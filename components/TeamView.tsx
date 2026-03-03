@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useDialog } from '../contexts/DialogContext';
 import { Employee } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS } from '../constants';
@@ -17,10 +18,16 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
   const [isYoung, setIsYoung] = useState(false);
   const [courseDay, setCourseDay] = useState('Segunda-feira');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { showDialog } = useDialog();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newName.trim()) {
-      if (confirm(`Deseja cadastrar o colaborador ${newName}?`)) {
+      const confirmed = await showDialog({
+        type: 'confirm',
+        message: `Deseja cadastrar o colaborador ${newName}?`
+      });
+      if (confirmed) {
         onAddEmployee(newName, isYoung, courseDay);
         setNewName('');
         setIsYoung(false);
@@ -90,7 +97,13 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                   )}
               </div>
               <button 
-                onClick={() => confirm(`Excluir ${emp.name} permanentemente?`) && onDeleteEmployee(emp.id)}
+                onClick={async () => {
+                  const confirmed = await showDialog({
+                    type: 'confirm',
+                    message: `Excluir ${emp.name} permanentemente?`
+                  });
+                  if (confirmed) onDeleteEmployee(emp.id);
+                }}
                 className="w-10 h-10 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center border border-red-100"
               >
                 <Icon name="delete" className="text-lg" />

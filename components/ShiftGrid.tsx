@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
+import { useDialog } from '../contexts/DialogContext';
 import { Employee, ShiftType, MonthYear } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS } from '../constants';
@@ -36,6 +37,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   const [isEditable, setIsEditable] = useState(false);
   const [isGridLocked, setIsGridLocked] = useState(false);
   const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday'>('all');
+  const { showDialog } = useDialog();
 
   const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -93,16 +95,26 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     return isGridLocked;
   };
 
-  const handleToggleLock = () => {
+  const handleToggleLock = async () => {
     if (isGridLocked) {
-      const confirmation = prompt('Para desbloquear as edições, digite "CONFIRMO":');
+      const confirmation = await showDialog({
+        type: 'prompt',
+        message: 'Para desbloquear as edições, digite "CONFIRMO":',
+      });
       if (confirmation === 'CONFIRMO') {
         setIsGridLocked(false);
       } else if (confirmation !== null) {
-        alert('Código incorreto. A escala permanece bloqueada.');
+        await showDialog({
+          type: 'alert',
+          message: 'Código incorreto. A escala permanece bloqueada.'
+        });
       }
     } else {
-      if (confirm('Deseja bloquear as edições desta escala?')) {
+      const confirmed = await showDialog({
+        type: 'confirm',
+        message: 'Deseja bloquear as edições desta escala?'
+      });
+      if (confirmed) {
         setIsGridLocked(true);
         setIsEditable(false);
       }
