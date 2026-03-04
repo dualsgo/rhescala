@@ -1,42 +1,47 @@
 
 import React, { useState, useMemo } from 'react';
 import { useDialog } from '../contexts/DialogContext';
-import { Employee, ShiftType, MonthYear } from '../types';
+import { Employee, ShiftType, MonthYear, Holiday } from '../types';
 import { Icon } from './Icon';
-import { SHIFT_HOURS } from '../constants';
+import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays } from '../constants';
 
 interface ShiftGridProps {
   employees: Employee[];
   currentMY: MonthYear;
   selectedDayIdx: number;
   today: Date;
+  customHolidays: Holiday[];
   onSelectDay: (idx: number) => void;
   onUpdateShift: (empId: string, dayIdx: number, newShift: ShiftType) => void;
   onUpdateEmployeeDailyHour: (empId: string, dayIdx: number, newHour: string) => void;
   onShareWhatsApp: (dayIdx: number) => void;
   onGenerateNextMonth: () => void;
   onResetMonth: () => void;
+  onShowHolidayManager: () => void;
   onNextMonth: () => void;
   onPrevMonth: () => void;
 }
 
-export const ShiftGrid: React.FC<ShiftGridProps> = ({ 
-  employees, 
+export const ShiftGrid: React.FC<ShiftGridProps> = ({
+  employees,
   currentMY,
   selectedDayIdx,
   today,
+  customHolidays,
   onSelectDay,
-  onUpdateShift, 
+  onUpdateShift,
   onUpdateEmployeeDailyHour,
-  onShareWhatsApp, 
+  onShareWhatsApp,
   onGenerateNextMonth,
   onResetMonth,
+  onShowHolidayManager,
   onNextMonth,
-  onPrevMonth
+  onPrevMonth,
 }) => {
   const [isEditable, setIsEditable] = useState(false);
   const [isGridLocked, setIsGridLocked] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday'>('all');
+  const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
+  const [selectedWeek, setSelectedWeek] = useState(1);
   const { showDialog } = useDialog();
 
   const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -46,6 +51,19 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     return date.getDate();
   }, [currentMY]);
 
+  const holidaySet = useMemo(() => {
+    const yearHolidays = customHolidays.filter(h => h.date.startsWith(`${currentMY.year}`));
+    return buildHolidaySet(currentMY.year, yearHolidays);
+  }, [currentMY.year, customHolidays]);
+
+  const holidayNames = useMemo(() => {
+    const nationals = getNationalHolidays(currentMY.year);
+    const yearCustom = customHolidays.filter(h => h.date.startsWith(`${currentMY.year}`));
+    const map: Record<string, string> = {};
+    [...nationals, ...yearCustom].forEach(h => { map[h.date] = h.name; });
+    return map;
+  }, [currentMY.year, customHolidays]);
+
   const days = useMemo(() => {
     const weekdays = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
     const currentYear = today.getFullYear();
@@ -54,26 +72,38 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
     return Array.from({ length: daysInMonth }, (_, i) => {
       const date = new Date(currentMY.year, currentMY.month, i + 1);
-      const isPast = (currentMY.year < currentYear) || 
+      const isPast = (currentMY.year < currentYear) ||
                      (currentMY.year === currentYear && currentMY.month < currentMonth) ||
                      (currentMY.year === currentYear && currentMY.month === currentMonth && (i + 1) < currentDay);
+      const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
 
       return {
         num: (i + 1).toString().padStart(2, '0'),
         weekday: weekdays[date.getDay()],
         isSunday: date.getDay() === 0,
-        isHoliday: false,
+        isSaturday: date.getDay() === 6,
+        isHoliday: holidaySet.has(dateStr),
+        holidayName: holidayNames[dateStr] || null,
         isPast,
-        dateStr: `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}-${(i + 1).toString().padStart(2, '0')}`
+        dateStr,
       };
     });
-  }, [currentMY, daysInMonth, today]);
+  }, [currentMY, daysInMonth, today, holidaySet, holidayNames]);
+
+  const weeksInMonth = useMemo(() => {
+    return Math.ceil(daysInMonth / 7);
+  }, [daysInMonth]);
 
   const filteredDays = useMemo(() => {
     if (filter === 'sunday') return days.map((d, i) => ({ ...d, originalIdx: i })).filter(d => d.isSunday);
     if (filter === 'holiday') return days.map((d, i) => ({ ...d, originalIdx: i })).filter(d => d.isHoliday);
+    if (filter === 'week') {
+      const start = (selectedWeek - 1) * 7;
+      const end = Math.min(start + 7, daysInMonth);
+      return days.slice(start, end).map((d, i) => ({ ...d, originalIdx: start + i }));
+    }
     return days.map((d, i) => ({ ...d, originalIdx: i }));
-  }, [days, filter]);
+  }, [days, filter, selectedWeek, daysInMonth]);
 
   const monthKey = `${currentMY.year}-${currentMY.month.toString().padStart(2, '0')}`;
 
@@ -121,14 +151,40 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     }
   };
 
-  const isSuggestedWorkDay = (emp: Employee, dayIdx: number) => {
-    // 6x1 Suggestion: If there was a Folga ('F') in the last 6 days
+  const isEarlyDayOff = (emp: Employee, dayIdx: number) => {
+    // If the person is off today, check if they *could* have worked instead
+    // (i.e. did they have another day off in the 6 preceding days?)
+    if (getDayShift(emp, dayIdx) !== 'F') return false;
+    
+    // Look back up to 6 days
     for (let i = 1; i <= 6; i++) {
       const prevIdx = dayIdx - i;
       if (prevIdx < 0) break;
-      if (getDayShift(emp, prevIdx) === 'F') return true;
+      if (getDayShift(emp, prevIdx) === 'F' || getDayShift(emp, prevIdx) === 'FF') {
+        return true; // Had another day off recently, so this one is technically early/removable
+      }
     }
     return false;
+  };
+
+  const isSuggestedWorkDay = (emp: Employee, dayIdx: number) => {
+    // If the person is working today, check if they've worked 6 consecutive days
+    // In that case, this day is "suggested" as a rest day (6x1 rule)
+    const shift = getDayShift(emp, dayIdx);
+    if (shift === 'F' || shift === 'FF' || shift === 'FE') return false;
+
+    let consecutiveWork = 0;
+    for (let i = 1; i <= 6; i++) {
+      const prevIdx = dayIdx - i;
+      if (prevIdx < 0) break;
+      const prevShift = getDayShift(emp, prevIdx);
+      if (prevShift === 'T' || prevShift === 'C' || prevShift === 'FF') {
+        consecutiveWork++;
+      } else {
+        break;
+      }
+    }
+    return consecutiveWork >= 6;
   };
 
   const handleCellClick = (empId: string, dayIdx: number) => {
@@ -159,7 +215,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     return 'text-slate-900';
   };
 
-  const currentDayType = days[selectedDayIdx].isSunday ? 'SUNDAY' : (days[selectedDayIdx].isHoliday ? 'HOLIDAY' : 'WEEKDAY');
+  const selectedDay = days[selectedDayIdx];
+  const currentDayType = selectedDay.isHoliday ? 'HOLIDAY' : selectedDay.isSunday ? 'SUNDAY' : 'WEEKDAY';
   const availableHours = SHIFT_HOURS[currentDayType];
 
   return (
@@ -182,8 +239,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 <Icon name={isGridLocked ? 'lock' : 'lock_open'} className="text-sm" /> 
                 {isGridLocked ? 'Escala Bloqueada' : 'Bloquear Escala'}
             </button>
+            <button onClick={onShowHolidayManager} className="flex items-center gap-2 px-4 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-xs font-extrabold hover:bg-rose-50 transition-all">
+                <Icon name="event_busy" className="text-sm" /> Feriados
+            </button>
             <button onClick={onResetMonth} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-extrabold hover:bg-slate-50 hover:text-slate-900 transition-all">
-                <Icon name="history" className="text-sm" /> Limpar Mês
+                <Icon name="history" className="text-sm" /> Regerar Mês
             </button>
             <button onClick={onGenerateNextMonth} className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg text-xs font-extrabold hover:bg-orange-600 shadow-sm transition-all">
                 <Icon name="auto_mode" className="text-sm" /> Gerar Próximo Mês
@@ -197,7 +257,36 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           <div className="flex bg-slate-100 p-1 rounded-lg">
             <button onClick={() => setFilter('all')} className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'all' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}>Mês Inteiro</button>
             <button onClick={() => setFilter('sunday')} className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'sunday' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}>Somente Domingos</button>
+            <button
+              onClick={() => { setFilter('week'); setSelectedWeek(1); }}
+              className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'week' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+            >Por Semana</button>
           </div>
+
+          {filter === 'week' && (
+            <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 p-1 rounded-lg animate-fade-in">
+              <span className="text-[10px] font-extrabold text-orange-400 uppercase tracking-widest px-2">Sem.</span>
+              {Array.from({ length: weeksInMonth }, (_, i) => {
+                const weekNum = i + 1;
+                const startDay = (weekNum - 1) * 7 + 1;
+                const endDay = Math.min(weekNum * 7, daysInMonth);
+                return (
+                  <button
+                    key={weekNum}
+                    onClick={() => setSelectedWeek(weekNum)}
+                    title={`Dias ${startDay}–${endDay}`}
+                    className={`px-3 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${
+                      selectedWeek === weekNum
+                        ? 'bg-orange-500 text-white shadow-sm'
+                        : 'text-orange-600 hover:bg-orange-100'
+                    }`}
+                  >
+                    {startDay}–{endDay}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           
           <div className="flex items-center gap-2 bg-green-50 border border-green-100 p-1 rounded-lg">
              <select 
@@ -228,17 +317,30 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
         <table className="w-full text-left border-collapse min-w-[1400px]">
           <thead>
             <tr className="bg-slate-50 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest border-b border-slate-200">
-              <th className="sticky-col p-4 border-r border-slate-100 min-w-[200px] shadow-none">Colaborador</th>
-              <th className="p-4 border-r border-slate-100 min-w-[180px] bg-slate-50">Horário (Dia {days[selectedDayIdx].num})</th>
+              <th className="sticky left-0 z-30 bg-slate-50 p-2 pl-4 border-r border-slate-100 min-w-[150px] w-[150px] max-w-[150px] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Colaborador</th>
+              <th className="sticky left-[150px] z-30 bg-slate-50 p-2 border-r border-slate-100 min-w-[130px] w-[130px] max-w-[130px] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Horário (Dia {days[selectedDayIdx].num})</th>
               {filteredDays.map((day) => (
-                <th 
-                  key={day.num} 
-                  onClick={() => onSelectDay(day.originalIdx)} 
-                  className={`p-3 text-center min-w-[62px] cursor-pointer transition-colors relative border-r border-slate-100/50 ${selectedDayIdx === day.originalIdx ? 'bg-orange-100/50 ring-2 ring-inset ring-orange-400' : ''} ${day.isSunday || day.isHoliday ? 'bg-orange-50/30' : ''}`}
+                <th
+                  key={day.num}
+                  onClick={() => onSelectDay(day.originalIdx)}
+                  title={day.holidayName || undefined}
+                  className={`p-3 text-center min-w-[62px] cursor-pointer transition-colors relative border-r border-slate-100/50 ${
+                    selectedDayIdx === day.originalIdx ? 'bg-orange-100/50 ring-2 ring-inset ring-orange-400' : ''
+                  } ${
+                    day.isHoliday ? 'bg-rose-50/60' : day.isSunday ? 'bg-orange-50/40' : day.isSaturday ? 'bg-slate-50/80' : ''
+                  }`}
                 >
-                  {(day.isSunday || day.isHoliday) && <div className="absolute inset-0 border-2 border-orange-400 pointer-events-none opacity-50"></div>}
-                  <div className={`text-sm font-extrabold ${day.isSunday ? 'text-orange-600' : 'text-slate-900'}`}>{day.num}</div>
+                  {(day.isSunday || day.isHoliday) && <div className={`absolute inset-0 border-2 pointer-events-none opacity-40 ${day.isHoliday ? 'border-rose-400' : 'border-orange-400'}`}></div>}
+                  {day.isHoliday && <div className="absolute top-0 right-0 w-0 h-0 border-t-[8px] border-r-[8px] border-t-rose-500 border-r-transparent" title={day.holidayName || ''}></div>}
+                  <div className={`text-sm font-extrabold ${
+                    day.isHoliday ? 'text-rose-600' : day.isSunday ? 'text-orange-600' : day.isSaturday ? 'text-slate-500' : 'text-slate-900'
+                  }`}>{day.num}</div>
                   <div className="text-[9px] font-bold opacity-60">{day.weekday}</div>
+                  {day.isHoliday && day.holidayName && (
+                    <div className="text-[7px] font-extrabold text-rose-500 leading-tight mt-0.5 truncate max-w-[56px] mx-auto" title={day.holidayName}>
+                      {day.holidayName.split(' ').slice(0, 2).join(' ')}
+                    </div>
+                  )}
                 </th>
               ))}
             </tr>
@@ -246,15 +348,15 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           <tbody className="divide-y divide-slate-100">
             {employees.map((emp) => (
               <tr key={emp.id} className="group hover:bg-slate-50/50 transition-colors">
-                <td className="sticky-col p-4 border-r border-slate-100 group-hover:bg-slate-50">
-                  <div className="flex flex-col">
-                    <span className={`font-extrabold text-xs uppercase tracking-tight ${getShiftTextColor(getDayHour(emp, selectedDayIdx))}`}>
+                <td className="sticky left-0 z-20 bg-white group-hover:bg-slate-50 p-2 pl-4 border-r border-slate-100 min-w-[150px] w-[150px] max-w-[150px] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                  <div className="flex flex-col truncate">
+                    <span className={`font-extrabold text-[11px] uppercase tracking-tight truncate ${getShiftTextColor(getDayHour(emp, selectedDayIdx))}`} title={emp.name}>
                       {emp.name}
                     </span>
-                    {emp.isYoungApprentice && <span className="text-[8px] font-extrabold text-teal-600 uppercase tracking-widest mt-0.5">Jovem Aprendiz</span>}
+                    {emp.isYoungApprentice && <span className="text-[8px] font-extrabold text-teal-600 uppercase tracking-widest mt-0.5 truncate">Jovem Aprendiz</span>}
                   </div>
                 </td>
-                <td className="p-3 border-r border-slate-100 bg-slate-50/30">
+                <td className="sticky left-[150px] z-20 bg-slate-50 group-hover:bg-slate-100 p-2 border-r border-slate-100 min-w-[130px] w-[130px] max-w-[130px] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                   <select 
                     value={getDayHour(emp, selectedDayIdx)}
                     disabled={isDayLocked(selectedDayIdx)}
@@ -268,20 +370,24 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 {filteredDays.map((day) => {
                   const shift = getDayShift(emp, day.originalIdx);
                   const isLocked = isDayLocked(day.originalIdx);
-                  const isSuggested = isSuggestedWorkDay(emp, day.originalIdx);
+                  const isWarningOff = isEarlyDayOff(emp, day.originalIdx); // Had another Folga within 6 days
+                  const isSuggestedWork = isSuggestedWorkDay(emp, day.originalIdx);
                   
                   return (
                     <td 
                       key={day.num} 
                       onClick={() => handleCellClick(emp.id, day.originalIdx)}
                       className={`p-2 text-center relative border-r border-slate-100/50 transition-all ${
-                        isEditable && !isLocked && getDayShift(emp, day.originalIdx) !== 'FE' ? 'cursor-pointer hover:bg-slate-100' : 'cursor-default'
-                      } ${selectedDayIdx === day.originalIdx ? 'bg-orange-50/50' : ''} ${day.isSunday || day.isHoliday ? 'bg-orange-50/10' : ''}`}
+                        isEditable && !isLocked && shift !== 'FE' ? 'cursor-pointer hover:bg-slate-100' : 'cursor-default'
+                      } ${selectedDayIdx === day.originalIdx ? 'bg-orange-50/50' : ''} ${day.isHoliday ? 'bg-rose-50/20' : day.isSunday ? 'bg-orange-50/10' : ''}`}
                     >
-                      {(day.isSunday || day.isHoliday) && <div className="absolute inset-y-0 left-0 right-0 border-x-2 border-orange-400/10 pointer-events-none"></div>}
+                      {(day.isSunday || day.isHoliday) && <div className={`absolute inset-y-0 left-0 right-0 border-x-2 pointer-events-none opacity-10 ${day.isHoliday ? 'border-rose-400' : 'border-orange-400'}`}></div>}
                       
-                      {/* 6x1 Suggestion Marker */}
-                      {isSuggested && shift !== 'F' && shift !== 'FF' && shift !== 'FE' && (
+                      {/* Suggestion / Warning Markers */}
+                      {isWarningOff && (
+                        <div className="absolute inset-0 border-2 border-dashed border-red-400/60 rounded-lg pointer-events-none m-0.5 animate-pulse" title="Folga potencialmente removível (escala 6x1 ainda não completa)"></div>
+                      )}
+                      {isSuggestedWork && shift !== 'F' && shift !== 'FF' && shift !== 'FE' && (
                         <div className="absolute inset-0 border-2 border-dashed border-teal-400/30 rounded-lg pointer-events-none m-1"></div>
                       )}
 
@@ -313,7 +419,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
          <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-red-500"></div> <span className="text-[10px] font-extrabold text-slate-500 uppercase">Feriado</span></div>
          <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-teal-500"></div> <span className="text-[10px] font-extrabold text-slate-500 uppercase">Curso</span></div>
          <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-indigo-600"></div> <span className="text-[10px] font-extrabold text-slate-500 uppercase">Férias</span></div>
-         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded border-2 border-dashed border-teal-400"></div> <span className="text-[10px] font-extrabold text-slate-500 uppercase">Sugestão 6x1</span></div>
+         <div className="ml-4 flex items-center gap-2"><div className="w-3 h-3 rounded border-2 border-dashed border-teal-400"></div> <span className="text-[10px] font-extrabold text-slate-500 uppercase">Sugerido p/ Folga (6x1)</span></div>
+         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded border-2 border-dashed border-red-500 animate-pulse"></div> <span className="text-[10px] font-extrabold text-rose-600 uppercase">Alerta: Excesso de Folga</span></div>
          <div className="ml-auto flex items-center gap-2 opacity-60">
             <Icon name={isGridLocked ? 'lock' : 'lock_open'} className="text-xs" />
             <span className="text-[10px] font-bold text-slate-400">

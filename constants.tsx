@@ -1,22 +1,95 @@
 
-import { Employee } from './types';
+import { Employee, Holiday } from './types';
 
 export const SHIFT_HOURS = {
   WEEKDAY: ['10h às 18h20', '12h às 20h20', '13h40 às 22h'],
-  SUNDAY: ['12h às 20h', '13h às 21h'],
-  HOLIDAY: ['12h às 16h', '13h às 17h', '14h às 18h', '15h às 19h', '16h às 20h', '17h às 21h']
+  SUNDAY:  ['12h às 20h', '13h às 21h'],
+  HOLIDAY: ['12h às 16h', '13h às 17h', '14h às 18h', '15h às 19h', '16h às 20h', '17h às 21h'],
 };
 
+/**
+ * Returns all fixed Brazilian national holidays for a given year.
+ * Also includes Corpus Christi (calculated) and Carnival.
+ */
+export function getNationalHolidays(year: number): Holiday[] {
+  // Easter Sunday calculation (Anonymous Gregorian algorithm)
+  const easterDate = (y: number): Date => {
+    const a = y % 19;
+    const b = Math.floor(y / 100);
+    const c = y % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31) - 1; // 0-indexed
+    const day = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(y, month, day);
+  };
+
+  const addDays = (date: Date, days: number): Date => {
+    const d = new Date(date);
+    d.setDate(d.getDate() + days);
+    return d;
+  };
+
+  const fmt = (d: Date): string =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  const easter = easterDate(year);
+  const carnival1 = addDays(easter, -48); // Monday
+  const carnival2 = addDays(easter, -47); // Tuesday
+  const goodFriday = addDays(easter, -2);
+  const corpusChristi = addDays(easter, 60);
+
+  const fixed: Array<Omit<Holiday, 'id'>> = [
+    { date: `${year}-01-01`, name: 'Confraternização Universal',      type: 'national', recurring: false },
+    { date: fmt(carnival1),  name: 'Carnaval (Segunda)',              type: 'national', recurring: false },
+    { date: fmt(carnival2),  name: 'Carnaval (Terça)',                type: 'national', recurring: false },
+    { date: fmt(goodFriday), name: 'Sexta-feira Santa',               type: 'national', recurring: false },
+    { date: fmt(easter),     name: 'Páscoa',                         type: 'national', recurring: false },
+    { date: `${year}-04-21`, name: 'Tiradentes',                     type: 'national', recurring: false },
+    { date: `${year}-05-01`, name: 'Dia do Trabalho',                type: 'national', recurring: false },
+    { date: fmt(corpusChristi), name: 'Corpus Christi',              type: 'national', recurring: false },
+    { date: `${year}-09-07`, name: 'Independência do Brasil',        type: 'national', recurring: false },
+    { date: `${year}-10-12`, name: 'Nossa Sra. Aparecida',           type: 'national', recurring: false },
+    { date: `${year}-11-02`, name: 'Finados',                        type: 'national', recurring: false },
+    { date: `${year}-11-15`, name: 'Proclamação da República',       type: 'national', recurring: false },
+    { date: `${year}-11-20`, name: 'Consciência Negra',              type: 'national', recurring: false },
+    { date: `${year}-12-25`, name: 'Natal',                          type: 'national', recurring: false },
+  ];
+
+  return fixed.map((h, i) => ({ ...h, id: `national-${year}-${i}` }));
+}
+
+/**
+ * Returns a Set of "YYYY-MM-DD" holiday date strings for fast lookup.
+ */
+export function buildHolidaySet(
+  year: number,
+  customHolidays: Holiday[] = []
+): Set<string> {
+  const nationals = getNationalHolidays(year);
+  const allHolidays = [...nationals, ...customHolidays];
+  return new Set(allHolidays.map(h => h.date));
+}
+
+// ─── Mock employees ───────────────────────────────────────────────────────────
+
 const names = [
-  'Jheferson Lima', 'Lidi Santos', 'Renata Silva', 'Thais Souza', 'Marcos Oliveira', 
+  'Jheferson Lima', 'Lidi Santos', 'Renata Silva', 'Thais Souza', 'Marcos Oliveira',
   'Camila Peixoto', 'Cátia Souza', 'Erika Melo', 'Luiz Fernando', 'Carol Dias',
-  'Aline Rocha', 'Bianca Vaz', 'Lidiane Costa', 'Luiza Paes', 'Rafael Silva'
+  'Aline Rocha', 'Bianca Vaz', 'Lidiane Costa', 'Luiza Paes', 'Rafael Silva',
 ];
 
-const daysOff = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+const daysOff = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira'];
 
 export const MOCK_EMPLOYEES: Employee[] = names.map((name, i) => {
-  const isYA = i > 12; 
+  const isYA = i > 12;
   const defaultHour = i < 7 ? '10h às 18h20' : (i < 10 ? '12h às 20h20' : '13h40 às 22h');
   return {
     id: (i + 1).toString(),
@@ -26,13 +99,13 @@ export const MOCK_EMPLOYEES: Employee[] = names.map((name, i) => {
     status: 'active',
     statusColor: i % 2 === 0 ? '#ff8400' : '#3b82f6',
     shifts: {
-      "2026-02": Array.from({ length: 31 }, () => (Math.random() > 0.2 ? 'T' : 'F'))
+      '2026-02': Array.from({ length: 28 }, () => (Math.random() > 0.2 ? 'T' : 'F')),
     },
     dailyHours: {
-      "2026-02": Array(31).fill(defaultHour)
+      '2026-02': Array(28).fill(defaultHour),
     },
     workPeriod: defaultHour,
     preferredDayOff: daysOff[i % daysOff.length],
-    shiftName: i < 7 ? 'Abertura' : (i < 10 ? 'Intermediário' : 'Fechamento')
-  }
+    shiftName: i < 7 ? 'Abertura' : (i < 10 ? 'Intermediário' : 'Fechamento'),
+  };
 });

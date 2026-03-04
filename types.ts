@@ -1,5 +1,5 @@
 
-export type ShiftType = 'T' | 'F' | 'FF' | 'FE' | 'C'; // Trabalho, Folga, Feriado, Férias, Curso
+export type ShiftType = 'T' | 'F' | 'FF' | 'FE' | 'C'; // Trabalho, Folga, Feriado/Folga Especial, Férias, Curso
 
 export interface Employee {
   id: string;
@@ -8,13 +8,23 @@ export interface Employee {
   courseDay?: string; // e.g. 'Segunda-feira'
   status: 'active' | 'inactive';
   statusColor: string;
-  shifts: Record<string, ShiftType[]>; // Keyed by "YYYY-MM"
-  dailyHours: Record<string, string[]>; // Keyed by "YYYY-MM", stores specific hours per day
-  workPeriod: string; // Default work period
-  preferredDayOff: string;
+  shifts: Record<string, ShiftType[]>;     // Keyed by "YYYY-MM"
+  dailyHours: Record<string, string[]>;    // Keyed by "YYYY-MM"
+  workPeriod: string;                      // Default work period
+  preferredDayOff: string;                 // e.g. 'Segunda-feira'
   shiftName: string;
   vacationStart?: string; // YYYY-MM-DD
   vacationEnd?: string;   // YYYY-MM-DD
+  hiredAt?: string;       // YYYY-MM-DD — used to skip months before hiring
+  firedAt?: string;       // YYYY-MM-DD — used to stop generating after termination
+}
+
+export interface Holiday {
+  id: string;
+  date: string;  // "MM-DD" for recurring, "YYYY-MM-DD" for one-off
+  name: string;
+  type: 'national' | 'state' | 'municipal';
+  recurring: boolean; // true = happens every year on same MM-DD
 }
 
 export interface ComplianceAlert {
