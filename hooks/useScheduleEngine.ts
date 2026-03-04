@@ -2,35 +2,233 @@
 import { Employee, ShiftType, Holiday } from '../types';
 import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet } from '../constants';
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 /**
- * Generates the full shift schedule for a single employee for a single month.
+ * Minimum CLT employees that must be WORKING on any Sunday.
+ * Rotation (giving rest) only activates when available > this threshold.
+ * Hard constraint verified by isSundayUnavailable + safety cap in buildSundayAssignments.
+ */
+const MIN_SUNDAY_WORKERS = 6;
+
+// ─── Shared weekday names ─────────────────────────────────────────────────────
+
+const WEEKDAY_NAMES = [
+    'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira',
+    'Quinta-feira', 'Sexta-feira', 'Sábado',
+];
+
+// ─── Centralized Sunday unavailability check ──────────────────────────────────
+
+/**
+ * Returns true if `emp` is UNAVAILABLE to work (or rest via rotation) on the
+ * given Sunday date. All hard exceptions are listed here:
+ *   1. Vacation (vacationStart..vacationEnd covers the date)
+ *   2. Preferred day off is "Domingo"
+ *   3. Hired after this date (hiredAt > dateStr)
+ *   4. Fired/left before this date (firedAt < dateStr)
+ *   5. Shift already marked FE in saved data (manual vacation mark)
+ *
+ * Employees failing this check will be treated as absent on Sundays and are
+ * NOT counted toward MIN_SUNDAY_WORKERS.
+ */
+function isSundayUnavailable(
+    emp: Employee,
+    dateStr: string,           // 'YYYY-MM-DD'
+    monthKey: string,           // 'YYYY-MM'
+    dayIdx: number            // 0-based day index
+): boolean {
+    // 1. Vacation
+    if (emp.vacationStart && emp.vacationEnd) {
+        if (dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) return true;
+    }
+    // 2. Preferred day off is Sunday
+    if (emp.preferredDayOff === 'Domingo') return true;
+    // 3. Not yet hired
+    if (emp.hiredAt && dateStr < emp.hiredAt) return true;
+    // 4. Already fired
+    if (emp.firedAt && dateStr > emp.firedAt) return true;
+    // 5. Existing shift already FE (manually set vacation)
+    const existing = (emp.shifts[monthKey] ?? [])[dayIdx] as string | undefined;
+    if (existing === 'FE') return true;
+    return false;
+}
+
+// ─── Sunday rotation engine ───────────────────────────────────────────────────
+
+/**
+ * Scans the last 2 Sundays of the previous month to compute each employee's
+ * "consecutive Sundays worked" count coming into the target month.
+ *
+ * This allows the cross-month carry-over:
+ *   - if emp worked the last Sunday of month N → consecutive ≥ 1
+ *   - if emp worked both last two Sundays of month N → consecutive = 2
+ *     → they get the highest priority to rest on the first Sunday of month N+1
+ */
+function getPrevMonthConsecutive(
+    activeRegular: Employee[],
+    year: number,
+    month: number   // 0-indexed target month
+): Map<string, number> {
+    const result = new Map<string, number>();
+    for (const emp of activeRegular) result.set(emp.id, 0);
+
+    let prevMonth = month - 1;
+    let prevYear = year;
+    if (prevMonth < 0) { prevMonth = 11; prevYear -= 1; }
+    if (prevYear < 2020) return result;
+
+    const prevMonthKey = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}`;
+    const daysInPrevMonth = new Date(prevYear, prevMonth + 1, 0).getDate();
+
+    // Collect the last 2 Sundays of the previous month (most-recent first)
+    const prevSundays: number[] = [];
+    for (let d = daysInPrevMonth - 1; d >= 0 && prevSundays.length < 2; d--) {
+        if (new Date(prevYear, prevMonth, d + 1).getDay() === 0) prevSundays.push(d);
+    }
+    // prevSundays[0] = last Sunday index, prevSundays[1] = second-to-last
+
+    if (prevSundays.length === 0) return result;
+
+    for (const emp of activeRegular) {
+        const prevShifts = emp.shifts[prevMonthKey];
+        if (!prevShifts) { result.set(emp.id, 0); continue; }
+
+        const workedLast = prevShifts[prevSundays[0]] === 'T' || prevShifts[prevSundays[0]] === 'FF';
+        const workedSecond = prevSundays.length > 1 &&
+            (prevShifts[prevSundays[1]] === 'T' || prevShifts[prevSundays[1]] === 'FF');
+
+        if (workedLast && workedSecond) {
+            result.set(emp.id, 2);
+        } else if (workedLast) {
+            result.set(emp.id, 1);
+        } else {
+            result.set(emp.id, 0);
+        }
+    }
+
+    return result;
+}
+
+/**
+ * Core Sunday rotation algorithm — RECOMPUTED FRESH EACH MONTH.
  *
  * Rules:
- *  - Jovem Aprendiz: always off on Saturday (6) AND Sunday (0); gets 'C' on courseDay.
- *  - Regular employee: off on preferredDayOff.
- *  - Sunday rotation: among active regular employees who ARE scheduled to work on Sundays,
- *    we rotate who rests — 1 person per Sunday, cycling by teamIndex.
- *  - Holidays: shift becomes 'FF' (holiday off) unless employee is rostered to work — then 'T'.
- *  - Vacations: days within vacationStart–vacationEnd become 'FE'.
- *  - If firedAt is within the month, days after firedAt become 'F'.
- *  - If hiredAt is after the month starts, days before hiredAt become 'F'.
+ *  1. min 6 CLTs working every Sunday (MIN_SUNDAY_WORKERS = 6).
+ *  2. Employees excluded by `isSundayUnavailable` (vacation, preferred-Sunday-off,
+ *     hired/fired boundaries) never count toward the 6.
+ *  3. HARD: streak ≥ 2 (would be 3rd consecutive Sunday) → MUST REST if any slot free.
+ *  4. SOFT: streak = 1 → prefer to rest (alternating pattern).
+ *  5. No cross-month carry — always starts fresh so each month alternates independently.
+ *  6. Month-based tiebreaker offset: rotates who gets first-rest priority each month
+ *     so the same people don’t always rest on Sunday 1.
+ *  7. Safety: resting.size is always < available.length (never zero workers).
+ *
+ * Returns: empId → Set<dayIdx> of Sundays each employee rests.
+ */
+export function buildSundayAssignments(
+    activeRegular: Employee[],
+    year: number,
+    month: number,
+    sundaysInMonth: number[]
+): Map<string, Set<number>> {
+    const assignments = new Map<string, Set<number>>();
+    for (const emp of activeRegular) assignments.set(emp.id, new Set());
+
+    if (sundaysInMonth.length === 0 || activeRegular.length === 0) return assignments;
+
+    // Always start FRESH each month — no cross-month carry
+    const consecutive = new Map<string, number>();
+    for (const emp of activeRegular) consecutive.set(emp.id, 0);
+
+    // Rotate the tiebreaker origin per month so Sunday 1 doesn’t always
+    // give rest to the same index-0 employees
+    const rotationOffset = month % Math.max(activeRegular.length, 1);
+
+    const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+
+    for (const sundayDayIdx of sundaysInMonth) {
+        const dayNum = sundayDayIdx + 1;
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+
+        // Build the eligible pool for rotation
+        const available = activeRegular.filter(
+            emp => !isSundayUnavailable(emp, dateStr, monthKey, sundayDayIdx)
+        );
+
+        // How many can rest while keeping ≥ MIN_SUNDAY_WORKERS and ≥ 1
+        const maxRestIdeal = Math.max(0, available.length - MIN_SUNDAY_WORKERS);
+        const maxRestSafe = available.length > 0
+            ? Math.min(maxRestIdeal, available.length - 1)
+            : 0;
+
+        const resting = new Set<string>();
+
+        if (maxRestSafe > 0) {
+            // Rotated index for tiebreaking (fair across months)
+            const rotIdx = (emp: Employee) =>
+                (activeRegular.indexOf(emp) - rotationOffset + activeRegular.length) % activeRegular.length;
+
+            // TIER 1: MUST rest — streak ≥ 2 (3rd consecutive would violate rule)
+            const mustRest = available
+                .filter(emp => (consecutive.get(emp.id) ?? 0) >= 2)
+                .sort((a, b) => {
+                    const sa = consecutive.get(a.id) ?? 0;
+                    const sb = consecutive.get(b.id) ?? 0;
+                    return sb - sa || rotIdx(a) - rotIdx(b);
+                });
+
+            // TIER 2: PREFER rest — streak = 1 (alternating, worked last Sunday)
+            const preferRest = available
+                .filter(emp => (consecutive.get(emp.id) ?? 0) === 1)
+                .sort((a, b) => rotIdx(a) - rotIdx(b));
+
+            // TIER 3: optional — streak = 0 (just rested; fill only if slots remain)
+            const optionalRest = available
+                .filter(emp => (consecutive.get(emp.id) ?? 0) === 0)
+                .sort((a, b) => rotIdx(a) - rotIdx(b));
+
+            const fillOrder = [...mustRest, ...preferRest, ...optionalRest];
+
+            let slots = maxRestSafe;
+            for (const emp of fillOrder) {
+                if (slots <= 0) break;
+                if (!resting.has(emp.id)) { resting.add(emp.id); slots--; }
+            }
+        }
+
+        // Record
+        for (const empId of resting) assignments.get(empId)!.add(sundayDayIdx);
+
+        // Update consecutive counts for available pool only
+        for (const emp of available) {
+            consecutive.set(
+                emp.id,
+                resting.has(emp.id) ? 0 : (consecutive.get(emp.id) ?? 0) + 1
+            );
+        }
+    }
+
+    return assignments;
+}
+
+// ─── Per-employee month generator ─────────────────────────────────────────────
+
+/**
+ * Generates the full shift/hours arrays for ONE employee for ONE month.
+ *
+ * Sunday rotation is driven by the pre-computed `sundayRestDays` set so that
+ * the whole-team rotation algorithm can be applied consistently from outside.
  */
 export function generateMonthForEmployee(
     emp: Employee,
     year: number,
-    month: number, // 0-indexed
-    teamIndex: number, // index among active non-apprentice employees for Sunday rotation
-    activeRegularCount: number, // total active non-apprentice employees
+    month: number,          // 0-indexed
+    sundayRestDays: Set<number>,  // day indices where THIS employee rests on Sunday
     customHolidays: Holiday[] = []
 ): { shifts: ShiftType[]; hours: string[] } {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const holidaySet = buildHolidaySet(year, customHolidays);
-    const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
-
-    const weekdayNames = [
-        'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira',
-        'Quinta-feira', 'Sexta-feira', 'Sábado',
-    ];
 
     const shifts: ShiftType[] = [];
     const hours: string[] = [];
@@ -38,142 +236,293 @@ export function generateMonthForEmployee(
     for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
         const dayNum = dayIdx + 1;
         const date = new Date(year, month, dayNum);
-        const dow = date.getDay(); // 0=Sun, 6=Sat
+        const dow = date.getDay();
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
         const isHoliday = holidaySet.has(dateStr);
 
-        // ── Vacation override ─────────────────────────────────────────────
+        // ── Vacation override ──────────────────────────────────────────────
         if (emp.vacationStart && emp.vacationEnd) {
             if (dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
-                shifts.push('FE');
-                hours.push(emp.workPeriod);
-                continue;
+                shifts.push('FE'); hours.push(emp.workPeriod); continue;
             }
         }
 
-        // ── Hired/fired boundaries ────────────────────────────────────────
+        // ── Hired / fired boundaries ───────────────────────────────────────
         if (emp.hiredAt && dateStr < emp.hiredAt) {
-            shifts.push('F');
-            hours.push(emp.workPeriod);
-            continue;
+            shifts.push('F'); hours.push(emp.workPeriod); continue;
         }
         if (emp.firedAt && dateStr > emp.firedAt) {
-            shifts.push('F');
-            hours.push(emp.workPeriod);
-            continue;
+            shifts.push('F'); hours.push(emp.workPeriod); continue;
         }
 
-        // ── Jovem Aprendiz rules ──────────────────────────────────────────
+        // ── Jovem Aprendiz rules ───────────────────────────────────────────
         if (emp.isYoungApprentice) {
             if (dow === 0 || dow === 6) {
-                // Always off on weekends
-                shifts.push('F');
-                hours.push(APPRENTICE_WORK_PERIOD);
-            } else if (weekdayNames[dow] === emp.courseDay) {
-                shifts.push('C');
-                hours.push(APPRENTICE_WORK_PERIOD);
+                shifts.push('F'); hours.push(APPRENTICE_WORK_PERIOD);
+            } else if (WEEKDAY_NAMES[dow] === emp.courseDay) {
+                shifts.push('C'); hours.push(APPRENTICE_WORK_PERIOD);
             } else if (isHoliday) {
-                shifts.push('FF');
-                hours.push(APPRENTICE_WORK_PERIOD);
+                shifts.push('FF'); hours.push(APPRENTICE_WORK_PERIOD);
             } else {
-                shifts.push('T');
-                hours.push(APPRENTICE_WORK_PERIOD);
+                shifts.push('T'); hours.push(APPRENTICE_WORK_PERIOD);
             }
             continue;
         }
 
-        // ── Regular employee rules ────────────────────────────────────────
+        // ── Regular employee ───────────────────────────────────────────────
 
-        // Fixed day off
-        if (weekdayNames[dow] === emp.preferredDayOff) {
-            shifts.push('F');
-            hours.push(emp.workPeriod);
-            continue;
+        // Preferred weekday off
+        if (WEEKDAY_NAMES[dow] === emp.preferredDayOff) {
+            shifts.push('F'); hours.push(emp.workPeriod); continue;
         }
 
-        // Sunday rotation: 1 employee rests each Sunday, cycling
+        // Sunday — driven by pre-computed assignment
         if (dow === 0) {
-            // Which Sunday is this? (0-indexed within the month)
-            const sundayIndex = Math.floor(dayIdx / 7);
-            // Which employee index rests on this Sunday?
-            const restingIndex = sundayIndex % Math.max(activeRegularCount, 1);
-            if (teamIndex === restingIndex) {
-                shifts.push('F');
-                hours.push(SHIFT_HOURS.SUNDAY[0]);
-                continue;
-            }
-            // Works this Sunday
-            if (isHoliday) {
-                shifts.push('FF');
-                hours.push(SHIFT_HOURS.HOLIDAY[0]);
+            if (sundayRestDays.has(dayIdx)) {
+                shifts.push('F'); hours.push(SHIFT_HOURS.SUNDAY[0]);
+            } else if (isHoliday) {
+                shifts.push('FF'); hours.push(SHIFT_HOURS.HOLIDAY[0]);
             } else {
-                shifts.push('T');
-                hours.push(SHIFT_HOURS.SUNDAY[0]);
+                shifts.push('T'); hours.push(SHIFT_HOURS.SUNDAY[0]);
             }
             continue;
         }
 
         // Weekday holiday
         if (isHoliday) {
-            shifts.push('FF');
-            hours.push(SHIFT_HOURS.HOLIDAY[0]);
-            continue;
+            shifts.push('FF'); hours.push(SHIFT_HOURS.HOLIDAY[0]); continue;
         }
 
         // Normal workday
-        shifts.push('T');
-        hours.push(emp.workPeriod);
+        shifts.push('T'); hours.push(emp.workPeriod);
     }
 
     return { shifts, hours };
 }
 
+// ─── Full-year generation ─────────────────────────────────────────────────────
+
 /**
- * Generates schedules for ALL remaining months of the year (from `fromMonth` to December).
- * Returns a map of empId → { [monthKey]: { shifts, hours } }.
+ * Generates schedules for ALL remaining months of the year (fromMonth → December).
+ * Returns: empId → { [monthKey]: { shifts, hours } }
+ *
+ * Sunday rotation is computed month-by-month, carrying consecutive counts forward
+ * so the alternating pattern is consistent across month boundaries.
  */
 export function generateYearSchedule(
     employees: Employee[],
     fromYear: number,
-    fromMonth: number, // 0-indexed, inclusive
+    fromMonth: number,       // 0-indexed, inclusive
     currentYear: number,
     customHolidays: Holiday[] = []
 ): Record<string, Record<string, { shifts: ShiftType[]; hours: string[] }>> {
     const result: Record<string, Record<string, { shifts: ShiftType[]; hours: string[] }>> = {};
 
-    // Only active employees participate in rotation counting
     const activeRegular = employees.filter(e => e.status === 'active' && !e.isYoungApprentice);
     const activeApprentices = employees.filter(e => e.status === 'active' && e.isYoungApprentice);
 
-    // Generate from fromMonth of fromYear to December of currentYear
+    // Track consecutive Sunday work counts across months for proper carry-over
+    let rollingConsecutive: Map<string, number> | undefined = undefined;
+
     for (let year = fromYear; year <= currentYear; year++) {
         const startMonth = year === fromYear ? fromMonth : 0;
         for (let month = startMonth; month <= 11; month++) {
             const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-            // Regular employees
-            activeRegular.forEach((emp, teamIndex) => {
+            // Find all Sundays in this month
+            const sundaysInMonth: number[] = [];
+            for (let d = 0; d < daysInMonth; d++) {
+                if (new Date(year, month, d + 1).getDay() === 0) sundaysInMonth.push(d);
+            }
+
+            // Build Sunday assignments — fresh each month, no cross-month carry
+            const sundayAssignments = buildSundayAssignments(
+                activeRegular, year, month, sundaysInMonth
+            );
+
+
+            // Generate each regular employee
+            activeRegular.forEach(emp => {
                 if (!result[emp.id]) result[emp.id] = {};
                 result[emp.id][monthKey] = generateMonthForEmployee(
                     emp, year, month,
-                    teamIndex,
-                    activeRegular.length,
+                    sundayAssignments.get(emp.id) ?? new Set(),
                     customHolidays
                 );
             });
 
-            // Apprentices (teamIndex irrelevant for rotation, pass 0)
+            // Generate each apprentice
             activeApprentices.forEach(emp => {
                 if (!result[emp.id]) result[emp.id] = {};
                 result[emp.id][monthKey] = generateMonthForEmployee(
                     emp, year, month,
-                    0,
-                    0,
+                    new Set(), // apprentices always off on Sundays via the isYoungApprentice rule
                     customHolidays
                 );
             });
         }
     }
+
+    return result;
+}
+
+// ─── Smart month update (Atualizar Mês) ──────────────────────────────────────
+
+/**
+ * "Smart Update" for a single month.
+ *
+ * What is RE-APPLIED (overwritten):
+ *  - Preferred weekday-off for each CLT employee
+ *  - Sunday rotation using the new alternating algorithm with cross-month carry
+ *  - Feriados (FF) on holiday days
+ *  - Vacation (FE) from employee data
+ *  - Apprentice weekend/course/holiday rules
+ *
+ * What is PRESERVED (not overwritten):
+ *  - All other manually-edited shifts on regular weekdays
+ *
+ * Returns: empId → { shifts, hours } for the target month only.
+ */
+export function applyMonthUpdate(
+    employees: Employee[],
+    year: number,
+    month: number,
+    customHolidays: Holiday[] = []
+): Record<string, { shifts: ShiftType[]; hours: string[] }> {
+    const result: Record<string, { shifts: ShiftType[]; hours: string[] }> = {};
+
+    const activeRegular = employees.filter(e => e.status === 'active' && !e.isYoungApprentice);
+    const activeApprentices = employees.filter(e => e.status === 'active' && e.isYoungApprentice);
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const holidaySet = buildHolidaySet(year, customHolidays);
+    const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+
+    // Find all Sundays in this month
+    const sundaysInMonth: number[] = [];
+    for (let d = 0; d < daysInMonth; d++) {
+        if (new Date(year, month, d + 1).getDay() === 0) sundaysInMonth.push(d);
+    }
+
+    // Compute Sunday assignments — fresh each month, no cross-month carry
+    const sundayAssignments = buildSundayAssignments(
+        activeRegular, year, month, sundaysInMonth
+    );
+
+    // ── Regular employees ──────────────────────────────────────────────────────
+    activeRegular.forEach(emp => {
+        const restDays = sundayAssignments.get(emp.id) ?? new Set<number>();
+
+        // Start from existing shifts to preserve manual edits on regular days
+        const newShifts: ShiftType[] = [
+            ...(emp.shifts[monthKey] ?? (Array(daysInMonth).fill('T') as ShiftType[]))
+        ];
+        const newHours: string[] = [
+            ...(emp.dailyHours[monthKey] ?? Array(daysInMonth).fill(emp.workPeriod))
+        ];
+
+        for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
+            const dayNum = dayIdx + 1;
+            const date = new Date(year, month, dayNum);
+            const dow = date.getDay();
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+            const isHoliday = holidaySet.has(dateStr);
+
+            // Always honour vacation
+            if (emp.vacationStart && emp.vacationEnd) {
+                if (dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
+                    newShifts[dayIdx] = 'FE'; newHours[dayIdx] = emp.workPeriod; continue;
+                }
+            }
+
+            // Re-apply preferred weekday off (not Sunday — Sunday handled separately)
+            if (WEEKDAY_NAMES[dow] === emp.preferredDayOff && dow !== 0) {
+                newShifts[dayIdx] = 'F'; newHours[dayIdx] = emp.workPeriod; continue;
+            }
+
+            // Re-apply ALL Sunday rules — consistent with buildSundayAssignments
+            if (dow === 0) {
+                // Check ALL hard unavailability reasons (same as isSundayUnavailable,
+                // but vacation is already handled above — check remaining ones)
+                const isPreferredSundayOff = emp.preferredDayOff === 'Domingo';
+                const notYetHired = !!(emp.hiredAt && dateStr < emp.hiredAt);
+                const alreadyFired = !!(emp.firedAt && dateStr > emp.firedAt);
+
+                if (isPreferredSundayOff) {
+                    // Preferred Sunday off — always F regardless of rotation
+                    newShifts[dayIdx] = 'F';
+                    newHours[dayIdx] = emp.workPeriod;
+                } else if (notYetHired || alreadyFired) {
+                    // Outside employment window
+                    newShifts[dayIdx] = 'F';
+                    newHours[dayIdx] = emp.workPeriod;
+                } else if (restDays.has(dayIdx)) {
+                    // Rotation rest
+                    newShifts[dayIdx] = 'F';
+                    newHours[dayIdx] = SHIFT_HOURS.SUNDAY[0];
+                } else {
+                    // Works this Sunday
+                    newShifts[dayIdx] = isHoliday ? 'FF' : 'T';
+                    newHours[dayIdx] = isHoliday ? SHIFT_HOURS.HOLIDAY[0] : SHIFT_HOURS.SUNDAY[0];
+                }
+                continue;
+            }
+
+            // Re-apply weekday holidays
+            if (isHoliday) {
+                newShifts[dayIdx] = 'FF'; newHours[dayIdx] = SHIFT_HOURS.HOLIDAY[0]; continue;
+            }
+
+            // All other weekdays: preserve existing shift.
+            // If no data yet, default to work.
+            if (!emp.shifts[monthKey]) {
+                newShifts[dayIdx] = 'T'; newHours[dayIdx] = emp.workPeriod;
+            }
+        }
+
+        result[emp.id] = { shifts: newShifts, hours: newHours };
+    });
+
+    // ── Apprentices ────────────────────────────────────────────────────────────
+    activeApprentices.forEach(emp => {
+        const newShifts: ShiftType[] = [
+            ...(emp.shifts[monthKey] ?? (Array(daysInMonth).fill('T') as ShiftType[]))
+        ];
+        const newHours: string[] = [
+            ...(emp.dailyHours[monthKey] ?? Array(daysInMonth).fill(APPRENTICE_WORK_PERIOD))
+        ];
+
+        for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
+            const dayNum = dayIdx + 1;
+            const date = new Date(year, month, dayNum);
+            const dow = date.getDay();
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+            const isHoliday = holidaySet.has(dateStr);
+
+            if (emp.vacationStart && emp.vacationEnd) {
+                if (dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
+                    newShifts[dayIdx] = 'FE'; newHours[dayIdx] = APPRENTICE_WORK_PERIOD; continue;
+                }
+            }
+
+            if (dow === 0 || dow === 6) {
+                newShifts[dayIdx] = 'F'; newHours[dayIdx] = APPRENTICE_WORK_PERIOD; continue;
+            }
+            if (WEEKDAY_NAMES[dow] === emp.courseDay) {
+                newShifts[dayIdx] = 'C'; newHours[dayIdx] = APPRENTICE_WORK_PERIOD; continue;
+            }
+            if (isHoliday) {
+                newShifts[dayIdx] = 'FF'; newHours[dayIdx] = APPRENTICE_WORK_PERIOD; continue;
+            }
+
+            if (!emp.shifts[monthKey]) {
+                newShifts[dayIdx] = 'T'; newHours[dayIdx] = APPRENTICE_WORK_PERIOD;
+            }
+        }
+
+        result[emp.id] = { shifts: newShifts, hours: newHours };
+    });
 
     return result;
 }

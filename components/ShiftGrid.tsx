@@ -4,6 +4,7 @@ import { useDialog } from '../contexts/DialogContext';
 import { Employee, ShiftType, MonthYear, Holiday } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays } from '../constants';
+import { InconsistencyPanel } from './InconsistencyPanel';
 
 interface ShiftGridProps {
   employees: Employee[];
@@ -222,7 +223,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col w-full animate-fade-in">
       {/* Top Nav */}
-      <div className="bg-slate-50 p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-slate-50 p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4 relative">
         <div className="flex items-center gap-3">
           <button onClick={onPrevMonth} className="p-2 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg transition-all text-slate-600"><Icon name="chevron_left" /></button>
           <div className="bg-white px-6 py-2 rounded-lg border border-slate-200 shadow-sm">
@@ -232,6 +233,12 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
         </div>
         
         <div className="flex items-center gap-2">
+            <InconsistencyPanel
+              employees={employees}
+              currentMY={currentMY}
+              onSelectDay={onSelectDay}
+              onApplyFix={(empId, dayIdx, shift) => onUpdateShift(empId, dayIdx, shift)}
+            />
             <button 
               onClick={handleToggleLock} 
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-extrabold transition-all border ${isGridLocked ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
@@ -243,7 +250,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 <Icon name="event_busy" className="text-sm" /> Feriados
             </button>
             <button onClick={onResetMonth} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-extrabold hover:bg-slate-50 hover:text-slate-900 transition-all">
-                <Icon name="history" className="text-sm" /> Regerar Mês
+                <Icon name="sync" className="text-sm" /> Atualizar Mês
             </button>
             <button onClick={onGenerateNextMonth} className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg text-xs font-extrabold hover:bg-orange-600 shadow-sm transition-all">
                 <Icon name="auto_mode" className="text-sm" /> Gerar Próximo Mês

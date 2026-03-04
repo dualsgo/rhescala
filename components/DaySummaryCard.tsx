@@ -9,43 +9,58 @@ interface DaySummaryCardProps {
   currentMY: MonthYear;
 }
 
-// Lunch break windows per shift type (considering 1h break for CLT, spread across slots)
-const LUNCH_SLOTS = {
-  abertura: [   // 10h–18h20 → lunch window 12h–14h
-    { time: '12h00', label: '12h00' },
-    { time: '12h30', label: '12h30' },
-    { time: '13h00', label: '13h00' },
-    { time: '13h30', label: '13h30' },
-  ],
-  intermediario: [ // 12h–20h20 → lunch window 14h–16h
-    { time: '14h00', label: '14h00' },
-    { time: '14h30', label: '14h30' },
-    { time: '15h00', label: '15h00' },
-    { time: '15h30', label: '15h30' },
-  ],
-  fechamento: [ // 13h40–22h → lunch window 16h–18h
-    { time: '16h00', label: '16h00' },
-    { time: '16h30', label: '16h30' },
-    { time: '17h00', label: '17h00' },
-    { time: '17h30', label: '17h30' },
-  ],
-};
+// Lunch break configuration per shift type
+// windowStart / windowEnd in minutes from midnight, slotDuration in minutes
+const LUNCH_CONFIG = {
+  abertura:     { windowStart: 12 * 60,       windowEnd: 14 * 60,       slotDuration: 30, label: 'Abertura',     icon: 'wb_twilight',  color: 'orange' },
+  intermediario:{ windowStart: 14 * 60,       windowEnd: 16 * 60,       slotDuration: 30, label: 'Intermediário', icon: 'sunny',        color: 'sky'    },
+  fechamento:   { windowStart: 16 * 60,       windowEnd: 18 * 60,       slotDuration: 30, label: 'Fechamento',   icon: 'nightlight',   color: 'indigo' },
+} as const;
 
-function getLunchSuggestion(count: number, slots: { time: string; label: string }[]): string[] {
-  if (count === 0) return [];
-  if (count === 1) return [slots[1].label]; // single person: middle slot
-  if (count === 2) return [slots[0].label, slots[2].label]; // 2 people: split across 2 slots
-  if (count === 3) return [slots[0].label, slots[1].label, slots[2].label];
-  // For 4+: split into pairs across all slots
-  const result: string[] = [];
-  const perSlot = Math.ceil(count / slots.length);
-  slots.forEach((s, i) => {
-    const from = i * perSlot + 1;
-    const to = Math.min((i + 1) * perSlot, count);
-    if (from <= count) {
-      result.push(`${s.label} (${from === to ? `${from}º` : `${from}º–${to}º`})`);
-    }
-  });
+type ShiftGroup = keyof typeof LUNCH_CONFIG;
+
+/** Formats minutes-from-midnight as "HHhMM" */
+function fmtTime(mins: number): string {
+  const h = Math.floor(mins / 60).toString().padStart(2, '0');
+  const m = (mins % 60).toString().padStart(2, '0');
+  return m === '00' ? `${h}h` : `${h}h${m}`;
+}
+
+/**
+ * Given a list of employee names and a shift config, distributes them
+ * across time slots starting from windowStart, each slotDuration minutes.
+ * Returns an array of { time, names } objects.
+ *
+ * Algorithm:
+ *  1. Calculate total available slots in the window.
+ *  2. Base load per slot = floor(N / slots). Remainder slots get +1.
+ *  3. Fill from the FIRST slot onwards (sequential distribution).
+ */
+function buildLunchSlots(
+  names: string[],
+  config: typeof LUNCH_CONFIG[ShiftGroup]
+): { time: string; names: string[] }[] {
+  const n = names.length;
+  if (n === 0) return [];
+
+  const totalSlots = Math.floor((config.windowEnd - config.windowStart) / config.slotDuration);
+  const slotsNeeded = Math.min(totalSlots, n); // no need for more slots than people
+  const basePerSlot = Math.floor(n / slotsNeeded);
+  const remainder   = n % slotsNeeded;
+
+  const result: { time: string; names: string[] }[] = [];
+  let nameIdx = 0;
+
+  for (let s = 0; s < slotsNeeded; s++) {
+    const count     = basePerSlot + (s < remainder ? 1 : 0);
+    const slotNames = names.slice(nameIdx, nameIdx + count);
+    nameIdx += count;
+    result.push({
+      time:  fmtTime(config.windowStart + s * config.slotDuration),
+      names: slotNames,
+    });
+  }
+
   return result;
 }
 
@@ -103,9 +118,9 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
 
   const { counts, names } = data;
 
-  const lunchAberta = getLunchSuggestion(counts.abertura, LUNCH_SLOTS.abertura);
-  const lunchInter = getLunchSuggestion(counts.intermediario, LUNCH_SLOTS.intermediario);
-  const lunchFecha = getLunchSuggestion(counts.fechamento, LUNCH_SLOTS.fechamento);
+  const lunchAberta = buildLunchSlots(names.abertura, LUNCH_CONFIG.abertura);
+  const lunchInter  = buildLunchSlots(names.intermediario, LUNCH_CONFIG.intermediario);
+  const lunchFecha  = buildLunchSlots(names.fechamento, LUNCH_CONFIG.fechamento);
 
   const hasLunchData = counts.abertura > 0 || counts.intermediario > 0 || counts.fechamento > 0;
 
@@ -183,24 +198,24 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
             </div>
             <div>
               <h4 className="font-extrabold text-sm text-slate-900 leading-tight">Sugestão de Almoço</h4>
-              <p className="text-[10px] text-slate-400 font-medium">Distribuição para minimizar impacto na operação · CLT: 1h de pausa · Aprendiz: 15 min</p>
+              <p className="text-[10px] text-slate-400 font-medium">Distribuição sequencial a partir do 1º horário disponível · CLT: 1h pausa · Aprendiz: 15 min</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Abertura */}
-            {counts.abertura > 0 && (
+            {lunchAberta.length > 0 && (
               <div className="bg-orange-50/80 rounded-xl border border-orange-100 p-4">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-3">
                   <Icon name="wb_twilight" className="text-orange-500 text-sm" />
                   <span className="text-[10px] font-extrabold text-orange-600 uppercase tracking-wide">Abertura</span>
-                  <span className="text-[9px] text-orange-400 ml-auto">{counts.abertura} colabs</span>
+                  <span className="text-[9px] text-orange-400 ml-auto">{counts.abertura} colabs · janela 12h–14h</span>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   {lunchAberta.map((slot, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />
-                      <span className="text-[11px] font-extrabold text-slate-700">{slot}</span>
+                    <div key={i} className="flex items-start gap-2">
+                      <span className="w-14 flex-shrink-0 text-[10px] font-extrabold text-orange-600 bg-orange-100 rounded px-1.5 py-0.5 text-center">{slot.time}</span>
+                      <span className="text-[10px] font-bold text-slate-600 leading-snug">{slot.names.join(', ')}</span>
                     </div>
                   ))}
                 </div>
@@ -208,18 +223,18 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
             )}
 
             {/* Intermediário */}
-            {counts.intermediario > 0 && (
+            {lunchInter.length > 0 && (
               <div className="bg-sky-50/80 rounded-xl border border-sky-100 p-4">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-3">
                   <Icon name="sunny" className="text-sky-500 text-sm" />
                   <span className="text-[10px] font-extrabold text-sky-600 uppercase tracking-wide">Intermediário</span>
-                  <span className="text-[9px] text-sky-400 ml-auto">{counts.intermediario} colabs</span>
+                  <span className="text-[9px] text-sky-400 ml-auto">{counts.intermediario} colabs · janela 14h–16h</span>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   {lunchInter.map((slot, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-sky-400 flex-shrink-0" />
-                      <span className="text-[11px] font-extrabold text-slate-700">{slot}</span>
+                    <div key={i} className="flex items-start gap-2">
+                      <span className="w-14 flex-shrink-0 text-[10px] font-extrabold text-sky-600 bg-sky-100 rounded px-1.5 py-0.5 text-center">{slot.time}</span>
+                      <span className="text-[10px] font-bold text-slate-600 leading-snug">{slot.names.join(', ')}</span>
                     </div>
                   ))}
                 </div>
@@ -227,18 +242,18 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
             )}
 
             {/* Fechamento */}
-            {counts.fechamento > 0 && (
+            {lunchFecha.length > 0 && (
               <div className="bg-indigo-50/80 rounded-xl border border-indigo-100 p-4">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-3">
                   <Icon name="nightlight" className="text-indigo-500 text-sm" />
                   <span className="text-[10px] font-extrabold text-indigo-600 uppercase tracking-wide">Fechamento</span>
-                  <span className="text-[9px] text-indigo-400 ml-auto">{counts.fechamento} colabs</span>
+                  <span className="text-[9px] text-indigo-400 ml-auto">{counts.fechamento} colabs · janela 16h–18h</span>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   {lunchFecha.map((slot, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />
-                      <span className="text-[11px] font-extrabold text-slate-700">{slot}</span>
+                    <div key={i} className="flex items-start gap-2">
+                      <span className="w-14 flex-shrink-0 text-[10px] font-extrabold text-indigo-600 bg-indigo-100 rounded px-1.5 py-0.5 text-center">{slot.time}</span>
+                      <span className="text-[10px] font-bold text-slate-600 leading-snug">{slot.names.join(', ')}</span>
                     </div>
                   ))}
                 </div>
@@ -260,7 +275,7 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
           </div>
 
           <p className="text-[9px] text-slate-300 mt-3 text-right font-medium">
-            * Sugestão automática. Ajuste conforme demanda da loja.
+            * Sugestão automática baseada na quantidade de colaboradores por turno. Ajuste conforme demanda.
           </p>
         </div>
       )}

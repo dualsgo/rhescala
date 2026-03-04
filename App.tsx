@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { generateYearSchedule } from './hooks/useScheduleEngine';
+import { generateYearSchedule, applyMonthUpdate } from './hooks/useScheduleEngine';
 import { Header } from './components/Header';
 import { Icon } from './components/Icon';
 import { DaySummaryCard } from './components/DaySummaryCard';
@@ -27,7 +27,7 @@ const App: React.FC = () => {
   const { showDialog } = useDialog();
 
   const today = useMemo(() => new Date(2026, 2, 15), []); // Simulated "today"
-  const monthKey = `${currentMY.year}-${currentMY.month.toString().padStart(2, '0')}`;
+  const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
 
 
 
@@ -82,29 +82,48 @@ Esta ação substituirá qualquer escala existente para este mês.`;
     setSelectedDayIdx(0);
   }, [currentMY, employees, customHolidays, showDialog, setEmployees]);
 
-  // ─── Reset month ─────────────────────────────────────────────────────────
+  // ─── Update month (smart refresh) ──────────────────────────────────────────
   const resetMonth = useCallback(async () => {
+    const monthsNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    const activeRegular = employees.filter(e => e.status === 'active' && !e.isYoungApprentice);
+
+    const maxRest = Math.max(0, activeRegular.length - 5);
+    const sundayRotationStatus = maxRest === 0
+      ? `⚠️ ${activeRegular.length} CLT(s) — todos trabalham domingos (mínimo de 5 em loja)`
+      : `🔄 ${activeRegular.length} CLTs — ${maxRest} folga(s)/domingo em alternância (máx. 2 seguidos)`;
+
     const confirmed = await showDialog({
       type: 'confirm',
-      message: 'Deseja regenerar a escala deste mês automaticamente? As edições manuais serão perdidas.',
+      message: `Atualizar escala de ${monthsNames[currentMY.month]} ${currentMY.year}?
+
+✅ Domingos — nova lógica:
+• ${sundayRotationStatus}
+• Quem trabalhou mais domingos seguidos tem prioridade de folga
+• Considera o último domingo do mês anterior (retro-análise)
+• Máximo 2 domingos seguidos por colaborador
+
+✅ Dias de semana:
+• Folgas preferenciais replicadas
+• Feriados, férias e dias de curso dos Aprendizes
+
+🔒 Preservado: outros turnos editados manualmente`,
     });
     if (!confirmed) return;
 
-    const generated = generateYearSchedule(
+    const updated = applyMonthUpdate(
       employees,
       currentMY.year,
       currentMY.month,
-      currentMY.year,
       customHolidays
     );
 
     setEmployees(prev => prev.map(emp => {
-      const empGen = generated[emp.id];
-      if (!empGen || !empGen[monthKey]) return emp;
+      const empUpdated = updated[emp.id];
+      if (!empUpdated) return emp;
       return {
         ...emp,
-        shifts: { ...emp.shifts, [monthKey]: empGen[monthKey].shifts },
-        dailyHours: { ...emp.dailyHours, [monthKey]: empGen[monthKey].hours },
+        shifts: { ...emp.shifts, [monthKey]: empUpdated.shifts },
+        dailyHours: { ...emp.dailyHours, [monthKey]: empUpdated.hours },
       };
     }));
   }, [currentMY, employees, customHolidays, monthKey, showDialog, setEmployees]);
