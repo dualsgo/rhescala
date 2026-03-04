@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { generateYearSchedule } from './hooks/useScheduleEngine';
@@ -7,10 +7,9 @@ import { Header } from './components/Header';
 import { Icon } from './components/Icon';
 import { DaySummaryCard } from './components/DaySummaryCard';
 import { ShiftGrid } from './components/ShiftGrid';
-import { ActionToolbar } from './components/ActionToolbar';
 import { TeamView } from './components/TeamView';
 import { HolidayManager } from './components/HolidayManager';
-import { MOCK_EMPLOYEES, SHIFT_HOURS } from './constants';
+import { MOCK_EMPLOYEES, APPRENTICE_WORK_PERIOD } from './constants';
 import { Employee, ShiftType, MonthYear, Holiday } from './types';
 
 const CURRENT_YEAR = new Date().getFullYear(); // 2026
@@ -30,56 +29,7 @@ const App: React.FC = () => {
   const today = useMemo(() => new Date(2026, 2, 15), []); // Simulated "today"
   const monthKey = `${currentMY.year}-${currentMY.month.toString().padStart(2, '0')}`;
 
-  // ─── Smart Auto-generation ────────────────────────────────────────────────
-  /**
-   * Whenever the employee list OR custom holidays change, regenerate all months
-   * from the current month onwards up to Dec 31 of the current year.
-   * Manual overrides for months that already have data are preserved — only
-   * months that don't yet have any data for a given employee get generated.
-   * 
-   * Exception: if an employee has been explicitly assigned shifts for a future
-   * month (marked as 'manual'), those are left untouched. We detect "manual"
-   * by checking if there are any 'T' shifts that differ from what the engine
-   * would produce — but for simplicity we regenerate only blank months.
-   */
-  const regenerateFutureMonths = useCallback((
-    currentEmployees: Employee[],
-    holidays: Holiday[]
-  ) => {
-    const now = today;
-    const fromYear = now.getFullYear();
-    const fromMonth = now.getMonth(); // start from current month
 
-    const generated = generateYearSchedule(
-      currentEmployees,
-      fromYear,
-      fromMonth,
-      CURRENT_YEAR,
-      holidays
-    );
-
-    setEmployees(prev =>
-      prev.map(emp => {
-        const empGenerated = generated[emp.id];
-        if (!empGenerated) return emp;
-
-        let newShifts = { ...emp.shifts };
-        let newHours = { ...emp.dailyHours };
-
-        Object.entries(empGenerated).forEach(([mk, { shifts, hours }]) => {
-          // Only auto-fill months that have no existing data for this employee
-          const existingShifts = emp.shifts[mk];
-          const hasRealData = existingShifts && existingShifts.some(s => s === 'T' || s === 'C' || s === 'FF');
-          if (!hasRealData) {
-            newShifts[mk] = shifts;
-            newHours[mk] = hours;
-          }
-        });
-
-        return { ...emp, shifts: newShifts, dailyHours: newHours };
-      })
-    );
-  }, [today, setEmployees]);
 
   // ─── Manual "Generate next month" ────────────────────────────────────────
   const generateNextMonth = useCallback(async () => {
@@ -251,7 +201,7 @@ Esta ação substituirá qualquer escala existente para este mês.`;
   };
 
   // ─── Employee CRUD ────────────────────────────────────────────────────────
-  const addEmployee = (name: string, isYoung: boolean, courseDay: string) => {
+  const addEmployee = useCallback((name: string, isYoung: boolean, courseDay: string) => {
     const newEmp: Employee = {
       id: Date.now().toString(),
       name,
@@ -261,26 +211,44 @@ Esta ação substituirá qualquer escala existente para este mês.`;
       statusColor: '#' + Math.floor(Math.random() * 16777215).toString(16),
       shifts: {},
       dailyHours: {},
-      workPeriod: '10h às 18h20',
+      workPeriod: isYoung ? APPRENTICE_WORK_PERIOD : '10h às 18h20',
       preferredDayOff: 'Segunda-feira',
       shiftName: 'Abertura',
       hiredAt: new Date().toISOString().split('T')[0],
     };
-    setEmployees(prev => {
-      const updated = [...prev, newEmp];
-      // Trigger regeneration for future months with the new team
-      setTimeout(() => regenerateFutureMonths(updated, customHolidays), 0);
-      return updated;
-    });
-  };
 
-  const handleDeleteEmployee = async (id: string) => {
+    // Add the employee and generate their schedule atomically in a single update.
+    // We use the functional form of setEmployees so we always get the latest list.
     setEmployees(prev => {
-      const updated = prev.filter(e => e.id !== id);
-      setTimeout(() => regenerateFutureMonths(updated, customHolidays), 0);
-      return updated;
+      const updatedList = [...prev, newEmp];
+
+      // Generate schedule for the new employee using the full (updated) team list
+      const now = today;
+      const generated = generateYearSchedule(
+        updatedList,
+        now.getFullYear(),
+        now.getMonth(),
+        CURRENT_YEAR,
+        customHolidays
+      );
+
+      // Apply generated shifts only to the new employee (others already have data)
+      return updatedList.map(emp => {
+        if (emp.id !== newEmp.id) return emp;
+        const empGenerated = generated[emp.id];
+        if (!empGenerated) return emp;
+        return {
+          ...emp,
+          shifts: { ...emp.shifts, ...Object.fromEntries(Object.entries(empGenerated).map(([mk, v]) => [mk, v.shifts])) },
+          dailyHours: { ...emp.dailyHours, ...Object.fromEntries(Object.entries(empGenerated).map(([mk, v]) => [mk, v.hours])) },
+        };
+      });
     });
-  };
+  }, [today, customHolidays, setEmployees]);
+
+  const handleDeleteEmployee = useCallback((id: string) => {
+    setEmployees(prev => prev.filter(e => e.id !== id));
+  }, [setEmployees]);
 
   const handleUpdateEmployee = (id: string, data: Partial<Employee>) => {
     setEmployees(prev => prev.map(e => e.id === id ? { ...e, ...data } : e));
@@ -288,7 +256,13 @@ Esta ação substituirá qualquer escala existente para este mês.`;
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header currentView={currentView} onViewChange={setCurrentView} currentMY={currentMY} />
+      <Header
+        currentView={currentView}
+        onViewChange={setCurrentView}
+        currentMY={currentMY}
+        employees={employees}
+        onImportClick={() => fileInputRef.current?.click()}
+      />
 
       {/* Holiday Manager Modal */}
       {showHolidayManager && (
@@ -333,18 +307,11 @@ Esta ação substituirá qualquer escala existente para este mês.`;
       <main className="flex-1 px-4 sm:px-6 lg:px-10 py-8 max-w-[1700px] mx-auto w-full">
         {currentView === 'dashboard' ? (
           <>
-            <div className="mb-4 animate-fade-in flex flex-col sm:flex-row sm:items-end justify-between gap-6" />
 
             <DaySummaryCard
               employees={employees}
               selectedDayIdx={selectedDayIdx}
               currentMY={currentMY}
-            />
-
-            <ActionToolbar
-              employees={employees}
-              currentMY={currentMY}
-              onImportClick={() => fileInputRef.current?.click()}
             />
 
             <input type="file" accept=".json" ref={fileInputRef} className="hidden" onChange={handleImportBackup} />

@@ -22,15 +22,23 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
     // persists the new value to localStorage.
     const setValue = (value: T | ((val: T) => T)) => {
         try {
-            // Allow value to be a function so we have same API as useState
-            const valueToStore = value instanceof Function ? value(storedValue) : value;
-
-            // Save state
-            setStoredValue(valueToStore);
-
-            // Save to local storage
-            if (typeof window !== 'undefined') {
-                window.localStorage.setItem(key, JSON.stringify(valueToStore));
+            if (value instanceof Function) {
+                // Pass the updater function to React's setState so it always
+                // receives the latest state value (avoids stale closure bugs).
+                setStoredValue(prev => {
+                    const valueToStore = value(prev);
+                    if (typeof window !== 'undefined') {
+                        window.localStorage.setItem(key, JSON.stringify(valueToStore));
+                    }
+                    return valueToStore;
+                });
+            } else {
+                // Save state
+                setStoredValue(value);
+                // Save to local storage
+                if (typeof window !== 'undefined') {
+                    window.localStorage.setItem(key, JSON.stringify(value));
+                }
             }
         } catch (error) {
             console.warn(`Error setting localStorage key "${key}":`, error);

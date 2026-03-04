@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useDialog } from '../contexts/DialogContext';
 import { Employee } from '../types';
 import { Icon } from './Icon';
-import { SHIFT_HOURS } from '../constants';
+import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD } from '../constants';
 
 interface TeamViewProps {
   employees: Employee[];
@@ -124,12 +124,23 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                 </div>
               )}
 
-              <div>
-                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Horário Padrão</label>
-                <select value={emp.workPeriod} onChange={(e) => onUpdateEmployee(emp.id, { workPeriod: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold p-3 outline-none focus:ring-2 focus:ring-orange-500">
-                  {SHIFT_HOURS.WEEKDAY.map(h => <option key={h} value={h}>{h}</option>)}
-                </select>
-              </div>
+              {emp.isYoungApprentice ? (
+                <div>
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Horário Padrão</label>
+                  <div className="w-full bg-teal-50 border border-teal-100 rounded-lg text-xs font-bold p-3 text-teal-700 flex items-center gap-2">
+                    <span className="text-[9px] bg-teal-100 text-teal-600 font-extrabold px-2 py-0.5 rounded uppercase tracking-widest">Fixo</span>
+                    {APPRENTICE_WORK_PERIOD}
+                    <span className="text-[9px] text-teal-400 ml-auto">(pausa 15min)</span>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Horário Padrão</label>
+                  <select value={emp.workPeriod} onChange={(e) => onUpdateEmployee(emp.id, { workPeriod: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold p-3 outline-none focus:ring-2 focus:ring-orange-500">
+                    {SHIFT_HOURS.WEEKDAY.map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>

@@ -1,6 +1,6 @@
 
 import { Employee, ShiftType, Holiday } from '../types';
-import { SHIFT_HOURS, buildHolidaySet } from '../constants';
+import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet } from '../constants';
 
 /**
  * Generates the full shift schedule for a single employee for a single month.
@@ -68,16 +68,16 @@ export function generateMonthForEmployee(
             if (dow === 0 || dow === 6) {
                 // Always off on weekends
                 shifts.push('F');
-                hours.push(emp.workPeriod);
+                hours.push(APPRENTICE_WORK_PERIOD);
             } else if (weekdayNames[dow] === emp.courseDay) {
                 shifts.push('C');
-                hours.push(emp.workPeriod);
+                hours.push(APPRENTICE_WORK_PERIOD);
             } else if (isHoliday) {
                 shifts.push('FF');
-                hours.push(SHIFT_HOURS.HOLIDAY[0]);
+                hours.push(APPRENTICE_WORK_PERIOD);
             } else {
                 shifts.push('T');
-                hours.push(emp.workPeriod);
+                hours.push(APPRENTICE_WORK_PERIOD);
             }
             continue;
         }
