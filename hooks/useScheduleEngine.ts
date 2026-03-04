@@ -474,11 +474,10 @@ export function applyMonthUpdate(
                 newShifts[dayIdx] = 'FF'; newHours[dayIdx] = SHIFT_HOURS.HOLIDAY[0]; continue;
             }
 
-            // All other weekdays: preserve existing shift.
-            // If no data yet, default to work.
-            if (!emp.shifts[monthKey]) {
-                newShifts[dayIdx] = 'T'; newHours[dayIdx] = emp.workPeriod;
-            }
+            // All other weekdays: always apply default work + standard hours.
+            // This ensures "Atualizar Mês" re-applies preferred day-offs and hours for the whole month.
+            newShifts[dayIdx] = 'T';
+            newHours[dayIdx] = emp.workPeriod;
         }
 
         result[emp.id] = { shifts: newShifts, hours: newHours };
@@ -486,12 +485,8 @@ export function applyMonthUpdate(
 
     // ── Apprentices ────────────────────────────────────────────────────────────
     activeApprentices.forEach(emp => {
-        const newShifts: ShiftType[] = [
-            ...(emp.shifts[monthKey] ?? (Array(daysInMonth).fill('T') as ShiftType[]))
-        ];
-        const newHours: string[] = [
-            ...(emp.dailyHours[monthKey] ?? Array(daysInMonth).fill(APPRENTICE_WORK_PERIOD))
-        ];
+        const newShifts: ShiftType[] = Array(daysInMonth).fill('T') as ShiftType[];
+        const newHours: string[] = Array(daysInMonth).fill(APPRENTICE_WORK_PERIOD);
 
         for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
             const dayNum = dayIdx + 1;
@@ -516,9 +511,7 @@ export function applyMonthUpdate(
                 newShifts[dayIdx] = 'FF'; newHours[dayIdx] = APPRENTICE_WORK_PERIOD; continue;
             }
 
-            if (!emp.shifts[monthKey]) {
-                newShifts[dayIdx] = 'T'; newHours[dayIdx] = APPRENTICE_WORK_PERIOD;
-            }
+            newShifts[dayIdx] = 'T'; newHours[dayIdx] = APPRENTICE_WORK_PERIOD;
         }
 
         result[emp.id] = { shifts: newShifts, hours: newHours };

@@ -16,7 +16,7 @@ interface ShiftGridProps {
   onUpdateShift: (empId: string, dayIdx: number, newShift: ShiftType) => void;
   onUpdateEmployeeDailyHour: (empId: string, dayIdx: number, newHour: string) => void;
   onShareWhatsApp: (dayIdx: number) => void;
-  onGenerateNextMonth: () => void;
+
   onResetMonth: () => void;
   onShowHolidayManager: () => void;
   onNextMonth: () => void;
@@ -33,7 +33,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onUpdateShift,
   onUpdateEmployeeDailyHour,
   onShareWhatsApp,
-  onGenerateNextMonth,
   onResetMonth,
   onShowHolidayManager,
   onNextMonth,
@@ -249,11 +248,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             <button onClick={onShowHolidayManager} className="flex items-center gap-2 px-4 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-xs font-extrabold hover:bg-rose-50 transition-all">
                 <Icon name="event_busy" className="text-sm" /> Feriados
             </button>
-            <button onClick={onResetMonth} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-extrabold hover:bg-slate-50 hover:text-slate-900 transition-all">
+            <button onClick={onResetMonth} className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg text-xs font-extrabold hover:bg-orange-600 shadow-sm transition-all">
                 <Icon name="sync" className="text-sm" /> Atualizar Mês
-            </button>
-            <button onClick={onGenerateNextMonth} className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg text-xs font-extrabold hover:bg-orange-600 shadow-sm transition-all">
-                <Icon name="auto_mode" className="text-sm" /> Gerar Próximo Mês
             </button>
         </div>
       </div>

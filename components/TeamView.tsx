@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useDialog } from '../contexts/DialogContext';
-import { Employee } from '../types';
+import { Employee, EmployeeCargo } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, PLACEHOLDER_EMPLOYEE_ID } from '../constants';
 
@@ -9,7 +9,26 @@ interface TeamViewProps {
   employees: Employee[];
   onUpdateEmployee: (empId: string, data: Partial<Employee>) => void;
   onDeleteEmployee: (empId: string) => void;
-  onAddEmployee: (name: string, isYoung: boolean, courseDay: string) => void;
+  onAddEmployee: (name: string, isYoung: boolean, courseDay: string, cargo: EmployeeCargo) => void;
+}
+
+const CARGO_OPTIONS: EmployeeCargo[] = ['Auxiliar de Loja', 'Estoquista'];
+
+/** Adds `days` calendar days to a YYYY-MM-DD string and returns YYYY-MM-DD */
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+}
+
+/** When user sets vacation start (saída), auto-compute end = start + 30 days */
+function handleVacationStart(empId: string, startDate: string, onUpdate: (id: string, data: Partial<Employee>) => void) {
+  if (!startDate) {
+    onUpdate(empId, { vacationStart: '', vacationEnd: '' });
+    return;
+  }
+  const endDate = addDays(startDate, 30);
+  onUpdate(empId, { vacationStart: startDate, vacationEnd: endDate });
 }
 
 export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee, onDeleteEmployee, onAddEmployee }) => {
@@ -17,6 +36,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
   const [newName, setNewName] = useState('');
   const [isYoung, setIsYoung] = useState(false);
   const [courseDay, setCourseDay] = useState('Segunda-feira');
+  const [newCargo, setNewCargo] = useState<EmployeeCargo>('Auxiliar de Loja');
 
   const { showDialog } = useDialog();
 
@@ -28,9 +48,10 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
         message: `Deseja cadastrar o colaborador ${newName}?`
       });
       if (confirmed) {
-        onAddEmployee(newName, isYoung, courseDay);
+        onAddEmployee(newName, isYoung, courseDay, newCargo);
         setNewName('');
         setIsYoung(false);
+        setNewCargo('Auxiliar de Loja');
         setShowAddModal(false);
       }
     }
@@ -60,6 +81,27 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                 <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Nome Completo</label>
                 <input autoFocus type="text" value={newName} onChange={(e) => setNewName(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Nome do colaborador" />
               </div>
+
+              {/* Cargo */}
+              <div>
+                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Cargo</label>
+                <div className="flex gap-2">
+                  {CARGO_OPTIONS.map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setNewCargo(c)}
+                      className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold border transition-all ${
+                        newCargo === c
+                          ? 'bg-orange-500 text-white border-orange-500 shadow'
+                          : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-orange-300'
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
               
               <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
                 <input type="checkbox" id="isYoung" checked={isYoung} onChange={(e) => setIsYoung(e.target.checked)} className="w-5 h-5 accent-orange-500 rounded" />
@@ -87,6 +129,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {employees.map(emp => {
           const isPlaceholder = emp.id === PLACEHOLDER_EMPLOYEE_ID;
+          const cargo: EmployeeCargo = emp.cargo ?? 'Auxiliar de Loja';
           return (
           <div key={emp.id} className={`bg-white rounded-xl border shadow-sm p-6 hover:shadow-md transition-all ${
             isPlaceholder ? 'border-dashed border-slate-300 opacity-70' : 'border-slate-200'
@@ -99,9 +142,11 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                       ⏳ Aguardando cadastro real
                     </span>
                   ) : emp.isYoungApprentice ? (
-                    <span className="text-[9px] font-extrabold text-teal-600 uppercase tracking-widest mt-1">Jovem Aprendiz (Curso: {emp.courseDay})</span>
+                    <span className="text-[9px] font-extrabold text-teal-600 uppercase tracking-widest mt-1">Jovem Aprendiz · {emp.courseDay}</span>
                   ) : (
-                    <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">Colaborador CLT</span>
+                    <span className={`text-[9px] font-extrabold uppercase tracking-widest mt-1 ${cargo === 'Estoquista' ? 'text-violet-600' : 'text-slate-400'}`}>
+                      {cargo}
+                    </span>
                   )}
               </div>
               <button 
@@ -125,6 +170,33 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
 
             {!isPlaceholder && (
               <div className="space-y-4">
+
+                {/* ── Cargo (somente CLT não-aprendiz) ── */}
+                {!emp.isYoungApprentice && (
+                  <div>
+                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Cargo</label>
+                    <div className="flex gap-2">
+                      {CARGO_OPTIONS.map(c => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => onUpdateEmployee(emp.id, { cargo: c })}
+                          className={`flex-1 py-2 rounded-lg text-[10px] font-extrabold border transition-all ${
+                            cargo === c
+                              ? c === 'Estoquista'
+                                ? 'bg-violet-500 text-white border-violet-500'
+                                : 'bg-orange-500 text-white border-orange-500'
+                              : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-orange-300'
+                          }`}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Dia de Curso (aprendiz) ── */}
                 {emp.isYoungApprentice && (
                   <div>
                     <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Dia de Curso</label>
@@ -138,6 +210,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                   </div>
                 )}
 
+                {/* ── Horário Padrão ── */}
                 {emp.isYoungApprentice ? (
                   <div>
                     <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Horário Padrão</label>
@@ -156,17 +229,27 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Início Férias</label>
-                    <input type="date" value={emp.vacationStart || ''} onChange={(e) => onUpdateEmployee(emp.id, { vacationStart: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-lg text-[11px] font-bold p-2.5 outline-none" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Fim Férias</label>
-                    <input type="date" value={emp.vacationEnd || ''} onChange={(e) => onUpdateEmployee(emp.id, { vacationEnd: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-lg text-[11px] font-bold p-2.5 outline-none" />
-                  </div>
+                {/* ── Férias: apenas data de saída, retorno calculado ── */}
+                <div>
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">
+                    Saída para Férias
+                  </label>
+                  <input
+                    type="date"
+                    value={emp.vacationStart || ''}
+                    onChange={(e) => handleVacationStart(emp.id, e.target.value, onUpdateEmployee)}
+                    className="w-full bg-slate-50 border border-slate-100 rounded-lg text-[11px] font-bold p-2.5 outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                  {emp.vacationStart && emp.vacationEnd && (
+                    <p className="text-[9px] font-bold text-violet-500 mt-1.5 flex items-center gap-1">
+                      <span>📅</span>
+                      Retorno: <strong>{new Date(emp.vacationEnd + 'T00:00:00').toLocaleDateString('pt-BR')}</strong>
+                      <span className="text-slate-300 ml-1">(30 dias)</span>
+                    </p>
+                  )}
                 </div>
 
+                {/* ── Folga Fixa Sugerida ── */}
                 <div>
                   <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Folga Fixa Sugerida</label>
                   <select value={emp.preferredDayOff} onChange={(e) => onUpdateEmployee(emp.id, { preferredDayOff: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold p-3 outline-none focus:ring-2 focus:ring-orange-500">

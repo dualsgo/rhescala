@@ -9,12 +9,13 @@ interface DaySummaryCardProps {
   currentMY: MonthYear;
 }
 
-// Lunch break configuration per shift type
-// windowStart / windowEnd in minutes from midnight, slotDuration in minutes
+// ─── Lunch interval definitions ───────────────────────────────────────────────
+// Each shift has discrete 30-min possible slots within its window.
+// Goal: ONE person per slot. Only stack when n > total available slots.
 const LUNCH_CONFIG = {
-  abertura:     { windowStart: 12 * 60,       windowEnd: 14 * 60,       slotDuration: 30, label: 'Abertura',     icon: 'wb_twilight',  color: 'orange' },
-  intermediario:{ windowStart: 14 * 60,       windowEnd: 16 * 60,       slotDuration: 30, label: 'Intermediário', icon: 'sunny',        color: 'sky'    },
-  fechamento:   { windowStart: 16 * 60,       windowEnd: 18 * 60,       slotDuration: 30, label: 'Fechamento',   icon: 'nightlight',   color: 'indigo' },
+  abertura:      { windowStart: 12 * 60, windowEnd: 14 * 60, slotDuration: 30, label: 'Abertura',     icon: 'wb_twilight', color: 'orange' },
+  intermediario: { windowStart: 14 * 60, windowEnd: 16 * 60, slotDuration: 30, label: 'Intermediário', icon: 'sunny',       color: 'sky'    },
+  fechamento:    { windowStart: 15 * 60, windowEnd: 18 * 60, slotDuration: 30, label: 'Fechamento',   icon: 'nightlight',  color: 'indigo' },
 } as const;
 
 type ShiftGroup = keyof typeof LUNCH_CONFIG;
@@ -27,41 +28,55 @@ function fmtTime(mins: number): string {
 }
 
 /**
- * Given a list of employee names and a shift config, distributes them
- * across time slots starting from windowStart, each slotDuration minutes.
- * Returns an array of { time, names } objects.
+ * Returns all discrete possible lunch slot labels for a shift config.
+ * e.g. Abertura (12h-14h, 30min) → ["12h", "12h30", "13h", "13h30"]
+ */
+function getAvailableSlots(config: typeof LUNCH_CONFIG[ShiftGroup]): string[] {
+  const slots: string[] = [];
+  for (let t = config.windowStart; t < config.windowEnd; t += config.slotDuration) {
+    slots.push(fmtTime(t));
+  }
+  return slots;
+}
+
+/**
+ * Distributes employees across available lunch slots trying to keep
+ * ONE person per slot. Only stacks when n > totalSlots (round-robin).
  *
  * Algorithm:
- *  1. Calculate total available slots in the window.
- *  2. Base load per slot = floor(N / slots). Remainder slots get +1.
- *  3. Fill from the FIRST slot onwards (sequential distribution).
+ *  1. List all possible slots (e.g. 4 slots for a 2h window in 30min steps).
+ *  2. Assign each person to slot[idx % totalSlots] — this fills slot 0, 1, 2, 3,
+ *     then wraps to 0, 1… ensuring balanced stacking if overflow occurs.
+ *  3. Return only slots that have ≥1 person, preserving time order.
  */
 function buildLunchSlots(
   names: string[],
   config: typeof LUNCH_CONFIG[ShiftGroup]
-): { time: string; names: string[] }[] {
+): { time: string; names: string[]; isDouble: boolean }[] {
   const n = names.length;
   if (n === 0) return [];
 
-  const totalSlots = Math.floor((config.windowEnd - config.windowStart) / config.slotDuration);
-  const slotsNeeded = Math.min(totalSlots, n); // no need for more slots than people
-  const basePerSlot = Math.floor(n / slotsNeeded);
-  const remainder   = n % slotsNeeded;
+  const availableSlots = getAvailableSlots(config);
+  const totalSlots = availableSlots.length;
 
-  const result: { time: string; names: string[] }[] = [];
-  let nameIdx = 0;
+  // Initialise each slot with an empty list
+  const slotMap: Record<string, string[]> = {};
+  availableSlots.forEach(t => { slotMap[t] = []; });
 
-  for (let s = 0; s < slotsNeeded; s++) {
-    const count     = basePerSlot + (s < remainder ? 1 : 0);
-    const slotNames = names.slice(nameIdx, nameIdx + count);
-    nameIdx += count;
-    result.push({
-      time:  fmtTime(config.windowStart + s * config.slotDuration),
-      names: slotNames,
-    });
-  }
+  // Round-robin assignment: one per slot before doubling
+  names.forEach((name, idx) => {
+    const slotLabel = availableSlots[idx % totalSlots];
+    slotMap[slotLabel].push(name);
+  });
 
-  return result;
+  // Return occupied slots in time order, flagging overloaded ones
+  return availableSlots
+    .filter(t => slotMap[t].length > 0)
+    .map(t => ({
+      time: t,
+      names: slotMap[t],
+      isDouble: slotMap[t].length > 1,
+    }));
 }
 
 export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selectedDayIdx, currentMY }) => {
@@ -69,10 +84,10 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
 
   const data = useMemo(() => {
     const counts = {
-      abertura: 0,       // 10h employees
-      intermediario: 0,  // 12h employees
-      fechamento: 0,     // 13h40 employees
-      aprendiz: 0,       // apprentices working
+      abertura: 0,
+      intermediario: 0,
+      fechamento: 0,
+      aprendiz: 0,
       folga: 0,
       curso: 0,
       ferias: 0,
@@ -94,7 +109,6 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
         if (e.isYoungApprentice) {
           counts.aprendiz++;
           counts.total++;
-          // aprendizes are always abertura-like for lunch purposes but have 15min break only
         } else {
           counts.total++;
           if (hForDay.includes('10h')) {
@@ -123,6 +137,11 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
   const lunchFecha  = buildLunchSlots(names.fechamento, LUNCH_CONFIG.fechamento);
 
   const hasLunchData = counts.abertura > 0 || counts.intermediario > 0 || counts.fechamento > 0;
+
+  // Possible slots labels for each group (shown in the header)
+  const slotsAbertura = getAvailableSlots(LUNCH_CONFIG.abertura);
+  const slotsInter    = getAvailableSlots(LUNCH_CONFIG.intermediario);
+  const slotsFecha    = getAvailableSlots(LUNCH_CONFIG.fechamento);
 
   return (
     <div className="flex flex-col gap-4 mb-8 animate-fade-in">
@@ -198,7 +217,7 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
             </div>
             <div>
               <h4 className="font-extrabold text-sm text-slate-900 leading-tight">Sugestão de Almoço</h4>
-              <p className="text-[10px] text-slate-400 font-medium">Distribuição sequencial a partir do 1º horário disponível · CLT: 1h pausa · Aprendiz: 15 min</p>
+              <p className="text-[10px] text-slate-400 font-medium">1 pessoa por horário sempre que possível · CLT: 1h pausa · Aprendiz: 15 min</p>
             </div>
           </div>
 
@@ -206,16 +225,27 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
             {/* Abertura */}
             {lunchAberta.length > 0 && (
               <div className="bg-orange-50/80 rounded-xl border border-orange-100 p-4">
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-1">
                   <Icon name="wb_twilight" className="text-orange-500 text-sm" />
                   <span className="text-[10px] font-extrabold text-orange-600 uppercase tracking-wide">Abertura</span>
-                  <span className="text-[9px] text-orange-400 ml-auto">{counts.abertura} colabs · janela 12h–14h</span>
+                  <span className="text-[9px] text-orange-400 ml-auto">{counts.abertura} colab{counts.abertura > 1 ? 's' : ''}</span>
+                </div>
+                {/* Available slots pills */}
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {slotsAbertura.map(s => (
+                    <span key={s} className="text-[8px] font-bold text-orange-300 border border-orange-200 rounded px-1 py-0.5">{s}</span>
+                  ))}
                 </div>
                 <div className="space-y-1.5">
                   {lunchAberta.map((slot, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <span className="w-14 flex-shrink-0 text-[10px] font-extrabold text-orange-600 bg-orange-100 rounded px-1.5 py-0.5 text-center">{slot.time}</span>
-                      <span className="text-[10px] font-bold text-slate-600 leading-snug">{slot.names.join(', ')}</span>
+                    <div key={i} className={`flex items-start gap-2 ${slot.isDouble ? 'opacity-80' : ''}`}>
+                      <span className={`w-14 flex-shrink-0 text-[10px] font-extrabold rounded px-1.5 py-0.5 text-center ${slot.isDouble ? 'bg-amber-100 text-amber-700 border border-amber-300' : 'bg-orange-100 text-orange-600'}`}>
+                        {slot.time}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-600 leading-snug">
+                        {slot.names.join(', ')}
+                        {slot.isDouble && <span className="ml-1 text-[8px] text-amber-500 font-extrabold">(2×)</span>}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -225,16 +255,27 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
             {/* Intermediário */}
             {lunchInter.length > 0 && (
               <div className="bg-sky-50/80 rounded-xl border border-sky-100 p-4">
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-1">
                   <Icon name="sunny" className="text-sky-500 text-sm" />
                   <span className="text-[10px] font-extrabold text-sky-600 uppercase tracking-wide">Intermediário</span>
-                  <span className="text-[9px] text-sky-400 ml-auto">{counts.intermediario} colabs · janela 14h–16h</span>
+                  <span className="text-[9px] text-sky-400 ml-auto">{counts.intermediario} colab{counts.intermediario > 1 ? 's' : ''}</span>
+                </div>
+                {/* Available slots pills */}
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {slotsInter.map(s => (
+                    <span key={s} className="text-[8px] font-bold text-sky-300 border border-sky-200 rounded px-1 py-0.5">{s}</span>
+                  ))}
                 </div>
                 <div className="space-y-1.5">
                   {lunchInter.map((slot, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <span className="w-14 flex-shrink-0 text-[10px] font-extrabold text-sky-600 bg-sky-100 rounded px-1.5 py-0.5 text-center">{slot.time}</span>
-                      <span className="text-[10px] font-bold text-slate-600 leading-snug">{slot.names.join(', ')}</span>
+                    <div key={i} className={`flex items-start gap-2 ${slot.isDouble ? 'opacity-80' : ''}`}>
+                      <span className={`w-14 flex-shrink-0 text-[10px] font-extrabold rounded px-1.5 py-0.5 text-center ${slot.isDouble ? 'bg-amber-100 text-amber-700 border border-amber-300' : 'bg-sky-100 text-sky-600'}`}>
+                        {slot.time}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-600 leading-snug">
+                        {slot.names.join(', ')}
+                        {slot.isDouble && <span className="ml-1 text-[8px] text-amber-500 font-extrabold">(2×)</span>}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -244,16 +285,27 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
             {/* Fechamento */}
             {lunchFecha.length > 0 && (
               <div className="bg-indigo-50/80 rounded-xl border border-indigo-100 p-4">
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-1">
                   <Icon name="nightlight" className="text-indigo-500 text-sm" />
                   <span className="text-[10px] font-extrabold text-indigo-600 uppercase tracking-wide">Fechamento</span>
-                  <span className="text-[9px] text-indigo-400 ml-auto">{counts.fechamento} colabs · janela 16h–18h</span>
+                  <span className="text-[9px] text-indigo-400 ml-auto">{counts.fechamento} colab{counts.fechamento > 1 ? 's' : ''} · janela 15h–18h</span>
+                </div>
+                {/* Available slots pills */}
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {slotsFecha.map(s => (
+                    <span key={s} className="text-[8px] font-bold text-indigo-300 border border-indigo-200 rounded px-1 py-0.5">{s}</span>
+                  ))}
                 </div>
                 <div className="space-y-1.5">
                   {lunchFecha.map((slot, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <span className="w-14 flex-shrink-0 text-[10px] font-extrabold text-indigo-600 bg-indigo-100 rounded px-1.5 py-0.5 text-center">{slot.time}</span>
-                      <span className="text-[10px] font-bold text-slate-600 leading-snug">{slot.names.join(', ')}</span>
+                    <div key={i} className={`flex items-start gap-2 ${slot.isDouble ? 'opacity-80' : ''}`}>
+                      <span className={`w-14 flex-shrink-0 text-[10px] font-extrabold rounded px-1.5 py-0.5 text-center ${slot.isDouble ? 'bg-amber-100 text-amber-700 border border-amber-300' : 'bg-indigo-100 text-indigo-600'}`}>
+                        {slot.time}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-600 leading-snug">
+                        {slot.names.join(', ')}
+                        {slot.isDouble && <span className="ml-1 text-[8px] text-amber-500 font-extrabold">(2×)</span>}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -275,7 +327,7 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
           </div>
 
           <p className="text-[9px] text-slate-300 mt-3 text-right font-medium">
-            * Sugestão automática baseada na quantidade de colaboradores por turno. Ajuste conforme demanda.
+            * 1 pessoa por horário sempre que possível · horários em âmbar indicam sobreposição inevitável · ajuste conforme demanda.
           </p>
         </div>
       )}

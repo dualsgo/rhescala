@@ -120,12 +120,8 @@ export const MOCK_EMPLOYEES: Employee[] = names.map((name, i) => {
     courseDay: isYA ? 'Quarta-feira' : undefined,
     status: 'active',
     statusColor: i % 2 === 0 ? '#ff8400' : '#3b82f6',
-    shifts: {
-      '2026-02': Array.from({ length: 28 }, () => (Math.random() > 0.2 ? 'T' : 'F')),
-    },
-    dailyHours: {
-      '2026-02': Array(28).fill(defaultHour),
-    },
+    shifts: {},
+    dailyHours: {},
     workPeriod: defaultHour,
     preferredDayOff: daysOff[i % daysOff.length],
     shiftName: i < 7 ? 'Abertura' : (i < 10 ? 'Intermediário' : 'Fechamento'),

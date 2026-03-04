@@ -10,7 +10,7 @@ import { ShiftGrid } from './components/ShiftGrid';
 import { TeamView } from './components/TeamView';
 import { HolidayManager } from './components/HolidayManager';
 import { APPRENTICE_WORK_PERIOD, PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID } from './constants';
-import { Employee, ShiftType, MonthYear, Holiday } from './types';
+import { Employee, ShiftType, MonthYear, Holiday, EmployeeCargo } from './types';
 
 const CURRENT_YEAR = new Date().getFullYear(); // 2026
 
@@ -29,58 +29,28 @@ const App: React.FC = () => {
   const today = useMemo(() => new Date(2026, 2, 15), []); // Simulated "today"
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
 
+  // Auto-generate month if it's completely empty
+  React.useEffect(() => {
+    // If we only have the placeholder, do nothing
+    if (employees.length === 1 && employees[0].id === 'placeholder') return;
 
-
-  // ─── Manual "Generate next month" ────────────────────────────────────────
-  const generateNextMonth = useCallback(async () => {
-    let nextMonth = currentMY.month + 1;
-    let nextYear = currentMY.year;
-    if (nextMonth > 11) { nextMonth = 0; nextYear++; }
-
-    if (nextYear > CURRENT_YEAR) {
-      await showDialog({ type: 'alert', message: 'Geração automática limitada a 31/12 do ano vigente.' });
-      return;
+    // Check if the current month has any generated data for active employees
+    const hasData = employees.some(e => e.status === 'active' && e.shifts[monthKey] && e.shifts[monthKey].length > 0);
+    
+    // If not, auto-generate and apply it silently (without breaking manual edits in other months)
+    if (!hasData) {
+      const updated = applyMonthUpdate(employees, currentMY.year, currentMY.month, customHolidays);
+      setEmployees(prev => prev.map(emp => {
+        const empUpdated = updated[emp.id];
+        if (!empUpdated) return emp;
+        return {
+          ...emp,
+          shifts: { ...emp.shifts, [monthKey]: empUpdated.shifts },
+          dailyHours: { ...emp.dailyHours, [monthKey]: empUpdated.hours },
+        };
+      }));
     }
-
-    const monthsNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-
-    const activeRegular = employees.filter(e => e.status === 'active' && !e.isYoungApprentice);
-    const activeApprentices = employees.filter(e => e.status === 'active' && e.isYoungApprentice);
-
-    const summaryText = `Gerar escala automática para ${monthsNames[nextMonth]} ${nextYear}?
-
-👥 ${activeRegular.length} colaboradores CLT + ${activeApprentices.length} Jovens Aprendizes
-📅 Feriados nacionais considerados automaticamente
-🔄 Rotação de domingos baseada no time atual
-
-Esta ação substituirá qualquer escala existente para este mês.`;
-
-    const confirmed = await showDialog({ type: 'confirm', message: summaryText });
-    if (!confirmed) return;
-
-    const generated = generateYearSchedule(
-      employees,
-      nextYear,
-      nextMonth,
-      nextYear,
-      customHolidays
-    );
-
-    const targetKey = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}`;
-
-    setEmployees(prev => prev.map(emp => {
-      const empGen = generated[emp.id];
-      if (!empGen || !empGen[targetKey]) return emp;
-      return {
-        ...emp,
-        shifts: { ...emp.shifts, [targetKey]: empGen[targetKey].shifts },
-        dailyHours: { ...emp.dailyHours, [targetKey]: empGen[targetKey].hours },
-      };
-    }));
-
-    setCurrentMY({ month: nextMonth, year: nextYear });
-    setSelectedDayIdx(0);
-  }, [currentMY, employees, customHolidays, showDialog, setEmployees]);
+  }, [currentMY, employees, monthKey, customHolidays, setEmployees]);
 
   // ─── Update month (smart refresh) ──────────────────────────────────────────
   const resetMonth = useCallback(async () => {
@@ -103,10 +73,11 @@ Esta ação substituirá qualquer escala existente para este mês.`;
 • Máximo 2 domingos seguidos por colaborador
 
 ✅ Dias de semana:
-• Folgas preferenciais replicadas
+• Folgas preferenciais aplicadas na semana
+• Horários padrão aplicados
 • Feriados, férias e dias de curso dos Aprendizes
 
-🔒 Preservado: outros turnos editados manualmente`,
+⚠️ Atenção: Esta ação reescreve todo o mês. Edições manuais feitas anteriormente para este mês serão apagadas.`,
     });
     if (!confirmed) return;
 
@@ -181,46 +152,81 @@ Esta ação substituirá qualquer escala existente para este mês.`;
 
   // ─── WhatsApp share ───────────────────────────────────────────────────────
   const shareWhatsApp = (dayIdx: number) => {
-    const weekdays = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+    const weekdaysFull = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
     const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
     const date = new Date(currentMY.year, currentMY.month, dayIdx + 1);
+    const weekdayName = weekdaysFull[date.getDay()];
+    // Capitalise first letter of weekday
+    const weekdayLabel = weekdayName.charAt(0).toUpperCase() + weekdayName.slice(1);
 
-    let text = `📅 *ESCALA RI HAPPY - ${weekdays[date.getDay()].toUpperCase()}*\n📍 ${dayIdx + 1} de ${months[date.getMonth()]} de ${currentMY.year}\n\n`;
+    // Header
+    let text = `📅 Escala - ${weekdayLabel}, ${dayIdx + 1} de ${months[currentMY.month]}\n\n`;
 
-    const uniqueHours = Array.from(new Set(
-      employees
-        .filter(e => { const s = (e.shifts[monthKey] || [])[dayIdx]; return s === 'T' || s === 'FF'; })
-        .map(e => (e.dailyHours[monthKey] || [])[dayIdx] || e.workPeriod)
-    )).sort();
+    // Group working employees by shift label
+    const shiftGroups: { label: string; range: string; members: { name: string; hour: string }[] }[] = [
+      { label: 'Abertura',     range: '10h às 18h20', members: [] },
+      { label: 'Intermediário',range: '12h às 20h20', members: [] },
+      { label: 'Fechamento',   range: '13h40 às 22h', members: [] },
+    ];
 
-    uniqueHours.forEach(h => {
-      const empsInHour = employees.filter(e => {
-        const s = (e.shifts[monthKey] || [])[dayIdx];
-        const hForDay = (e.dailyHours[monthKey] || [])[dayIdx] || e.workPeriod;
-        return (s === 'T' || s === 'FF') && hForDay === h;
-      });
-      if (empsInHour.length > 0) {
-        text += `⏰ *${h}*\n`;
-        empsInHour.forEach(e => text += `• ${e.name}\n`);
-        text += `\n`;
+    const absent: { name: string; code: string }[] = [];
+
+    employees.forEach(e => {
+      if (e.id === PLACEHOLDER_EMPLOYEE_ID) return;
+      const shift = (e.shifts[monthKey] || [])[dayIdx];
+      const hour  = (e.dailyHours[monthKey] || [])[dayIdx] || e.workPeriod;
+      const firstName = e.name.split(' ')[0];
+
+      if (shift === 'T' || shift === 'FF') {
+        if (hour.includes('10h')) {
+          shiftGroups[0].members.push({ name: firstName, hour });
+        } else if (hour.includes('12h')) {
+          shiftGroups[1].members.push({ name: firstName, hour });
+        } else if (hour.includes('13h40')) {
+          shiftGroups[2].members.push({ name: firstName, hour });
+        } else {
+          // Fallback: add to the closest matching group by hour prefix
+          shiftGroups[0].members.push({ name: firstName, hour });
+        }
+      } else if (shift === 'F') {
+        absent.push({ name: firstName, code: 'F' });
+      } else if (shift === 'FE') {
+        absent.push({ name: firstName, code: 'FE' });
+      } else if (shift === 'C') {
+        absent.push({ name: firstName, code: 'C' });
       }
     });
 
-    const off = employees.filter(e => ['F', 'FE', 'C'].includes((e.shifts[monthKey] || [])[dayIdx]));
-    if (off.length > 0) {
-      text += `━━━━━━━━━━━━━━━\n🌴 *FOLGA / CURSO / FÉRIAS*\n`;
-      off.forEach(e => {
-        const shift = (e.shifts[monthKey] || [])[dayIdx];
-        const label = shift === 'FE' ? 'Férias' : shift === 'C' ? 'Curso' : 'Folga';
-        const emoji = shift === 'FE' ? '🟣' : shift === 'C' ? '📘' : '⚪';
-        text += `${emoji} ${e.name} (${label})\n`;
+    // Emit each shift group
+    shiftGroups.forEach(g => {
+      if (g.members.length === 0) return;
+      text += `⏰ ${g.label} (${g.range})\n`;
+      // Sort alphabetically by name
+      g.members.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+      g.members.forEach(m => {
+        text += `⚪ ${m.name} - ${m.hour}\n`;
       });
+      text += '\n';
+    });
+
+    // Ausências footer
+    if (absent.length > 0) {
+      const absentLabels: Record<string, string> = { F: 'F', FE: 'FE', C: 'C' };
+      const absentStr = absent
+        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+        .map(a => `${a.name} (${absentLabels[a.code]})`)
+        .join(', ');
+      text += `Ausências e Folgas:\n${absentStr}\n\n`;
     }
+
+    text += `Se identificarem inconsistências, favor acionar imediatamente para correção!`;
+
     setWaModal({ show: true, text });
   };
 
+
   // ─── Employee CRUD ────────────────────────────────────────────────────────
-  const addEmployee = useCallback((name: string, isYoung: boolean, courseDay: string) => {
+  const addEmployee = useCallback((name: string, isYoung: boolean, courseDay: string, cargo: EmployeeCargo = 'Auxiliar de Loja') => {
     const newEmp: Employee = {
       id: Date.now().toString(),
       name,
@@ -231,6 +237,7 @@ Esta ação substituirá qualquer escala existente para este mês.`;
       shifts: {},
       dailyHours: {},
       workPeriod: isYoung ? APPRENTICE_WORK_PERIOD : '10h às 18h20',
+      cargo: isYoung ? undefined : cargo,
       preferredDayOff: 'Segunda-feira',
       shiftName: 'Abertura',
       hiredAt: new Date().toISOString().split('T')[0],
@@ -260,8 +267,8 @@ Esta ação substituirá qualquer escala existente para este mês.`;
         if (!empGenerated) return emp;
         return {
           ...emp,
-          shifts: { ...emp.shifts, ...Object.fromEntries(Object.entries(empGenerated).map(([mk, v]) => [mk, v.shifts])) },
-          dailyHours: { ...emp.dailyHours, ...Object.fromEntries(Object.entries(empGenerated).map(([mk, v]) => [mk, v.hours])) },
+          shifts: { ...emp.shifts, ...Object.fromEntries(Object.entries(empGenerated).map(([mk, v]) => [mk, (v as { shifts: ShiftType[]; hours: string[] }).shifts])) },
+          dailyHours: { ...emp.dailyHours, ...Object.fromEntries(Object.entries(empGenerated).map(([mk, v]) => [mk, (v as { shifts: ShiftType[]; hours: string[] }).hours])) },
         };
       });
     });
@@ -351,7 +358,6 @@ Esta ação substituirá qualquer escala existente para este mês.`;
               onUpdateShift={updateShift}
               onUpdateEmployeeDailyHour={updateEmployeeDailyHour}
               onShareWhatsApp={shareWhatsApp}
-              onGenerateNextMonth={generateNextMonth}
               onResetMonth={resetMonth}
               onShowHolidayManager={() => setShowHolidayManager(true)}
               onNextMonth={() => setCurrentMY(prev => {

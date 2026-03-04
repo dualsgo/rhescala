@@ -1,10 +1,12 @@
 
 export type ShiftType = 'T' | 'F' | 'FF' | 'FE' | 'C'; // Trabalho, Folga, Feriado/Folga Especial, Férias, Curso
+export type EmployeeCargo = 'Auxiliar de Loja' | 'Estoquista';
 
 export interface Employee {
   id: string;
   name: string;
   isYoungApprentice: boolean;
+  cargo?: EmployeeCargo;           // 'Auxiliar de Loja' (padrão) | 'Estoquista'
   courseDay?: string; // e.g. 'Segunda-feira'
   status: 'active' | 'inactive';
   statusColor: string;
