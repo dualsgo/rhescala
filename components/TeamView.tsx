@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useDialog } from '../contexts/DialogContext';
 import { Employee } from '../types';
 import { Icon } from './Icon';
-import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD } from '../constants';
+import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, PLACEHOLDER_EMPLOYEE_ID } from '../constants';
 
 interface TeamViewProps {
   employees: Employee[];
@@ -85,18 +85,27 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {employees.map(emp => (
-          <div key={emp.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 hover:shadow-md transition-all">
+        {employees.map(emp => {
+          const isPlaceholder = emp.id === PLACEHOLDER_EMPLOYEE_ID;
+          return (
+          <div key={emp.id} className={`bg-white rounded-xl border shadow-sm p-6 hover:shadow-md transition-all ${
+            isPlaceholder ? 'border-dashed border-slate-300 opacity-70' : 'border-slate-200'
+          }`}>
             <div className="flex items-start justify-between mb-6">
               <div className="flex flex-col">
                   <h4 className="font-extrabold text-lg text-slate-900 leading-tight uppercase">{emp.name}</h4>
-                  {emp.isYoungApprentice ? (
+                  {isPlaceholder ? (
+                    <span className="text-[9px] font-extrabold text-amber-500 uppercase tracking-widest mt-1 flex items-center gap-1">
+                      ⏳ Aguardando cadastro real
+                    </span>
+                  ) : emp.isYoungApprentice ? (
                     <span className="text-[9px] font-extrabold text-teal-600 uppercase tracking-widest mt-1">Jovem Aprendiz (Curso: {emp.courseDay})</span>
                   ) : (
                     <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">Colaborador CLT</span>
                   )}
               </div>
               <button 
+                disabled={isPlaceholder}
                 onClick={async () => {
                   const confirmed = await showDialog({
                     type: 'confirm',
@@ -104,64 +113,71 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                   });
                   if (confirmed) onDeleteEmployee(emp.id);
                 }}
-                className="w-10 h-10 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center border border-red-100"
+                className={`w-10 h-10 rounded-lg transition-all flex items-center justify-center border ${
+                  isPlaceholder
+                    ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed'
+                    : 'bg-red-50 text-red-500 hover:bg-red-500 hover:text-white border-red-100'
+                }`}
               >
                 <Icon name="delete" className="text-lg" />
               </button>
             </div>
 
-            <div className="space-y-4">
-              {emp.isYoungApprentice && (
-                <div>
-                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Dia de Curso</label>
-                  <select 
-                    value={emp.courseDay} 
-                    onChange={(e) => onUpdateEmployee(emp.id, { courseDay: e.target.value })} 
-                    className="w-full bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold p-3 outline-none focus:ring-2 focus:ring-teal-500"
-                  >
-                    {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'].map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-              )}
+            {!isPlaceholder && (
+              <div className="space-y-4">
+                {emp.isYoungApprentice && (
+                  <div>
+                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Dia de Curso</label>
+                    <select 
+                      value={emp.courseDay} 
+                      onChange={(e) => onUpdateEmployee(emp.id, { courseDay: e.target.value })} 
+                      className="w-full bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold p-3 outline-none focus:ring-2 focus:ring-teal-500"
+                    >
+                      {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'].map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                )}
 
-              {emp.isYoungApprentice ? (
-                <div>
-                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Horário Padrão</label>
-                  <div className="w-full bg-teal-50 border border-teal-100 rounded-lg text-xs font-bold p-3 text-teal-700 flex items-center gap-2">
-                    <span className="text-[9px] bg-teal-100 text-teal-600 font-extrabold px-2 py-0.5 rounded uppercase tracking-widest">Fixo</span>
-                    {APPRENTICE_WORK_PERIOD}
-                    <span className="text-[9px] text-teal-400 ml-auto">(pausa 15min)</span>
+                {emp.isYoungApprentice ? (
+                  <div>
+                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Horário Padrão</label>
+                    <div className="w-full bg-teal-50 border border-teal-100 rounded-lg text-xs font-bold p-3 text-teal-700 flex items-center gap-2">
+                      <span className="text-[9px] bg-teal-100 text-teal-600 font-extrabold px-2 py-0.5 rounded uppercase tracking-widest">Fixo</span>
+                      {APPRENTICE_WORK_PERIOD}
+                      <span className="text-[9px] text-teal-400 ml-auto">(pausa 15min)</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Horário Padrão</label>
+                    <select value={emp.workPeriod} onChange={(e) => onUpdateEmployee(emp.id, { workPeriod: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold p-3 outline-none focus:ring-2 focus:ring-orange-500">
+                      {SHIFT_HOURS.WEEKDAY.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Início Férias</label>
+                    <input type="date" value={emp.vacationStart || ''} onChange={(e) => onUpdateEmployee(emp.id, { vacationStart: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-lg text-[11px] font-bold p-2.5 outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Fim Férias</label>
+                    <input type="date" value={emp.vacationEnd || ''} onChange={(e) => onUpdateEmployee(emp.id, { vacationEnd: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-lg text-[11px] font-bold p-2.5 outline-none" />
                   </div>
                 </div>
-              ) : (
+
                 <div>
-                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Horário Padrão</label>
-                  <select value={emp.workPeriod} onChange={(e) => onUpdateEmployee(emp.id, { workPeriod: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold p-3 outline-none focus:ring-2 focus:ring-orange-500">
-                    {SHIFT_HOURS.WEEKDAY.map(h => <option key={h} value={h}>{h}</option>)}
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Folga Fixa Sugerida</label>
+                  <select value={emp.preferredDayOff} onChange={(e) => onUpdateEmployee(emp.id, { preferredDayOff: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold p-3 outline-none focus:ring-2 focus:ring-orange-500">
+                    {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'].map(d => <option key={d}>{d}</option>)}
                   </select>
                 </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Início Férias</label>
-                  <input type="date" value={emp.vacationStart || ''} onChange={(e) => onUpdateEmployee(emp.id, { vacationStart: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-lg text-[11px] font-bold p-2.5 outline-none" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Fim Férias</label>
-                  <input type="date" value={emp.vacationEnd || ''} onChange={(e) => onUpdateEmployee(emp.id, { vacationEnd: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-lg text-[11px] font-bold p-2.5 outline-none" />
-                </div>
               </div>
-
-              <div>
-                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Folga Fixa Sugerida</label>
-                <select value={emp.preferredDayOff} onChange={(e) => onUpdateEmployee(emp.id, { preferredDayOff: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold p-3 outline-none focus:ring-2 focus:ring-orange-500">
-                  {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'].map(d => <option key={d}>{d}</option>)}
-                </select>
-              </div>
-            </div>
+            )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -1,6 +1,25 @@
 
 import { Employee, Holiday } from './types';
 
+/** ID sentinel do colaborador placeholder (nunca deve ser exibido como real) */
+export const PLACEHOLDER_EMPLOYEE_ID = '__placeholder__';
+
+/** Colaborador genérico fixo usado quando não há nenhum cadastrado.  
+ *  Ao cadastrar o primeiro colaborador real, este é substituído. */
+export const PLACEHOLDER_EMPLOYEE: Employee = {
+  id: PLACEHOLDER_EMPLOYEE_ID,
+  name: 'Colaborador',
+  isYoungApprentice: false,
+  status: 'active',
+  statusColor: '#94a3b8',
+  shifts: {},
+  dailyHours: {},
+  workPeriod: '10h às 18h20',
+  preferredDayOff: 'Segunda-feira',
+  shiftName: 'Abertura',
+  hiredAt: new Date().toISOString().split('T')[0],
+};
+
 export const APPRENTICE_WORK_PERIOD = '10h às 16h15'; // Jornada fixa do Jovem Aprendiz (pausa 15 min)
 
 export const SHIFT_HOURS = {

@@ -9,13 +9,13 @@ import { DaySummaryCard } from './components/DaySummaryCard';
 import { ShiftGrid } from './components/ShiftGrid';
 import { TeamView } from './components/TeamView';
 import { HolidayManager } from './components/HolidayManager';
-import { MOCK_EMPLOYEES, APPRENTICE_WORK_PERIOD } from './constants';
+import { APPRENTICE_WORK_PERIOD, PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID } from './constants';
 import { Employee, ShiftType, MonthYear, Holiday } from './types';
 
 const CURRENT_YEAR = new Date().getFullYear(); // 2026
 
 const App: React.FC = () => {
-  const [employees, setEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', MOCK_EMPLOYEES);
+  const [employees, setEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', [PLACEHOLDER_EMPLOYEE]);
   const [customHolidays, setCustomHolidays] = useLocalStorage<Holiday[]>('riHappyCustomHolidays', []);
   const [showHolidayManager, setShowHolidayManager] = useState(false);
 
@@ -220,7 +220,9 @@ Esta ação substituirá qualquer escala existente para este mês.`;
     // Add the employee and generate their schedule atomically in a single update.
     // We use the functional form of setEmployees so we always get the latest list.
     setEmployees(prev => {
-      const updatedList = [...prev, newEmp];
+      // Se a lista só contém o placeholder, substitui em vez de adicionar
+      const isOnlyPlaceholder = prev.length === 1 && prev[0].id === PLACEHOLDER_EMPLOYEE_ID;
+      const updatedList = isOnlyPlaceholder ? [newEmp] : [...prev, newEmp];
 
       // Generate schedule for the new employee using the full (updated) team list
       const now = today;
@@ -247,7 +249,11 @@ Esta ação substituirá qualquer escala existente para este mês.`;
   }, [today, customHolidays, setEmployees]);
 
   const handleDeleteEmployee = useCallback((id: string) => {
-    setEmployees(prev => prev.filter(e => e.id !== id));
+    setEmployees(prev => {
+      const remaining = prev.filter(e => e.id !== id);
+      // Se ficou vazio, restaura o placeholder genérico para evitar crash
+      return remaining.length === 0 ? [PLACEHOLDER_EMPLOYEE] : remaining;
+    });
   }, [setEmployees]);
 
   const handleUpdateEmployee = (id: string, data: Partial<Employee>) => {
