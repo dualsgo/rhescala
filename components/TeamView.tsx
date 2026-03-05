@@ -9,7 +9,7 @@ interface TeamViewProps {
   employees: Employee[];
   onUpdateEmployee: (empId: string, data: Partial<Employee>) => void;
   onDeleteEmployee: (empId: string) => void;
-  onAddEmployee: (name: string, isYoung: boolean, courseDay: string, cargo: EmployeeCargo) => void;
+  onAddEmployee: (name: string, isYoung: boolean, courseDay: string, cargo: EmployeeCargo, birthday: string) => void;
 }
 
 const CARGO_OPTIONS: EmployeeCargo[] = ['Auxiliar de Loja', 'Estoquista'];
@@ -37,6 +37,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
   const [isYoung, setIsYoung] = useState(false);
   const [courseDay, setCourseDay] = useState('Segunda-feira');
   const [newCargo, setNewCargo] = useState<EmployeeCargo>('Auxiliar de Loja');
+  const [newBirthday, setNewBirthday] = useState('');
 
   const { showDialog } = useDialog();
 
@@ -48,10 +49,11 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
         message: `Deseja cadastrar o colaborador ${newName}?`
       });
       if (confirmed) {
-        onAddEmployee(newName, isYoung, courseDay, newCargo);
+        onAddEmployee(newName, isYoung, courseDay, newCargo, newBirthday);
         setNewName('');
         setIsYoung(false);
         setNewCargo('Auxiliar de Loja');
+        setNewBirthday('');
         setShowAddModal(false);
       }
     }
@@ -74,12 +76,17 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
 
       {showAddModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl overflow-y-auto max-h-[90vh]">
             <h4 className="text-xl font-extrabold text-slate-900 mb-6">Cadastrar Colaborador</h4>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Nome Completo</label>
                 <input autoFocus type="text" value={newName} onChange={(e) => setNewName(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Nome do colaborador" />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Data de Nascimento (Aniversário)</label>
+                <input type="date" value={newBirthday} onChange={(e) => setNewBirthday(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold focus:ring-2 focus:ring-orange-500 outline-none" />
               </div>
 
               {/* Cargo */}
@@ -133,10 +140,13 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
           return (
           <div key={emp.id} className={`bg-white rounded-xl border shadow-sm p-6 hover:shadow-md transition-all ${
             isPlaceholder ? 'border-dashed border-slate-300 opacity-70' : 'border-slate-200'
-          }`}>
+          } ${emp.isHidden ? 'opacity-60 bg-slate-50' : ''}`}>
             <div className="flex items-start justify-between mb-6">
               <div className="flex flex-col">
-                  <h4 className="font-extrabold text-lg text-slate-900 leading-tight uppercase">{emp.name}</h4>
+                  <h4 className="font-extrabold text-lg text-slate-900 leading-tight uppercase flex items-center gap-2">
+                    {emp.name.toUpperCase()}
+                    {emp.isHidden && <span className="text-[8px] bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-widest">Oculto</span>}
+                  </h4>
                   {isPlaceholder ? (
                     <span className="text-[9px] font-extrabold text-amber-500 uppercase tracking-widest mt-1 flex items-center gap-1">
                       ⏳ Aguardando cadastro real
@@ -149,27 +159,51 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                     </span>
                   )}
               </div>
-              <button 
-                disabled={isPlaceholder}
-                onClick={async () => {
-                  const confirmed = await showDialog({
-                    type: 'confirm',
-                    message: `Excluir ${emp.name} permanentemente?`
-                  });
-                  if (confirmed) onDeleteEmployee(emp.id);
-                }}
-                className={`w-10 h-10 rounded-lg transition-all flex items-center justify-center border ${
-                  isPlaceholder
-                    ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed'
-                    : 'bg-red-50 text-red-500 hover:bg-red-500 hover:text-white border-red-100'
-                }`}
-              >
-                <Icon name="delete" className="text-lg" />
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  disabled={isPlaceholder}
+                  onClick={() => onUpdateEmployee(emp.id, { isHidden: !emp.isHidden })}
+                  className={`w-10 h-10 rounded-lg transition-all flex items-center justify-center border ${
+                    emp.isHidden 
+                      ? 'bg-slate-900 text-white border-slate-900' 
+                      : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'
+                  }`}
+                  title={emp.isHidden ? 'Mostrar na Escala' : 'Ocultar da Escala'}
+                >
+                  <Icon name={emp.isHidden ? 'visibility_off' : 'visibility'} className="text-lg" />
+                </button>
+                <button 
+                  disabled={isPlaceholder}
+                  onClick={async () => {
+                    const confirmed = await showDialog({
+                      type: 'confirm',
+                      message: `Excluir ${emp.name} permanentemente?`
+                    });
+                    if (confirmed) onDeleteEmployee(emp.id);
+                  }}
+                  className={`w-10 h-10 rounded-lg transition-all flex items-center justify-center border ${
+                    isPlaceholder
+                      ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed'
+                      : 'bg-red-50 text-red-500 hover:bg-red-500 hover:text-white border-red-100'
+                  }`}
+                >
+                  <Icon name="delete" className="text-lg" />
+                </button>
+              </div>
             </div>
 
             {!isPlaceholder && (
               <div className="space-y-4">
+                {/* ── Aniversário ── */}
+                <div>
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Aniversário</label>
+                  <input
+                    type="date"
+                    value={emp.birthday || ''}
+                    onChange={(e) => onUpdateEmployee(emp.id, { birthday: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-100 rounded-lg text-[11px] font-bold p-2.5 outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
 
                 {/* ── Cargo (somente CLT não-aprendiz) ── */}
                 {!emp.isYoungApprentice && (
@@ -229,25 +263,27 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                   </div>
                 )}
 
-                {/* ── Férias: apenas data de saída, retorno calculado ── */}
-                <div>
-                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">
-                    Saída para Férias
-                  </label>
-                  <input
-                    type="date"
-                    value={emp.vacationStart || ''}
-                    onChange={(e) => handleVacationStart(emp.id, e.target.value, onUpdateEmployee)}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-lg text-[11px] font-bold p-2.5 outline-none focus:ring-2 focus:ring-orange-500"
-                  />
-                  {emp.vacationStart && emp.vacationEnd && (
-                    <p className="text-[9px] font-bold text-violet-500 mt-1.5 flex items-center gap-1">
-                      <span>📅</span>
-                      Retorno: <strong>{new Date(emp.vacationEnd + 'T00:00:00').toLocaleDateString('pt-BR')}</strong>
-                      <span className="text-slate-300 ml-1">(30 dias)</span>
-                    </p>
-                  )}
-                </div>
+                {/* ── Férias: apenas para CLT regular ── */}
+                {!emp.isYoungApprentice && (
+                  <div>
+                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">
+                      Saída para Férias
+                    </label>
+                    <input
+                      type="date"
+                      value={emp.vacationStart || ''}
+                      onChange={(e) => handleVacationStart(emp.id, e.target.value, onUpdateEmployee)}
+                      className="w-full bg-slate-50 border border-slate-100 rounded-lg text-[11px] font-bold p-2.5 outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                    {emp.vacationStart && emp.vacationEnd && (
+                      <p className="text-[9px] font-bold text-violet-500 mt-1.5 flex items-center gap-1">
+                        <span>📅</span>
+                        Retorno: <strong>{new Date(emp.vacationEnd + 'T00:00:00').toLocaleDateString('pt-BR')}</strong>
+                        <span className="text-slate-300 ml-1">(30 dias)</span>
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* ── Folga Fixa Sugerida ── */}
                 <div>

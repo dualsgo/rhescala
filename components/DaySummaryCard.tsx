@@ -100,12 +100,12 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
       fechamento: [] as string[],
     };
 
-    employees.forEach(e => {
+    employees.filter(e => !e.isHidden).forEach(e => {
       const mShifts = e.shifts[monthKey] || [];
       const shift = mShifts[selectedDayIdx];
       const hForDay = (e.dailyHours[monthKey] || [])[selectedDayIdx] || e.workPeriod;
 
-      if (shift === 'T' || (shift && shift.startsWith('FF'))) {
+      if (shift === 'T') {
         if (e.isYoungApprentice) {
           counts.aprendiz++;
           counts.total++;
@@ -122,7 +122,7 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
             else if (hForDay.includes('13h40')) { counts.fechamento++; names.fechamento.push(e.name.split(' ')[0]); }
           }
         }
-      } else if (shift === 'F') counts.folga++;
+      } else if (shift === 'F' || (shift && shift.startsWith('FF'))) counts.folga++;
       else if (shift === 'C') counts.curso++;
       else if (shift === 'FE') counts.ferias++;
     });

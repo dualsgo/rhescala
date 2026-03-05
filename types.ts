@@ -1,5 +1,5 @@
 
-export type ShiftType = 'T' | 'F' | 'FF' | 'FE' | 'C' | string; // Trabalho, Folga, Feriado/Folga Especial, Férias, Curso, or dynamic Holiday Offs like 'FF 01/05'
+export type ShiftType = 'T' | 'F' | 'FF' | 'FE' | 'C' | 'N/A' | string; // Trabalho, Folga, Feriado/Folga Especial, Férias, Curso, Not Available, or dynamic Holiday Offs like 'FF 01/05'
 export type EmployeeCargo = 'Auxiliar de Loja' | 'Estoquista';
 
 export interface Employee {
@@ -19,6 +19,8 @@ export interface Employee {
   vacationEnd?: string;   // YYYY-MM-DD
   hiredAt?: string;       // YYYY-MM-DD — used to skip months before hiring
   firedAt?: string;       // YYYY-MM-DD — used to stop generating after termination
+  birthday?: string;       // YYYY-MM-DD or MM-DD
+  isHidden?: boolean;      // To hide collaborator from the grid
 }
 
 export interface Holiday {

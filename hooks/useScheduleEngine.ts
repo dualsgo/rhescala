@@ -230,10 +230,17 @@ export function generateMonthForEmployee(
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const holidaySet = buildHolidaySet(year, customHolidays);
 
+    const today = new Date();
+    const isPastMonth = year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth());
+
     const shifts: ShiftType[] = [];
     const hours: string[] = [];
 
     for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
+        if (isPastMonth) {
+            shifts.push('N/A'); hours.push(emp.workPeriod); continue;
+        }
+
         const dayNum = dayIdx + 1;
         const date = new Date(year, month, dayNum);
         const dow = date.getDay();
@@ -259,10 +266,12 @@ export function generateMonthForEmployee(
         if (emp.isYoungApprentice) {
             if (dow === 0 || dow === 6) {
                 shifts.push('F'); hours.push(APPRENTICE_WORK_PERIOD);
+            } else if (isHoliday) {
+                // Apprentices do NOT work on holidays, they get a simple Folga (F)
+                // This takes priority over Course Day because there's no class on holidays.
+                shifts.push('F'); hours.push(APPRENTICE_WORK_PERIOD);
             } else if (WEEKDAY_NAMES[dow] === emp.courseDay) {
                 shifts.push('C'); hours.push(APPRENTICE_WORK_PERIOD);
-            } else if (isHoliday) {
-                shifts.push('FF'); hours.push(APPRENTICE_WORK_PERIOD);
             } else {
                 shifts.push('T'); hours.push(APPRENTICE_WORK_PERIOD);
             }
@@ -281,7 +290,8 @@ export function generateMonthForEmployee(
             if (sundayRestDays.has(dayIdx)) {
                 shifts.push('F'); hours.push(SHIFT_HOURS.SUNDAY[0]);
             } else if (isHoliday) {
-                shifts.push('FF'); hours.push(SHIFT_HOURS.HOLIDAY[0]);
+                // If worked on Sunday+Holiday, it counts as T for credit purposes
+                shifts.push('T'); hours.push(SHIFT_HOURS.HOLIDAY[0]);
             } else {
                 shifts.push('T'); hours.push(SHIFT_HOURS.SUNDAY[0]);
             }
@@ -290,7 +300,9 @@ export function generateMonthForEmployee(
 
         // Weekday holiday
         if (isHoliday) {
-            shifts.push('FF'); hours.push(SHIFT_HOURS.HOLIDAY[0]); continue;
+            // Default to T (Work) so they earn a credit, or user can change to F later.
+            // FF is NEVER assigned by the system by default.
+            shifts.push('T'); hours.push(SHIFT_HOURS.HOLIDAY[0]); continue;
         }
 
         // Normal workday
@@ -410,6 +422,19 @@ export function applyMonthUpdate(
         activeRegular, year, month, sundaysInMonth
     );
 
+    const today = new Date();
+    const isPastMonth = year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth());
+
+    if (isPastMonth) {
+        employees.forEach(emp => {
+            result[emp.id] = {
+                shifts: Array(daysInMonth).fill('N/A'),
+                hours: Array(daysInMonth).fill(emp.workPeriod)
+            };
+        });
+        return result;
+    }
+
     // ── Regular employees ──────────────────────────────────────────────────────
     activeRegular.forEach(emp => {
         const restDays = sundayAssignments.get(emp.id) ?? new Set<number>();
@@ -449,7 +474,7 @@ export function applyMonthUpdate(
                 } else if (restDays.has(dayIdx)) {
                     newShifts[dayIdx] = 'F'; newHours[dayIdx] = SHIFT_HOURS.SUNDAY[0];
                 } else {
-                    newShifts[dayIdx] = isHoliday ? 'FF' : 'T';
+                    newShifts[dayIdx] = 'T';
                     newHours[dayIdx] = isHoliday ? SHIFT_HOURS.HOLIDAY[0] : SHIFT_HOURS.SUNDAY[0];
                 }
                 continue;
@@ -457,7 +482,7 @@ export function applyMonthUpdate(
 
             // Re-apply weekday holidays
             if (isHoliday) {
-                newShifts[dayIdx] = 'FF'; newHours[dayIdx] = SHIFT_HOURS.HOLIDAY[0]; continue;
+                newShifts[dayIdx] = 'T'; newHours[dayIdx] = SHIFT_HOURS.HOLIDAY[0]; continue;
             }
         }
 
@@ -524,11 +549,12 @@ export function applyMonthUpdate(
             if (dow === 0 || dow === 6) {
                 newShifts[dayIdx] = 'F'; newHours[dayIdx] = APPRENTICE_WORK_PERIOD; continue;
             }
+            if (isHoliday) {
+                // Priority: Holiday (F) over Course Day (C)
+                newShifts[dayIdx] = 'F'; newHours[dayIdx] = APPRENTICE_WORK_PERIOD; continue;
+            }
             if (WEEKDAY_NAMES[dow] === emp.courseDay) {
                 newShifts[dayIdx] = 'C'; newHours[dayIdx] = APPRENTICE_WORK_PERIOD; continue;
-            }
-            if (isHoliday) {
-                newShifts[dayIdx] = 'FF'; newHours[dayIdx] = APPRENTICE_WORK_PERIOD; continue;
             }
 
             // Other manual edits are naturally preserved.

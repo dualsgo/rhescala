@@ -22,12 +22,12 @@ const App: React.FC = () => {
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [currentView, setCurrentView] = useState<'dashboard' | 'team'>('dashboard');
-  const [currentMY, setCurrentMY] = useState<MonthYear>({ month: 2, year: 2026 }); // March 2026
-  const [selectedDayIdx, setSelectedDayIdx] = useState(0);
+  const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
+  const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
   const [waModal, setWaModal] = useState<{ show: boolean; text: string }>({ show: false, text: '' });
   const { showDialog } = useDialog();
 
-  const today = useMemo(() => new Date(2026, 2, 15), []); // Simulated "today"
+  const today = useMemo(() => new Date(), []); // Actual "today"
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
 
   // Auto-generate month if it's completely empty
@@ -236,10 +236,10 @@ const App: React.FC = () => {
 
 
   // ─── Employee CRUD ────────────────────────────────────────────────────────
-  const addEmployee = useCallback((name: string, isYoung: boolean, courseDay: string, cargo: EmployeeCargo = 'Auxiliar de Loja') => {
+  const addEmployee = useCallback((name: string, isYoung: boolean, courseDay: string, cargo: EmployeeCargo = 'Auxiliar de Loja', birthday: string = '') => {
     const newEmp: Employee = {
       id: Date.now().toString(),
-      name,
+      name: name.toUpperCase(),
       isYoungApprentice: isYoung,
       courseDay: isYoung ? courseDay : undefined,
       status: 'active',
@@ -251,6 +251,8 @@ const App: React.FC = () => {
       preferredDayOff: 'Segunda-feira',
       shiftName: 'Abertura',
       hiredAt: new Date().toISOString().split('T')[0],
+      birthday,
+      isHidden: false,
     };
 
     // Add the employee and generate their schedule atomically in a single update.
@@ -293,7 +295,9 @@ const App: React.FC = () => {
   }, [setEmployees]);
 
   const handleUpdateEmployee = (id: string, data: Partial<Employee>) => {
-    setEmployees(prev => prev.map(e => e.id === id ? { ...e, ...data } : e));
+    const updatedData = { ...data };
+    if (updatedData.name) updatedData.name = updatedData.name.toUpperCase();
+    setEmployees(prev => prev.map(e => e.id === id ? { ...e, ...updatedData } : e));
   };
 
   return (
@@ -303,6 +307,7 @@ const App: React.FC = () => {
         onViewChange={setCurrentView}
         currentMY={currentMY}
         employees={employees}
+        customHolidays={customHolidays}
         onImportClick={() => fileInputRef.current?.click()}
       />
 
