@@ -25,9 +25,10 @@ export const APPRENTICE_WORK_PERIOD = '10h às 16h15'; // Jornada fixa do Jovem 
 export const SHIFT_HOURS = {
   WEEKDAY: ['10h às 18h20', '12h às 20h20', '13h40 às 22h'],
   SUNDAY:  ['12h às 20h', '13h às 21h'],
-  HOLIDAY: ['12h às 16h', '13h às 17h', '14h às 18h', '15h às 19h', '16h às 20h', '17h às 21h'],
+  HOLIDAY: ['12h às 18h', '13h às 19h', '14h às 20h', '15h às 21h'],
   APPRENTICE: ['10h às 16h15'],
 };
+
 
 /**
  * Returns all fixed Brazilian national holidays for a given year.

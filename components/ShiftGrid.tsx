@@ -5,6 +5,7 @@ import { Employee, ShiftType, MonthYear, Holiday } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays } from '../constants';
 import { InconsistencyPanel } from './InconsistencyPanel';
+import { AnalysisPanel } from './AnalysisPanel';
 
 interface ShiftGridProps {
   employees: Employee[];
@@ -39,10 +40,13 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onPrevMonth,
 }) => {
   const [isEditable, setIsEditable] = useState(false);
+  const [allowRetroactive, setAllowRetroactive] = useState(false);
   const [isGridLocked, setIsGridLocked] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
   const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
   const [selectedWeek, setSelectedWeek] = useState(1);
   const { showDialog } = useDialog();
+
 
   const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -75,6 +79,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       const isPast = (currentMY.year < currentYear) ||
                      (currentMY.year === currentYear && currentMY.month < currentMonth) ||
                      (currentMY.year === currentYear && currentMY.month === currentMonth && (i + 1) < currentDay);
+      const isToday = (currentMY.year === currentYear && currentMY.month === currentMonth && (i + 1) === currentDay);
       const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
 
       return {
@@ -85,6 +90,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
         isHoliday: holidaySet.has(dateStr),
         holidayName: holidayNames[dateStr] || null,
         isPast,
+        isToday,
         dateStr,
       };
     });
@@ -105,7 +111,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     return days.map((d, i) => ({ ...d, originalIdx: i }));
   }, [days, filter, selectedWeek, daysInMonth]);
 
-  const monthKey = `${currentMY.year}-${currentMY.month.toString().padStart(2, '0')}`;
+  const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+  console.log('ShiftGrid render:', { monthKey, isEditable });
 
   const getDayShift = (emp: Employee, dayIdx: number) => {
     const day = days[dayIdx];
@@ -122,7 +129,27 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   };
 
   const isDayLocked = (dayIdx: number) => {
-    return isGridLocked;
+    if (isGridLocked) return true;
+    const day = days[dayIdx];
+    const isPastOrToday = day.isPast || day.isToday;
+    if (isPastOrToday && !allowRetroactive) return true;
+    return false;
+  };
+
+  const handleToggleEditMode = async () => {
+    if (isGridLocked) return;
+    
+    if (isEditable) {
+      const confirmed = await showDialog({
+        type: 'confirm',
+        message: 'Deseja confirmar o salvamento das alterações?'
+      });
+      if (confirmed) {
+        setIsEditable(false);
+      }
+    } else {
+      setIsEditable(true);
+    }
   };
 
   const handleToggleLock = async () => {
@@ -188,36 +215,59 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   };
 
   const handleCellClick = (empId: string, dayIdx: number) => {
-    if (isDayLocked(dayIdx)) {
-        return;
-    }
-    
-    if (!isEditable) {
-        onSelectDay(dayIdx);
-        return;
-    }
+    onSelectDay(dayIdx);
+  };
 
-    const emp = employees.find(e => e.id === empId);
-    if (!emp || getDayShift(emp, dayIdx) === 'FE') return;
-
-    const current = getDayShift(emp, dayIdx);
-    const cycle: Record<ShiftType, ShiftType> = { 'T': 'F', 'F': 'FF', 'FF': 'C', 'C': 'T', 'FE': 'FE' };
-    const nextShift = cycle[current as ShiftType] || 'T';
-
-    onUpdateShift(empId, dayIdx, nextShift);
+  const handleShiftChange = (empId: string, dayIdx: number, newShift: ShiftType) => {
+    console.log('Applying shift change:', { empId, dayIdx, newShift, monthKey });
+    onUpdateShift(empId, dayIdx, newShift);
     onSelectDay(dayIdx);
   };
 
   const getShiftTextColor = (hour: string) => {
     if (hour.includes('10h')) return 'text-orange-600'; 
     if (hour.includes('12h')) return 'text-sky-600'; 
+    if (hour.includes('13h')) return 'text-emerald-600'; 
+    if (hour.includes('14h')) return 'text-pink-600'; 
+    if (hour.includes('15h')) return 'text-rose-600';
     if (hour.includes('13h40')) return 'text-indigo-600'; 
     return 'text-slate-900';
   };
 
+
   const selectedDay = days[selectedDayIdx];
   const currentDayType = selectedDay.isHoliday ? 'HOLIDAY' : selectedDay.isSunday ? 'SUNDAY' : 'WEEKDAY';
   const availableHours = SHIFT_HOURS[currentDayType];
+
+  const getAvailableHolidayCredits = (emp: Employee) => {
+    const yearHolidays = [...getNationalHolidays(currentMY.year), ...customHolidays.filter(h => h.date.startsWith(`${currentMY.year}`))];
+    const earned: string[] = [];
+    const spent: Set<string> = new Set();
+
+    Object.keys(emp.shifts).forEach(mk => {
+      if (!mk.startsWith(`${currentMY.year}`)) return;
+      emp.shifts[mk].forEach((s, idx) => {
+        if (s.startsWith('FF ') && s.length > 3) {
+          spent.add(s.replace('FF ', ''));
+        }
+      });
+    });
+
+    for (const h of yearHolidays) {
+      const hDate = new Date(h.date);
+      const hMK = `${hDate.getFullYear()}-${String(hDate.getMonth() + 1).padStart(2, '0')}`;
+      const hDayIdx = hDate.getDate() - 1;
+      
+      const empShifts = emp.shifts[hMK] || [];
+      if (empShifts[hDayIdx] === 'T' || empShifts[hDayIdx] === 'C') {
+        const creditLabel = `${String(hDate.getDate()).padStart(2, '0')}/${String(hDate.getMonth() + 1).padStart(2, '0')}`;
+        if (!spent.has(creditLabel)) {
+          earned.push(creditLabel);
+        }
+      }
+    }
+    return earned;
+  };
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col w-full animate-fade-in">
@@ -232,11 +282,20 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
         </div>
         
         <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setShowAnalysis(true)} 
+              className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-extrabold hover:bg-slate-800 shadow-lg active:scale-95 transition-all"
+            >
+                <Icon name="analytics" className="text-sm" /> Painel de Análise
+            </button>
             <InconsistencyPanel
               employees={employees}
               currentMY={currentMY}
               onSelectDay={onSelectDay}
-              onApplyFix={(empId, dayIdx, shift) => onUpdateShift(empId, dayIdx, shift)}
+              onApplyFix={(empId, dayIdx, nextShift) => {
+                onUpdateShift(empId, dayIdx, nextShift);
+                onSelectDay(dayIdx);
+              }}
             />
             <button 
               onClick={handleToggleLock} 
@@ -252,7 +311,17 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 <Icon name="sync" className="text-sm" /> Atualizar Mês
             </button>
         </div>
+
+        {showAnalysis && (
+          <AnalysisPanel 
+            employees={employees} 
+            currentMY={currentMY} 
+            customHolidays={customHolidays}
+            onClose={() => setShowAnalysis(false)} 
+          />
+        )}
       </div>
+
 
       {/* Toolbar */}
       <div className="p-4 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between bg-white sticky top-0 z-30 gap-4">
@@ -306,14 +375,27 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           </div>
         </div>
 
-        <button 
-          onClick={() => !isGridLocked && setIsEditable(!isEditable)} 
-          disabled={isGridLocked}
-          className={`flex items-center gap-2 px-6 py-2 rounded-lg text-xs font-extrabold transition-all border ${isGridLocked ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : isEditable ? 'bg-orange-500 text-white border-orange-500' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
-        >
-          <Icon name={isEditable ? 'check_circle' : 'edit_square'} className="text-sm" />
-          {isEditable ? 'Salvar Alterações' : 'Modo de Edição'}
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={handleToggleEditMode} 
+            disabled={isGridLocked}
+            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-xs font-extrabold transition-all border ${isGridLocked ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : isEditable ? 'bg-orange-500 text-white border-orange-500' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+          >
+            <Icon name={isEditable ? 'check_circle' : 'edit_square'} className="text-sm" />
+            {isEditable ? 'Salvar Alterações' : 'Ativar Edições'}
+          </button>
+
+          {isEditable && (
+            <button
+              onClick={() => setAllowRetroactive(!allowRetroactive)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-extrabold transition-all border ${allowRetroactive ? 'bg-amber-100 border-amber-300 text-amber-700 hover:bg-amber-200' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'}`}
+              title="Permitir edição de dias passados e hoje"
+            >
+              <Icon name={allowRetroactive ? 'history_toggle_off' : 'history'} className="text-sm" />
+              {allowRetroactive ? 'Bloquear Retroativo' : 'Liberar Retroativo'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Table */}
@@ -358,6 +440,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                       {emp.name}
                     </span>
                     {emp.isYoungApprentice && <span className="text-[8px] font-extrabold text-teal-600 uppercase tracking-widest mt-0.5 truncate">Jovem Aprendiz</span>}
+                    {getAvailableHolidayCredits(emp).length > 0 && (
+                      <span className="flex items-center gap-1 text-[7px] font-extrabold text-rose-500 uppercase tracking-wider mt-0.5 animate-pulse">
+                        <Icon name="event_repeat" className="text-[10px]" /> {getAvailableHolidayCredits(emp).length} Feriado{getAvailableHolidayCredits(emp).length > 1 ? 's' : ''} Pendente
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="sticky left-[150px] z-20 bg-slate-50 group-hover:bg-slate-100 p-2 border-r border-slate-100 min-w-[130px] w-[130px] max-w-[130px] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
@@ -395,18 +482,44 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                         <div className="absolute inset-0 border-2 border-dashed border-teal-400/30 rounded-lg pointer-events-none m-1"></div>
                       )}
 
-                      <div 
-                        className={`inline-flex items-center justify-center w-8 h-8 rounded-lg text-white text-[10px] font-extrabold shadow-sm transition-all pointer-events-none relative z-10 ${
-                          isLocked ? 'opacity-90 grayscale-[0.3]' : ''
-                        } ${
-                          shift === 'T' ? 'bg-sky-600' : 
-                          shift === 'F' ? 'bg-orange-500' : 
-                          shift === 'FF' ? 'bg-red-500' : 
-                          shift === 'C' ? 'bg-teal-500' : 'bg-indigo-600'
-                        }`}
-                      >
-                        {shift}
+                      <div className="relative inline-block w-8 h-8">
+                        <div 
+                          className={`absolute inset-0 flex items-center justify-center rounded-lg text-white text-[10px] font-extrabold shadow-sm transition-all pointer-events-none z-10 ${
+                            isLocked ? 'opacity-90 grayscale-[0.3]' : ''
+                          } ${
+                            shift === 'T' ? 'bg-sky-600' : 
+                            shift === 'F' ? 'bg-orange-500' : 
+                            shift.startsWith('FF') ? 'bg-red-500' : 
+                            shift === 'C' ? 'bg-teal-500' : 'bg-indigo-600'
+                          }`}
+                        >
+                          {shift}
+                        </div>
                       </div>
+
+                        {isEditable && !isLocked && shift !== 'FE' && (
+                          <select
+                            value={shift}
+                            onChange={(e) => {
+                               handleShiftChange(emp.id, day.originalIdx, e.target.value as ShiftType);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
+                            title="Alterar status"
+                          >
+                          <option value="T">T - Trabalho</option>
+                          <option value="F">F - Folga</option>
+                          <option value="FF">FF - Feriado/Dom</option>
+                          {getAvailableHolidayCredits(emp).map(credit => (
+                             <option key={credit} value={`FF ${credit}`}>FF {credit} - Folga Feriado</option>
+                          ))}
+                          {shift.startsWith('FF ') && !getAvailableHolidayCredits(emp).includes(shift.replace('FF ', '')) && (
+                             <option value={shift}>{shift} - Folga Feriado</option>
+                          )}
+                          <option value="C">C - Curso</option>
+                        </select>
+                      )}
                     </td>
                   );
                 })}

@@ -9,7 +9,8 @@ import { DaySummaryCard } from './components/DaySummaryCard';
 import { ShiftGrid } from './components/ShiftGrid';
 import { TeamView } from './components/TeamView';
 import { HolidayManager } from './components/HolidayManager';
-import { APPRENTICE_WORK_PERIOD, PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID } from './constants';
+import { APPRENTICE_WORK_PERIOD, PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, buildHolidaySet } from './constants';
+
 import { Employee, ShiftType, MonthYear, Holiday, EmployeeCargo } from './types';
 
 const CURRENT_YEAR = new Date().getFullYear(); // 2026
@@ -159,15 +160,26 @@ const App: React.FC = () => {
     // Capitalise first letter of weekday
     const weekdayLabel = weekdayName.charAt(0).toUpperCase() + weekdayName.slice(1);
 
-    // Header
-    let text = `📅 Escala - ${weekdayLabel}, ${dayIdx + 1} de ${months[currentMY.month]}\n\n`;
+    const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+    const isHoliday = buildHolidaySet(currentMY.year, customHolidays).has(dateStr);
 
-    // Group working employees by shift label
-    const shiftGroups: { label: string; range: string; members: { name: string; hour: string }[] }[] = [
-      { label: 'Abertura',     range: '10h às 18h20', members: [] },
-      { label: 'Intermediário',range: '12h às 20h20', members: [] },
-      { label: 'Fechamento',   range: '13h40 às 22h', members: [] },
-    ];
+    // Header
+    let text = `📅 Escala - ${weekdayLabel}, ${dayIdx + 1} de ${months[currentMY.month]}${isHoliday ? ' (🏴 FERIADO)' : ''}\n\n`;
+
+
+    // Group working employees by shift label or hour
+    const shiftGroups: { label: string; range: string; members: { name: string; hour: string }[] }[] = isHoliday 
+      ? [
+          { label: 'Abertura (H)', range: '12h às 18h', members: [] },
+          { label: 'Interm. 1 (H)', range: '13h às 19h', members: [] },
+          { label: 'Interm. 2 (H)', range: '14h às 20h', members: [] },
+          { label: 'Fechamento (H)', range: '15h às 21h', members: [] },
+        ]
+      : [
+          { label: 'Abertura',     range: '10h às 18h20', members: [] },
+          { label: 'Intermediário',range: '12h às 20h20', members: [] },
+          { label: 'Fechamento',   range: '13h40 às 22h', members: [] },
+        ];
 
     const absent: { name: string; code: string }[] = [];
 
@@ -178,14 +190,11 @@ const App: React.FC = () => {
       const firstName = e.name.split(' ')[0];
 
       if (shift === 'T' || shift === 'FF') {
-        if (hour.includes('10h')) {
-          shiftGroups[0].members.push({ name: firstName, hour });
-        } else if (hour.includes('12h')) {
-          shiftGroups[1].members.push({ name: firstName, hour });
-        } else if (hour.includes('13h40')) {
-          shiftGroups[2].members.push({ name: firstName, hour });
+        const matchingGroup = shiftGroups.find(g => hour.includes(g.range.split(' ')[0]));
+        if (matchingGroup) {
+          matchingGroup.members.push({ name: firstName, hour });
         } else {
-          // Fallback: add to the closest matching group by hour prefix
+          // Fallback: add to the first group if no match
           shiftGroups[0].members.push({ name: firstName, hour });
         }
       } else if (shift === 'F') {
@@ -208,6 +217,7 @@ const App: React.FC = () => {
       });
       text += '\n';
     });
+
 
     // Ausências footer
     if (absent.length > 0) {
@@ -344,7 +354,9 @@ const App: React.FC = () => {
               employees={employees}
               selectedDayIdx={selectedDayIdx}
               currentMY={currentMY}
+              customHolidays={customHolidays}
             />
+
 
             <input type="file" accept=".json" ref={fileInputRef} className="hidden" onChange={handleImportBackup} />
 
