@@ -260,6 +260,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           <div className="flex bg-slate-100 p-1 rounded-lg">
             <button onClick={() => setFilter('all')} className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'all' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}>Mês Inteiro</button>
             <button onClick={() => setFilter('sunday')} className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'sunday' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}>Somente Domingos</button>
+            <button onClick={() => setFilter('holiday')} className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'holiday' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}>Visão Feriados</button>
             <button
               onClick={() => { setFilter('week'); setSelectedWeek(1); }}
               className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'week' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
