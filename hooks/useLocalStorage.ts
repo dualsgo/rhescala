@@ -28,8 +28,17 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
         }
 
         fetch(`${DB_API_URL}?key=${key}`)
-            .then(res => res.json())
-            .then(data => {
+            .then(res => res.text())
+            .then(textData => {
+                let data;
+                try {
+                    data = JSON.parse(textData);
+                } catch (err) {
+                    console.warn(`⚠️ ALERTA: O Cofre retornou dados inválidos ('${textData.slice(0, 20)}...'). A célula A1 da planilha deve conter apenas JSON ou estar vazia. Ignorando a nuvem por segurança.`);
+                    setIsLoaded(true);
+                    return;
+                }
+
                 // Prevenção de Segurança: Se os dados vierem da URL errada (ex: Painel Visual), não corrompe o Editor.
                 // O RHEscala espera que a lista de funcionários (riHappyEmployeesData) seja um Array.
                 if (key === 'riHappyEmployeesData' && !Array.isArray(data)) {
