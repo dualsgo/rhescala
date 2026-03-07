@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 
 // URL DO SEU NOVO GOOGLE APPS SCRIPT (CRIE UM SCRIPT ESPECÍFICO PARA ESSE BANCO DE DADOS EM JSON)
 // Substitua o link abaixo assim que implantar o novo Script no Google
-export const DB_API_URL = "https://script.google.com/macros/s/AKfycbz0QeiMbI2F9MjNHFgoAacNmfXy7kEluuQHvpqJn0y0htZiMhJ6s9OZbiLQ9bLMmJZ85A/exec";
+export const DB_API_URL = "https://script.google.com/macros/s/AKfycbxV3_Lq7J9LGbQ4M20p5zqMyqZ9ciX1zOkx_wHnecL0eX0qF-S57qLQgtVV3fAFPOzorw/exec";
 
 export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void] {
 
@@ -22,7 +22,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
 
     // Carrega do Banco de Dados em Nuvem (Google Sheets) na inicialização do app
     useEffect(() => {
-        if (!DB_API_URL || DB_API_URL === "SUA_URL_AQUI") {
+        if (!DB_API_URL) {
             setIsLoaded(true); // Funciona offline se não houver URL
             return;
         }
@@ -30,8 +30,17 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
         fetch(`${DB_API_URL}?key=${key}`)
             .then(res => res.json())
             .then(data => {
-                // Se retornou dados do banco, substitui o estado (Nuven > Local)
+                // Prevenção de Segurança: Se os dados vierem da URL errada (ex: Painel Visual), não corrompe o Editor.
+                // O RHEscala espera que a lista de funcionários (riHappyEmployeesData) seja um Array.
+                if (key === 'riHappyEmployeesData' && !Array.isArray(data)) {
+                    console.error("⚠️ ALERTA: A URL colocada parece ser do Painel Visual (Hub), e não do 'Cofre' do Editor. Os dados não foram carregados para evitar corromper a escala.");
+                    setIsLoaded(true);
+                    return;
+                }
+
+                // Se retornou dados válidos do banco, substitui o estado (Nuvem > Local)
                 if (data && (!Array.isArray(data) || data.length > 0)) {
+                    console.log(`✅ Dados [${key}] carregados da nuvem com sucesso!`);
                     setStoredValue(data);
                     window.localStorage.setItem(key, JSON.stringify(data));
                 }
@@ -55,11 +64,13 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                 }
 
                 // Sincronização em nuvem invisível
-                if (DB_API_URL && DB_API_URL !== "SUA_URL_AQUI" && isLoaded) {
+                if (DB_API_URL && isLoaded) {
                     fetch(`${DB_API_URL}?key=${key}`, {
                         method: 'POST',
                         body: JSON.stringify(valueToStore),
-                    }).catch(err => console.error("Erro ao salvar no BD da nuvem:", err));
+                    })
+                        .then(() => console.log(`☁️ Alteração em [${key}] salva na nuvem com sucesso!`))
+                        .catch(err => console.error("❌ Erro ao salvar no BD da nuvem:", err));
                 }
 
                 return valueToStore;
