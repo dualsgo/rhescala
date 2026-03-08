@@ -32,14 +32,15 @@ const App: React.FC = () => {
 
   // Auto-generate month if it's completely empty
   React.useEffect(() => {
-    // If we only have the placeholder, do nothing
-    if (employees.length === 1 && employees[0].id === 'placeholder') return;
+    // Se a lista de funcionários ainda é o placeholder ou está carregando dados, não gera nada
+    if (employees.length <= 1 && (employees[0]?.id === PLACEHOLDER_EMPLOYEE_ID || !employees[0])) return;
 
     // Check if the current month has any generated data for active employees
     const hasData = employees.some(e => e.status === 'active' && e.shifts[monthKey] && e.shifts[monthKey].length > 0);
     
-    // If not, auto-generate and apply it silently (without breaking manual edits in other months)
+    // Só gera se não tiver dados e NÃO estivermos em processo de sincronização inicial
     if (!hasData) {
+      console.log(`🪄 Auto-gerando escala para ${monthKey}...`);
       const updated = applyMonthUpdate(employees, currentMY.year, currentMY.month, customHolidays);
       setEmployees(prev => prev.map(emp => {
         const empUpdated = updated[emp.id];
@@ -51,7 +52,8 @@ const App: React.FC = () => {
         };
       }));
     }
-  }, [currentMY, employees, monthKey, customHolidays, setEmployees]);
+  }, [currentMY, monthKey, customHolidays, setEmployees]); 
+  // Removi 'employees' das dependências para evitar loop infinito e marcação de 'dirty' constante
 
   // ─── Update month (smart refresh) ──────────────────────────────────────────
   const resetMonth = useCallback(async () => {
