@@ -10,6 +10,7 @@ interface InconsistencyPanelProps {
   today:          Date;
   onSelectDay:    (idx: number) => void;
   onApplyFix:     (empId: string, dayIdx: number, shift: ShiftType) => void;
+  onApplyBulkFixes: (updates: { empId: string, dayIdx: number, newShift: ShiftType }[]) => void;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -201,6 +202,7 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
   today,
   onSelectDay,
   onApplyFix,
+  onApplyBulkFixes,
 }) => {
   const [open, setOpen] = useState(false);
 
@@ -225,29 +227,55 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
   };
 
   const handleApplyAll = () => {
-    // Track how many rest-fixes have been scheduled per Sunday dayIdx
-    // to avoid dropping below MIN_SUNDAY_WORKERS on any single Sunday.
     const MIN_WORKERS = 6;
     const fixesAppliedPerDay = new Map<number, number>();
+    const bulkUpdates: { empId: string, dayIdx: number, newShift: ShiftType }[] = [];
 
-    for (const issue of issues) {
+    // Prioridade 1: Quebra 6x1 (Legalmente obrigatório)
+    const workInconsistencies = issues.filter(i => i.type === 'consecutive_work');
+    for (const issue of workInconsistencies) {
+      if (issue.fix) {
+        bulkUpdates.push({
+          empId: issue.fix.empId,
+          dayIdx: issue.fix.dayIdx,
+          newShift: issue.fix.newShift
+        });
+        // Se for domingo, decrementa a cobertura (embora seja obrigatório)
+        if (new Date(currentMY.year, currentMY.month, issue.fix.dayIdx + 1).getDay() === 0) {
+          fixesAppliedPerDay.set(issue.fix.dayIdx, (fixesAppliedPerDay.get(issue.fix.dayIdx) || 0) + 1);
+        }
+      }
+    }
+
+    // Prioridade 2: Domingos Seguidos (Também importante, mas respeita cobertura se possível)
+    const sundayInconsistencies = issues.filter(i => i.type === 'consecutive_sunday');
+    const mKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+
+    for (const issue of sundayInconsistencies) {
       if (!issue.fix) continue;
 
-      if (issue.type === 'consecutive_sunday') {
-        const dayIdx = issue.fix.dayIdx;
-        const mKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
-        // Count CLTs currently working this Sunday in saved shifts
-        const currentWorkers = employees.filter(e => {
-          if (e.isYoungApprentice || e.status !== 'active') return false;
-          return (e.shifts[mKey]?.[dayIdx]) === 'T'; // Apenas quem está em T
-        }).length;
-        const alreadyScheduledOff = fixesAppliedPerDay.get(dayIdx) ?? 0;
-        // Skip if applying this fix would drop below the minimum
-        if (currentWorkers - alreadyScheduledOff - 1 < MIN_WORKERS) continue;
+      const dayIdx = issue.fix.dayIdx;
+      // Count CLTs working TODAY (using the static employees prop as baseline)
+      const currentWorkers = employees.filter(e => {
+        if (e.isYoungApprentice || e.status !== 'active') return false;
+        return (e.shifts[mKey]?.[dayIdx]) === 'T';
+      }).length;
+
+      const alreadyScheduledOff = fixesAppliedPerDay.get(dayIdx) ?? 0;
+      
+      // Só aplica se não quebrar o mínimo de 6 pessoas na loja
+      if (currentWorkers - alreadyScheduledOff - 1 >= MIN_WORKERS) {
+        bulkUpdates.push({
+          empId: issue.fix.empId,
+          dayIdx: issue.fix.dayIdx,
+          newShift: issue.fix.newShift
+        });
         fixesAppliedPerDay.set(dayIdx, alreadyScheduledOff + 1);
       }
+    }
 
-      onApplyFix(issue.fix.empId, issue.fix.dayIdx, issue.fix.newShift);
+    if (bulkUpdates.length > 0) {
+      onApplyBulkFixes(bulkUpdates);
     }
   };
 

@@ -65,6 +65,42 @@ function isSundayUnavailable(
  *   - if emp worked both last two Sundays of month N → consecutive = 2
  *     → they get the highest priority to rest on the first Sunday of month N+1
  */
+/**
+ * Scans the last days of the previous month to compute each employee's
+ * current work streak (consecutive days without a break).
+ */
+export function getPrevMonthWorkStreak(
+    employees: Employee[],
+    year: number,
+    month: number
+): Map<string, number> {
+    const result = new Map<string, number>();
+    let prevMonth = month - 1;
+    let prevYear = year;
+    if (prevMonth < 0) { prevMonth = 11; prevYear -= 1; }
+
+    const prevMonthKey = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}`;
+    const daysInPrevMonth = new Date(prevYear, prevMonth + 1, 0).getDate();
+
+    for (const emp of employees) {
+        let streak = 0;
+        const shifts = emp.shifts[prevMonthKey];
+        if (shifts) {
+            for (let d = daysInPrevMonth - 1; d >= 0; d--) {
+                const s = shifts[d];
+                // Férias (FE) quebras a sequência de trabalho
+                if (s === 'T' || s === 'C') {
+                    streak++;
+                } else {
+                    break;
+                }
+            }
+        }
+        result.set(emp.id, streak);
+    }
+    return result;
+}
+
 export function getPrevMonthConsecutive(
     activeRegular: Employee[],
     year: number,
@@ -461,14 +497,12 @@ export function applyMonthUpdate(
     }
 
     // ── Regular employees ──────────────────────────────────────────────────────
+    const prevStreaks = getPrevMonthWorkStreak(activeRegular, year, month);
+
     activeRegular.forEach(emp => {
         const restDays = sundayAssignments.get(emp.id) ?? new Set<number>();
-
-        // IMPORTANT: We now reset everything to 'T' (Trabalho) on Auto-Fill
-        // The user wants a clean slate based on the master rules.
         const newShifts: ShiftType[] = Array(daysInMonth).fill('T');
 
-        // Always recalculate hours to ensure consistency with saved shift/workPeriod
         const newHours: string[] = Array.from({ length: daysInMonth }, (_, i) => {
             const date = new Date(year, month, i + 1);
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
@@ -477,67 +511,55 @@ export function applyMonthUpdate(
 
         // 1. Pass: Apply absolute constraints (Vacation, out-of-employment, Sundays, Holidays)
         for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
-            const dayNum = dayIdx + 1;
-            const date = new Date(year, month, dayNum);
-            const dow = date.getDay();
-            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-            const isHoliday = holidaySet.has(dateStr);
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
 
-            // Always honour vacation
             if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
                 newShifts[dayIdx] = 'FE'; continue;
             }
-
-            // Outside employment window
             if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) {
                 newShifts[dayIdx] = 'F'; continue;
             }
 
-            // Apply Sunday rotation
+            const dow = new Date(year, month, dayIdx + 1).getDay();
             if (dow === 0) {
-                if (emp.preferredDayOff === 'Domingo') {
+                if (emp.preferredDayOff === 'Domingo' || restDays.has(dayIdx)) {
                     newShifts[dayIdx] = 'F';
-                } else if (restDays.has(dayIdx)) {
-                    newShifts[dayIdx] = 'F';
-                } else {
-                    newShifts[dayIdx] = 'T';
                 }
-                continue;
             }
         }
 
-        // 2. Second pass: Ensure WEEKLY preferred folgas are applied
-        let currentWeekStartIdx = 0;
-        while (currentWeekStartIdx < daysInMonth) {
-            let weekEndIdx = currentWeekStartIdx;
-            // Find the end of the week (Sunday)
-            while (weekEndIdx < daysInMonth && new Date(year, month, weekEndIdx + 1).getDay() !== 0) {
-                weekEndIdx++;
+        // 2. Pass: Streak-based Folga Application
+        // We ensure a folga is placed at least every 6 working days.
+        let currentStreak = prevStreaks.get(emp.id) || 0;
+
+        for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
+            const shift = newShifts[dayIdx];
+            if (shift === 'FE' || shift === 'F') {
+                currentStreak = 0;
+                continue;
             }
 
-            let hasFolga = false;
-            let preferredDayOffIdx = -1;
+            // Atividade detected (T or C - apprentices are handled separately, regular emps are mostly T here)
+            currentStreak++;
 
-            for (let i = currentWeekStartIdx; i <= Math.min(weekEndIdx, daysInMonth - 1); i++) {
-                if (newShifts[i] === 'F' || newShifts[i] === 'FE') {
-                    hasFolga = true;
-                }
-                const dow = new Date(year, month, i + 1).getDay();
+            // If we hit 7th day without folga, we MUST put one here or earlier in the week.
+            if (currentStreak > 6) {
+                // To be smart, try to find the "preferredDayOff" within the LAST 6 days and move it there.
+                // Or just if today is the preferred day, it would have been caught if we checked ahead.
+                // Simplified: if currentStreak > 6, this MUST be a folga.
+                newShifts[dayIdx] = 'F';
+                currentStreak = 0;
+            } else {
+                // If this is the preferred day off, and we haven't had a folga in the current "sequence",
+                // we should take it now to stay legally safe and follow preference.
+                const dow = new Date(year, month, dayIdx + 1).getDay();
                 if (WEEKDAY_NAMES[dow] === emp.preferredDayOff) {
-                    preferredDayOffIdx = i;
+                    // Check ahead: if we don't take it now, will we hit 7 days before next Sunday?
+                    // For simplicity: always take the preferred day if it's been 0-5 days since last folga.
+                    newShifts[dayIdx] = 'F';
+                    currentStreak = 0;
                 }
             }
-
-            // Se não tem folga na semana (não descansou no domingo nem está de férias), 
-            // aplica a folga preferencial na semana.
-            if (!hasFolga && preferredDayOffIdx !== -1) {
-                const dayNum = preferredDayOffIdx + 1;
-                const preferredDow = new Date(year, month, dayNum).getDay();
-                if (preferredDow !== 0) { // Sunday handled in Pass 1
-                    newShifts[preferredDayOffIdx] = 'F';
-                }
-            }
-            currentWeekStartIdx = weekEndIdx + 1;
         }
 
         result[emp.id] = { shifts: newShifts, hours: newHours };

@@ -21,7 +21,7 @@ const App: React.FC = () => {
   const [showHolidayManager, setShowHolidayManager] = useState(false);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'team'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'team' | 'analysis'>('dashboard');
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate());
   const [waModal, setWaModal] = useState<{ show: boolean; text: string }>({ show: false, text: '' });
@@ -106,11 +106,27 @@ const App: React.FC = () => {
   const updateShift = (empId: string, dayIdx: number, newShift: ShiftType) => {
     setEmployees(prev => prev.map(emp => {
       if (emp.id !== empId) return emp;
-      const current = emp.shifts[monthKey] || Array(31).fill('F');
+      const current = emp.shifts[monthKey] || Array(31).fill('T');
       const updated = [...current];
       updated[dayIdx] = newShift;
       return { ...emp, shifts: { ...emp.shifts, [monthKey]: updated } };
     }));
+  };
+
+  const updateShifts = (updates: { empId: string, dayIdx: number, newShift: ShiftType }[]) => {
+    setEmployees(prev => {
+      let nextList = [...prev];
+      for (const update of updates) {
+        nextList = nextList.map(emp => {
+          if (emp.id !== update.empId) return emp;
+          const current = emp.shifts[monthKey] || Array(31).fill('T');
+          const updated = [...current];
+          updated[update.dayIdx] = update.newShift;
+          return { ...emp, shifts: { ...emp.shifts, [monthKey]: updated } };
+        });
+      }
+      return nextList;
+    });
   };
 
   const updateEmployeeDailyHour = (empId: string, dayIdx: number, newHour: string) => {
@@ -379,10 +395,11 @@ const App: React.FC = () => {
               customHolidays={customHolidays}
               onSelectDay={setSelectedDayIdx}
               onUpdateShift={updateShift}
+              onUpdateShifts={updateShifts}
               onUpdateEmployeeDailyHour={updateEmployeeDailyHour}
               onShareWhatsApp={shareWhatsApp}
-              onResetMonth={resetMonth}
               onShowHolidayManager={() => setShowHolidayManager(true)}
+              onOpenAnalysis={() => setCurrentView('analysis')}
               onNextMonth={() => setCurrentMY(prev => {
                 let m = prev.month + 1, y = prev.year;
                 if (m > 11) { m = 0; y++; }

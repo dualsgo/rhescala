@@ -16,6 +16,7 @@ interface ShiftGridProps {
   customHolidays: Holiday[];
   onSelectDay: (idx: number) => void;
   onUpdateShift: (empId: string, dayIdx: number, newShift: ShiftType) => void;
+  onUpdateShifts: (updates: { empId: string, dayIdx: number, newShift: ShiftType }[]) => void;
   onUpdateEmployeeDailyHour: (empId: string, dayIdx: number, newHour: string) => void;
   onShareWhatsApp: (dayIdx: number) => void;
 
@@ -33,8 +34,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   customHolidays,
   onSelectDay,
   onUpdateShift,
+  onUpdateShifts,
   onUpdateEmployeeDailyHour,
   onShareWhatsApp,
+  onApplyBulkFixes,
   onResetMonth,
   onShowHolidayManager,
   onNextMonth,
@@ -461,6 +464,9 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               onApplyFix={(empId, dayIdx, nextShift) => {
                 onUpdateShift(empId, dayIdx, nextShift);
                 onSelectDay(dayIdx);
+              }}
+              onApplyBulkFixes={(updates) => {
+                onUpdateShifts(updates);
               }}
             />
             <button 
