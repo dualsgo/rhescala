@@ -60,8 +60,17 @@ export const HolidayCreditPanel: React.FC<HolidayCreditPanelProps> = ({
       const shifts = emp.shifts[monthKey] || [];
       
       holidaysInMonth.forEach(h => {
+        const shifts = emp.shifts[monthKey] || [];
+        let currentShift = shifts[h.dayIdx];
+        const hDateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(h.dayIdx + 1).padStart(2, '0')}`;
+        
+        // Override with vacation if applicable
+        if (emp.vacationStart && emp.vacationEnd && hDateStr >= emp.vacationStart && hDateStr <= emp.vacationEnd) {
+            currentShift = 'FE';
+        }
+
         // T e C contam como atividade (ganha crédito se trabalhar no feriado)
-        if (shifts[h.dayIdx] === 'T' || shifts[h.dayIdx] === 'C') {
+        if (currentShift === 'T' || currentShift === 'C') {
           // Suggest a day off
           let bestDayIdx = -1;
           let maxCoverage = -1;
@@ -78,13 +87,21 @@ export const HolidayCreditPanel: React.FC<HolidayCreditPanelProps> = ({
             if (holidaySet.has(dateStr)) continue;
             // 3. Must not be preferred day off
             if (WEEKDAY_NAMES[dow] === emp.preferredDayOff) continue;
-            // 4. Must not be currently off
-            if ((emp.shifts[monthKey]?.[d]) === 'F' || (emp.shifts[monthKey]?.[d]) === 'FE') continue;
+            // 4. Must not be currently off or on vacation
+            const currentShiftArr = emp.shifts[monthKey] || [];
+            let currentShift = currentShiftArr[d] || 'F';
+            const isOnVacation = emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd;
+            if (currentShift === 'F' || currentShift === 'FE' || isOnVacation) continue;
 
             // Calculate team coverage for this candidate day
             const coverage = employees.filter(e => {
-              const s = (e.shifts[monthKey] || [])[d];
-              // Apenas T conta como presença na loja para os cálculos de cobertura
+              const sArr = e.shifts[monthKey] || [];
+              let s = sArr[d] || 'F';
+              const dDateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`;
+              if (e.vacationStart && e.vacationEnd && dDateStr >= e.vacationStart && dDateStr <= e.vacationEnd) {
+                s = 'FE';
+              }
+              // Apenas T conta como presença na loja
               return s === 'T';
             }).length;
 

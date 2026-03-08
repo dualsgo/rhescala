@@ -101,8 +101,14 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
     };
 
     employees.filter(e => !e.isHidden).forEach(e => {
-      const mShifts = e.shifts[monthKey] || [];
-      const shift = mShifts[selectedDayIdx];
+      const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
+      let shift = (e.shifts[monthKey] || [])[selectedDayIdx];
+
+      // Override with vacation if applicable
+      if (e.vacationStart && e.vacationEnd && dateStr >= e.vacationStart && dateStr <= e.vacationEnd) {
+        shift = 'FE';
+      }
+
       const hForDay = (e.dailyHours[monthKey] || [])[selectedDayIdx] || e.workPeriod;
 
       if (shift === 'T') {
@@ -122,9 +128,14 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
             else if (hForDay.includes('13h40')) { counts.fechamento++; names.fechamento.push(e.name.split(' ')[0]); }
           }
         }
-      } else if (shift === 'F' || (shift && shift.startsWith('FF'))) counts.folga++;
-      else if (shift === 'C') counts.curso++;
-      else if (shift === 'FE') counts.ferias++;
+      } else if (shift === 'F' || (shift && (shift.startsWith('FF') || shift === 'DO'))) {
+        counts.folga++;
+      } else if (shift === 'C') {
+        counts.curso++;
+        // C is activity but NOT store presence, consistent with rule
+      } else if (shift === 'FE') {
+        counts.ferias++;
+      }
     });
 
     return { counts, names };

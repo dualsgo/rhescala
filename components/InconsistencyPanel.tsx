@@ -40,6 +40,17 @@ interface Inconsistency {
 const isActivityShift = (s: ShiftType | undefined): boolean => s === 'T' || s === 'C';
 const isStorePresence = (s: ShiftType | undefined): boolean => s === 'T';
 
+function getEffectiveShift(emp: Employee, year: number, month: number, dayIdx: number): ShiftType {
+    const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+    
+    if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
+        return 'FE';
+    }
+    const shifts = (emp.shifts[monthKey] ?? []) as ShiftType[];
+    return shifts[dayIdx] || 'F';
+}
+
 // ─── Detection ────────────────────────────────────────────────────────────────
 
 function detectInconsistencies(
@@ -67,97 +78,87 @@ function detectInconsistencies(
     if (new Date(year, month, d + 1).getDay() === 0) sundaysThisMonth.push(d);
   }
 
-  for (const emp of employees) {
-    if (emp.status !== 'active') continue;
-    // Apprentices don't work Sundays by design — skip all per-employee rules
-    if (emp.isYoungApprentice) continue;
-    const shifts = (emp.shifts[monthKey] ?? []) as ShiftType[];
+    for (const emp of employees) {
+      if (emp.status !== 'active' || emp.isYoungApprentice) continue;
 
-    // ── Rule 1: 6×1 — more than 6 consecutive working days ─────────────────
-    let workStreak    = 0;
-    let streakStart   = 0;
-    let alreadyFlagged = false; // flag each separate streak once
+      // ── Rule 1: 6×1 — more than 6 consecutive working days ─────────────────
+      let workStreak    = 0;
+      let streakStart   = 0;
+      let alreadyFlagged = false;
 
-    for (let d = 0; d < daysInMonth; d++) {
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`;
-      const onVacation = emp.vacationStart && emp.vacationEnd &&
-        dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd;
+      for (let d = 0; d < daysInMonth; d++) {
+        const s = getEffectiveShift(emp, year, month, d);
 
-      if (isActivityShift(shifts[d]) && !onVacation) {
-        if (workStreak === 0) { streakStart = d; alreadyFlagged = false; }
-        workStreak++;
+        if (isActivityShift(s)) {
+          if (workStreak === 0) { streakStart = d; alreadyFlagged = false; }
+          workStreak++;
 
-        if (workStreak > 6 && !alreadyFlagged) {
-          alreadyFlagged = true;
-          // Fix: give a day off on the 7th day (6-index from streakStart)
-          const fixDay = streakStart + 6;
-          const fixDayNum = fixDay + 1;
+          if (workStreak > 6 && !alreadyFlagged) {
+            alreadyFlagged = true;
+            const fixDay = streakStart + 6;
+            const fixDayNum = fixDay + 1;
+            results.push({
+              id:       `${emp.id}-6x1-${streakStart}`,
+              empId:    emp.id,
+              empName:  emp.name,
+              type:     'consecutive_work',
+              severity: 'error',
+              detail:   `${workStreak}+ dias seguidos sem folga (${streakStart + 1} → ${d + 1})`,
+              dayIdx:   d,
+              fix: fixDay < daysInMonth ? {
+                label:    `Dar folga no dia ${fixDayNum}`,
+                empId:    emp.id,
+                dayIdx:   fixDay,
+                newShift: 'F',
+              } : null,
+            });
+          }
+        } else {
+          workStreak    = 0;
+          alreadyFlagged = false;
+        }
+      }
+
+      // ── Rule 2: 3+ consecutive Sundays (considering retro) ────────────────
+      const initialStreak = prevMonthConsecs.get(emp.id) || 0;
+      let currentStreak = initialStreak;
+      let streakIndices: number[] = []; 
+
+      for (const sunIdx of sundaysThisMonth) {
+        const s = getEffectiveShift(emp, year, month, sunIdx);
+
+        if (isActivityShift(s)) {
+          currentStreak++;
+          streakIndices.push(sunIdx);
+        } else {
+          currentStreak = 0;
+          streakIndices = [];
+        }
+
+        if (currentStreak >= 3) {
+          const domDays = streakIndices.map(d => d + 1).join(', ');
+          const detailPrefix = initialStreak > 0 && streakIndices.length < currentStreak 
+            ? `Iniciou no mês anterior, totalizando ${currentStreak} domingos: ` 
+            : '';
+
           results.push({
-            id:       `${emp.id}-6x1-${streakStart}`,
+            id:       `${emp.id}-sun-${sunIdx}`,
             empId:    emp.id,
             empName:  emp.name,
-            type:     'consecutive_work',
+            type:     'consecutive_sunday',
             severity: 'error',
-            detail:   `${workStreak}+ dias seguidos sem folga (${streakStart + 1} → ${d + 1})`,
-            dayIdx:   d,
-            fix: fixDay < daysInMonth ? {
-              label:    `Dar folga no dia ${fixDayNum}`,
+            detail:   `${detailPrefix}${currentStreak} domingos seguidos trabalhados (mês atual: ${domDays || 'nenhum'})`,
+            dayIdx:   sunIdx,
+            fix: {
+              label:    `Dar folga no domingo dia ${sunIdx + 1}`,
               empId:    emp.id,
-              dayIdx:   fixDay,
+              dayIdx:   sunIdx,
               newShift: 'F',
-            } : null,
+            },
           });
         }
-      } else {
-        workStreak    = 0;
-        alreadyFlagged = false;
       }
     }
-
-    // ── Rule 2: 3+ consecutive Sundays (considering retro) ────────────────
-    const initialStreak = prevMonthConsecs.get(emp.id) || 0;
-    let currentStreak = initialStreak;
-    let streakIndices: number[] = []; 
-    // Note: streakIndices only tracks indices in THIS month for the detail message
-
-    for (const sunIdx of sundaysThisMonth) {
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(sunIdx + 1).padStart(2, '0')}`;
-      const onVacation = emp.vacationStart && emp.vacationEnd &&
-        dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd;
-
-      if (isActivityShift(shifts[sunIdx]) && !onVacation) {
-        currentStreak++;
-        streakIndices.push(sunIdx);
-      } else {
-        currentStreak = 0;
-        streakIndices = [];
-      }
-
-      // Flag if streak hits 3
-      if (currentStreak >= 3) {
-        const domDays = streakIndices.map(d => d + 1).join(', ');
-        const detailPrefix = initialStreak > 0 && streakIndices.length < currentStreak 
-          ? `Iniciou no mês anterior, totalizando ${currentStreak} domingos: ` 
-          : '';
-
-        results.push({
-          id:       `${emp.id}-sun-${sunIdx}`,
-          empId:    emp.id,
-          empName:  emp.name,
-          type:     'consecutive_sunday',
-          severity: 'error',
-          detail:   `${detailPrefix}${currentStreak} domingos seguidos trabalhados (mês atual: ${domDays || 'nenhum'})`,
-          dayIdx:   sunIdx,
-          fix: {
-            label:    `Dar folga no domingo dia ${sunIdx + 1}`,
-            empId:    emp.id,
-            dayIdx:   sunIdx,
-            newShift: 'F',
-          },
-        });
-      }
-    }
-  }
 
   // ── Rule 3: Sunday with fewer than 6 CLT workers ────────────────────────
   const MIN_WORKERS = 6;
@@ -165,10 +166,9 @@ function detectInconsistencies(
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(sunIdx + 1).padStart(2, '0')}`;
 
     // Count CLTs actually working this Sunday (not on vacation, not resting)
-      const workers = employees.filter(emp => {
+    const workers = employees.filter(emp => {
       if (emp.isYoungApprentice || emp.status !== 'active') return false;
-      const shifts = (emp.shifts[monthKey] ?? []) as ShiftType[];
-      const s = shifts[sunIdx];
+      const s = getEffectiveShift(emp, year, month, sunIdx);
       // Apenas T conta como presença na loja
       return isStorePresence(s);
     });
