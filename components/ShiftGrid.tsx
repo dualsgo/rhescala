@@ -204,11 +204,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       });
       if (confirmed) {
         setIsEditable(false);
-        setIsFullscreen(false); // Exit fullscreen when saving and exiting edit mode
       }
     } else {
       setIsEditable(true);
-      setIsFullscreen(true); // Enter fullscreen when entering edit mode
+      if (!isFullscreen) setIsFullscreen(true);
     }
   };
 
@@ -216,20 +215,23 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     if (isGridLocked) {
       const confirmation = await showDialog({
         type: 'prompt',
-        message: 'Para desbloquear as edições, digite "CONFIRMO":',
+        message: 'Para DESTRVAR a escala, digite a SENHA DE ACESSO:',
+        confirmText: 'Desbloquear',
+        cancelText: 'Cancelar'
       });
-      if (confirmation === 'CONFIRMO') {
+      // Senha padrão 1234 para demonstração, conforme solicitado
+      if (confirmation === '1234') {
         setIsGridLocked(false);
       } else if (confirmation !== null) {
         await showDialog({
           type: 'alert',
-          message: 'Código incorreto. A escala permanece bloqueada.'
+          message: 'Senha incorreta! O acesso às edições permanece bloqueado por segurança.'
         });
       }
     } else {
       const confirmed = await showDialog({
         type: 'confirm',
-        message: 'Deseja bloquear as edições desta escala?'
+        message: 'Deseja BLOQUEAR a escala? Isso impedirá qualquer edição acidental até que a senha seja inserida.'
       });
       if (confirmed) {
         setIsGridLocked(true);
@@ -486,9 +488,9 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             <button onClick={onShowHolidayManager} className="flex items-center gap-2 px-4 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-xs font-extrabold hover:bg-rose-50 transition-all">
                 <Icon name="event_busy" className="text-sm" /> Feriados
             </button>
-            <button onClick={onResetMonth} className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg text-xs font-extrabold hover:bg-orange-600 shadow-sm transition-all">
-                <Icon name="auto_fix_high" className="text-sm" /> Auto Preencher Folgas
-            </button>
+      <button onClick={onResetMonth} className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg text-xs font-extrabold hover:bg-orange-600 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled={isGridLocked}>
+          <Icon name="auto_fix_high" className="text-sm" /> Auto Preencher
+      </button>
         </div>
 
         {showAnalysis && (
@@ -567,23 +569,22 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {isEditable && (
-            <button
-               onClick={() => setIsFullscreen(!isFullscreen)}
-               className={`p-2 rounded-lg border transition-all ${isFullscreen ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'}`}
-               title={isFullscreen ? 'Reduzir' : 'Expandir'}
-            >
-               <Icon name={isFullscreen ? 'fullscreen_exit' : 'fullscreen'} className="text-lg" />
-            </button>
-          )}
+          {/* Zen Mode Toggle (Fullscreen without Edit) */}
+          <button
+             onClick={() => setIsFullscreen(!isFullscreen)}
+             className={`p-2 rounded-lg border transition-all ${isFullscreen ? 'bg-indigo-50 text-indigo-600 border-indigo-200 shadow-inner' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50 shadow-sm'}`}
+             title={isFullscreen ? 'Sair do Modo Zen' : 'Modo Zen (Tela Cheia)'}
+          >
+             <Icon name={isFullscreen ? 'fullscreen_exit' : 'zoom_out_map'} className="text-lg" />
+          </button>
 
           <button 
             onClick={handleToggleEditMode} 
             disabled={isGridLocked}
-            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-xs font-extrabold transition-all border ${isGridLocked ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : isEditable ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm'}`}
+            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-xs font-extrabold transition-all border ${isGridLocked ? 'bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed' : isEditable ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg scale-105' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm'}`}
           >
-            <Icon name={isEditable ? 'save' : 'edit_square'} className="text-sm" />
-            {isEditable ? 'Salvar Tudo' : 'Editar Escala'}
+            <Icon name={isEditable ? 'save' : 'edit_square'} className="text-sm" fill={isEditable} />
+            {isEditable ? 'Salvar Alterações' : 'Editar Escala'}
           </button>
 
           {isEditable && (
@@ -596,11 +597,43 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               {allowRetroactive ? 'Antigos Liberados' : 'Antigos Bloqueados'}
             </button>
           )}
+
+          <div className="w-px h-8 bg-slate-200 mx-1"></div>
+
+          <button 
+            onClick={handleToggleLock} 
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-extrabold transition-all border ${isGridLocked ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100' : 'bg-white border-slate-200 text-slate-400 hover:text-slate-600'}`}
+            title={isGridLocked ? 'Desbloquear Escala' : 'Proteger Escala'}
+          >
+              <Icon name={isGridLocked ? 'lock' : 'lock_open'} className="text-sm" fill={isGridLocked} /> 
+              {isGridLocked ? 'Desbloquear' : 'Bloquear'}
+          </button>
         </div>
       </div>
 
       {/* Table Section */}
       <div className="flex-1 overflow-auto custom-scrollbar relative bg-slate-50/20">
+        {/* Safety Lock Overlay */}
+        {isGridLocked && (
+          <div className="absolute inset-0 z-[70] bg-slate-900/5 backdrop-blur-[1px] flex items-center justify-center p-8 pointer-events-none select-none">
+             <div className="bg-white/90 border border-slate-200 shadow-2xl rounded-3xl p-8 flex flex-col items-center gap-4 animate-scale-up border-b-4 border-b-rose-500 pointer-events-auto">
+                <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center shadow-inner">
+                   <Icon name="lock" className="text-3xl" fill />
+                </div>
+                <div className="text-center">
+                   <h4 className="text-xl font-black text-slate-900 tracking-tight">Escala Protegida</h4>
+                   <p className="text-xs font-bold text-slate-400 max-w-[200px] mt-1">Edições bloqueadas para evitar alterações acidentais.</p>
+                </div>
+                <button 
+                  onClick={handleToggleLock}
+                  className="mt-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-extrabold hover:bg-slate-800 transition-all flex items-center gap-2 shadow-lg active:scale-95"
+                >
+                   <Icon name="lock_open" className="text-sm" /> Desbloquear Agora
+                </button>
+             </div>
+          </div>
+        )}
+
         <table className="w-full text-left border-separate border-spacing-0 min-w-[max-content] table-fixed">
           <thead className="sticky top-0 z-40 bg-white">
             <tr className="bg-slate-100/90 backdrop-blur-sm text-[10px] font-extrabold text-slate-600 uppercase tracking-widest border-b border-slate-300">
