@@ -8,6 +8,7 @@ import { Icon } from './components/Icon';
 import { DaySummaryCard } from './components/DaySummaryCard';
 import { ShiftGrid } from './components/ShiftGrid';
 import { TeamView } from './components/TeamView';
+import { AnalysisPanel } from './components/AnalysisPanel';
 import { HolidayManager } from './components/HolidayManager';
 import { APPRENTICE_WORK_PERIOD, PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, buildHolidaySet } from './constants';
 
@@ -398,6 +399,7 @@ const App: React.FC = () => {
               onUpdateShifts={updateShifts}
               onUpdateEmployeeDailyHour={updateEmployeeDailyHour}
               onShareWhatsApp={shareWhatsApp}
+              onResetMonth={resetMonth}
               onShowHolidayManager={() => setShowHolidayManager(true)}
               onOpenAnalysis={() => setCurrentView('analysis')}
               onNextMonth={() => setCurrentMY(prev => {
@@ -412,6 +414,13 @@ const App: React.FC = () => {
               })}
             />
           </>
+        ) : currentView === 'analysis' ? (
+          <AnalysisPanel 
+            employees={employees} 
+            currentMY={currentMY} 
+            customHolidays={customHolidays}
+            onClose={() => setCurrentView('dashboard')} 
+          />
         ) : (
           <TeamView
             employees={employees}

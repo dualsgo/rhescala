@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from 'react';
 import { Employee, MonthYear, Holiday, ShiftType } from '../types';
 import { Icon } from './Icon';
@@ -112,8 +111,8 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
   // ── Render Helpers ───────────────────────────────────────────────────────────
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
-      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-7xl overflow-hidden flex flex-col max-h-[95vh]">
+    <div className="flex flex-col h-full animate-fade-in">
+      <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1">
         
         {/* Header */}
         <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
@@ -122,7 +121,15 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                <Icon name="insights" className="text-2xl" />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Análise de Escala & Gargalos</h2>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={onClose}
+                  className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors mr-1"
+                >
+                  <Icon name="arrow_back" />
+                </button>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Análise de Escala & Gargalos</h2>
+              </div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mt-1">
                 Visualização de Sobrecarga e Cobertura Operacional • {(currentMY.month + 1).toString().padStart(2, '0')}/{currentMY.year}
               </p>

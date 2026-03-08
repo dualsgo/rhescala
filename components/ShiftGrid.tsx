@@ -21,6 +21,7 @@ interface ShiftGridProps {
   onShareWhatsApp: (dayIdx: number) => void;
 
   onResetMonth: () => void;
+  onOpenAnalysis: () => void;
   onShowHolidayManager: () => void;
   onNextMonth: () => void;
   onPrevMonth: () => void;
@@ -39,6 +40,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onShareWhatsApp,
   onApplyBulkFixes,
   onResetMonth,
+  onOpenAnalysis,
   onShowHolidayManager,
   onNextMonth,
   onPrevMonth,
@@ -451,7 +453,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 <Icon name="event_repeat" className="text-sm" /> Folgas Feriado
             </button>
             <button 
-              onClick={() => setShowAnalysis(true)} 
+              onClick={onOpenAnalysis} 
               className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-extrabold hover:bg-slate-800 shadow-lg active:scale-95 transition-all"
             >
                 <Icon name="analytics" className="text-sm" /> Painel de Análise
