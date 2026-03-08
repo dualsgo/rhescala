@@ -151,57 +151,97 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
 
   const hasLunchData = counts.abertura > 0 || counts.intermediario > 0 || counts.fechamento > 0 || counts.interm1 > 0 || counts.interm2 > 0;
 
+  // New variables for the updated JSX
+  const date = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1);
+  const dateNum = date.getDate();
+  const weekdayName = date.toLocaleDateString('pt-BR', { weekday: 'short' }).toUpperCase().replace('.', '');
+
+  const totalWorkers = counts.total;
+  const totalOff = counts.folga + counts.curso + counts.ferias;
+
+  const buckets = useMemo(() => {
+    const b: Record<string, string[]> = {};
+    if (isHoliday) {
+      if (names.abertura.length > 0) b[`ABERTURA (${HOLIDAY_LUNCH_CONFIG.abertura.range})`] = names.abertura;
+      if (names.interm1.length > 0) b[`INTERM. 1 (${HOLIDAY_LUNCH_CONFIG.interm1.range})`] = names.interm1;
+      if (names.interm2.length > 0) b[`INTERM. 2 (${HOLIDAY_LUNCH_CONFIG.interm2.range})`] = names.interm2;
+      if (names.fechamento.length > 0) b[`FECHAMENTO (${HOLIDAY_LUNCH_CONFIG.fechamento.range})`] = names.fechamento;
+    } else {
+      if (names.abertura.length > 0) b[`ABERTURA (${LUNCH_CONFIG.abertura.range})`] = names.abertura;
+      if (names.intermediario.length > 0) b[`INTERMEDIÁRIO (${LUNCH_CONFIG.intermediario.range})`] = names.intermediario;
+      if (names.fechamento.length > 0) b[`FECHAMENTO (${LUNCH_CONFIG.fechamento.range})`] = names.fechamento;
+    }
+    return b;
+  }, [isHoliday, names]);
+
   return (
-    <div className="flex flex-col gap-3 mb-6 animate-fade-in group/summary">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 transition-all duration-300 group-hover/summary:shadow-md group-hover/summary:border-slate-300">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-center gap-4 md:border-r border-slate-100 pr-6">
-            <div className={`w-12 h-12 shrink-0 ${isHoliday ? 'bg-rose-50 text-rose-600' : 'bg-orange-50 text-orange-600'} rounded-2xl flex items-center justify-center shadow-inner`}>
-              <Icon name={isHoliday ? 'event_busy' : 'groups'} className="text-2xl" fill />
-            </div>
-            <div>
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{isHoliday ? 'Equipe Feriado' : 'Equipe em Loja'}</p>
-              <h3 className="text-2xl font-black text-slate-900 leading-none mt-0.5">{counts.total}<span className="text-sm text-slate-300 ml-1 font-bold">/{employees.filter(e => !e.isHidden).length}</span></h3>
-              {counts.aprendiz > 0 && (
-                <p className="text-[8px] font-black text-teal-600 mt-1 uppercase tracking-tighter">incl. {counts.aprendiz} aprendiz</p>
-              )}
-            </div>
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-3 flex flex-col h-full hover:shadow-md transition-all group overflow-hidden">
+      
+      {/* Mini-header: Dia e Data */}
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tighter">{dateNum}</span>
+          <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{weekdayName}</span>
+        </div>
+        
+        {isHoliday && (
+          <div className="flex items-center gap-1 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-full text-[8px] font-black uppercase ring-1 ring-inset ring-red-200 dark:ring-red-800">
+             <Icon name="event_busy" className="text-[10px]" /> FERIADO
           </div>
+        )}
+      </div>
 
-          <div className={`flex-1 grid grid-cols-1 ${isHoliday ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-3`}>
-            {isHoliday ? (
-              <>
-                <ShiftBox label="Ab. (H)" range="12h-18h" count={counts.abertura} names={names.abertura} color="orange" icon="wb_twilight" />
-                <ShiftBox label="Int 1 (H)" range="13h-19h" count={counts.interm1} names={names.interm1} color="emerald" icon="sunny" />
-                <ShiftBox label="Int 2 (H)" range="14h-20h" count={counts.interm2} names={names.interm2} color="pink" icon="sunny" />
-                <ShiftBox label="Fech (H)" range="15h-21h" count={counts.fechamento} names={names.fechamento} color="rose" icon="nightlight" />
-              </>
-            ) : (
-              <>
-                <ShiftBox label="Abertura" range="10h-18h20" count={counts.abertura} names={names.abertura} color="orange" icon="wb_twilight" />
-                <ShiftBox label="Intermed." range="12h-20h20" count={counts.intermediario} names={names.intermediario} color="sky" icon="sunny" />
-                <ShiftBox label="Fechamento" range="13h40-22h" count={counts.fechamento} names={names.fechamento} color="indigo" icon="nightlight" />
-              </>
-            )}
-          </div>
-
-          <div className="flex items-center gap-4 pl-0 md:pl-6 md:border-l border-slate-100 shrink-0">
-            <StatCircle label="Folgas" count={counts.folga} color="orange" />
-            <StatCircle label="Curso" count={counts.curso} color="teal" />
-            <StatCircle label="Férias" count={counts.ferias} color="red" />
-          </div>
+      {/* Stats Quickbar */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="bg-slate-50 dark:bg-slate-900/40 rounded-xl p-2 flex items-center gap-2 border border-slate-100 dark:border-slate-700/50">
+           <div className="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <Icon name="person" className="text-xs" />
+           </div>
+           <div className="flex flex-col">
+              <span className="text-[14px] font-black text-slate-900 dark:text-slate-100 leading-none">{totalWorkers}</span>
+              <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Equipe</span>
+           </div>
+        </div>
+        <div className="bg-slate-50 dark:bg-slate-900/40 rounded-xl p-2 flex items-center gap-2 border border-slate-100 dark:border-slate-700/50">
+           <div className="w-6 h-6 rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+              <Icon name="block" className="text-xs" />
+           </div>
+           <div className="flex flex-col">
+              <span className="text-[14px] font-black text-slate-900 dark:text-slate-100 leading-none">{totalOff}</span>
+              <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Folgas</span>
+           </div>
         </div>
       </div>
 
+      {/* Shift Buckets */}
+      <div className="space-y-2 flex-grow">
+         {(Object.entries(buckets) as [string, string[]][]).map(([shiftName, names]) => (
+            <div key={shiftName} className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-2.5 border border-slate-100 dark:border-slate-700/50 group-hover:bg-white dark:group-hover:bg-slate-800 transition-colors">
+               <div className="flex justify-between items-center mb-1.5 px-0.5">
+                  <span className="text-[9px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">{shiftName}</span>
+                  <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/40 px-1.5 rounded-md">{(names as string[]).length}</span>
+               </div>
+               <div className="flex flex-col gap-1">
+                  {(names as string[]).map((name, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                       <div className="w-1 h-1 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+                       <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase truncate" title={name}>{name}</span>
+                    </div>
+                  ))}
+               </div>
+            </div>
+         ))}
+      </div>
+
       {hasLunchData && (
-        <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-4 animate-fade-in group-hover/summary:border-amber-200 transition-colors">
+        <div className="bg-white dark:bg-slate-900/50 rounded-2xl border border-amber-100 dark:border-amber-900/50 shadow-sm p-4 animate-fade-in group-hover/summary:border-amber-200 dark:group-hover/summary:border-amber-800 transition-colors mt-3">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center text-amber-500 shadow-inner">
+            <div className="w-8 h-8 bg-amber-50 dark:bg-amber-900/30 rounded-lg flex items-center justify-center text-amber-500 dark:text-amber-400 shadow-inner">
               <Icon name="restaurant" className="text-sm" />
             </div>
             <div>
-              <h4 className="font-black text-xs text-slate-900 leading-tight uppercase tracking-tight">Pausas Sugeridas</h4>
-              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+              <h4 className="font-black text-xs text-slate-900 dark:text-slate-100 leading-tight uppercase tracking-tight">Pausas Sugeridas</h4>
+              <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-0.5">
                 Balanceamento de loja · {isHoliday ? '15 min' : '1h'} pausa
               </p>
             </div>

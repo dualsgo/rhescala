@@ -26,10 +26,20 @@ const App: React.FC = () => {
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate());
   const [waModal, setWaModal] = useState<{ show: boolean; text: string }>({ show: false, text: '' });
+  const [isDarkMode, setIsDarkMode] = useLocalStorage<boolean>('riHappyDarkMode', false);
   const { showDialog } = useDialog();
 
   const today = useMemo(() => new Date(), []); // Actual "today"
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+
+  // Apply dark mode class
+  React.useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   // Auto-generate month if it's completely empty
   React.useEffect(() => {
@@ -332,6 +342,8 @@ const App: React.FC = () => {
           await forceSyncEmployees();
           await forceSyncHolidays();
         }}
+        isDarkMode={isDarkMode}
+        onDarkModeToggle={() => setIsDarkMode(prev => !prev)}
       />
 
       {/* Holiday Manager Modal */}
@@ -347,25 +359,25 @@ const App: React.FC = () => {
 
       {/* WhatsApp Modal */}
       {waModal.show && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl p-8 max-w-lg w-full shadow-2xl">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800">
             <div className="flex justify-between items-center mb-6">
-              <h4 className="text-xl font-extrabold flex items-center gap-2 text-slate-900">
-                <Icon name="chat" className="text-green-600" /> Escala Diária
+              <h4 className="text-xl font-extrabold flex items-center gap-2 text-slate-900 dark:text-slate-100">
+                <Icon name="chat" className="text-green-600 dark:text-green-500" /> Escala Diária
               </h4>
-              <button onClick={() => setWaModal({ show: false, text: '' })} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+              <button onClick={() => setWaModal({ show: false, text: '' })} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400">
                 <Icon name="close" />
               </button>
             </div>
             <textarea
               readOnly
-              className="w-full h-80 bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-medium focus:ring-0 resize-none whitespace-pre-wrap outline-none text-slate-700"
+              className="w-full h-80 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm font-medium focus:ring-0 resize-none whitespace-pre-wrap outline-none text-slate-700 dark:text-slate-300"
               value={waModal.text}
             />
             <div className="mt-6 flex gap-3">
               <button
                 onClick={async () => { navigator.clipboard.writeText(waModal.text); await showDialog({ message: 'Copiado!' }); }}
-                className="flex-1 bg-green-600 text-white font-extrabold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:bg-green-700 transition-all active:scale-95"
+                className="flex-1 bg-green-600 dark:bg-green-700 text-white font-extrabold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:bg-green-700 dark:hover:bg-green-600 transition-all active:scale-95"
               >
                 <Icon name="content_copy" /> Copiar para WhatsApp
               </button>
@@ -374,60 +386,106 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <main className={`flex-1 px-4 sm:px-6 lg:px-10 py-8 max-w-[1700px] mx-auto w-full ${currentView === 'dashboard' ? '' : 'overflow-hidden'}`}>
+      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-colors">
         {currentView === 'dashboard' ? (
-          <>
+          <div className="space-y-8 animate-fade-in">
+            {/* Legend card */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-6">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center">
+                            <Icon name="info" className="text-2xl" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">Visão Geral do Mês</h3>
+                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Analise a distribution de equipe por dia</p>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-6 bg-slate-50 dark:bg-slate-800/50 p-4 px-6 rounded-2xl border border-slate-100 dark:border-slate-700">
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-orange-500"></div> <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Folga</span></div>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-red-500"></div> <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Feriado</span></div>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-teal-500"></div> <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Curso</span></div>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-indigo-600"></div> <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Férias</span></div>
+                    </div>
+                </div>
+            </div>
 
-            <DaySummaryCard
-              employees={employees}
-              selectedDayIdx={selectedDayIdx}
-              currentMY={currentMY}
-              customHolidays={customHolidays}
-            />
-
-
-            <input type="file" accept=".json" ref={fileInputRef} className="hidden" onChange={handleImportBackup} />
-
-            <ShiftGrid
-              employees={employees}
-              currentMY={currentMY}
-              selectedDayIdx={selectedDayIdx}
-              today={today}
-              customHolidays={customHolidays}
-              onSelectDay={setSelectedDayIdx}
-              onUpdateShift={updateShift}
-              onUpdateShifts={updateShifts}
-              onUpdateEmployeeDailyHour={updateEmployeeDailyHour}
-              onShareWhatsApp={shareWhatsApp}
-              onResetMonth={resetMonth}
-              onShowHolidayManager={() => setShowHolidayManager(true)}
-              onOpenAnalysis={() => setCurrentView('analysis')}
-              onNextMonth={() => setCurrentMY(prev => {
-                let m = prev.month + 1, y = prev.year;
-                if (m > 11) { m = 0; y++; }
-                return { month: m, year: y };
-              })}
-              onPrevMonth={() => setCurrentMY(prev => {
-                let m = prev.month - 1, y = prev.year;
-                if (m < 0) { m = 11; y--; }
-                return { month: m, year: y };
-              })}
-            />
-          </>
-        ) : currentView === 'analysis' ? (
-          <AnalysisPanel 
-            employees={employees} 
-            currentMY={currentMY} 
-            customHolidays={customHolidays}
-            onClose={() => setCurrentView('dashboard')} 
-          />
-        ) : (
-          <TeamView
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+                {Array.from({ length: new Date(currentMY.year, currentMY.month + 1, 0).getDate() }).map((_, i) => (
+                    <div 
+                      key={i} 
+                      onClick={() => { setSelectedDayIdx(i); setCurrentView('grid'); }}
+                      className="cursor-pointer active:scale-95 transition-all"
+                    >
+                        <DaySummaryCard
+                            selectedDayIdx={i}
+                            employees={employees}
+                            currentMY={currentMY}
+                            customHolidays={customHolidays}
+                        />
+                    </div>
+                ))}
+            </div>
+          </div>
+        ) : currentView === 'grid' ? (
+          <ShiftGrid
             employees={employees}
-            onUpdateEmployee={handleUpdateEmployee}
-            onDeleteEmployee={handleDeleteEmployee}
-            onAddEmployee={addEmployee}
+            currentMY={currentMY}
+            selectedDayIdx={selectedDayIdx}
+            today={today}
+            customHolidays={customHolidays}
+            onOpenAnalysis={() => setCurrentView('analysis')}
+            onSelectDay={setSelectedDayIdx}
+            onUpdateShift={updateShift}
+            onUpdateShifts={updateShifts}
+            onUpdateEmployeeDailyHour={updateEmployeeDailyHour}
+            onShareWhatsApp={shareWhatsApp}
+            onResetMonth={async () => {
+              const confirmed = await showDialog({
+                type: 'confirm',
+                message: 'Isso irá limpar todas as folgas e horas extras deste mês. Continuar?'
+              });
+              if (confirmed) resetMonth();
+            }}
+            onShowHolidayManager={() => setShowHolidayManager(true)}
+            onNextMonth={() => setCurrentMY(prev => prev.month === 11 ? { month: 0, year: prev.year + 1 } : { ...prev, month: prev.month + 1 })}
+            onPrevMonth={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })}
           />
+        ) : currentView === 'analysis' ? (
+            <AnalysisPanel
+              employees={employees}
+              currentMY={currentMY}
+              customHolidays={customHolidays}
+              onClose={() => setCurrentView('dashboard')}
+            />
+        ) : (
+          <div className="animate-fade-in">
+             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 shadow-sm">
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center">
+                            <Icon name="groups" className="text-2xl" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">Gestão da Equipe</h3>
+                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Cadastre, edite e remova colaboradores</p>
+                        </div>
+                    </div>
+                    <button
+                      onClick={() => addEmployee('', false, '', 'Auxiliar de Loja', '')}
+                      className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-white transition-all shadow-lg active:scale-95 flex items-center gap-2"
+                    >
+                      <Icon name="person_add" className="text-sm" /> Adicionar
+                    </button>
+                </div>
+                <TeamView
+                  employees={employees}
+                  onUpdateEmployee={handleUpdateEmployee}
+                  onDeleteEmployee={handleDeleteEmployee}
+                  onAddEmployee={addEmployee}
+                />
+             </div>
+          </div>
         )}
       </main>
     </div>

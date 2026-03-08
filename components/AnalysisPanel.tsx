@@ -25,12 +25,25 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
   
   const getEffectiveShift = (emp: Employee, dayIdx: number) => {
     const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
-    if (emp.vacationStart && emp.vacationEnd) {
-      if (dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) return 'FE';
+    
+    // Check if employee is on vacation
+    if (emp.vacationStart) {
+      const start = emp.vacationStart;
+      // If no vacationEnd, assume 30 days
+      const end = emp.vacationEnd || addDays(start, 30);
+      if (dateStr >= start && dateStr <= end) return 'FE';
     }
+
     const monthShifts = emp.shifts[monthKey] || [];
     return monthShifts[dayIdx] || 'F';
   };
+
+  // Helper inside AnalysisPanel for date math
+  function addDays(dateStr: string, days: number): string {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    return d.toISOString().split('T')[0];
+  }
 
   // ── Data Processing ──────────────────────────────────────────────────────────
 
@@ -65,19 +78,34 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
     
     return employees.filter(e => !e.isHidden && e.status === 'active').map(emp => {
       let worked = 0;
+      let totalHours = 0;
       let maxStreak = 0;
       let currentStreak = 0;
       let fullCycles = 0;
+      let sundaysWorked = 0;
+      let holidaysWorked = 0;
 
       for (let d = 0; d < daysInMonth; d++) {
         const s = getEffectiveShift(emp, d);
+        const dayType = new Date(currentMY.year, currentMY.month, d + 1).getDay();
+        const isSun = dayType === 0;
+        const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`);
+
         if (s === 'T' || s === 'C') {
           worked++;
           currentStreak++;
           if (currentStreak > maxStreak) maxStreak = currentStreak;
-          if (currentStreak === 6) {
-            fullCycles++;
-          }
+          if (currentStreak === 6) fullCycles++;
+          
+          if (isSun) sundaysWorked++;
+          if (isHol) holidaysWorked++;
+
+          // Hours calculation
+          const hStr = (emp.dailyHours[monthKey] || [])[d] || emp.workPeriod || '';
+          // Simple extraction: "08:00 às 16:20 (1h)" -> roughly 7.33h (standard)
+          // If it mentions hours differently, we might need a better parser.
+          // For now, let's assume 7.33 if 'T' or 'C'
+          totalHours += 7.33; 
         } else {
           currentStreak = 0;
         }
@@ -89,16 +117,19 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
         id: emp.id,
         name: emp.name,
         worked,
+        totalHours: Math.round(totalHours),
         theoreticalMax,
         extraOffs,
         fullCycles,
         maxStreak,
+        sundaysWorked,
+        holidaysWorked,
         overlooked: maxStreak > 6,
         isHeavy: worked > 22,
         emp
       };
     }).sort((a, b) => b.worked - a.worked);
-  }, [employees, daysInMonth, getEffectiveShift]);
+  }, [employees, daysInMonth, getEffectiveShift, monthKey, holidaySet]);
 
   const bottlenecks = useMemo(() => {
     return dailyCoverage.filter(c => c.total < 6);
@@ -111,54 +142,54 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
   // ── Render Helpers ───────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col h-full animate-fade-in">
-      <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1">
+    <div className="flex flex-col h-full animate-fade-in transition-colors">
+      <div className="bg-white dark:bg-slate-950 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col flex-1">
         
         {/* Header */}
-        <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-10 transition-colors">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100">
+            <div className="w-12 h-12 bg-indigo-600 dark:bg-indigo-700 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100 dark:shadow-none">
                <Icon name="insights" className="text-2xl" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <button 
                   onClick={onClose}
-                  className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors mr-1"
+                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mr-1"
                 >
                   <Icon name="arrow_back" />
                 </button>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Análise de Escala & Gargalos</h2>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Análise de Escala & Gargalos</h2>
               </div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mt-1">
+              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mt-1">
                 Visualização de Sobrecarga e Cobertura Operacional • {(currentMY.month + 1).toString().padStart(2, '0')}/{currentMY.year}
               </p>
             </div>
           </div>
           
           <div className="flex items-center gap-3">
-             <div className="bg-slate-100 p-1 rounded-2xl flex gap-1">
+             <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl flex gap-1">
                 <button 
                   onClick={() => setViewMode('insights')}
-                  className={`px-6 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${viewMode === 'insights' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
+                  className={`px-6 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${viewMode === 'insights' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-orange-400' : 'text-slate-500 dark:text-slate-400'}`}
                 >
                   <Icon name="analytics" className="text-sm" /> Insights
                 </button>
                 <button 
                   onClick={() => setViewMode('team-calendar')}
-                  className={`px-6 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${viewMode === 'team-calendar' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
+                  className={`px-6 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${viewMode === 'team-calendar' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-orange-400' : 'text-slate-500 dark:text-slate-400'}`}
                 >
                   <Icon name="calendar_view_month" className="text-sm" /> Escala Geral
                 </button>
              </div>
-             <button onClick={onClose} className="p-2.5 hover:bg-slate-100 rounded-full transition-colors order-last ml-2">
-               <Icon name="close" className="text-slate-400" />
+             <button onClick={onClose} className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors order-last ml-2">
+               <Icon name="close" className="text-slate-400 dark:text-slate-500" />
              </button>
           </div>
         </div>
 
         {/* Scrollable Area */}
-        <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50 dark:bg-slate-900/50 custom-scrollbar transition-colors">
           
           {viewMode === 'insights' ? (
             <div className="space-y-8 animate-fade-in">
@@ -166,10 +197,10 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
               {/* Key Indicators */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <InsightCard 
-                  label="Média de Equipe" 
-                  description="Média de pessoas por dia"
-                  value={(dailyCoverage.reduce((acc, c) => acc + c.total, 0) / daysInMonth).toFixed(1)} 
-                  icon="group" color="indigo" 
+                  label="Horas Mensais" 
+                  description="Total de horas CLT"
+                  value={employeeStats.reduce((acc, s) => acc + s.totalHours, 0).toLocaleString('pt-BR') + 'h'} 
+                  icon="schedule" color="indigo" 
                 />
                 <InsightCard 
                   label="Dias Críticos" 
@@ -179,10 +210,10 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                   urgent={bottlenecks.length > 0}
                 />
                 <InsightCard 
-                  label="Sobrecarga" 
-                  description="Com > 6 dias seguidos"
-                  value={employeeStats.filter(s => s.overlooked).length.toString()} 
-                  icon="timer" color="amber" 
+                  label="Justiça de Escala" 
+                  description="Média de Domingos"
+                  value={(employeeStats.reduce((acc, s) => acc + s.sundaysWorked, 0) / employeeStats.length).toFixed(1)} 
+                  icon="balance" color="amber" 
                 />
                 <InsightCard 
                   label="Escala Ativa" 
@@ -196,8 +227,8 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 
                 {/* Left: Individual Weekly Calendar */}
-                <div className="lg:col-span-5 flex flex-col gap-6">
-                  <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm h-full flex flex-col">
+                <div className="lg:col-span-12 xl:col-span-5 flex flex-col gap-6">
+                  <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-8 shadow-sm h-full flex flex-col transition-colors">
                     <div className="mb-6 flex justify-between items-start">
                         <div className="min-w-0">
                             <h3 className="text-lg font-black text-slate-800 truncate">
@@ -223,37 +254,37 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                         )}
                     </div>
 
-                    <div className="mt-6 grid grid-cols-2 gap-4 pt-6 border-t border-slate-100">
-                        <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
-                            <p className="text-[10px] font-black text-indigo-400 uppercase">Dias Trabalhados</p>
-                            <p className="text-2xl font-black text-indigo-700">{selectedEmployee?.worked} / {selectedEmployee?.theoreticalMax}</p>
-                            <p className="text-[9px] font-bold text-indigo-400">Objetivo mensal: {selectedEmployee?.theoreticalMax}d</p>
+                    <div className="mt-6 grid grid-cols-2 gap-4 pt-6 border-t border-slate-100 dark:border-slate-800">
+                        <div className="bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-2xl border border-indigo-100 dark:border-indigo-800">
+                            <p className="text-[10px] font-black text-indigo-400 dark:text-indigo-400 uppercase">Horas Estimadas</p>
+                            <p className="text-2xl font-black text-indigo-700 dark:text-indigo-300">{selectedEmployee?.totalHours}h</p>
+                            <p className="text-[9px] font-bold text-indigo-400 dark:text-indigo-500">Mês completo ({selectedEmployee?.worked}d)</p>
                         </div>
-                        <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100">
-                            <p className="text-[10px] font-black text-amber-500 uppercase">Respeito ao 6x1</p>
-                            <p className="text-2xl font-black text-amber-700">{selectedEmployee?.fullCycles} ciclos</p>
-                            <p className="text-[9px] font-bold text-amber-500">Sequências completas de 6d</p>
+                        <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+                            <p className="text-[10px] font-black text-amber-500 dark:text-amber-500 uppercase">Domingos/Feriados</p>
+                            <p className="text-2xl font-black text-amber-700 dark:text-amber-400">{selectedEmployee?.sundaysWorked}D / {selectedEmployee?.holidaysWorked}F</p>
+                            <p className="text-[9px] font-bold text-amber-500 dark:text-amber-600">Presença em dias premium</p>
                         </div>
-                        <div className="bg-rose-50 p-4 rounded-2xl border border-rose-100">
-                            <p className="text-[10px] font-black text-rose-400 uppercase">Folgas Extras</p>
-                            <p className="text-2xl font-black text-rose-600">+{selectedEmployee?.extraOffs}d</p>
-                            <p className="text-[9px] font-bold text-rose-400">Além do mínimo legal</p>
+                        <div className="bg-rose-50 dark:bg-rose-900/20 p-4 rounded-2xl border border-rose-100 dark:border-rose-900/30">
+                            <p className="text-[10px] font-black text-rose-400 dark:text-rose-400 uppercase">Folgas Extras</p>
+                            <p className="text-2xl font-black text-rose-600 dark:text-rose-400">+{selectedEmployee?.extraOffs}d</p>
+                            <p className="text-[9px] font-bold text-rose-400 dark:text-rose-500">Além do mínimo legal</p>
                         </div>
-                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                            <p className="text-[10px] font-black text-slate-400 uppercase">Maior Sequência</p>
-                            <p className="text-2xl font-black text-slate-900">{selectedEmployee?.maxStreak}d</p>
-                            <p className="text-[9px] font-bold text-slate-400">{selectedEmployee?.overlooked ? '⚠️ Excede limite legal' : 'Dentro do limite'}</p>
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+                            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Maior Sequência</p>
+                            <p className="text-2xl font-black text-slate-900 dark:text-slate-100">{selectedEmployee?.maxStreak}d</p>
+                            <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500">{selectedEmployee?.overlooked ? '⚠️ Excede limite legal' : 'Dentro do limite'}</p>
                         </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Middle/Right: Overload Ranking with Click Interaction */}
-                <div className="lg:col-span-7 flex flex-col gap-6">
-                   <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm flex flex-col max-h-[600px]">
+                <div className="lg:col-span-12 xl:col-span-7 flex flex-col gap-6">
+                   <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-8 shadow-sm flex flex-col max-h-[600px] transition-colors">
                         <div className="mb-6">
-                            <h3 className="text-lg font-black text-slate-800">Ranking de Escala</h3>
-                            <p className="text-xs font-bold text-slate-400">Clique no colaborador para ver o calendário individual</p>
+                            <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">Ranking de Escala</h3>
+                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500">Clique no colaborador para ver o calendário individual</p>
                         </div>
                         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
                             {employeeStats.map((s, idx) => (
@@ -272,15 +303,15 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                                         {idx + 1}
                                     </div>
                                     <div className="flex-1 text-left min-w-0">
-                                        <p className={`text-xs font-black uppercase truncate ${selectedEmpId === s.id ? 'text-white' : 'text-slate-900'}`}>
+                                        <p className={`text-xs font-black uppercase truncate ${selectedEmpId === s.id ? 'text-white' : 'text-slate-900 dark:text-slate-100'}`}>
                                             {s.name}
                                         </p>
-                                        <div className="flex items-center gap-3 mt-1">
-                                            <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${selectedEmpId === s.id ? 'bg-white/20' : 'bg-slate-200'}`}>
-                                                <div className={`h-full rounded-full ${s.isHeavy ? 'bg-rose-400' : 'bg-indigo-400'}`} style={{ width: `${(s.worked / daysInMonth) * 100}%` }}></div>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${selectedEmpId === s.id ? 'bg-white/20' : 'bg-slate-200 dark:bg-slate-800'}`}>
+                                                <div className={`h-full rounded-full ${s.isHeavy ? 'bg-rose-400' : 'bg-indigo-400 dark:bg-indigo-500'}`} style={{ width: `${(s.worked / daysInMonth) * 100}%` }}></div>
                                             </div>
-                                            <span className={`text-[10px] font-black shrink-0 ${selectedEmpId === s.id ? 'text-white/80' : 'text-slate-500'}`}>
-                                                {s.worked} dias
+                                            <span className={`text-[9px] font-black shrink-0 ${selectedEmpId === s.id ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
+                                                {s.worked}d • {s.sundaysWorked}D
                                             </span>
                                         </div>
                                     </div>
@@ -293,14 +324,14 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                    </div>
 
                    {/* Heatmap moved to bottom of middle section */}
-                   <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm">
+                   <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-8 shadow-sm transition-colors">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Mapa de Cobertura Geral</h3>
+                            <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-widest">Mapa de Cobertura Geral</h3>
                             <div className="flex gap-4">
-                                <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-400">
+                                <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 dark:text-slate-500">
                                     <span className="w-2.5 h-2.5 bg-indigo-500 rounded-sm"></span> OK
                                 </div>
-                                <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-400">
+                                <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 dark:text-slate-500">
                                     <span className="w-2.5 h-2.5 bg-rose-500 rounded-sm"></span> Crítico
                                 </div>
                             </div>
@@ -310,7 +341,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                                 <div 
                                     key={c.day}
                                     className={`w-8 h-8 flex flex-col items-center justify-center rounded-lg border text-[9px] font-black transition-all ${
-                                        c.total < 6 ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-indigo-50 border-indigo-100 text-indigo-600'
+                                        c.total < 6 ? 'bg-rose-50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400' : 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400'
                                     }`}
                                 >
                                     {c.total}
@@ -351,7 +382,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
 
             </div>
           ) : (
-            <div className="h-full animate-fade-in bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm overflow-auto">
+            <div className="h-full animate-fade-in bg-white dark:bg-slate-950 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-auto transition-colors">
                <TeamMonthlyCalendar 
                  employees={employees} 
                  currentMY={currentMY} 
@@ -363,11 +394,11 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
         </div>
 
         {/* Footer */}
-        <div className="px-10 py-6 bg-white border-t border-slate-100 flex items-center justify-between sticky bottom-0">
-           <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Insights Operacionais Mensal • Ri Happy Dashboard v2.0</p>
+        <div className="px-10 py-6 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between sticky bottom-0 transition-colors">
+           <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Insights Operacionais Mensal • Ri Happy Dashboard v2.0</p>
            <button 
              onClick={onClose} 
-             className="px-10 py-3 bg-slate-950 text-white text-xs font-black rounded-2xl hover:bg-indigo-600 transition-all shadow-xl active:scale-95"
+             className="px-10 py-3 bg-slate-950 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-black rounded-2xl hover:bg-indigo-600 dark:hover:bg-white transition-all shadow-xl active:scale-95"
            >
              Sair da Análise
            </button>
@@ -377,19 +408,19 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
   );
 };
 
-const InsightCard: React.FC<{ label: string, value: string, icon: any, color: any, description: string, urgent?: boolean }> = ({ label, value, icon, color, description, urgent }) => (
-  <div className={`bg-white border rounded-3xl p-6 shadow-sm flex items-center gap-5 transition-all hover:translate-y-[-4px] hover:shadow-md ${urgent ? 'border-rose-300 ring-2 ring-rose-50' : 'border-slate-100'}`}>
+ const InsightCard: React.FC<{ label: string, value: string, icon: any, color: any, description: string, urgent?: boolean }> = ({ label, value, icon, color, description, urgent }) => (
+  <div className={`bg-white dark:bg-slate-900 border rounded-3xl p-6 shadow-sm flex items-center gap-5 transition-all hover:translate-y-[-4px] hover:shadow-md ${urgent ? 'border-rose-300 dark:border-rose-900 ring-2 ring-rose-50 dark:ring-rose-900/20' : 'border-slate-100 dark:border-slate-800'}`}>
      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
-       color === 'indigo' ? 'bg-indigo-50 text-indigo-600' : 
-       color === 'rose' ? 'bg-rose-50 text-rose-600' : 
-       color === 'amber' ? 'bg-amber-50 text-amber-600' : 'bg-sky-50 text-sky-600'
+       color === 'indigo' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 
+       color === 'rose' ? 'bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400' : 
+       color === 'amber' ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' : 'bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400'
      }`}>
         <Icon name={icon} className="text-xl" />
      </div>
      <div className="min-w-0">
-        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
-        <h4 className={`text-xl font-black ${urgent ? 'text-rose-600' : 'text-slate-900'} leading-none`}>{value}</h4>
-        <p className="text-[9px] font-bold text-slate-400 truncate">{description}</p>
+        <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">{label}</p>
+        <h4 className={`text-xl font-black ${urgent ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-100'} leading-none`}>{value}</h4>
+        <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 truncate">{description}</p>
      </div>
   </div>
 );
@@ -427,7 +458,7 @@ const IndividualWeeklyCalendar: React.FC<{
         <div className="w-full">
             <div className="grid grid-cols-7 gap-2 mb-2">
                 {WEEKDAY_NAMES.map(wd => (
-                    <div key={wd} className="text-center text-[9px] font-black text-slate-400 uppercase tracking-tighter">
+                    <div key={wd} className="text-center text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">
                         {wd.substring(0, 3)}
                     </div>
                 ))}
@@ -445,12 +476,13 @@ const IndividualWeeklyCalendar: React.FC<{
                             title={cell.isVacation ? 'Férias' : (cell.shift as string)}
                             className={`aspect-square rounded-xl border flex flex-col items-center justify-center transition-all ${
                                 cell.shift === 'T' 
-                                ? 'bg-indigo-600 border-indigo-700 text-white shadow-sm' 
+                                ? 'bg-indigo-600 dark:bg-indigo-700 border-indigo-700 dark:border-indigo-800 text-white shadow-sm' 
                                 : cell.isCourse
-                                ? 'bg-teal-500 border-teal-600 text-white shadow-sm'
+                                ? 'bg-teal-500 dark:bg-teal-600 border-teal-600 dark:border-teal-700 text-white shadow-sm'
                                 : cell.isVacation
-                                ? 'bg-indigo-100 border-indigo-200 text-indigo-600'
-                                : cell.isHoliday ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-slate-50 border-slate-100 text-slate-300'
+                                ? 'bg-indigo-100 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400'
+                                : cell.isHoliday ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50 text-amber-600 dark:text-amber-400' 
+                                : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-600'
                             }`}
                         >
                             <span className={`text-[8px] font-black absolute top-1 left-1 opacity-50 ${cell.shift === 'T' || cell.isCourse ? 'text-white/60' : ''}`}>{cell.day}</span>
@@ -503,12 +535,12 @@ const TeamMonthlyCalendar: React.FC<{
       </div>
       <div className="grid grid-cols-7 gap-4">
         {cells.map((cell, idx) => (
-          <div key={idx} className={`min-h-[160px] rounded-[2rem] border p-5 flex flex-col gap-1.5 transition-all ${cell.type === 'empty' ? 'border-transparent' : 'bg-white border-slate-100'}`}>
+          <div key={idx} className={`min-h-[160px] rounded-[2rem] border p-5 flex flex-col gap-1.5 transition-all ${cell.type === 'empty' ? 'border-transparent' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800'}`}>
             {cell.type === 'day' && (
               <>
                 <div className="flex justify-between items-start mb-3">
-                  <span className="text-xs font-black text-slate-400">{cell.date}</span>
-                  <span className="text-[8px] font-black text-slate-300 uppercase tracking-tighter">
+                  <span className="text-xs font-black text-slate-400 dark:text-slate-500">{cell.date}</span>
+                  <span className="text-[8px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-tighter">
                     {WEEKDAY_NAMES[new Date(currentMY.year, currentMY.month, cell.date).getDay()].split('-')[0]}
                   </span>
                 </div>

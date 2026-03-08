@@ -44,8 +44,12 @@ function getEffectiveShift(emp: Employee, year: number, month: number, dayIdx: n
     const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
     
-    if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
-        return 'FE';
+    if (emp.vacationStart) {
+        const start = emp.vacationStart;
+        const d = new Date(start + 'T00:00:00');
+        d.setDate(d.getDate() + 30);
+        const end = emp.vacationEnd || d.toISOString().split('T')[0];
+        if (dateStr >= start && dateStr <= end) return 'FE';
     }
     const shifts = (emp.shifts[monthKey] ?? []) as ShiftType[];
     return shifts[dayIdx] || 'F';
@@ -296,8 +300,8 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
         onClick={() => setOpen(o => !o)}
         className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-extrabold transition-all border ${
           errors.length > 0
-            ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100'
-            : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+            ? 'bg-red-50 dark:bg-rose-950/40 border-red-200 dark:border-rose-900/50 text-red-700 dark:text-rose-400 hover:bg-red-100 dark:hover:bg-rose-900/60'
+            : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/60'
         }`}
       >
         <Icon name="warning" className="text-sm" />
@@ -324,16 +328,16 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
             onClick={() => setOpen(false)}
           />
 
-          <div className="absolute top-full right-0 mt-2 z-50 w-[480px] bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden animate-fade-in">
+          <div className="absolute top-full right-0 mt-2 z-50 w-[480px] bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-fade-in transition-colors">
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600">
+                <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/40 rounded-lg flex items-center justify-center text-amber-600 dark:text-amber-400">
                   <Icon name="policy" className="text-base" />
                 </div>
                 <div>
-                  <h4 className="font-extrabold text-sm text-slate-900">Inconsistências da Escala</h4>
-                  <p className="text-[10px] text-slate-400 font-medium">
+                  <h4 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">Inconsistências da Escala</h4>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
                     Apenas o mês atual · {issues.length} problema{issues.length > 1 ? 's' : ''} encontrado{issues.length > 1 ? 's' : ''}
                   </p>
                 </div>
@@ -348,42 +352,42 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
                     Corrigir Todos
                   </button>
                 )}
-                <button onClick={() => setOpen(false)} className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors">
-                  <Icon name="close" className="text-slate-400 text-sm" />
+                <button onClick={() => setOpen(false)} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                  <Icon name="close" className="text-slate-400 dark:text-slate-500 text-sm" />
                 </button>
               </div>
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-4 px-5 py-2.5 bg-white border-b border-slate-100">
-              <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-600">
-                <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
+            <div className="flex items-center gap-4 px-5 py-2.5 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
+              <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 dark:text-rose-400">
+                <span className="w-2 h-2 rounded-full bg-red-500 dark:bg-rose-500 inline-block" />
                 Erro (6×1)
               </span>
-              <span className="text-[10px] font-bold text-red-600 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
-                Todos os alertas são erros a corrigir
+              <span className="text-[10px] font-bold text-red-600 dark:text-rose-400 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-red-500 dark:bg-rose-500 inline-block" />
+                Inconsistência Crítica
               </span>
-              <span className="ml-auto text-[10px] text-slate-400 font-medium italic">
-                Clique em "Aplicar" para corrigir automaticamente
+              <span className="ml-auto text-[10px] text-slate-400 dark:text-slate-500 font-medium italic">
+                Clique em "Aplicar"
               </span>
             </div>
 
             {/* Issues list */}
             {/* Issues list — purely driven by live issues array, no stale state */}
-            <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-80 overflow-y-auto custom-scrollbar">
               {issues.map((issue) => {
                 const empObj = employees.find(e => e.id === issue.empId);
                 const displayName = (empObj?.name ?? issue.empName).split(' ').slice(0, 2).join(' ');
                 return (
                   <div
                     key={issue.id}
-                    className="px-5 py-4 bg-white hover:bg-slate-50/60 transition-colors"
+                    className="px-5 py-4 bg-white dark:bg-slate-900 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
                   >
                     <div className="flex items-start gap-3">
                       {/* Severity icon */}
                       <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                        issue.severity === 'error' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                        issue.severity === 'error' ? 'bg-red-100 dark:bg-rose-900/40 text-red-600 dark:text-rose-400' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400'
                       }`}>
                         <Icon
                           name={
@@ -398,10 +402,10 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
                       <div className="flex-1 min-w-0">
                         {/* Employee + type badge */}
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[11px] font-extrabold text-slate-900">
+                          <span className="text-[11px] font-extrabold text-slate-900 dark:text-slate-100">
                             {displayName}
                           </span>
-                          <span className={`text-[9px] font-extrabold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-red-100 text-red-700`}>
+                          <span className={`text-[9px] font-extrabold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-rose-900/40 text-red-700 dark:text-rose-400`}>
                             {issue.type === 'consecutive_work' ? 'Quebra 6×1' :
                              issue.type === 'consecutive_sunday' ? '3+ Dom. Seguidos' :
                              'Dom. Insuficiente'}
@@ -412,9 +416,9 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
 
                         {/* Fix suggestion */}
                         {issue.fix && (
-                          <div className="mt-2 flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-1.5">
-                            <Icon name="auto_fix_high" className="text-blue-500 text-xs flex-shrink-0" />
-                            <span className="text-[10px] font-bold text-blue-700 flex-1">{issue.fix.label}</span>
+                          <div className="mt-2 flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-lg px-3 py-1.5 transition-colors">
+                            <Icon name="auto_fix_high" className="text-blue-500 dark:text-blue-400 text-xs flex-shrink-0" />
+                            <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 flex-1">{issue.fix.label}</span>
                           </div>
                         )}
                       </div>
@@ -423,7 +427,7 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
                       <div className="flex flex-col gap-1.5 flex-shrink-0">
                         <button
                           onClick={() => { onSelectDay(issue.dayIdx); setOpen(false); }}
-                          className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-extrabold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all"
+                          className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-extrabold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-all"
                         >
                           <Icon name="arrow_forward" className="text-[11px]" />
                           Ver
@@ -445,8 +449,8 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
             </div>
 
             {/* Footer */}
-            <div className="px-5 py-3 border-t border-slate-100 bg-slate-50">
-              <p className="text-[9px] text-slate-400 font-medium">
+            <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 transition-colors">
+              <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium">
                 * As correções aplicam folgas nos dias críticos. Revise manualmente se necessário.
               </p>
             </div>

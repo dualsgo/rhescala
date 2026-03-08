@@ -420,50 +420,50 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   };
 
   return (
-    <div className={`flex flex-col bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden h-full transition-all duration-300 ${
+    <div className={`flex flex-col bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden h-full transition-all duration-300 ${
       isFullscreen ? 'fixed inset-0 z-[100] rounded-none border-none' : 'relative'
     }`}>
       {/* Grid Header / Toolbar */}
-      <div className={`flex flex-col md:flex-row items-start md:items-center justify-between p-4 px-6 gap-4 border-b border-slate-100 bg-slate-50/30 ${isFullscreen ? 'py-3' : ''}`}>
+      <div className={`flex flex-col md:flex-row items-start md:items-center justify-between p-4 px-6 gap-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/20 ${isFullscreen ? 'py-3' : ''}`}>
         <div className="flex items-center gap-6">
-            <div className={`w-12 h-12 ${isPastMonth ? 'bg-slate-100 text-slate-400' : 'bg-orange-100 text-orange-600'} rounded-2xl flex items-center justify-center shadow-sm`}>
+            <div className={`w-12 h-12 ${isPastMonth ? 'bg-slate-100 dark:bg-slate-800 text-slate-400' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'} rounded-2xl flex items-center justify-center shadow-sm`}>
                 <Icon name="calendar_month" className="text-2xl" fill />
             </div>
             <div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
                     {months[currentMY.month]}
                     <span className="text-orange-500">{currentMY.year}</span>
-                    {isPastMonth && <span className="text-[10px] bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full uppercase ml-2 tracking-widest font-black">Histórico</span>}
+                    {isPastMonth && <span className="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full uppercase ml-2 tracking-widest font-black">Histórico</span>}
                 </h2>
-                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-[0.2em] mt-0.5">Gestão de Escala Operacional {isPastMonth ? '· Visualização N/A' : ''}</p>
+                <p className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-0.5">Gestão de Escala Operacional {isPastMonth ? '· Visualização N/A' : ''}</p>
             </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
             {/* Month selector */}
-            <div className="flex items-center bg-white border border-slate-200 shadow-sm rounded-xl p-1 gap-1">
-                <button onClick={onHandlePrevMonth} className="p-2 hover:bg-slate-50 rounded-lg transition-all text-slate-400 hover:text-orange-500">
+            <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-xl p-1 gap-1">
+                <button onClick={onHandlePrevMonth} className="p-1 px-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-all text-slate-400 hover:text-orange-500">
                     <Icon name="chevron_left" />
                 </button>
-                <div className="px-4 text-[11px] font-black text-slate-700 uppercase tracking-widest min-w-[130px] text-center">
+                <div className="px-2 text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest min-w-[100px] text-center">
                     {months[currentMY.month]}
                 </div>
-                <button onClick={onNextMonth} className="p-2 hover:bg-slate-50 rounded-lg transition-all text-slate-400 hover:text-orange-500">
+                <button onClick={onNextMonth} className="p-1 px-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-all text-slate-400 hover:text-orange-500">
                     <Icon name="chevron_right" />
                 </button>
             </div>
             
             <button 
               onClick={() => setShowHolidayCredit(true)} 
-              className="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded-lg text-xs font-extrabold hover:bg-rose-600 shadow-lg active:scale-95 transition-all"
+              className="flex items-center gap-2 px-3 py-2 bg-rose-500 text-white rounded-lg text-[10px] font-extrabold hover:bg-rose-600 shadow-lg active:scale-95 transition-all whitespace-nowrap"
             >
-                <Icon name="event_repeat" className="text-sm" /> Folgas Feriado
+                <Icon name="event_repeat" className="text-sm" /> <span className="hidden xs:inline">Folgas Feriado</span><span className="xs:hidden">Feriado</span>
             </button>
             <button 
               onClick={onOpenAnalysis} 
-              className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-extrabold hover:bg-slate-800 shadow-lg active:scale-95 transition-all"
+              className="flex items-center gap-2 px-3 py-2 bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white rounded-lg text-[10px] font-extrabold hover:bg-slate-800 dark:hover:bg-white shadow-lg active:scale-95 transition-all whitespace-nowrap"
             >
-                <Icon name="analytics" className="text-sm" /> Painel de Análise
+                <Icon name="analytics" className="text-sm" /> <span className="hidden xs:inline">Painel de Análise</span><span className="xs:hidden">Análise</span>
             </button>
             <InconsistencyPanel
               employees={employees}
@@ -480,17 +480,18 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             />
             <button 
               onClick={handleToggleLock} 
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-extrabold transition-all border ${isGridLocked ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-extrabold transition-all border ${isGridLocked ? 'bg-red-50 dark:bg-red-900/40 border-red-200 dark:border-red-900/50 text-red-600 dark:text-rose-400' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'}`}
             >
                 <Icon name={isGridLocked ? 'lock' : 'lock_open'} className="text-sm" /> 
-                {isGridLocked ? 'Escala Bloqueada' : 'Bloquear Escala'}
+                <span className="hidden sm:inline">{isGridLocked ? 'Escala Bloqueada' : 'Bloquear Escala'}</span>
+                <span className="sm:hidden">{isGridLocked ? 'Trancado' : 'Trancar'}</span>
             </button>
-            <button onClick={onShowHolidayManager} className="flex items-center gap-2 px-4 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-xs font-extrabold hover:bg-rose-50 transition-all">
-                <Icon name="event_busy" className="text-sm" /> Feriados
+            <button onClick={onShowHolidayManager} className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 rounded-lg text-[10px] font-extrabold hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all whitespace-nowrap">
+                <Icon name="event_busy" className="text-sm" /> <span className="hidden sm:inline">Feriados</span>
             </button>
-      <button onClick={onResetMonth} className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg text-xs font-extrabold hover:bg-orange-600 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled={isGridLocked}>
-          <Icon name="auto_fix_high" className="text-sm" /> Auto Preencher
-      </button>
+            <button onClick={onResetMonth} className="flex items-center gap-2 px-3 py-2 bg-orange-500 text-white rounded-lg text-[10px] font-extrabold hover:bg-orange-600 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap" disabled={isGridLocked}>
+                <Icon name="auto_fix_high" className="text-sm" /> <span className="hidden sm:inline">Auto Preencher</span>
+            </button>
         </div>
 
         {showAnalysis && (
@@ -517,15 +518,15 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
 
       {/* Toolbar */}
-      <div className="p-4 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between bg-white sticky top-0 z-30 gap-4">
+      <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-30 gap-4 transition-colors">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex bg-slate-100 p-1 rounded-lg">
-            <button onClick={() => setFilter('all')} className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'all' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}>Mês Inteiro</button>
-            <button onClick={() => setFilter('sunday')} className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'sunday' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}>Somente Domingos</button>
-            <button onClick={() => setFilter('holiday')} className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'holiday' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}>Visão Feriados</button>
+          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+            <button onClick={() => setFilter('all')} className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'all' ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600 dark:text-orange-500' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Mês Inteiro</button>
+            <button onClick={() => setFilter('sunday')} className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'sunday' ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600 dark:text-orange-500' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Somente Domingos</button>
+            <button onClick={() => setFilter('holiday')} className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'holiday' ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600 dark:text-orange-500' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Visão Feriados</button>
             <button
               onClick={() => { setFilter('week'); setSelectedWeek(1); }}
-              className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'week' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'week' ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600 dark:text-orange-500' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
             >Por Semana</button>
           </div>
 
@@ -572,7 +573,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           {/* Zen Mode Toggle (Fullscreen without Edit) */}
           <button
              onClick={() => setIsFullscreen(!isFullscreen)}
-             className={`p-2 rounded-lg border transition-all ${isFullscreen ? 'bg-indigo-50 text-indigo-600 border-indigo-200 shadow-inner' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50 shadow-sm'}`}
+             className={`p-2 rounded-lg border transition-all ${isFullscreen ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-900/50 shadow-inner' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm'}`}
              title={isFullscreen ? 'Sair do Modo Zen' : 'Modo Zen (Tela Cheia)'}
           >
              <Icon name={isFullscreen ? 'fullscreen_exit' : 'zoom_out_map'} className="text-lg" />
@@ -581,10 +582,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           <button 
             onClick={handleToggleEditMode} 
             disabled={isGridLocked}
-            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-xs font-extrabold transition-all border ${isGridLocked ? 'bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed' : isEditable ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg scale-105' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm'}`}
+            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-xs font-extrabold transition-all border ${isGridLocked ? 'bg-slate-50 dark:bg-slate-900/30 border-slate-200 dark:border-slate-800 text-slate-300 dark:text-slate-700 cursor-not-allowed' : isEditable ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg scale-105' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm'}`}
           >
             <Icon name={isEditable ? 'save' : 'edit_square'} className="text-sm" fill={isEditable} />
-            {isEditable ? 'Salvar Alterações' : 'Editar Escala'}
+            <span className="hidden sm:inline">{isEditable ? 'Salvar Alterações' : 'Editar Escala'}</span>
+            <span className="sm:hidden">{isEditable ? 'Salvar' : 'Editar'}</span>
           </button>
 
           {isEditable && (
@@ -612,21 +614,21 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       </div>
 
       {/* Table Section */}
-      <div className="flex-1 overflow-auto custom-scrollbar relative bg-slate-50/20">
+      <div className="flex-1 overflow-auto custom-scrollbar relative bg-slate-50/20 dark:bg-slate-900/40">
         {/* Safety Lock Overlay */}
         {isGridLocked && (
-          <div className="absolute inset-0 z-[70] bg-slate-900/5 backdrop-blur-[1px] flex items-center justify-center p-8 pointer-events-none select-none">
-             <div className="bg-white/90 border border-slate-200 shadow-2xl rounded-3xl p-8 flex flex-col items-center gap-4 animate-scale-up border-b-4 border-b-rose-500 pointer-events-auto">
-                <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center shadow-inner">
+          <div className="absolute inset-0 z-[70] bg-slate-900/5 dark:bg-slate-950/20 backdrop-blur-[1px] flex items-center justify-center p-8 pointer-events-none select-none">
+             <div className="bg-white/90 dark:bg-slate-800/95 border border-slate-200 dark:border-slate-700 shadow-2xl rounded-3xl p-8 flex flex-col items-center gap-4 animate-scale-up border-b-4 border-b-rose-500 pointer-events-auto">
+                <div className="w-16 h-16 bg-rose-50 dark:bg-rose-900/20 text-rose-500 rounded-full flex items-center justify-center shadow-inner">
                    <Icon name="lock" className="text-3xl" fill />
                 </div>
                 <div className="text-center">
-                   <h4 className="text-xl font-black text-slate-900 tracking-tight">Escala Protegida</h4>
-                   <p className="text-xs font-bold text-slate-400 max-w-[200px] mt-1">Edições bloqueadas para evitar alterações acidentais.</p>
+                   <h4 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Escala Protegida</h4>
+                   <p className="text-xs font-bold text-slate-400 dark:text-slate-500 max-w-[200px] mt-1">Edições bloqueadas para evitar alterações acidentais.</p>
                 </div>
                 <button 
                   onClick={handleToggleLock}
-                  className="mt-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-extrabold hover:bg-slate-800 transition-all flex items-center gap-2 shadow-lg active:scale-95"
+                  className="mt-2 px-6 py-2.5 bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white rounded-xl text-xs font-extrabold hover:bg-slate-800 dark:hover:bg-white transition-all flex items-center gap-2 shadow-lg active:scale-95"
                 >
                    <Icon name="lock_open" className="text-sm" /> Desbloquear Agora
                 </button>
@@ -635,25 +637,25 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
         )}
 
         <table className="w-full text-left border-separate border-spacing-0 min-w-[max-content] table-fixed">
-          <thead className="sticky top-0 z-40 bg-white">
-            <tr className="bg-slate-100/90 backdrop-blur-sm text-[10px] font-extrabold text-slate-600 uppercase tracking-widest border-b border-slate-300">
-              <th className="sticky left-0 top-0 z-[60] bg-slate-100 p-3 pl-4 border-r border-b border-slate-300 min-w-[150px] w-[150px] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Colaborador</th>
-              <th className="sticky left-[150px] top-0 z-[60] bg-slate-100 p-3 border-r border-b border-slate-300 min-w-[120px] w-[120px] shadow-[2px_0_5px_rgba(0,0,0,0.05)] text-center">Horário Diário</th>
+          <thead className="sticky top-0 z-40 bg-white dark:bg-slate-900 transition-colors">
+            <tr className="bg-slate-100/90 dark:bg-slate-800/90 backdrop-blur-sm text-[10px] font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-widest border-b border-slate-300 dark:border-slate-700">
+              <th className="sticky left-0 top-0 z-[61] bg-slate-100 dark:bg-slate-800 p-3 pl-4 border-r border-b border-slate-300 dark:border-slate-700 min-w-[120px] w-[120px] sm:min-w-[150px] sm:w-[150px] shadow-[2px_0_5px_rgba(0,0,0,0.05)] transition-colors">Colaborador</th>
+              <th className="sticky left-[120px] sm:left-[150px] top-0 z-[61] bg-slate-100 dark:bg-slate-800 p-3 border-r border-b border-slate-300 dark:border-slate-700 min-w-[100px] w-[100px] sm:min-w-[120px] sm:w-[120px] shadow-[2px_0_5px_rgba(0,0,0,0.05)] text-center transition-colors">Horário Diário</th>
               {filteredDays.map((day) => (
                 <th
                   key={day.num}
                   onClick={() => onSelectDay(day.originalIdx)}
                   title={day.holidayName || undefined}
-                  className={`p-1.5 text-center min-w-[60px] w-[60px] cursor-pointer transition-colors relative border-r border-b border-slate-100/50 ${
-                    selectedDayIdx === day.originalIdx ? 'bg-orange-100/50 ring-2 ring-inset ring-orange-400' : ''
+                  className={`p-1.5 text-center min-w-[60px] w-[60px] cursor-pointer transition-colors relative border-r border-b border-slate-100/50 dark:border-slate-700/80 ${
+                    selectedDayIdx === day.originalIdx ? 'bg-orange-100/50 dark:bg-orange-900/20 ring-2 ring-inset ring-orange-400' : ''
                   } ${
-                    day.isHoliday ? 'bg-rose-100/80' : day.isSunday ? 'bg-orange-100/60' : day.isSaturday ? 'bg-slate-100/80' : ''
+                    day.isHoliday ? 'bg-rose-100/80 dark:bg-rose-900/20' : day.isSunday ? 'bg-orange-100/60 dark:bg-orange-900/10' : day.isSaturday ? 'bg-slate-100/80 dark:bg-slate-800/50' : ''
                   }`}
                 >
                   {(day.isSunday || day.isHoliday) && <div className={`absolute inset-0 border-2 pointer-events-none opacity-40 ${day.isHoliday ? 'border-rose-400' : 'border-orange-400'}`}></div>}
                   {day.isHoliday && <div className="absolute top-0 right-0 w-0 h-0 border-t-[8px] border-r-[8px] border-t-rose-500 border-r-transparent" title={day.holidayName || ''}></div>}
                   <div className={`text-sm font-extrabold ${
-                    day.isHoliday ? 'text-rose-600' : day.isSunday ? 'text-orange-600' : day.isSaturday ? 'text-slate-500' : 'text-slate-900'
+                    day.isHoliday ? 'text-rose-600 dark:text-rose-400' : day.isSunday ? 'text-orange-600 dark:text-orange-400' : day.isSaturday ? 'text-slate-500 dark:text-slate-400' : 'text-slate-900 dark:text-slate-100'
                   }`}>{day.num}</div>
                   <div className="text-[9px] font-bold opacity-60">{day.weekday}</div>
                   {day.isHoliday && day.holidayName && (
@@ -665,22 +667,22 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {displayedEmployees.map((emp) => (
-              <tr key={emp.id} className={`group hover:bg-slate-50/50 transition-colors ${emp.isHidden ? 'hidden' : ''}`}>
-                <td className="sticky left-0 z-20 bg-white group-hover:bg-slate-50 p-2 pl-4 border-r border-b border-slate-200 min-w-[150px] w-[150px] shadow-[4px_0_10px_rgba(0,0,0,0.05)]">
+              <tr key={emp.id} className={`group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors ${emp.isHidden ? 'hidden' : ''}`}>
+                <td className="sticky left-0 z-20 bg-white group-hover:bg-slate-50 dark:bg-slate-900 dark:group-hover:bg-slate-800/50 p-2 pl-4 border-r border-b border-slate-200 dark:border-slate-800 min-w-[120px] w-[120px] sm:min-w-[150px] sm:w-[150px] shadow-[4px_0_10px_rgba(0,0,0,0.05)] transition-colors">
                   <div className="flex flex-col truncate">
-                    <span className={`font-black text-[10px] uppercase tracking-tight truncate ${getShiftTextColor(getDayHour(emp, selectedDayIdx))}`} title={emp.name}>
+                    <span className={`font-black text-[10px] uppercase tracking-tight truncate ${getShiftTextColor(getDayHour(emp, selectedDayIdx))} dark:text-slate-100`} title={emp.name}>
                       {emp.name.split(' ').slice(0, 2).join(' ')}
                     </span>
                     {emp.isYoungApprentice ? (
                       <span className="text-[7px] font-black text-teal-600 uppercase tracking-widest truncate">Aprendiz</span>
                     ) : (
-                      <span className="text-[7px] font-bold text-slate-300 uppercase tracking-widest truncate">{emp.cargo}</span>
+                      <span className="text-[7px] font-bold text-slate-300 dark:text-slate-500 uppercase tracking-widest truncate">{emp.cargo}</span>
                     )}
                   </div>
                 </td>
-                <td className="sticky left-[150px] z-20 bg-white group-hover:bg-slate-100 p-1.5 border-r border-b border-slate-200 min-w-[120px] w-[120px] shadow-[4px_0_10px_rgba(0,0,0,0.05)]">
+                <td className="sticky left-[120px] sm:left-[150px] z-20 bg-white group-hover:bg-slate-100 dark:bg-slate-900 dark:group-hover:bg-slate-800/50 p-1.5 border-r border-b border-slate-200 dark:border-slate-800 min-w-[100px] w-[100px] sm:min-w-[120px] sm:w-[120px] shadow-[4px_0_10px_rgba(0,0,0,0.05)] transition-colors">
                   <select 
                     value={getDayHour(emp, selectedDayIdx)}
                     disabled={isDayLocked(selectedDayIdx)}
@@ -774,17 +776,17 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       </div>
       
       {/* Footer Info */}
-      <div className="bg-slate-50 px-6 py-3 border-t border-slate-200 flex flex-wrap gap-6 items-center">
-         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-sky-600"></div> <span className="text-[10px] font-extrabold text-slate-500 uppercase">Trabalho</span></div>
-         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-orange-500"></div> <span className="text-[10px] font-extrabold text-slate-500 uppercase">Folga</span></div>
-         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-red-500"></div> <span className="text-[10px] font-extrabold text-slate-500 uppercase">Feriado</span></div>
-         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-teal-500"></div> <span className="text-[10px] font-extrabold text-slate-500 uppercase">Curso</span></div>
-         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-indigo-600"></div> <span className="text-[10px] font-extrabold text-slate-500 uppercase">Férias</span></div>
-         <div className="ml-4 flex items-center gap-2"><div className="w-3 h-3 rounded border-2 border-dashed border-teal-400"></div> <span className="text-[10px] font-extrabold text-slate-500 uppercase">Sugerido p/ Folga (6x1)</span></div>
-         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded border-2 border-dashed border-red-500 animate-pulse"></div> <span className="text-[10px] font-extrabold text-rose-600 uppercase">Alerta: Excesso de Folga</span></div>
+      <div className="bg-slate-50 dark:bg-slate-800 px-6 py-3 border-t border-slate-200 dark:border-slate-700 flex flex-wrap gap-6 items-center transition-colors">
+         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-sky-600"></div> <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase">Trabalho</span></div>
+         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-orange-500"></div> <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase">Folga</span></div>
+         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-red-500"></div> <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase">Feriado</span></div>
+         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-teal-500"></div> <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase">Curso</span></div>
+         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-indigo-600"></div> <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase">Férias</span></div>
+         <div className="ml-4 flex items-center gap-2"><div className="w-3 h-3 rounded border-2 border-dashed border-teal-400"></div> <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase">Sugerido p/ Folga (6x1)</span></div>
+         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded border-2 border-dashed border-red-500 animate-pulse"></div> <span className="text-[10px] font-extrabold text-rose-600 dark:text-rose-400 uppercase">Alerta: Excesso de Folga</span></div>
          <div className="ml-auto flex items-center gap-2 opacity-60">
-            <Icon name={isGridLocked ? 'lock' : 'lock_open'} className="text-xs" />
-            <span className="text-[10px] font-bold text-slate-400">
+            <Icon name={isGridLocked ? 'lock' : 'lock_open'} className="text-xs text-slate-500 dark:text-slate-400" />
+            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">
               {isGridLocked ? 'Escala bloqueada para edições' : 'Edições liberadas (use o Modo de Edição)'}
             </span>
          </div>
