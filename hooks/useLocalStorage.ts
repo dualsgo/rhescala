@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { SyncState, SyncStatus, SyncHistoryItem } from '../types';
 
 // URL DO SEU NOVO GOOGLE APPS SCRIPT
-export const DB_API_URL = "https://script.google.com/macros/s/AKfycbxV3_Lq7J9LGbQ4M20p5zqMyqZ9ciX1zOkx_wHnecL0eX0qF-S57qLQgtVV3fAFPOzorw/exec";
+export const DB_API_URL = "https://script.google.com/macros/s/AKfycbzSumKHux0aYikTpcBznYN85r7wxRjCtWoO7MQ1CB5B0fETDmON05g466ufg65g8M7WRg/exec";
 
 // Global state for sync status tracking
 const GLOBAL_SYNC_STATUS: SyncStatus = {
@@ -67,7 +67,8 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
 
         updateGlobalSync('syncing', key, 'Baixando dados...');
 
-        fetch(`${DB_API_URL}?key=${key}`)
+        // Adiciona um timestamp para evitar cache do navegador/celular
+        fetch(`${DB_API_URL}?key=${key}&_t=${Date.now()}`)
             .then(res => res.text())
             .then(textData => {
                 let data;
