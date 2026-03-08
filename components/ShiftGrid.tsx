@@ -6,6 +6,7 @@ import { Icon } from './Icon';
 import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays } from '../constants';
 import { InconsistencyPanel } from './InconsistencyPanel';
 import { AnalysisPanel } from './AnalysisPanel';
+import { HolidayCreditPanel } from './HolidayCreditPanel';
 
 interface ShiftGridProps {
   employees: Employee[];
@@ -43,6 +44,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   const [allowRetroactive, setAllowRetroactive] = useState(false);
   const [isGridLocked, setIsGridLocked] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [showHolidayCredit, setShowHolidayCredit] = useState(false);
   const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
   const [selectedWeek, setSelectedWeek] = useState(1);
   const { showDialog } = useDialog();
@@ -362,6 +364,12 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             </div>
             
             <button 
+              onClick={() => setShowHolidayCredit(true)} 
+              className="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded-lg text-xs font-extrabold hover:bg-rose-600 shadow-lg active:scale-95 transition-all"
+            >
+                <Icon name="event_repeat" className="text-sm" /> Folgas Feriado
+            </button>
+            <button 
               onClick={() => setShowAnalysis(true)} 
               className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-extrabold hover:bg-slate-800 shadow-lg active:scale-95 transition-all"
             >
@@ -398,6 +406,18 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             currentMY={currentMY} 
             customHolidays={customHolidays}
             onClose={() => setShowAnalysis(false)} 
+          />
+        )}
+
+        {showHolidayCredit && (
+          <HolidayCreditPanel
+            employees={employees}
+            currentMY={currentMY}
+            customHolidays={customHolidays}
+            onClose={() => setShowHolidayCredit(false)}
+            onApplyFix={(empId, dayIdx, nextShift) => {
+              onUpdateShift(empId, dayIdx, nextShift);
+            }}
           />
         )}
       </div>
