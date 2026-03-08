@@ -23,6 +23,15 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
   const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
   const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
+  
+  const getEffectiveShift = (emp: Employee, dayIdx: number) => {
+    const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+    if (emp.vacationStart && emp.vacationEnd) {
+      if (dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) return 'FE';
+    }
+    const monthShifts = emp.shifts[monthKey] || [];
+    return monthShifts[dayIdx] || 'F';
+  };
 
   // ── Data Processing ──────────────────────────────────────────────────────────
 
@@ -31,7 +40,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
     for (let d = 0; d < daysInMonth; d++) {
       const activeEmps = employees.filter(e => !e.isHidden && e.status === 'active');
       const working = activeEmps.filter(e => {
-        const s = (e.shifts[monthKey] || [])[d];
+        const s = getEffectiveShift(e, d);
         return s === 'T'; // Somente T conta como presença na LOJA
       });
 
@@ -60,7 +69,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
       const shifts = emp.shifts[monthKey] || [];
 
       for (let d = 0; d < daysInMonth; d++) {
-        const s = shifts[d];
+        const s = getEffectiveShift(emp, d);
         // T e C contam como atividade (impede folga no 6x1)
         if (s === 'T' || s === 'C') {
           worked++;
@@ -193,6 +202,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                                 employee={selectedEmployee.emp} 
                                 currentMY={currentMY} 
                                 customHolidays={customHolidays}
+                                getEffectiveShift={getEffectiveShift}
                             />
                         )}
                     </div>
@@ -314,7 +324,12 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
             </div>
           ) : (
             <div className="h-full animate-fade-in bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm overflow-auto">
-               <TeamMonthlyCalendar employees={employees} currentMY={currentMY} customHolidays={customHolidays} />
+               <TeamMonthlyCalendar 
+                 employees={employees} 
+                 currentMY={currentMY} 
+                 customHolidays={customHolidays} 
+                 getEffectiveShift={getEffectiveShift}
+               />
             </div>
           )}
         </div>
@@ -351,7 +366,12 @@ const InsightCard: React.FC<{ label: string, value: string, icon: any, color: an
   </div>
 );
 
-const IndividualWeeklyCalendar: React.FC<{ employee: Employee, currentMY: MonthYear, customHolidays: Holiday[] }> = ({ employee, currentMY, customHolidays }) => {
+const IndividualWeeklyCalendar: React.FC<{ 
+    employee: Employee, 
+    currentMY: MonthYear, 
+    customHolidays: Holiday[],
+    getEffectiveShift: (emp: Employee, dayIdx: number) => ShiftType
+}> = ({ employee, currentMY, customHolidays, getEffectiveShift }) => {
     const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
     const firstDayOfMonth = new Date(currentMY.year, currentMY.month, 1).getDay(); // 0 is Sunday
     const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
@@ -364,14 +384,15 @@ const IndividualWeeklyCalendar: React.FC<{ employee: Employee, currentMY: MonthY
         calendarDays.push({ type: 'empty' });
     }
     for (let i = 1; i <= daysInMonth; i++) {
-        const shift = shifts[i - 1];
+        const shift = getEffectiveShift(employee, i - 1);
         const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
         // Ausência é qualquer coisa que não seja T. 
         // Mas para visualização de "Folga" no calendário individual, ignoramos o Curso (que é externo)
         const isOff = shift !== 'T' && shift !== 'C'; 
         const isCourse = shift === 'C';
+        const isVacation = shift === 'FE';
         const isHoliday = holidaySet.has(dateStr);
-        calendarDays.push({ type: 'day', day: i, shift, isOff, isCourse, isHoliday });
+        calendarDays.push({ type: 'day', day: i, shift, isOff, isCourse, isVacation, isHoliday });
     }
 
     return (
@@ -393,16 +414,21 @@ const IndividualWeeklyCalendar: React.FC<{ employee: Employee, currentMY: MonthY
                     return (
                         <div 
                             key={idx}
+                            title={cell.isVacation ? 'Férias' : (cell.shift as string)}
                             className={`aspect-square rounded-xl border flex flex-col items-center justify-center transition-all ${
                                 cell.shift === 'T' 
                                 ? 'bg-indigo-600 border-indigo-700 text-white shadow-sm' 
                                 : cell.isCourse
                                 ? 'bg-teal-500 border-teal-600 text-white shadow-sm'
+                                : cell.isVacation
+                                ? 'bg-indigo-100 border-indigo-200 text-indigo-600'
                                 : cell.isHoliday ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-slate-50 border-slate-100 text-slate-300'
                             }`}
                         >
                             <span className={`text-[8px] font-black absolute top-1 left-1 opacity-50 ${cell.shift === 'T' || cell.isCourse ? 'text-white/60' : ''}`}>{cell.day}</span>
-                            <span className="text-[10px] font-black tracking-tighter">{cell.shift === 'T' ? shiftLabel : cell.isCourse ? 'C' : 'F'}</span>
+                            <span className="text-[10px] font-black tracking-tighter">
+                                {cell.shift === 'T' ? shiftLabel : cell.isCourse ? 'C' : cell.isVacation ? 'FE' : 'F'}
+                            </span>
                         </div>
                     );
                 })}
@@ -411,7 +437,12 @@ const IndividualWeeklyCalendar: React.FC<{ employee: Employee, currentMY: MonthY
     );
 }
 
-const TeamMonthlyCalendar: React.FC<{ employees: Employee[], currentMY: MonthYear, customHolidays: Holiday[] }> = ({ employees, currentMY, customHolidays }) => {
+const TeamMonthlyCalendar: React.FC<{ 
+    employees: Employee[], 
+    currentMY: MonthYear, 
+    customHolidays: Holiday[],
+    getEffectiveShift: (emp: Employee, dayIdx: number) => ShiftType
+}> = ({ employees, currentMY, customHolidays, getEffectiveShift }) => {
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMY.year, currentMY.month, 1).getDay();
   const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
@@ -420,10 +451,17 @@ const TeamMonthlyCalendar: React.FC<{ employees: Employee[], currentMY: MonthYea
   for (let i = 0; i < firstDayOfMonth; i++) cells.push({ type: 'empty' });
   for (let i = 1; i <= daysInMonth; i++) {
     const workingDayData = employees.filter(e => !e.isHidden && e.status === 'active').map(emp => {
-      const shift = (emp.shifts[monthKey] || [])[i - 1];
+      const shift = getEffectiveShift(emp, i - 1);
       const hours = (emp.dailyHours[monthKey] || [])[i - 1] || emp.workPeriod;
       const isOff = shift !== 'T' && shift !== 'C';
-      return { name: emp.name.split(' ')[0], shift, hours, isOff, isCourse: shift === 'C' };
+      return { 
+        name: emp.name.split(' ')[0], 
+        shift, 
+        hours, 
+        isOff, 
+        isCourse: shift === 'C',
+        isVacation: shift === 'FE'
+      };
     }).filter(d => !d.isOff || d.isCourse); // Mostramos T e C no calendário geral
     cells.push({ type: 'day', date: i, dayData: workingDayData });
   }
