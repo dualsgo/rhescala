@@ -62,35 +62,44 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
   }, [employees, monthKey, daysInMonth, currentMY, holidaySet]);
 
   const employeeStats = useMemo(() => {
+    const theoreticalMax = daysInMonth - Math.floor(daysInMonth / 7);
+    
     return employees.filter(e => !e.isHidden && e.status === 'active').map(emp => {
       let worked = 0;
       let maxStreak = 0;
       let currentStreak = 0;
-      const shifts = emp.shifts[monthKey] || [];
+      let fullCycles = 0;
 
       for (let d = 0; d < daysInMonth; d++) {
         const s = getEffectiveShift(emp, d);
-        // T e C contam como atividade (impede folga no 6x1)
         if (s === 'T' || s === 'C') {
           worked++;
           currentStreak++;
           if (currentStreak > maxStreak) maxStreak = currentStreak;
+          if (currentStreak === 6) {
+            fullCycles++;
+          }
         } else {
           currentStreak = 0;
         }
       }
 
+      const extraOffs = Math.max(0, theoreticalMax - worked);
+
       return {
         id: emp.id,
         name: emp.name,
         worked,
+        theoreticalMax,
+        extraOffs,
+        fullCycles,
         maxStreak,
         overlooked: maxStreak > 6,
         isHeavy: worked > 22,
         emp
       };
     }).sort((a, b) => b.worked - a.worked);
-  }, [employees, monthKey, daysInMonth]);
+  }, [employees, daysInMonth, getEffectiveShift]);
 
   const bottlenecks = useMemo(() => {
     return dailyCoverage.filter(c => c.total < 6);
@@ -208,13 +217,25 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                     </div>
 
                     <div className="mt-6 grid grid-cols-2 gap-4 pt-6 border-t border-slate-100">
-                        <div className="bg-slate-50 p-4 rounded-2xl">
-                            <p className="text-[10px] font-black text-slate-400 uppercase">Dias Trabalhados</p>
-                            <p className="text-2xl font-black text-slate-900">{selectedEmployee?.worked}d</p>
+                        <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
+                            <p className="text-[10px] font-black text-indigo-400 uppercase">Dias Trabalhados</p>
+                            <p className="text-2xl font-black text-indigo-700">{selectedEmployee?.worked} / {selectedEmployee?.theoreticalMax}</p>
+                            <p className="text-[9px] font-bold text-indigo-400">Objetivo mensal: {selectedEmployee?.theoreticalMax}d</p>
                         </div>
-                        <div className="bg-slate-50 p-4 rounded-2xl">
+                        <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100">
+                            <p className="text-[10px] font-black text-amber-500 uppercase">Respeito ao 6x1</p>
+                            <p className="text-2xl font-black text-amber-700">{selectedEmployee?.fullCycles} ciclos</p>
+                            <p className="text-[9px] font-bold text-amber-500">Sequências completas de 6d</p>
+                        </div>
+                        <div className="bg-rose-50 p-4 rounded-2xl border border-rose-100">
+                            <p className="text-[10px] font-black text-rose-400 uppercase">Folgas Extras</p>
+                            <p className="text-2xl font-black text-rose-600">+{selectedEmployee?.extraOffs}d</p>
+                            <p className="text-[9px] font-bold text-rose-400">Além do mínimo legal</p>
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
                             <p className="text-[10px] font-black text-slate-400 uppercase">Maior Sequência</p>
                             <p className="text-2xl font-black text-slate-900">{selectedEmployee?.maxStreak}d</p>
+                            <p className="text-[9px] font-bold text-slate-400">{selectedEmployee?.overlooked ? '⚠️ Excede limite legal' : 'Dentro do limite'}</p>
                         </div>
                     </div>
                   </div>
@@ -478,7 +499,12 @@ const TeamMonthlyCalendar: React.FC<{
           <div key={idx} className={`min-h-[160px] rounded-[2rem] border p-5 flex flex-col gap-1.5 transition-all ${cell.type === 'empty' ? 'border-transparent' : 'bg-white border-slate-100'}`}>
             {cell.type === 'day' && (
               <>
-                <span className="text-xs font-black text-slate-400 mb-3">{cell.date}</span>
+                <div className="flex justify-between items-start mb-3">
+                  <span className="text-xs font-black text-slate-400">{cell.date}</span>
+                  <span className="text-[8px] font-black text-slate-300 uppercase tracking-tighter">
+                    {WEEKDAY_NAMES[new Date(currentMY.year, currentMY.month, cell.date).getDay()].split('-')[0]}
+                  </span>
+                </div>
                 <div className="space-y-1.5">
                   {cell.dayData.map((d, i) => (
                     <div key={i} className={`flex items-center justify-between gap-2 p-2 rounded-xl border ${d.isCourse ? 'bg-teal-50 border-teal-100 text-teal-700' : 'bg-slate-50 border-slate-100/50 text-slate-800'}`}>
