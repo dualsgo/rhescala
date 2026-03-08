@@ -62,26 +62,19 @@ export function useSyncStatus() {
 }
 
 export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void, () => Promise<void>] {
-    const [storedValue, setStoredValue] = useState<T>(() => {
-        if (typeof window === 'undefined') return initialValue;
-        try {
-            const item = window.localStorage.getItem(key);
-            return item ? (JSON.parse(item) as T) : initialValue;
-        } catch (error) {
-            return initialValue;
-        }
-    });
+    // Inicializa sempre com o placeholder (sem ler o disco)
+    const [storedValue, setStoredValue] = useState<T>(initialValue);
 
     const [isLoaded, setIsLoaded] = useState(false);
     const isFirstLoadDone = useRef(false);
     const lastCloudValue = useRef<string | null>(null);
-    const isDirty = useRef(false); // Track if local changes exist that aren't synced
+    const isDirty = useRef(false);
     const retryCount = useRef(0);
 
     const downloadFromCloud = async (force = false) => {
         if (!DB_API_URL) return;
 
-        updateGlobalSync('syncing', key, force ? 'Forçando Sincronia...' : 'Sincronizando Banco...');
+        updateGlobalSync('syncing', key, force ? 'Forçando Sincronia...' : 'Baixando Nuvem...');
         try {
             const res = await fetch(`${DB_API_URL}?key=${key}&_t=${Date.now()}`);
             const textData = await res.text();
@@ -89,50 +82,45 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
             try {
                 cloudData = JSON.parse(textData);
             } catch {
-                updateGlobalSync('error', key, 'Dados corrompidos na nuvem');
+                updateGlobalSync('error', key, 'Erro: Dados da Nuvem Corrompidos');
                 return;
             }
 
-            // RACIONAL DE CONFLITO:
-            // Se NÃO for um sync forçado e tivermos alterações locais pendentes, não sobrescrevemos.
-            if (!force && isDirty.current) {
-                console.log(`⚠️ Backup [${key}] ignorado para proteger alterações locais em curso.`);
-                updateGlobalSync('synced', key, 'Usando Cache Local (Edição)');
-                return;
-            }
-
+            // OBRIGATORIEDADE: Se a nuvem tem dados, nós USAMOS eles, 
+            // ignorando qualquer coisa local (a menos que o usuário esteja editando agora mesmo)
             if (cloudData && (!Array.isArray(cloudData) || cloudData.length > 0)) {
                 const dataStr = JSON.stringify(cloudData);
-                const localStr = window.localStorage.getItem(key);
 
-                // Atualiza se for diferente ou se for forçado
-                if (dataStr !== localStr || force) {
+                // Se for a primeira vez ou um force sync, sobrescrevemos sem perguntar
+                if (!isFirstLoadDone.current || force) {
                     setStoredValue(cloudData);
-                    window.localStorage.setItem(key, dataStr);
-                    updateGlobalSync('synced', key, force ? 'Nuvem Sincronizada' : 'Dados Atualizados');
-                } else {
-                    updateGlobalSync('synced', key, 'Sincronia OK');
+                    lastCloudValue.current = dataStr;
+                    isDirty.current = false;
+                    updateGlobalSync('synced', key, 'Nuvem Carregada (OK)');
+                } else if (!isDirty.current) {
+                    // Se não houver edição pendente, sincroniza
+                    setStoredValue(cloudData);
+                    lastCloudValue.current = dataStr;
+                    updateGlobalSync('synced', key, 'Sincronizado');
                 }
-                lastCloudValue.current = dataStr;
-                isDirty.current = false;
             } else {
                 updateGlobalSync('idle', key, 'Nuvem Pronta');
             }
         } catch (err) {
             console.error('Download error:', err);
-            updateGlobalSync('error', key, 'Trabalhando em Cache Local');
+            updateGlobalSync('error', key, 'Falha de Conexão com a Nuvem');
         } finally {
             setIsLoaded(true);
             isFirstLoadDone.current = true;
         }
     };
 
-    // 1. Carregamento Inicial (Otimizado)
+    // 1. Carregamento Inicial OBRIGATÓRIO (Assunto ao Cloud)
     useEffect(() => {
         downloadFromCloud();
     }, [key]);
 
-    // 2. Sincronização em Segundo Plano com Fila Global
+    // 2. Upload para a Nuvem
     useEffect(() => {
         if (!isFirstLoadDone.current || !DB_API_URL) return;
 
@@ -146,7 +134,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
 
         const timer = setTimeout(() => {
             const syncTask = async () => {
-                updateGlobalSync('syncing', key, 'Sincronizando...');
+                updateGlobalSync('syncing', key, 'Salvando...');
                 const valueToSync = currentValueStr;
 
                 try {
@@ -164,13 +152,13 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                     console.error('Sync failure:', err);
                     if (retryCount.current < 3) {
                         retryCount.current++;
-                        updateGlobalSync('error', key, `Tentando reconectar (${retryCount.current}/3)`);
+                        updateGlobalSync('error', key, `Tentando salvar (${retryCount.current}/3)`);
                         setTimeout(() => {
                             syncQueue.push(syncTask);
                             processSyncQueue();
                         }, 5000 * retryCount.current);
                     } else {
-                        updateGlobalSync('error', key, 'Falha na Conexão');
+                        updateGlobalSync('error', key, 'Erro Crítico de Rede');
                     }
                 }
             };
@@ -186,14 +174,11 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
         try {
             setStoredValue(prev => {
                 const next = value instanceof Function ? value(prev) : value;
-                if (typeof window !== 'undefined') {
-                    window.localStorage.setItem(key, JSON.stringify(next));
-                }
                 isDirty.current = true;
                 return next;
             });
         } catch (error) {
-            console.warn(`Erro local [${key}]:`, error);
+            console.warn(`Erro em memória [${key}]:`, error);
         }
     };
 
