@@ -62,19 +62,33 @@ export function useSyncStatus() {
 }
 
 export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void, () => Promise<void>] {
-    // Inicializa sempre com o placeholder (sem ler o disco)
     const [storedValue, setStoredValue] = useState<T>(initialValue);
-
     const [isLoaded, setIsLoaded] = useState(false);
     const isFirstLoadDone = useRef(false);
+    const initialLoadSuccess = useRef(false); // CRITICAL: Stop app from saving empty state over DB on failure
     const lastCloudValue = useRef<string | null>(null);
     const isDirty = useRef(false);
     const retryCount = useRef(0);
 
+    // Cross-tab synchronization
+    useEffect(() => {
+        const channel = new BroadcastChannel(`sync_${key}`);
+        channel.onmessage = (event) => {
+            if (event.data && !isDirty.current) {
+                setStoredValue(event.data);
+                lastCloudValue.current = JSON.stringify(event.data);
+            }
+        };
+        return () => channel.close();
+    }, [key]);
+
     const downloadFromCloud = async (force = false) => {
         if (!DB_API_URL) return;
 
-        updateGlobalSync('syncing', key, force ? 'Forçando Sincronia...' : 'Baixando Nuvem...');
+        // Skip polling if user is editing
+        if (!force && isDirty.current) return;
+
+        updateGlobalSync('syncing', key, force ? 'Forçando Sincronia...' : 'Verificando Nuvem...');
         try {
             const res = await fetch(`${DB_API_URL}?key=${key}&_t=${Date.now()}`);
             const textData = await res.text();
@@ -82,47 +96,50 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
             try {
                 cloudData = JSON.parse(textData);
             } catch {
-                updateGlobalSync('error', key, 'Erro: Dados da Nuvem Corrompidos');
+                updateGlobalSync('error', key, 'Nuvem Ilegível (Formato Errado)');
                 return;
             }
 
-            // OBRIGATORIEDADE: Se a nuvem tem dados, nós USAMOS eles, 
-            // ignorando qualquer coisa local (a menos que o usuário esteja editando agora mesmo)
             if (cloudData && (!Array.isArray(cloudData) || cloudData.length > 0)) {
                 const dataStr = JSON.stringify(cloudData);
 
-                // Se for a primeira vez ou um force sync, sobrescrevemos sem perguntar
-                if (!isFirstLoadDone.current || force) {
+                if (dataStr !== lastCloudValue.current || force) {
                     setStoredValue(cloudData);
                     lastCloudValue.current = dataStr;
-                    isDirty.current = false;
-                    updateGlobalSync('synced', key, 'Nuvem Carregada (OK)');
-                } else if (!isDirty.current) {
-                    // Se não houver edição pendente, sincroniza
-                    setStoredValue(cloudData);
-                    lastCloudValue.current = dataStr;
+                    try {
+                        new BroadcastChannel(`sync_${key}`).postMessage(cloudData);
+                    } catch (e) { }
+                    updateGlobalSync('synced', key, force ? 'Sincronizado' : 'Dados Atualizados');
+                } else {
                     updateGlobalSync('synced', key, 'Sincronizado');
                 }
+
+                isDirty.current = false;
+                initialLoadSuccess.current = true;
             } else {
+                initialLoadSuccess.current = true;
                 updateGlobalSync('idle', key, 'Nuvem Pronta');
             }
         } catch (err) {
             console.error('Download error:', err);
-            updateGlobalSync('error', key, 'Falha de Conexão com a Nuvem');
+            updateGlobalSync('error', key, 'Offline');
         } finally {
             setIsLoaded(true);
             isFirstLoadDone.current = true;
         }
     };
 
-    // 1. Carregamento Inicial OBRIGATÓRIO (Assunto ao Cloud)
+    // 1. Carregamento Inicial OBRIGATÓRIO e Polling (30s)
     useEffect(() => {
         downloadFromCloud();
+        const interval = setInterval(() => downloadFromCloud(), 30000);
+        return () => clearInterval(interval);
     }, [key]);
 
     // 2. Upload para a Nuvem
     useEffect(() => {
-        if (!isFirstLoadDone.current || !DB_API_URL) return;
+        // SEGURANÇA: Só salva se conseguimos ler a nuvem pelo menos uma vez
+        if (!isFirstLoadDone.current || !DB_API_URL || !initialLoadSuccess.current) return;
 
         const currentValueStr = JSON.stringify(storedValue);
         if (currentValueStr === lastCloudValue.current) {
@@ -134,7 +151,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
 
         const timer = setTimeout(() => {
             const syncTask = async () => {
-                updateGlobalSync('syncing', key, 'Salvando...');
+                updateGlobalSync('syncing', key, 'Enviando p/ Nuvem...');
                 const valueToSync = currentValueStr;
 
                 try {
@@ -148,24 +165,29 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                     isDirty.current = false;
                     retryCount.current = 0;
                     updateGlobalSync('synced', key, 'Salvo na Nuvem');
+
+                    // Notifica outras abas locais
+                    try {
+                        new BroadcastChannel(`sync_${key}`).postMessage(storedValue);
+                    } catch (e) { }
                 } catch (err) {
                     console.error('Sync failure:', err);
                     if (retryCount.current < 3) {
                         retryCount.current++;
-                        updateGlobalSync('error', key, `Tentando salvar (${retryCount.current}/3)`);
+                        updateGlobalSync('error', key, `Tentativa de Resgate (${retryCount.current}/3)`);
                         setTimeout(() => {
                             syncQueue.push(syncTask);
                             processSyncQueue();
-                        }, 5000 * retryCount.current);
+                        }, 5000);
                     } else {
-                        updateGlobalSync('error', key, 'Erro Crítico de Rede');
+                        updateGlobalSync('error', key, 'Erro ao Salvar (Internet instável)');
                     }
                 }
             };
 
             syncQueue.push(syncTask);
             processSyncQueue();
-        }, 1500);
+        }, 2000);
 
         return () => clearTimeout(timer);
     }, [storedValue, key]);
@@ -178,7 +200,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                 return next;
             });
         } catch (error) {
-            console.warn(`Erro em memória [${key}]:`, error);
+            console.warn(`Erro memoria:`, error);
         }
     };
 
