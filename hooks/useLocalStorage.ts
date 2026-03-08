@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { SyncState, SyncStatus, SyncHistoryItem } from '../types';
 
-// URL DO SEU NOVO GOOGLE APPS SCRIPT
-export const DB_API_URL = "https://script.google.com/macros/s/AKfycbzSumKHux0aYikTpcBznYN85r7wxRjCtWoO7MQ1CB5B0fETDmON05g466ufg65g8M7WRg/exec";
+// URL DA SUA NOVA API NO RENDER (Cole o endereço que você receber lá)
+export const DB_API_URL = "https://rhescala-api.onrender.com"; // Exemplo, troque pelo seu
 
 // Global state for sync status tracking
 const GLOBAL_SYNC_STATUS: SyncStatus = {
@@ -155,11 +155,13 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                 const dataToSync = currentValueStr;
 
                 try {
-                    await fetch(`${DB_API_URL}?key=${key}`, {
+                    const res = await fetch(`${DB_API_URL}?key=${key}`, {
                         method: 'POST',
-                        body: dataToSync,
-                        mode: 'no-cors'
+                        headers: { 'Content-Type': 'application/json' },
+                        body: dataToSync
                     });
+
+                    if (!res.ok) throw new Error('Falha HTTP');
 
                     lastCloudValue.current = dataToSync;
                     isDirty.current = false;
