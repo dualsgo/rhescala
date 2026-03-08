@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { SyncState, SyncStatus, SyncHistoryItem } from '../types';
 
-// URL DA SUA NOVA API NO RENDER (Cole o endereço que você receber lá)
-export const DB_API_URL = "https://rhescala-api.onrender.com"; // Exemplo, troque pelo seu
+// URL DA SUA NOVA API NO RENDER
+export const DB_API_URL = "https://rhescala.onrender.com";
 
 // Global state for sync status tracking
 const GLOBAL_SYNC_STATUS: SyncStatus = {
