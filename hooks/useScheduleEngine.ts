@@ -464,10 +464,9 @@ export function applyMonthUpdate(
     activeRegular.forEach(emp => {
         const restDays = sundayAssignments.get(emp.id) ?? new Set<number>();
 
-        // Start from existing shifts to preserve manual edits on regular days
-        const newShifts: ShiftType[] = [
-            ...(emp.shifts[monthKey] ?? (Array(daysInMonth).fill('T') as ShiftType[]))
-        ];
+        // IMPORTANT: We now reset everything to 'T' (Trabalho) on Auto-Fill
+        // The user wants a clean slate based on the master rules.
+        const newShifts: ShiftType[] = Array(daysInMonth).fill('T');
 
         // Always recalculate hours to ensure consistency with saved shift/workPeriod
         const newHours: string[] = Array.from({ length: daysInMonth }, (_, i) => {
@@ -476,7 +475,7 @@ export function applyMonthUpdate(
             return getTargetHours(emp, date.getDay(), holidaySet.has(dateStr));
         });
 
-        // 1. First pass: Apply absolute constraints (Vacation, out-of-employment, Sundays, Holidays)
+        // 1. Pass: Apply absolute constraints (Vacation, out-of-employment, Sundays, Holidays)
         for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
             const dayNum = dayIdx + 1;
             const date = new Date(year, month, dayNum);
@@ -486,15 +485,15 @@ export function applyMonthUpdate(
 
             // Always honour vacation
             if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
-                newShifts[dayIdx] = 'FE'; newHours[dayIdx] = getTargetHours(emp, dow, isHoliday); continue;
+                newShifts[dayIdx] = 'FE'; continue;
             }
 
             // Outside employment window
             if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) {
-                newShifts[dayIdx] = 'F'; newHours[dayIdx] = getTargetHours(emp, dow, isHoliday); continue;
+                newShifts[dayIdx] = 'F'; continue;
             }
 
-            // Re-apply ALL Sunday rules
+            // Apply Sunday rotation
             if (dow === 0) {
                 if (emp.preferredDayOff === 'Domingo') {
                     newShifts[dayIdx] = 'F';
@@ -503,18 +502,11 @@ export function applyMonthUpdate(
                 } else {
                     newShifts[dayIdx] = 'T';
                 }
-                newHours[dayIdx] = getTargetHours(emp, dow, isHoliday);
                 continue;
-            }
-
-            // Re-apply weekday holidays
-            if (isHoliday) {
-                newShifts[dayIdx] = 'T'; newHours[dayIdx] = getTargetHours(emp, dow, isHoliday); continue;
             }
         }
 
-        // 2. Second pass: Ensure standard preferred folgas are applied
-        // We will slice the month into ISO weeks (Mon-Sun).
+        // 2. Second pass: Ensure WEEKLY preferred folgas are applied
         let currentWeekStartIdx = 0;
         while (currentWeekStartIdx < daysInMonth) {
             let weekEndIdx = currentWeekStartIdx;
@@ -523,7 +515,6 @@ export function applyMonthUpdate(
                 weekEndIdx++;
             }
 
-            // Loop through the whole week (including Sunday if it exists in the month)
             let hasFolga = false;
             let preferredDayOffIdx = -1;
 
@@ -531,28 +522,21 @@ export function applyMonthUpdate(
                 if (newShifts[i] === 'F' || newShifts[i] === 'FE') {
                     hasFolga = true;
                 }
-
                 const dow = new Date(year, month, i + 1).getDay();
                 if (WEEKDAY_NAMES[dow] === emp.preferredDayOff) {
                     preferredDayOffIdx = i;
                 }
             }
 
-            // Se não tem folga na semana (nem no domingo nem na semana), tenta aplicar no dia preferencial.
-            // Se o dia preferencial for na semana (seg-sab) e não o domingo.
+            // Se não tem folga na semana (não descansou no domingo nem está de férias), 
+            // aplica a folga preferencial na semana.
             if (!hasFolga && preferredDayOffIdx !== -1) {
                 const dayNum = preferredDayOffIdx + 1;
                 const preferredDow = new Date(year, month, dayNum).getDay();
-                const prefDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-
-                if (preferredDow !== 0) { // If preferred day is not Sunday (Sunday is handled in Pass 1)
-                    if (newShifts[preferredDayOffIdx] !== 'FF' && newShifts[preferredDayOffIdx] !== 'FE') {
-                        newShifts[preferredDayOffIdx] = 'F';
-                        newHours[preferredDayOffIdx] = getTargetHours(emp, preferredDow, holidaySet.has(prefDateStr));
-                    }
+                if (preferredDow !== 0) { // Sunday handled in Pass 1
+                    newShifts[preferredDayOffIdx] = 'F';
                 }
             }
-
             currentWeekStartIdx = weekEndIdx + 1;
         }
 
@@ -561,13 +545,8 @@ export function applyMonthUpdate(
 
     // ── Apprentices ────────────────────────────────────────────────────────────
     activeApprentices.forEach(emp => {
-        // Start from existing shifts to preserve manual edits
-        const newShifts: ShiftType[] = [
-            ...(emp.shifts[monthKey] ?? (Array(daysInMonth).fill('T') as ShiftType[]))
-        ];
-        const newHours: string[] = [
-            ...(emp.dailyHours[monthKey] ?? Array(daysInMonth).fill(APPRENTICE_WORK_PERIOD))
-        ];
+        const newShifts: ShiftType[] = Array(daysInMonth).fill('T');
+        const newHours: string[] = Array(daysInMonth).fill(APPRENTICE_WORK_PERIOD);
 
         for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
             const dayNum = dayIdx + 1;
@@ -578,22 +557,19 @@ export function applyMonthUpdate(
 
             if (emp.vacationStart && emp.vacationEnd) {
                 if (dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
-                    newShifts[dayIdx] = 'FE'; newHours[dayIdx] = APPRENTICE_WORK_PERIOD; continue;
+                    newShifts[dayIdx] = 'FE'; continue;
                 }
             }
 
             if (dow === 0 || dow === 6) {
-                newShifts[dayIdx] = 'F'; newHours[dayIdx] = APPRENTICE_WORK_PERIOD; continue;
+                newShifts[dayIdx] = 'F'; continue;
             }
             if (isHoliday) {
-                // Priority: Holiday (F) over Course Day (C)
-                newShifts[dayIdx] = 'F'; newHours[dayIdx] = APPRENTICE_WORK_PERIOD; continue;
+                newShifts[dayIdx] = 'F'; continue;
             }
             if (WEEKDAY_NAMES[dow] === emp.courseDay) {
-                newShifts[dayIdx] = 'C'; newHours[dayIdx] = APPRENTICE_WORK_PERIOD; continue;
+                newShifts[dayIdx] = 'C'; continue;
             }
-
-            // Other manual edits are naturally preserved.
         }
 
         result[emp.id] = { shifts: newShifts, hours: newHours };
