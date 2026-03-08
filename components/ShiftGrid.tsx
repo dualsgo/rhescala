@@ -231,15 +231,37 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   };
 
   const isEarlyDayOff = (emp: Employee, dayIdx: number) => {
-    if (getDayShift(emp, dayIdx) !== 'F') return false;
-    for (let i = 1; i <= 6; i++) {
-      const prevIdx = dayIdx - i;
-      if (prevIdx < 0) break;
-      if (getDayShift(emp, prevIdx) === 'F' || getDayShift(emp, prevIdx) === 'FF') {
-        return true; 
+    const shift = getDayShift(emp, dayIdx);
+    // Só analisamos folgas comuns (F) ou folgas de feriado (FF)
+    if (shift !== 'F' && !shift.startsWith('FF')) return false;
+
+    // Um dia de folga é considerado "excessivo" se ele puder ser removido 
+    // sem quebrar a regra de 6x1 em nenhuma das janelas de 7 dias das quais ele faz parte.
+    // Analisamos o contexto de 14 dias (as 7 janelas que contêm este dia).
+    
+    for (let start = dayIdx - 6; start <= dayIdx; start++) {
+      let hasAlternativeOff = false;
+      for (let d = start; d <= start + 6; d++) {
+        if (d === dayIdx) continue; // Simulamos a remoção do dia atual
+        
+        // Ignoramos dias fora do mês para não gerar falsos positivos nas bordas
+        if (d < 0 || d >= daysInMonth) continue;
+
+        const s = getDayShift(emp, d);
+        // Qualquer coisa que NÃO seja Trabalho (T) ou Curso (C) conta como descanso
+        if (s !== 'T' && s !== 'C') {
+          hasAlternativeOff = true;
+          break;
+        }
       }
+      
+      // Se encontrarmos UMA janela onde ESTE dia é a única folga, ele é OBRIGATÓRIO.
+      // Portanto, não é uma folga em excesso.
+      if (!hasAlternativeOff) return false;
     }
-    return false;
+    
+    // Se em todas as janelas possíveis existe outra alternativa de folga, esta é excessiva.
+    return true;
   };
 
   const isSuggestedWorkDay = (emp: Employee, dayIdx: number) => {
