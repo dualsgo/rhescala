@@ -1,13 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
-// URL DO SEU NOVO GOOGLE APPS SCRIPT (CRIE UM SCRIPT ESPECÍFICO PARA ESSE BANCO DE DADOS EM JSON)
-// Substitua o link abaixo assim que implantar o novo Script no Google
+// URL DO SEU NOVO GOOGLE APPS SCRIPT
 export const DB_API_URL = "https://script.google.com/macros/s/AKfycbxV3_Lq7J9LGbQ4M20p5zqMyqZ9ciX1zOkx_wHnecL0eX0qF-S57qLQgtVV3fAFPOzorw/exec";
 
 export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void] {
-
-    // Obtém do localStorage como fallback, para funcionar enquanto o banco carrega
-    const readLocal = (): T => {
+    const [storedValue, setStoredValue] = useState<T>(() => {
         if (typeof window === 'undefined') return initialValue;
         try {
             const item = window.localStorage.getItem(key);
@@ -15,15 +12,17 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
         } catch (error) {
             return initialValue;
         }
-    };
+    });
 
-    const [storedValue, setStoredValue] = useState<T>(readLocal);
     const [isLoaded, setIsLoaded] = useState(false);
+    const isFirstLoadDone = useRef(false);
+    const lastCloudValue = useRef<string>(JSON.stringify(storedValue));
 
-    // Carrega do Banco de Dados em Nuvem (Google Sheets) na inicialização do app
+    // 1. Carregamento Inicial da Nuvem
     useEffect(() => {
         if (!DB_API_URL) {
-            setIsLoaded(true); // Funciona offline se não houver URL
+            setIsLoaded(true);
+            isFirstLoadDone.current = true;
             return;
         }
 
@@ -34,58 +33,82 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                 try {
                     data = JSON.parse(textData);
                 } catch (err) {
-                    console.warn(`⚠️ ALERTA: O Cofre retornou dados inválidos ('${textData.slice(0, 20)}...'). A célula A1 da planilha deve conter apenas JSON ou estar vazia. Ignorando a nuvem por segurança.`);
+                    console.warn(`⚠️ ALERTA [${key}]: Nuvem retornou dados inválidos. Usando offline.`);
                     setIsLoaded(true);
+                    isFirstLoadDone.current = true;
                     return;
                 }
 
-                // Prevenção de Segurança: Se os dados vierem da URL errada (ex: Painel Visual), não corrompe o Editor.
-                // O RHEscala espera que a lista de funcionários (riHappyEmployeesData) seja um Array.
                 if (key === 'riHappyEmployeesData' && !Array.isArray(data)) {
-                    console.error("⚠️ ALERTA: A URL colocada parece ser do Painel Visual (Hub), e não do 'Cofre' do Editor. Os dados não foram carregados para evitar corromper a escala.");
+                    console.error("⚠️ ALERTA: URL do 'Hub' detectada no lugar do 'Cofre'. Bloqueando carga.");
                     setIsLoaded(true);
+                    isFirstLoadDone.current = true;
                     return;
                 }
 
-                // Se retornou dados válidos do banco, substitui o estado (Nuvem > Local)
                 if (data && (!Array.isArray(data) || data.length > 0)) {
-                    console.log(`✅ Dados [${key}] carregados da nuvem com sucesso!`);
+                    console.log(`✅ Dados [${key}] baixados da nuvem.`);
+                    const dataStr = JSON.stringify(data);
                     setStoredValue(data);
-                    window.localStorage.setItem(key, JSON.stringify(data));
+                    lastCloudValue.current = dataStr;
+                    window.localStorage.setItem(key, dataStr);
                 }
                 setIsLoaded(true);
+                isFirstLoadDone.current = true;
             })
             .catch(err => {
-                console.error("Erro ao carregar do BD na Nuvem, usando memória offline:", err);
+                console.error(`Erro ao carregar do BD [${key}]:`, err);
                 setIsLoaded(true);
+                isFirstLoadDone.current = true;
             });
     }, [key]);
 
-    // O setValue agora atualiza o React, salva no Local Storage (como antes) E salva na Nuvem em 2º plano
+    // 2. Sincronização Automática (Debounce de 2 segundos)
+    useEffect(() => {
+        // Só sincroniza se já terminou a carga inicial
+        if (!isFirstLoadDone.current || !DB_API_URL) return;
+
+        const currentValueStr = JSON.stringify(storedValue);
+
+        // Se o valor atual for igual ao que estava na nuvem, não faz nada
+        if (currentValueStr === lastCloudValue.current) return;
+
+        const timer = setTimeout(() => {
+            console.log(`☁️ Sincronizando [${key}] com a nuvem...`);
+
+            // Registra o valor que está sendo enviado para evitar loops
+            const valueToSync = currentValueStr;
+
+            fetch(`${DB_API_URL}?key=${key}`, {
+                method: 'POST',
+                body: valueToSync,
+            })
+                .then(() => {
+                    console.log(`✅ [${key}] salvo na nuvem com sucesso!`);
+                    lastCloudValue.current = valueToSync;
+                })
+                .catch(err => {
+                    console.error(`❌ Erro ao salvar [${key}] na nuvem:`, err);
+                });
+        }, 2000); // Debounce de 2 segundos para dar tempo de fazer várias edições
+
+        return () => clearTimeout(timer);
+    }, [storedValue, key]);
+
     const setValue = (value: T | ((val: T) => T)) => {
         try {
             setStoredValue(prev => {
                 const valueToStore = value instanceof Function ? value(prev) : value;
 
-                // Backup offline imediato
+                // Salva no localStorage IMEDIATAMENTE (segurança offline)
                 if (typeof window !== 'undefined') {
                     window.localStorage.setItem(key, JSON.stringify(valueToStore));
-                }
-
-                // Sincronização em nuvem invisível
-                if (DB_API_URL && isLoaded) {
-                    fetch(`${DB_API_URL}?key=${key}`, {
-                        method: 'POST',
-                        body: JSON.stringify(valueToStore),
-                    })
-                        .then(() => console.log(`☁️ Alteração em [${key}] salva na nuvem com sucesso!`))
-                        .catch(err => console.error("❌ Erro ao salvar no BD da nuvem:", err));
                 }
 
                 return valueToStore;
             });
         } catch (error) {
-            console.warn(`Error setting key "${key}":`, error);
+            console.warn(`Erro ao setar key "${key}":`, error);
         }
     };
 

@@ -126,25 +126,44 @@ function getPrevMonthConsecutive(
  *
  * Returns: empId → Set<dayIdx> of Sundays each employee rests.
  */
+/**
+ * Core Sunday rotation algorithm — RECOMPUTED FRESH EACH MONTH.
+ *
+ * Rules:
+ *  1. min 6 CLTs working every Sunday (MIN_SUNDAY_WORKERS = 6).
+ *  2. Employees excluded by `isSundayUnavailable` (vacation, preferred-Sunday-off,
+ *     hired/fired boundaries) never count toward the 6.
+ *  3. HARD: streak ≥ 2 (would be 3rd consecutive Sunday) → MUST REST if any slot free.
+ *  4. SOFT: streak = 1 → prefer to rest (alternating pattern).
+ *  5. Cross-month carry — can be initialized with counts from previous month.
+ *  6. Month-based tiebreaker offset: rotates who gets first-rest priority each month
+ *     so the same people don’t always rest on Sunday 1.
+ *  7. Safety: resting.size is always < available.length (never zero workers).
+ *
+ * Returns: { assignments: empId → Set<dayIdx>, nextConsecutive: empId → count }
+ */
 export function buildSundayAssignments(
     activeRegular: Employee[],
     year: number,
     month: number,
-    sundaysInMonth: number[]
-): Map<string, Set<number>> {
+    sundaysInMonth: number[],
+    initialConsecutive?: Map<string, number>
+): { assignments: Map<string, Set<number>>, nextConsecutive: Map<string, number> } {
     const assignments = new Map<string, Set<number>>();
-    for (const emp of activeRegular) assignments.set(emp.id, new Set());
-
-    if (sundaysInMonth.length === 0 || activeRegular.length === 0) return assignments;
-
-    // Always start FRESH each month — no cross-month carry
     const consecutive = new Map<string, number>();
-    for (const emp of activeRegular) consecutive.set(emp.id, 0);
+
+    for (const emp of activeRegular) {
+        assignments.set(emp.id, new Set());
+        consecutive.set(emp.id, initialConsecutive?.get(emp.id) ?? 0);
+    }
+
+    if (sundaysInMonth.length === 0 || activeRegular.length === 0) {
+        return { assignments, nextConsecutive: consecutive };
+    }
 
     // Rotate the tiebreaker origin per month so Sunday 1 doesn’t always
     // give rest to the same index-0 employees
     const rotationOffset = month % Math.max(activeRegular.length, 1);
-
     const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
 
     for (const sundayDayIdx of sundaysInMonth) {
@@ -209,7 +228,7 @@ export function buildSundayAssignments(
         }
     }
 
-    return assignments;
+    return { assignments, nextConsecutive: consecutive };
 }
 
 // ─── Per-employee month generator ─────────────────────────────────────────────
@@ -348,18 +367,18 @@ export function generateYearSchedule(
                 if (new Date(year, month, d + 1).getDay() === 0) sundaysInMonth.push(d);
             }
 
-            // Build Sunday assignments — fresh each month, no cross-month carry
-            const sundayAssignments = buildSundayAssignments(
-                activeRegular, year, month, sundaysInMonth
+            // Build Sunday assignments — with cross-month carry
+            const { assignments, nextConsecutive } = buildSundayAssignments(
+                activeRegular, year, month, sundaysInMonth, rollingConsecutive
             );
-
+            rollingConsecutive = nextConsecutive;
 
             // Generate each regular employee
             activeRegular.forEach(emp => {
                 if (!result[emp.id]) result[emp.id] = {};
                 result[emp.id][monthKey] = generateMonthForEmployee(
                     emp, year, month,
-                    sundayAssignments.get(emp.id) ?? new Set(),
+                    assignments.get(emp.id) ?? new Set(),
                     customHolidays
                 );
             });
@@ -417,9 +436,10 @@ export function applyMonthUpdate(
         if (new Date(year, month, d + 1).getDay() === 0) sundaysInMonth.push(d);
     }
 
-    // Compute Sunday assignments — fresh each month, no cross-month carry
-    const sundayAssignments = buildSundayAssignments(
-        activeRegular, year, month, sundaysInMonth
+    // Compute Sunday assignments — with cross-month carry (retro-analysis)
+    const prevConsecutive = getPrevMonthConsecutive(activeRegular, year, month);
+    const { assignments: sundayAssignments } = buildSundayAssignments(
+        activeRegular, year, month, sundaysInMonth, prevConsecutive
     );
 
     const today = new Date();
@@ -491,14 +511,16 @@ export function applyMonthUpdate(
         let currentWeekStartIdx = 0;
         while (currentWeekStartIdx < daysInMonth) {
             let weekEndIdx = currentWeekStartIdx;
+            // Find the end of the week (Sunday)
             while (weekEndIdx < daysInMonth && new Date(year, month, weekEndIdx + 1).getDay() !== 0) {
                 weekEndIdx++;
             }
 
+            // Loop through the whole week (including Sunday if it exists in the month)
             let hasFolga = false;
             let preferredDayOffIdx = -1;
 
-            for (let i = currentWeekStartIdx; i < weekEndIdx; i++) {
+            for (let i = currentWeekStartIdx; i <= Math.min(weekEndIdx, daysInMonth - 1); i++) {
                 if (newShifts[i] === 'F' || newShifts[i] === 'FE') {
                     hasFolga = true;
                 }
@@ -509,15 +531,19 @@ export function applyMonthUpdate(
                 }
             }
 
-            // Se não tem folga na semana, tenta aplicar no dia preferencial se for no mês vigente
+            // Se não tem folga na semana (nem no domingo nem na semana), tenta aplicar no dia preferencial.
+            // Se o dia preferencial for na semana (seg-sab) e não o domingo.
             if (!hasFolga && preferredDayOffIdx !== -1) {
-                if (newShifts[preferredDayOffIdx] !== 'FF' && newShifts[preferredDayOffIdx] !== 'FE') {
-                    newShifts[preferredDayOffIdx] = 'F';
-                    newHours[preferredDayOffIdx] = emp.workPeriod;
+                const preferredDow = new Date(year, month, preferredDayOffIdx + 1).getDay();
+                if (preferredDow !== 0) { // If preferred day is not Sunday (Sunday is handled in Pass 1)
+                    if (newShifts[preferredDayOffIdx] !== 'FF' && newShifts[preferredDayOffIdx] !== 'FE') {
+                        newShifts[preferredDayOffIdx] = 'F';
+                        newHours[preferredDayOffIdx] = emp.workPeriod;
+                    }
                 }
             }
 
-            currentWeekStartIdx = weekEndIdx + 1; // Pular o domingo, pois já foi iterado
+            currentWeekStartIdx = weekEndIdx + 1;
         }
 
         result[emp.id] = { shifts: newShifts, hours: newHours };
