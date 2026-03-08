@@ -11,8 +11,15 @@ interface AnalysisPanelProps {
   onClose: () => void;
 }
 
+const WEEKDAY_NAMES = [
+  'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira',
+  'Quinta-feira', 'Sexta-feira', 'Sábado',
+];
+
 export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, currentMY, customHolidays, onClose }) => {
   const [viewMode, setViewMode] = useState<'insights' | 'team-calendar'>('insights');
+  const [selectedEmpId, setSelectedEmpId] = useState<string | null>(employees.filter(e => !e.isHidden && e.status === 'active')[0]?.id || null);
+  
   const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
   const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
@@ -69,7 +76,8 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
         worked,
         maxStreak,
         overlooked: maxStreak > 6,
-        isHeavy: worked > 22
+        isHeavy: worked > 22,
+        emp
       };
     }).sort((a, b) => b.worked - a.worked);
   }, [employees, monthKey, daysInMonth]);
@@ -78,11 +86,15 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
     return dailyCoverage.filter(c => c.total < 6);
   }, [dailyCoverage]);
 
+  const selectedEmployee = useMemo(() => 
+    employeeStats.find(s => s.id === selectedEmpId), [employeeStats, selectedEmpId]
+  );
+
   // ── Render Helpers ───────────────────────────────────────────────────────────
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
-      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-7xl overflow-hidden flex flex-col max-h-[95vh]">
         
         {/* Header */}
         <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
@@ -125,7 +137,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
           {viewMode === 'insights' ? (
             <div className="space-y-8 animate-fade-in">
               
-              {/* Row 1: Key Indicators */}
+              {/* Key Indicators */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <InsightCard 
                   label="Média de Equipe" 
@@ -135,119 +147,163 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                 />
                 <InsightCard 
                   label="Dias Críticos" 
-                  description="Dias com menos de 6 pessoas"
+                  description="Abaixo de 6 pessoas"
                   value={bottlenecks.length.toString()} 
                   icon="warning" color="rose"
                   urgent={bottlenecks.length > 0}
                 />
                 <InsightCard 
-                  label="Sobrecarga Ativa" 
-                  description="Colaboradores com > 6 dias seguidos"
+                  label="Sobrecarga" 
+                  description="Com > 6 dias seguidos"
                   value={employeeStats.filter(s => s.overlooked).length.toString()} 
                   icon="timer" color="amber" 
                 />
                 <InsightCard 
-                  label="Turno Mais Fraco" 
-                  description="Menor cobertura média"
-                  value="Intermed." 
-                  icon="leaderboard" color="sky" 
+                  label="Escala Ativa" 
+                  description="Total de colaboradores"
+                  value={employeeStats.length.toString()} 
+                  icon="person" color="sky" 
                 />
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Main Interactive Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 
-                {/* Visual Coverage Heatmap */}
-                <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm">
-                  <div className="flex items-center justify-between mb-8">
-                    <div>
-                      <h3 className="text-lg font-black text-slate-800">Mapa de Calor: Cobertura Diária</h3>
-                      <p className="text-xs font-bold text-slate-400">Total de pessoas escaladas por dia do mês</p>
-                    </div>
-                    <div className="flex gap-4">
-                       <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-400">
-                          <span className="w-3 h-3 bg-indigo-500 rounded-sm"></span> Equipe OK
-                       </div>
-                       <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-400">
-                          <span className="w-3 h-3 bg-rose-500 rounded-sm"></span> Crítico (&lt;6)
-                       </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-7 sm:grid-cols-10 md:grid-cols-15 gap-2">
-                    {dailyCoverage.map(c => (
-                      <div 
-                        key={c.day}
-                        className={`group relative flex flex-col items-center justify-center aspect-square rounded-xl border transition-all ${
-                          c.total < 6 ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-indigo-50 border-indigo-100 text-indigo-600'
-                        } hover:scale-105 hover:shadow-md cursor-help`}
-                      >
-                        <span className="text-[10px] font-black">{c.total}</span>
-                        <span className="text-[8px] font-bold opacity-40 absolute top-1 left-1">{c.day}</span>
-                        
-                        {/* Tooltip */}
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-3 bg-slate-900 text-white rounded-lg text-[10px] font-bold hidden group-hover:block z-50 whitespace-nowrap shadow-xl">
-                           <p className="border-b border-slate-700 pb-1 mb-1">Dia {c.day} • {c.isSunday ? 'Domingo' : c.isHoliday ? 'Feriado' : 'Semana'}</p>
-                           <p className="text-indigo-300">Abertura: {c.shifts.abertura}</p>
-                           <p className="text-sky-300">Intermed: {c.shifts.intermediario}</p>
-                           <p className="text-amber-300">Fechamento: {c.shifts.fechamento}</p>
+                {/* Left: Individual Weekly Calendar */}
+                <div className="lg:col-span-5 flex flex-col gap-6">
+                  <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm h-full flex flex-col">
+                    <div className="mb-6 flex justify-between items-start">
+                        <div className="min-w-0">
+                            <h3 className="text-lg font-black text-slate-800 truncate">
+                                {selectedEmployee?.name || 'Selecione um colaborador'}
+                            </h3>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Calendário Semanal (Dom-Sáb)</p>
                         </div>
-                      </div>
-                    ))}
+                        {selectedEmployee?.overlooked && (
+                            <div className="bg-rose-50 text-rose-600 px-3 py-1 rounded-lg text-[10px] font-black animate-pulse">
+                                ALERTA 6x1
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex-1">
+                        {selectedEmployee && (
+                            <IndividualWeeklyCalendar 
+                                employee={selectedEmployee.emp} 
+                                currentMY={currentMY} 
+                                customHolidays={customHolidays}
+                            />
+                        )}
+                    </div>
+
+                    <div className="mt-6 grid grid-cols-2 gap-4 pt-6 border-t border-slate-100">
+                        <div className="bg-slate-50 p-4 rounded-2xl">
+                            <p className="text-[10px] font-black text-slate-400 uppercase">Dias Trabalhados</p>
+                            <p className="text-2xl font-black text-slate-900">{selectedEmployee?.worked}d</p>
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-2xl">
+                            <p className="text-[10px] font-black text-slate-400 uppercase">Maior Sequência</p>
+                            <p className="text-2xl font-black text-slate-900">{selectedEmployee?.maxStreak}d</p>
+                        </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Overload Ranking */}
-                <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm flex flex-col">
-                   <div className="mb-6">
-                      <h3 className="text-lg font-black text-slate-800">Ranking de Sobrecarga</h3>
-                      <p className="text-xs font-bold text-slate-400">Maior volume de dias trabalhados</p>
-                   </div>
-                   <div className="flex-1 space-y-4">
-                      {employeeStats.slice(0, 5).map((s, idx) => (
-                        <div key={s.id} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100/50">
-                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${idx === 0 ? 'bg-rose-500 text-white' : 'bg-slate-200 text-slate-500'}`}>
-                              {idx + 1}
-                           </div>
-                           <div className="flex-1 min-w-0">
-                              <p className="text-xs font-black text-slate-900 uppercase truncate">{s.name}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                 <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                                    <div className={`h-full rounded-full ${s.isHeavy ? 'bg-rose-500' : 'bg-indigo-500'}`} style={{ width: `${(s.worked / daysInMonth) * 100}%` }}></div>
-                                 </div>
-                                 <span className="text-[10px] font-black text-slate-500">{s.worked}d</span>
-                              </div>
-                           </div>
+                {/* Middle/Right: Overload Ranking with Click Interaction */}
+                <div className="lg:col-span-7 flex flex-col gap-6">
+                   <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm flex flex-col max-h-[600px]">
+                        <div className="mb-6">
+                            <h3 className="text-lg font-black text-slate-800">Ranking de Escala</h3>
+                            <p className="text-xs font-bold text-slate-400">Clique no colaborador para ver o calendário individual</p>
                         </div>
-                      ))}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
+                            {employeeStats.map((s, idx) => (
+                                <button 
+                                    key={s.id} 
+                                    onClick={() => setSelectedEmpId(s.id)}
+                                    className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all border ${
+                                        selectedEmpId === s.id 
+                                        ? 'bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-100 scale-[1.02]' 
+                                        : 'bg-slate-50 border-slate-100 hover:bg-slate-100'
+                                    }`}
+                                >
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${
+                                        selectedEmpId === s.id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'
+                                    }`}>
+                                        {idx + 1}
+                                    </div>
+                                    <div className="flex-1 text-left min-w-0">
+                                        <p className={`text-xs font-black uppercase truncate ${selectedEmpId === s.id ? 'text-white' : 'text-slate-900'}`}>
+                                            {s.name}
+                                        </p>
+                                        <div className="flex items-center gap-3 mt-1">
+                                            <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${selectedEmpId === s.id ? 'bg-white/20' : 'bg-slate-200'}`}>
+                                                <div className={`h-full rounded-full ${s.isHeavy ? 'bg-rose-400' : 'bg-indigo-400'}`} style={{ width: `${(s.worked / daysInMonth) * 100}%` }}></div>
+                                            </div>
+                                            <span className={`text-[10px] font-black shrink-0 ${selectedEmpId === s.id ? 'text-white/80' : 'text-slate-500'}`}>
+                                                {s.worked} dias
+                                            </span>
+                                        </div>
+                                    </div>
+                                    {s.overlooked && (
+                                        <Icon name="timer" className={selectedEmpId === s.id ? 'text-white' : 'text-rose-500'} />
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                   </div>
+
+                   {/* Heatmap moved to bottom of middle section */}
+                   <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Mapa de Cobertura Geral</h3>
+                            <div className="flex gap-4">
+                                <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-400">
+                                    <span className="w-2.5 h-2.5 bg-indigo-500 rounded-sm"></span> OK
+                                </div>
+                                <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-400">
+                                    <span className="w-2.5 h-2.5 bg-rose-500 rounded-sm"></span> Crítico
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                            {dailyCoverage.map(c => (
+                                <div 
+                                    key={c.day}
+                                    className={`w-8 h-8 flex flex-col items-center justify-center rounded-lg border text-[9px] font-black transition-all ${
+                                        c.total < 6 ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-indigo-50 border-indigo-100 text-indigo-600'
+                                    }`}
+                                >
+                                    {c.total}
+                                </div>
+                            ))}
+                        </div>
                    </div>
                 </div>
 
               </div>
 
-              {/* Row 3: Critical Days List */}
+              {/* Botlenecks Alert */}
               {bottlenecks.length > 0 && (
-                <div className="bg-rose-50 border border-rose-100 rounded-[2.5rem] p-8 animate-pulse-subtle">
+                <div className="bg-rose-50 border border-rose-100 rounded-[2.5rem] p-8">
                    <div className="flex items-center gap-4 mb-6">
                       <div className="w-10 h-10 bg-rose-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-rose-200">
                          <Icon name="error" className="text-xl" />
                       </div>
                       <div>
-                         <h3 className="text-lg font-black text-rose-900 uppercase tracking-tight">ALERTA DE GARGALO DETECTADO</h3>
+                         <h3 className="text-lg font-black text-rose-900 uppercase tracking-tight">ALERTA DE EQUIPE INSUFICIENTE</h3>
                          <p className="text-xs font-bold text-rose-700">Identificamos dias onde a equipe está abaixo do mínimo operacional (6 pessoas).</p>
                       </div>
                    </div>
                    <div className="flex flex-wrap gap-3">
                       {bottlenecks.map(b => (
-                        <div key={b.day} className="flex items-center gap-3 bg-white border border-rose-200 px-4 py-3 rounded-2xl shadow-sm">
+                        <div key={b.day} className="flex items-center gap-3 bg-white border border-rose-200 px-4 py-2 rounded-2xl shadow-sm">
                            <div className="flex flex-col items-center">
-                              <span className="text-[10px] font-black text-rose-500 uppercase leading-none">{WEEKDAY_NAMES[new Date(currentMY.year, currentMY.month, b.day).getDay()].substring(0, 3)}</span>
-                              <span className="text-xl font-black text-slate-900 leading-none mt-1">{b.day}</span>
+                              <span className="text-[10px] font-black text-rose-500 leading-none">{WEEKDAY_NAMES[new Date(currentMY.year, currentMY.month, b.day).getDay()].substring(0, 3)}</span>
+                              <span className="text-lg font-black text-slate-900 leading-none mt-1">{b.day}</span>
                            </div>
-                           <div className="h-8 w-px bg-rose-100 mx-1"></div>
-                           <div>
-                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Apenas</p>
-                              <p className="text-sm font-black text-rose-600 leading-tight">{b.total} Pessoas</p>
-                           </div>
+                           <div className="h-6 w-px bg-rose-100 mx-1"></div>
+                           <p className="text-sm font-black text-rose-600">{b.total} CLT's</p>
                         </div>
                       ))}
                    </div>
@@ -263,7 +319,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
         </div>
 
         {/* Footer */}
-        <div className="px-10 py-6 bg-white border-t border-slate-100 flex items-center justify-between">
+        <div className="px-10 py-6 bg-white border-t border-slate-100 flex items-center justify-between sticky bottom-0">
            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Insights Operacionais Mensal • Ri Happy Dashboard v2.0</p>
            <button 
              onClick={onClose} 
@@ -278,32 +334,81 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
 };
 
 const InsightCard: React.FC<{ label: string, value: string, icon: any, color: any, description: string, urgent?: boolean }> = ({ label, value, icon, color, description, urgent }) => (
-  <div className={`bg-white border rounded-[2rem] p-6 shadow-sm flex items-center gap-5 transition-all hover:translate-y-[-4px] hover:shadow-md ${urgent ? 'border-rose-300 ring-2 ring-rose-50' : 'border-slate-100'}`}>
-     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
+  <div className={`bg-white border rounded-3xl p-6 shadow-sm flex items-center gap-5 transition-all hover:translate-y-[-4px] hover:shadow-md ${urgent ? 'border-rose-300 ring-2 ring-rose-50' : 'border-slate-100'}`}>
+     <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
        color === 'indigo' ? 'bg-indigo-50 text-indigo-600' : 
        color === 'rose' ? 'bg-rose-50 text-rose-600' : 
        color === 'amber' ? 'bg-amber-50 text-amber-600' : 'bg-sky-50 text-sky-600'
      }`}>
-        <Icon name={icon} className="text-2xl" />
+        <Icon name={icon} className="text-xl" />
      </div>
      <div className="min-w-0">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
-        <h4 className={`text-2xl font-black ${urgent ? 'text-rose-600' : 'text-slate-900'} leading-none mb-1`}>{value}</h4>
+        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
+        <h4 className={`text-xl font-black ${urgent ? 'text-rose-600' : 'text-slate-900'} leading-none`}>{value}</h4>
         <p className="text-[9px] font-bold text-slate-400 truncate">{description}</p>
      </div>
   </div>
 );
 
-const WEEKDAY_NAMES = [
-  'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira',
-  'Quinta-feira', 'Sexta-feira', 'Sábado',
-];
+const IndividualWeeklyCalendar: React.FC<{ employee: Employee, currentMY: MonthYear, customHolidays: Holiday[] }> = ({ employee, currentMY, customHolidays }) => {
+    const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
+    const firstDayOfMonth = new Date(currentMY.year, currentMY.month, 1).getDay(); // 0 is Sunday
+    const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
+    const shifts = employee.shifts[monthKey] || [];
+    const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
+
+    // Create a flat list of days including leading empty spaces for the first week
+    const calendarDays = [];
+    for (let i = 0; i < firstDayOfMonth; i++) {
+        calendarDays.push({ type: 'empty' });
+    }
+    for (let i = 1; i <= daysInMonth; i++) {
+        const shift = shifts[i - 1];
+        const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+        const isOff = shift === 'F' || (typeof shift === 'string' && shift.startsWith('FF')) || shift === 'FE';
+        const isHoliday = holidaySet.has(dateStr);
+        calendarDays.push({ type: 'day', day: i, shift, isOff, isHoliday });
+    }
+
+    return (
+        <div className="w-full">
+            <div className="grid grid-cols-7 gap-2 mb-2">
+                {WEEKDAY_NAMES.map(wd => (
+                    <div key={wd} className="text-center text-[9px] font-black text-slate-400 uppercase tracking-tighter">
+                        {wd.substring(0, 3)}
+                    </div>
+                ))}
+            </div>
+            <div className="grid grid-cols-7 gap-2">
+                {calendarDays.map((cell, idx) => {
+                    if (cell.type === 'empty') return <div key={idx} className="aspect-square"></div>;
+                    
+                    const isWork = !cell.isOff;
+                    const shiftLabel = (cell.shift as string)?.split(' ')[0] || '-';
+                    
+                    return (
+                        <div 
+                            key={idx}
+                            className={`aspect-square rounded-xl border flex flex-col items-center justify-center transition-all ${
+                                isWork 
+                                ? 'bg-indigo-600 border-indigo-700 text-white shadow-sm' 
+                                : cell.isHoliday ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-slate-50 border-slate-100 text-slate-300'
+                            }`}
+                        >
+                            <span className={`text-[8px] font-black absolute top-1 left-1 opacity-50 ${isWork ? 'text-indigo-200' : ''}`}>{cell.day}</span>
+                            <span className="text-[10px] font-black tracking-tighter">{isWork ? shiftLabel : 'F'}</span>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
 
 const TeamMonthlyCalendar: React.FC<{ employees: Employee[], currentMY: MonthYear, customHolidays: Holiday[] }> = ({ employees, currentMY, customHolidays }) => {
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMY.year, currentMY.month, 1).getDay();
   const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
-  const hSet = buildHolidaySet(currentMY.year, customHolidays);
 
   const cells = [];
   for (let i = 0; i < firstDayOfMonth; i++) cells.push({ type: 'empty' });
@@ -318,22 +423,22 @@ const TeamMonthlyCalendar: React.FC<{ employees: Employee[], currentMY: MonthYea
 
   return (
     <div className="w-full">
-      <div className="grid grid-cols-7 gap-3 mb-3">
+      <div className="grid grid-cols-7 gap-4 mb-4">
         {WEEKDAY_NAMES.map(wd => (
-          <div key={wd} className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">{wd.substring(0, 3)}</div>
+          <div key={wd} className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">{wd}</div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-3">
+      <div className="grid grid-cols-7 gap-4">
         {cells.map((cell, idx) => (
-          <div key={idx} className={`min-h-[140px] rounded-[1.5rem] border p-4 flex flex-col gap-1 transition-all ${cell.type === 'empty' ? 'border-transparent' : 'bg-white border-slate-100 hover:border-indigo-200 hover:shadow-lg'}`}>
+          <div key={idx} className={`min-h-[160px] rounded-[2rem] border p-5 flex flex-col gap-1.5 transition-all ${cell.type === 'empty' ? 'border-transparent' : 'bg-white border-slate-100'}`}>
             {cell.type === 'day' && (
               <>
-                <span className="text-xs font-black text-slate-400 mb-2">{cell.date}</span>
-                <div className="space-y-1 overflow-hidden">
+                <span className="text-xs font-black text-slate-400 mb-3">{cell.date}</span>
+                <div className="space-y-1.5">
                   {cell.dayData.map((d, i) => (
-                    <div key={i} className="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-100/50">
-                       <span className="text-[8px] font-black text-slate-700 uppercase truncate">{d.name}</span>
-                       <span className="text-[7px] font-bold text-slate-400 shrink-0">{d.hours.split(' ')[0]}</span>
+                    <div key={i} className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50 border border-slate-100/50">
+                       <span className="text-[9px] font-black text-slate-800 uppercase truncate">{d.name}</span>
+                       <span className="text-[8px] font-bold text-slate-400 shrink-0">{d.hours.split(' ')[0]}</span>
                     </div>
                   ))}
                 </div>
