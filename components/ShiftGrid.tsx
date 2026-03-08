@@ -59,15 +59,15 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   }, [currentMY.year, currentMY.month]);
 
   const holidaySet = useMemo(() => {
-    const yearHolidays = customHolidays.filter(h => h.date.startsWith(`${currentMY.year}`));
+    const yearHolidays = customHolidays.filter(h => h?.date?.startsWith(`${currentMY.year}`));
     return buildHolidaySet(currentMY.year, yearHolidays);
   }, [currentMY.year, customHolidays]);
 
   const holidayNames = useMemo(() => {
     const nationals = getNationalHolidays(currentMY.year);
-    const yearCustom = customHolidays.filter(h => h.date.startsWith(`${currentMY.year}`));
+    const yearCustom = customHolidays.filter(h => h?.date?.startsWith(`${currentMY.year}`));
     const map: Record<string, string> = {};
-    [...nationals, ...yearCustom].forEach(h => { map[h.date] = h.name; });
+    [...nationals, ...yearCustom].forEach(h => { if(h?.date) map[h.date] = h.name; });
     return map;
   }, [currentMY.year, customHolidays]);
 
@@ -119,10 +119,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
   const getDayShift = (emp: Employee, dayIdx: number) => {
     const day = days[dayIdx];
+    if (!day) return 'F';
     if (emp.vacationStart && emp.vacationEnd) {
       if (day.dateStr >= emp.vacationStart && day.dateStr <= emp.vacationEnd) return 'FE';
     }
-    const monthShifts = emp.shifts[monthKey] || [];
+    const monthShifts = (emp.shifts || {})[monthKey] || [];
     return monthShifts[dayIdx] || 'F';
   };
 
@@ -141,9 +142,9 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     onPrevMonth();
   };
 
-  const getDayHour = (emp: Employee, dayIdx: number) => {
-    const mHours = emp.dailyHours[monthKey] || [];
-    return mHours[dayIdx] || emp.workPeriod;
+  const getDayHour = (emp: Employee, dayIdx: number): string => {
+    const mHours = (emp.dailyHours || {})[monthKey] || [];
+    return mHours[dayIdx] || emp.workPeriod || '';
   };
 
   const isBirthday = (emp: Employee, dayIdx: number) => {
@@ -155,6 +156,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   const isDayLocked = (dayIdx: number) => {
     if (isGridLocked) return true;
     const day = days[dayIdx];
+    if (!day) return true;
     const isPastOrToday = day.isPast || day.isToday;
     if (isPastOrToday && !allowRetroactive) return true;
     return false;
@@ -248,7 +250,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     onSelectDay(dayIdx);
   };
 
-  const getShiftTextColor = (hour: string) => {
+  const getShiftTextColor = (hour: string | undefined) => {
+    if (!hour) return 'text-slate-900';
     if (hour.includes('10h')) return 'text-orange-600'; 
     if (hour.includes('12h')) return 'text-sky-600'; 
     if (hour.includes('13h')) return 'text-emerald-600'; 
@@ -259,12 +262,12 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   };
 
 
-  const selectedDay = days[selectedDayIdx];
-  const currentDayType = selectedDay.isHoliday ? 'HOLIDAY' : selectedDay.isSunday ? 'SUNDAY' : 'WEEKDAY';
-  const availableHours = SHIFT_HOURS[currentDayType];
+  const selectedDay = days[selectedDayIdx] || days[0];
+  const currentDayType = selectedDay?.isHoliday ? 'HOLIDAY' : selectedDay?.isSunday ? 'SUNDAY' : 'WEEKDAY';
+  const availableHours = SHIFT_HOURS[currentDayType] || [];
 
   const getAvailableHolidayCredits = (emp: Employee) => {
-    const yearHolidays = [...getNationalHolidays(currentMY.year), ...customHolidays.filter(h => h.date.startsWith(`${currentMY.year}`))];
+    const yearHolidays = [...getNationalHolidays(currentMY.year), ...customHolidays.filter(h => h?.date?.startsWith(`${currentMY.year}`))];
     const earned: string[] = [];
     const spent: Set<string> = new Set();
 
@@ -274,12 +277,13 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     const cutoffYear = todayLocal.getFullYear();
     const cutoffMonth = todayLocal.getMonth() + 1;
 
-    Object.keys(emp.shifts).forEach(mk => {
+    const safeShifts = emp.shifts || {};
+    Object.keys(safeShifts).forEach(mk => {
       const [y, m] = mk.split('-').map(Number);
       if (y < cutoffYear || (y === cutoffYear && m < cutoffMonth)) return;
       
-      emp.shifts[mk].forEach((s, idx) => {
-        if (s.startsWith('FF ') && s.length > 3) {
+      safeShifts[mk].forEach((s, idx) => {
+        if (s && s.startsWith('FF ') && s.length > 3) {
           spent.add(s.replace('FF ', ''));
         }
       });
@@ -304,7 +308,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       const hMK = `${hY}-${String(hM).padStart(2, '0')}`;
       const hDayIdx = hDate.getDate() - 1;
       
-      const empShifts = emp.shifts[hMK] || [];
+      const empShifts = (emp.shifts || {})[hMK] || [];
       if (empShifts[hDayIdx] === 'T' || empShifts[hDayIdx] === 'C') {
         const creditLabel = `${String(hDate.getDate()).padStart(2, '0')}/${String(hDate.getMonth() + 1).padStart(2, '0')}`;
         if (!spent.has(creditLabel)) {
@@ -469,7 +473,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           <thead>
             <tr className="bg-slate-50 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest border-b border-slate-200">
               <th className="sticky left-0 z-30 bg-slate-50 p-2 pl-4 border-r border-slate-100 min-w-[150px] w-[150px] max-w-[150px] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Colaborador</th>
-              <th className="sticky left-[150px] z-30 bg-slate-50 p-2 border-r border-slate-100 min-w-[130px] w-[130px] max-w-[130px] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Horário (Dia {days[selectedDayIdx].num})</th>
+              <th className="sticky left-[150px] z-30 bg-slate-50 p-2 border-r border-slate-100 min-w-[130px] w-[130px] max-w-[130px] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Horário (Dia {(days[selectedDayIdx] || days[0])?.num})</th>
               {filteredDays.map((day) => (
                 <th
                   key={day.num}
@@ -524,7 +528,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     className={`bg-transparent w-full text-[11px] font-extrabold focus:ring-0 border-none p-0 cursor-pointer outline-none transition-colors ${getShiftTextColor(getDayHour(emp, selectedDayIdx))} disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {availableHours.map(h => <option key={h} value={h}>{h}</option>)}
-                    {!availableHours.includes(getDayHour(emp, selectedDayIdx)) && <option value={getDayHour(emp, selectedDayIdx)}>{getDayHour(emp, selectedDayIdx)}</option>}
+                    {getDayHour(emp, selectedDayIdx) && !availableHours.includes(getDayHour(emp, selectedDayIdx)) && <option value={getDayHour(emp, selectedDayIdx)}>{getDayHour(emp, selectedDayIdx)}</option>}
                   </select>
                 </td>
                 {filteredDays.map((day) => {
@@ -580,10 +584,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                           >
                           <option value="T">T - Trabalho</option>
                           <option value="F">F - Folga</option>
-                          {getAvailableHolidayCredits(emp).map(credit => (
+                          {emp.shifts && getAvailableHolidayCredits(emp).map(credit => (
                              <option key={credit} value={`FF ${credit}`}>FF {credit} - Folga Feriado</option>
                           ))}
-                          {shift.startsWith('FF ') && !getAvailableHolidayCredits(emp).includes(shift.replace('FF ', '')) && (
+                          {shift && shift.startsWith('FF ') && !getAvailableHolidayCredits(emp).includes(shift.replace('FF ', '')) && (
                              <option value={shift}>{shift} - Folga Feriado (Usado)</option>
                           )}
                           <option value="C">C - Curso</option>

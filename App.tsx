@@ -186,7 +186,7 @@ const App: React.FC = () => {
     employees.forEach(e => {
       if (e.id === PLACEHOLDER_EMPLOYEE_ID) return;
       const shift = (e.shifts[monthKey] || [])[dayIdx];
-      const hour  = (e.dailyHours[monthKey] || [])[dayIdx] || e.workPeriod;
+      const hour  = (e.dailyHours[monthKey] || [])[dayIdx] || e.workPeriod || '';
       const firstName = e.name.split(' ')[0];
 
       if (shift === 'T' || shift === 'FF') {
@@ -315,7 +315,7 @@ const App: React.FC = () => {
       {showHolidayManager && (
         <HolidayManager
           year={currentMY.year}
-          customHolidays={customHolidays.filter(h => h.date.startsWith(`${currentMY.year}`))}
+          customHolidays={customHolidays.filter(h => h?.date?.startsWith(`${currentMY.year}`))}
           onAdd={addHoliday}
           onRemove={removeHoliday}
           onClose={() => setShowHolidayManager(false)}

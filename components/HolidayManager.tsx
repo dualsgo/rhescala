@@ -34,7 +34,7 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
     const prefix = `${year}-${String(mi + 1).padStart(2, '0')}`;
     return {
       monthName,
-      items: allHolidays.filter(h => h.date.startsWith(prefix)),
+      items: allHolidays.filter(h => h.date && h.date.startsWith(prefix)),
     };
   }).filter(g => g.items.length > 0);
 
@@ -140,7 +140,7 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
                       <span className={`w-8 text-center font-extrabold text-base ${
                         h.isNational ? 'text-rose-600' : h.type === 'state' ? 'text-violet-600' : 'text-amber-600'
                       }`}>
-                        {formatDate(h.date)}
+                        {h.date ? formatDate(h.date) : 'Data Inválida'}
                       </span>
                       <div>
                         <p className="font-extrabold text-slate-800 text-[13px]">{h.name}</p>

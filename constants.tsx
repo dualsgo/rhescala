@@ -98,7 +98,7 @@ export function buildHolidaySet(
 ): Set<string> {
   const nationals = getNationalHolidays(year);
   const allHolidays = [...nationals, ...customHolidays];
-  return new Set(allHolidays.map(h => h.date));
+  return new Set(allHolidays.map(h => h.date).filter(Boolean));
 }
 
 // ─── Mock employees ───────────────────────────────────────────────────────────

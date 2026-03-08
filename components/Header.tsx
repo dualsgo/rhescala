@@ -177,6 +177,7 @@ export const Header: React.FC<HeaderProps> = ({
       
       // Feriados do Mês
       const monthHolidays = customHolidays.filter(h => {
+        if (!h.date) return false;
         const hDate = new Date(h.date + 'T00:00:00');
         return hDate.getMonth() === currentMY.month && hDate.getFullYear() === currentMY.year;
       });
@@ -186,6 +187,7 @@ export const Header: React.FC<HeaderProps> = ({
         doc.text('FERIADOS DO MÊS:', 40, infoY);
         doc.setFont('helvetica', 'normal');
         monthHolidays.forEach((h, i) => {
+          if (!h.date) return;
           const d = h.date.split('-')[2];
           doc.text(`• ${d}/${currentMY.month + 1}: ${h.name}`, 40, infoY + 12 + (i * 10));
         });
