@@ -50,6 +50,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   const [isGridLocked, setIsGridLocked] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [showHolidayCredit, setShowHolidayCredit] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
   const [selectedWeek, setSelectedWeek] = useState(1);
   const { showDialog } = useDialog();
@@ -203,9 +204,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       });
       if (confirmed) {
         setIsEditable(false);
+        setIsFullscreen(false); // Exit fullscreen when saving and exiting edit mode
       }
     } else {
       setIsEditable(true);
+      setIsFullscreen(true); // Enter fullscreen when entering edit mode
     }
   };
 
@@ -415,9 +418,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col w-full animate-fade-in">
-      {/* Top Nav */}
-      <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-50/30">
+    <div className={`flex flex-col bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden h-full transition-all duration-300 ${
+      isFullscreen ? 'fixed inset-0 z-[100] rounded-none border-none' : 'relative'
+    }`}>
+      {/* Grid Header / Toolbar */}
+      <div className={`flex flex-col md:flex-row items-start md:items-center justify-between p-4 px-6 gap-4 border-b border-slate-100 bg-slate-50/30 ${isFullscreen ? 'py-3' : ''}`}>
         <div className="flex items-center gap-6">
             <div className={`w-12 h-12 ${isPastMonth ? 'bg-slate-100 text-slate-400' : 'bg-orange-100 text-orange-600'} rounded-2xl flex items-center justify-center shadow-sm`}>
                 <Icon name="calendar_month" className="text-2xl" fill />
@@ -561,42 +566,52 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {isEditable && (
+            <button
+               onClick={() => setIsFullscreen(!isFullscreen)}
+               className={`p-2 rounded-lg border transition-all ${isFullscreen ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'}`}
+               title={isFullscreen ? 'Reduzir' : 'Expandir'}
+            >
+               <Icon name={isFullscreen ? 'fullscreen_exit' : 'fullscreen'} className="text-lg" />
+            </button>
+          )}
+
           <button 
             onClick={handleToggleEditMode} 
             disabled={isGridLocked}
-            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-xs font-extrabold transition-all border ${isGridLocked ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : isEditable ? 'bg-orange-500 text-white border-orange-500' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-xs font-extrabold transition-all border ${isGridLocked ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : isEditable ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm'}`}
           >
-            <Icon name={isEditable ? 'check_circle' : 'edit_square'} className="text-sm" />
-            {isEditable ? 'Salvar Alterações' : 'Ativar Edições'}
+            <Icon name={isEditable ? 'save' : 'edit_square'} className="text-sm" />
+            {isEditable ? 'Salvar Tudo' : 'Editar Escala'}
           </button>
 
           {isEditable && (
             <button
               onClick={() => setAllowRetroactive(!allowRetroactive)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-extrabold transition-all border ${allowRetroactive ? 'bg-amber-100 border-amber-300 text-amber-700 hover:bg-amber-200' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-extrabold transition-all border opacity-80 hover:opacity-100 ${allowRetroactive ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-white border-slate-200 text-slate-400'}`}
               title="Permitir edição de dias passados e hoje"
             >
-              <Icon name={allowRetroactive ? 'history_toggle_off' : 'history'} className="text-sm" />
-              {allowRetroactive ? 'Bloquear Retroativo' : 'Liberar Retroativo'}
+              <Icon name={allowRetroactive ? 'lock_open' : 'lock'} className="text-xs" />
+              {allowRetroactive ? 'Antigos Liberados' : 'Antigos Bloqueados'}
             </button>
           )}
         </div>
       </div>
 
       {/* Table Section */}
-      <div className="flex-1 overflow-auto custom-scrollbar relative">
-        <table className="w-full text-left border-collapse min-w-[max-content] table-fixed">
-          <thead className="sticky top-0 z-40">
-            <tr className="bg-slate-50 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest border-b border-slate-200">
-              <th className="sticky left-0 z-50 bg-slate-100 p-2 pl-4 border-r border-slate-200 min-w-[150px] w-[150px] shadow-[4px_0_10px_rgba(0,0,0,0.05)]">Colaborador</th>
-              <th className="sticky left-[150px] z-50 bg-slate-100 p-2 border-r border-slate-200 min-w-[130px] w-[130px] shadow-[4px_0_10px_rgba(0,0,0,0.05)]">Horário (Dia {(days[selectedDayIdx] || days[0])?.num})</th>
+      <div className="flex-1 overflow-auto custom-scrollbar relative bg-slate-50/20">
+        <table className="w-full text-left border-separate border-spacing-0 min-w-[max-content] table-fixed">
+          <thead className="sticky top-0 z-40 bg-white">
+            <tr className="bg-slate-100/90 backdrop-blur-sm text-[10px] font-extrabold text-slate-600 uppercase tracking-widest border-b border-slate-300">
+              <th className="sticky left-0 top-0 z-[60] bg-slate-100 p-3 pl-4 border-r border-b border-slate-300 min-w-[150px] w-[150px] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Colaborador</th>
+              <th className="sticky left-[150px] top-0 z-[60] bg-slate-100 p-3 border-r border-b border-slate-300 min-w-[120px] w-[120px] shadow-[2px_0_5px_rgba(0,0,0,0.05)] text-center">Horário Diário</th>
               {filteredDays.map((day) => (
                 <th
                   key={day.num}
                   onClick={() => onSelectDay(day.originalIdx)}
                   title={day.holidayName || undefined}
-                  className={`p-3 text-center min-w-[62px] w-[62px] cursor-pointer transition-colors relative border-r border-slate-100/50 ${
+                  className={`p-1.5 text-center min-w-[60px] w-[60px] cursor-pointer transition-colors relative border-r border-b border-slate-100/50 ${
                     selectedDayIdx === day.originalIdx ? 'bg-orange-100/50 ring-2 ring-inset ring-orange-400' : ''
                   } ${
                     day.isHoliday ? 'bg-rose-100/80' : day.isSunday ? 'bg-orange-100/60' : day.isSaturday ? 'bg-slate-100/80' : ''
@@ -620,24 +635,19 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           <tbody className="divide-y divide-slate-100">
             {displayedEmployees.map((emp) => (
               <tr key={emp.id} className={`group hover:bg-slate-50/50 transition-colors ${emp.isHidden ? 'hidden' : ''}`}>
-                <td className="sticky left-0 z-20 bg-white group-hover:bg-slate-50 p-2 pl-4 border-r border-slate-200 min-w-[150px] w-[150px] shadow-[4px_0_10px_rgba(0,0,0,0.05)]">
+                <td className="sticky left-0 z-20 bg-white group-hover:bg-slate-50 p-2 pl-4 border-r border-b border-slate-200 min-w-[150px] w-[150px] shadow-[4px_0_10px_rgba(0,0,0,0.05)]">
                   <div className="flex flex-col truncate">
-                    <span className={`font-extrabold text-[11px] uppercase tracking-tight truncate ${getShiftTextColor(getDayHour(emp, selectedDayIdx))}`} title={emp.name}>
-                      {emp.name}
+                    <span className={`font-black text-[10px] uppercase tracking-tight truncate ${getShiftTextColor(getDayHour(emp, selectedDayIdx))}`} title={emp.name}>
+                      {emp.name.split(' ').slice(0, 2).join(' ')}
                     </span>
-                    {emp.isYoungApprentice && <span className="text-[8px] font-extrabold text-teal-600 uppercase tracking-widest mt-0.5 truncate uppercase">Jovem Aprendiz</span>}
-                    {getAvailableHolidayCredits(emp).length > 0 && (
-                      <span 
-                        className="flex items-center gap-1 text-[7px] font-extrabold text-rose-500 uppercase tracking-wider mt-0.5 animate-pulse"
-                        title={`Feriados pendentes de: ${getAvailableHolidayCredits(emp).join(', ')}`}
-                      >
-                        <Icon name="event_repeat" className="text-[10px]" /> 
-                        {getAvailableHolidayCredits(emp).length} Pendente ({getAvailableHolidayCredits(emp).join(', ')})
-                      </span>
+                    {emp.isYoungApprentice ? (
+                      <span className="text-[7px] font-black text-teal-600 uppercase tracking-widest truncate">Aprendiz</span>
+                    ) : (
+                      <span className="text-[7px] font-bold text-slate-300 uppercase tracking-widest truncate">{emp.cargo}</span>
                     )}
                   </div>
                 </td>
-                <td className="sticky left-[150px] z-20 bg-white group-hover:bg-slate-100 p-2 border-r border-slate-200 min-w-[130px] w-[130px] shadow-[4px_0_10px_rgba(0,0,0,0.05)]">
+                <td className="sticky left-[150px] z-20 bg-white group-hover:bg-slate-100 p-1.5 border-r border-b border-slate-200 min-w-[120px] w-[120px] shadow-[4px_0_10px_rgba(0,0,0,0.05)]">
                   <select 
                     value={getDayHour(emp, selectedDayIdx)}
                     disabled={isDayLocked(selectedDayIdx)}

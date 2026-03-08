@@ -133,44 +133,44 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-4">
         {employees.map(emp => {
           const isPlaceholder = emp.id === PLACEHOLDER_EMPLOYEE_ID;
           const cargo: EmployeeCargo = emp.cargo ?? 'Auxiliar de Loja';
           return (
-          <div key={emp.id} className={`bg-white rounded-xl border shadow-sm p-6 hover:shadow-md transition-all ${
+          <div key={emp.id} className={`bg-white rounded-xl border shadow-sm p-4 hover:shadow-md transition-all ${
             isPlaceholder ? 'border-dashed border-slate-300 opacity-70' : 'border-slate-200'
           } ${emp.isHidden ? 'opacity-60 bg-slate-50' : ''}`}>
-            <div className="flex items-start justify-between mb-6">
-              <div className="flex flex-col">
-                  <h4 className="font-extrabold text-lg text-slate-900 leading-tight uppercase flex items-center gap-2">
-                    {emp.name.toUpperCase()}
-                    {emp.isHidden && <span className="text-[8px] bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-widest">Oculto</span>}
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex flex-col min-w-0">
+                  <h4 className="font-extrabold text-xs text-slate-900 leading-tight uppercase flex items-center gap-1.5 truncate">
+                    <span className="truncate">{emp.name.toUpperCase()}</span>
+                    {emp.isHidden && <span className="text-[7px] bg-slate-200 text-slate-500 px-1 py-0.5 rounded uppercase tracking-widest shrink-0">Oculto</span>}
                   </h4>
                   {isPlaceholder ? (
-                    <span className="text-[9px] font-extrabold text-amber-500 uppercase tracking-widest mt-1 flex items-center gap-1">
-                      ⏳ Aguardando cadastro real
+                    <span className="text-[8px] font-extrabold text-amber-500 uppercase tracking-widest mt-0.5 flex items-center gap-1">
+                      ⏳ Aguardando...
                     </span>
                   ) : emp.isYoungApprentice ? (
-                    <span className="text-[9px] font-extrabold text-teal-600 uppercase tracking-widest mt-1">Jovem Aprendiz · {emp.courseDay}</span>
+                    <span className="text-[8px] font-extrabold text-teal-600 uppercase tracking-widest mt-0.5">Aprendiz · {emp.courseDay.split('-')[0]}</span>
                   ) : (
-                    <span className={`text-[9px] font-extrabold uppercase tracking-widest mt-1 ${cargo === 'Estoquista' ? 'text-violet-600' : 'text-slate-400'}`}>
+                    <span className={`text-[8px] font-extrabold uppercase tracking-widest mt-0.5 ${cargo === 'Estoquista' ? 'text-violet-600' : 'text-slate-400'}`}>
                       {cargo}
                     </span>
                   )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-1.5 shrink-0 ml-2">
                 <button 
                   disabled={isPlaceholder}
                   onClick={() => onUpdateEmployee(emp.id, { isHidden: !emp.isHidden })}
-                  className={`w-10 h-10 rounded-lg transition-all flex items-center justify-center border ${
+                  className={`w-7 h-7 rounded-lg transition-all flex items-center justify-center border ${
                     emp.isHidden 
                       ? 'bg-slate-900 text-white border-slate-900' 
                       : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'
                   }`}
                   title={emp.isHidden ? 'Mostrar na Escala' : 'Ocultar da Escala'}
                 >
-                  <Icon name={emp.isHidden ? 'visibility_off' : 'visibility'} className="text-lg" />
+                  <Icon name={emp.isHidden ? 'visibility_off' : 'visibility'} className="text-sm" />
                 </button>
                 <button 
                   disabled={isPlaceholder}
@@ -181,46 +181,56 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                     });
                     if (confirmed) onDeleteEmployee(emp.id);
                   }}
-                  className={`w-10 h-10 rounded-lg transition-all flex items-center justify-center border ${
+                  className={`w-7 h-7 rounded-lg transition-all flex items-center justify-center border ${
                     isPlaceholder
                       ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed'
                       : 'bg-red-50 text-red-500 hover:bg-red-500 hover:text-white border-red-100'
                   }`}
                 >
-                  <Icon name="delete" className="text-lg" />
+                  <Icon name="delete" className="text-sm" />
                 </button>
               </div>
             </div>
 
             {!isPlaceholder && (
-              <div className="space-y-4">
-                {/* ── Aniversário ── */}
-                <div>
-                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Aniversário</label>
-                  <input
-                    type="date"
-                    value={emp.birthday || ''}
-                    onChange={(e) => onUpdateEmployee(emp.id, { birthday: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-lg text-[11px] font-bold p-2.5 outline-none focus:ring-2 focus:ring-orange-500"
-                  />
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                    {/* ── Aniversário ── */}
+                    <div>
+                    <label className="text-[8px] font-extrabold text-slate-400 uppercase tracking-widest block mb-0.5">Aniversário</label>
+                    <input
+                        type="date"
+                        value={emp.birthday || ''}
+                        onChange={(e) => onUpdateEmployee(emp.id, { birthday: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-100 rounded-lg text-[10px] font-bold p-1.5 outline-none focus:ring-1 focus:ring-orange-500"
+                    />
+                    </div>
+
+                    {/* ── Folga Fixa Sugerida ── */}
+                    <div>
+                    <label className="text-[8px] font-extrabold text-slate-400 uppercase tracking-widest block mb-0.5">Folga Sugerida</label>
+                    <select value={emp.preferredDayOff} onChange={(e) => onUpdateEmployee(emp.id, { preferredDayOff: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-lg text-[10px] font-bold p-1.5 outline-none focus:ring-1 focus:ring-orange-500">
+                        {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'].map(d => <option key={d}>{d.split('-')[0]}</option>)}
+                    </select>
+                    </div>
                 </div>
 
-                {/* ── Cargo (somente CLT não-aprendiz) ── */}
-                {!emp.isYoungApprentice && (
+                {/* ── Cargo ou Curso ── */}
+                {!emp.isYoungApprentice ? (
                   <div>
-                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Cargo</label>
-                    <div className="flex gap-2">
+                    <label className="text-[8px] font-extrabold text-slate-400 uppercase tracking-widest block mb-0.5">Cargo Operacional</label>
+                    <div className="flex gap-1.5">
                       {CARGO_OPTIONS.map(c => (
                         <button
                           key={c}
                           type="button"
                           onClick={() => onUpdateEmployee(emp.id, { cargo: c })}
-                          className={`flex-1 py-2 rounded-lg text-[10px] font-extrabold border transition-all ${
+                          className={`flex-1 py-1.5 rounded-lg text-[9px] font-extrabold border transition-all ${
                             cargo === c
                               ? c === 'Estoquista'
-                                ? 'bg-violet-500 text-white border-violet-500'
-                                : 'bg-orange-500 text-white border-orange-500'
-                              : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-orange-300'
+                                ? 'bg-violet-500 text-white border-violet-500 shadow-sm'
+                                : 'bg-orange-500 text-white border-orange-500 shadow-sm'
+                              : 'bg-slate-50 text-slate-400 border-slate-100 hover:border-orange-200'
                           }`}
                         >
                           {c}
@@ -228,77 +238,54 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                       ))}
                     </div>
                   </div>
-                )}
-
-                {/* ── Dia de Curso (aprendiz) ── */}
-                {emp.isYoungApprentice && (
-                  <div>
-                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Dia de Curso</label>
-                    <select 
-                      value={emp.courseDay} 
-                      onChange={(e) => onUpdateEmployee(emp.id, { courseDay: e.target.value })} 
-                      className="w-full bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold p-3 outline-none focus:ring-2 focus:ring-teal-500"
-                    >
-                      {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'].map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </div>
-                )}
-
-                {/* ── Horário Padrão ── */}
-                {emp.isYoungApprentice ? (
-                  <div>
-                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Horário Padrão</label>
-                    <div className="w-full bg-teal-50 border border-teal-100 rounded-lg text-xs font-bold p-3 text-teal-700 flex items-center gap-2">
-                      <span className="text-[9px] bg-teal-100 text-teal-600 font-extrabold px-2 py-0.5 rounded uppercase tracking-widest">Fixo</span>
-                      {APPRENTICE_WORK_PERIOD}
-                      <span className="text-[9px] text-teal-400 ml-auto">(pausa 15min)</span>
-                    </div>
-                  </div>
                 ) : (
-                  <div>
-                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Horário Padrão</label>
-                    <select 
-                      value={emp.workPeriod} 
-                      onChange={(e) => {
-                        const wp = e.target.value;
-                        const sn = wp.includes('10h') ? 'Abertura' : wp.includes('12h') ? 'Intermediário' : 'Fechamento';
-                        onUpdateEmployee(emp.id, { workPeriod: wp, shiftName: sn });
-                      }} 
-                      className="w-full bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold p-3 outline-none focus:ring-2 focus:ring-orange-500"
-                    >
-                      {SHIFT_HOURS.WEEKDAY.map(h => <option key={h} value={h}>{h}</option>)}
-                    </select>
-                  </div>
+                    <div>
+                        <label className="text-[8px] font-extrabold text-slate-400 uppercase tracking-widest block mb-0.5">Dia de Curso</label>
+                        <select 
+                        value={emp.courseDay} 
+                        onChange={(e) => onUpdateEmployee(emp.id, { courseDay: e.target.value })} 
+                        className="w-full bg-slate-50 border border-slate-100 rounded-lg text-[10px] font-bold p-1.5 outline-none focus:ring-1 focus:ring-teal-500"
+                        >
+                        {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'].map(d => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                    </div>
                 )}
 
-                {/* ── Férias: apenas para CLT regular ── */}
-                {!emp.isYoungApprentice && (
-                  <div>
-                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">
-                      Saída para Férias
-                    </label>
-                    <input
-                      type="date"
-                      value={emp.vacationStart || ''}
-                      onChange={(e) => handleVacationStart(emp.id, e.target.value, onUpdateEmployee)}
-                      className="w-full bg-slate-50 border border-slate-100 rounded-lg text-[11px] font-bold p-2.5 outline-none focus:ring-2 focus:ring-orange-500"
-                    />
-                    {emp.vacationStart && emp.vacationEnd && (
-                      <p className="text-[9px] font-bold text-violet-500 mt-1.5 flex items-center gap-1">
-                        <span>📅</span>
-                        Retorno: <strong>{new Date(emp.vacationEnd + 'T00:00:00').toLocaleDateString('pt-BR')}</strong>
-                        <span className="text-slate-300 ml-1">(30 dias)</span>
-                      </p>
+                {/* ── Horário ou Férias ── */}
+                <div className="grid grid-cols-2 gap-2">
+                    <div>
+                        <label className="text-[8px] font-extrabold text-slate-400 uppercase tracking-widest block mb-0.5">Horário Base</label>
+                        {emp.isYoungApprentice ? (
+                            <div className="w-full bg-teal-50 border border-teal-100 rounded-lg text-[9px] font-bold p-1.5 text-teal-700 truncate">
+                                {APPRENTICE_WORK_PERIOD.split(' (')[0]}
+                            </div>
+                        ) : (
+                            <select 
+                                value={emp.workPeriod} 
+                                onChange={(e) => {
+                                    const wp = e.target.value;
+                                    const sn = wp.includes('10h') ? 'Abertura' : wp.includes('12h') ? 'Intermediário' : 'Fechamento';
+                                    onUpdateEmployee(emp.id, { workPeriod: wp, shiftName: sn });
+                                }} 
+                                className="w-full bg-slate-50 border border-slate-100 rounded-lg text-[10px] font-bold p-1.5 outline-none focus:ring-1 focus:ring-orange-500"
+                            >
+                                {SHIFT_HOURS.WEEKDAY.map(h => <option key={h} value={h}>{h.includes('13h40') ? '13:40' : h.includes('10h') ? '10:00' : '12:00'}</option>)}
+                            </select>
+                        )}
+                    </div>
+                    {!emp.isYoungApprentice && (
+                        <div>
+                        <label className="text-[8px] font-extrabold text-slate-400 uppercase tracking-widest block mb-0.5">
+                            Férias (Saída)
+                        </label>
+                        <input
+                            type="date"
+                            value={emp.vacationStart || ''}
+                            onChange={(e) => handleVacationStart(emp.id, e.target.value, onUpdateEmployee)}
+                            className={`w-full bg-slate-50 border border-slate-100 rounded-lg text-[10px] font-bold p-1.5 outline-none focus:ring-1 focus:ring-orange-500 ${emp.vacationStart ? 'border-violet-200 text-violet-700' : ''}`}
+                        />
+                        </div>
                     )}
-                  </div>
-                )}
-
-                {/* ── Folga Fixa Sugerida ── */}
-                <div>
-                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Folga Fixa Sugerida</label>
-                  <select value={emp.preferredDayOff} onChange={(e) => onUpdateEmployee(emp.id, { preferredDayOff: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold p-3 outline-none focus:ring-2 focus:ring-orange-500">
-                    {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'].map(d => <option key={d}>{d}</option>)}
-                  </select>
                 </div>
               </div>
             )}

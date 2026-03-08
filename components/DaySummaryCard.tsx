@@ -152,40 +152,40 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
   const hasLunchData = counts.abertura > 0 || counts.intermediario > 0 || counts.fechamento > 0 || counts.interm1 > 0 || counts.interm2 > 0;
 
   return (
-    <div className="flex flex-col gap-4 mb-8 animate-fade-in">
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-          <div className="flex items-center gap-5 md:border-r border-slate-100 pr-8">
-            <div className={`w-14 h-14 ${isHoliday ? 'bg-rose-50 text-rose-600' : 'bg-orange-50 text-orange-600'} rounded-xl flex items-center justify-center`}>
-              <Icon name={isHoliday ? 'event_busy' : 'groups'} className="text-3xl" fill />
+    <div className="flex flex-col gap-3 mb-6 animate-fade-in group/summary">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 transition-all duration-300 group-hover/summary:shadow-md group-hover/summary:border-slate-300">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-4 md:border-r border-slate-100 pr-6">
+            <div className={`w-12 h-12 shrink-0 ${isHoliday ? 'bg-rose-50 text-rose-600' : 'bg-orange-50 text-orange-600'} rounded-2xl flex items-center justify-center shadow-inner`}>
+              <Icon name={isHoliday ? 'event_busy' : 'groups'} className="text-2xl" fill />
             </div>
             <div>
-              <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">{isHoliday ? 'Equipe no Feriado' : 'Equipe Presente'}</p>
-              <h3 className="text-3xl font-extrabold text-slate-900">{counts.total}<span className="text-lg text-slate-300 ml-1 font-medium">/{employees.length}</span></h3>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{isHoliday ? 'Equipe Feriado' : 'Equipe em Loja'}</p>
+              <h3 className="text-2xl font-black text-slate-900 leading-none mt-0.5">{counts.total}<span className="text-sm text-slate-300 ml-1 font-bold">/{employees.filter(e => !e.isHidden).length}</span></h3>
               {counts.aprendiz > 0 && (
-                <p className="text-[10px] font-bold text-teal-600 mt-0.5">incl. {counts.aprendiz} aprendiz{counts.aprendiz > 1 ? 'es' : ''}</p>
+                <p className="text-[8px] font-black text-teal-600 mt-1 uppercase tracking-tighter">incl. {counts.aprendiz} aprendiz</p>
               )}
             </div>
           </div>
 
-          <div className={`flex-1 grid grid-cols-1 ${isHoliday ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-4`}>
+          <div className={`flex-1 grid grid-cols-1 ${isHoliday ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-3`}>
             {isHoliday ? (
               <>
-                <ShiftBox label="Abertura (H)" range="12h–18h" count={counts.abertura} names={names.abertura} color="orange" icon="wb_twilight" />
-                <ShiftBox label="Interm. 1 (H)" range="13h–19h" count={counts.interm1} names={names.interm1} color="emerald" icon="sunny" />
-                <ShiftBox label="Interm. 2 (H)" range="14h–20h" count={counts.interm2} names={names.interm2} color="pink" icon="sunny" />
-                <ShiftBox label="Fechamento (H)" range="15h–21h" count={counts.fechamento} names={names.fechamento} color="rose" icon="nightlight" />
+                <ShiftBox label="Ab. (H)" range="12h-18h" count={counts.abertura} names={names.abertura} color="orange" icon="wb_twilight" />
+                <ShiftBox label="Int 1 (H)" range="13h-19h" count={counts.interm1} names={names.interm1} color="emerald" icon="sunny" />
+                <ShiftBox label="Int 2 (H)" range="14h-20h" count={counts.interm2} names={names.interm2} color="pink" icon="sunny" />
+                <ShiftBox label="Fech (H)" range="15h-21h" count={counts.fechamento} names={names.fechamento} color="rose" icon="nightlight" />
               </>
             ) : (
               <>
-                <ShiftBox label="Abertura" range="10h–18h20" count={counts.abertura} names={names.abertura} color="orange" icon="wb_twilight" />
-                <ShiftBox label="Intermediário" range="12h–20h20" count={counts.intermediario} names={names.intermediario} color="sky" icon="sunny" />
-                <ShiftBox label="Fechamento" range="13h40–22h" count={counts.fechamento} names={names.fechamento} color="indigo" icon="nightlight" />
+                <ShiftBox label="Abertura" range="10h-18h20" count={counts.abertura} names={names.abertura} color="orange" icon="wb_twilight" />
+                <ShiftBox label="Intermed." range="12h-20h20" count={counts.intermediario} names={names.intermediario} color="sky" icon="sunny" />
+                <ShiftBox label="Fechamento" range="13h40-22h" count={counts.fechamento} names={names.fechamento} color="indigo" icon="nightlight" />
               </>
             )}
           </div>
 
-          <div className="flex items-center gap-6 pl-0 md:pl-8 md:border-l border-slate-100">
+          <div className="flex items-center gap-4 pl-0 md:pl-6 md:border-l border-slate-100 shrink-0">
             <StatCircle label="Folgas" count={counts.folga} color="orange" />
             <StatCircle label="Curso" count={counts.curso} color="teal" />
             <StatCircle label="Férias" count={counts.ferias} color="red" />
@@ -194,30 +194,26 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
       </div>
 
       {hasLunchData && (
-        <div className="bg-white rounded-xl border border-amber-200 shadow-sm p-5 animate-fade-in">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-9 h-9 bg-amber-50 rounded-lg flex items-center justify-center text-amber-500">
-              <Icon name="restaurant" className="text-lg" />
+        <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-4 animate-fade-in group-hover/summary:border-amber-200 transition-colors">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center text-amber-500 shadow-inner">
+              <Icon name="restaurant" className="text-sm" />
             </div>
             <div>
-              <h4 className="font-extrabold text-sm text-slate-900 leading-tight">Sugestão de Pausa</h4>
-              <p className="text-[10px] text-slate-400 font-medium">
-                1 pessoa por horário · CLT: {isHoliday ? '15 min' : '1h'} pausa · Aprendiz: 15 min
+              <h4 className="font-black text-xs text-slate-900 leading-tight uppercase tracking-tight">Pausas Sugeridas</h4>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                Balanceamento de loja · {isHoliday ? '15 min' : '1h'} pausa
               </p>
             </div>
           </div>
 
-          <div className={`grid grid-cols-1 ${isHoliday ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-3`}>
-            <LunchSection label={isHoliday ? "Abertura (H)" : "Abertura"} slots={getAvailableSlots(isHoliday ? HOLIDAY_LUNCH_CONFIG.abertura : LUNCH_CONFIG.abertura)} lunchData={lunchAberta} count={counts.abertura} color="orange" icon="wb_twilight" />
-            {!isHoliday && <LunchSection label="Intermediário" slots={getAvailableSlots(LUNCH_CONFIG.intermediario)} lunchData={lunchInter} count={counts.intermediario} color="sky" icon="sunny" />}
-            {isHoliday && <LunchSection label="Interm. 1 (H)" slots={getAvailableSlots(HOLIDAY_LUNCH_CONFIG.interm1)} lunchData={lunchInter1} count={counts.interm1} color="emerald" icon="sunny" />}
-            {isHoliday && <LunchSection label="Interm. 2 (H)" slots={getAvailableSlots(HOLIDAY_LUNCH_CONFIG.interm2)} lunchData={lunchInter2} count={counts.interm2} color="pink" icon="sunny" />}
-            <LunchSection label={isHoliday ? "Fechamento (H)" : "Fechamento"} slots={getAvailableSlots(isHoliday ? HOLIDAY_LUNCH_CONFIG.fechamento : LUNCH_CONFIG.fechamento)} lunchData={lunchFecha} count={counts.fechamento} color={isHoliday ? "rose" : "indigo"} icon="nightlight" />
+          <div className={`grid grid-cols-1 ${isHoliday ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-2.5`}>
+            <LunchSection label={isHoliday ? "Ab. (H)" : "Abertura"} slots={getAvailableSlots(isHoliday ? HOLIDAY_LUNCH_CONFIG.abertura : LUNCH_CONFIG.abertura)} lunchData={lunchAberta} count={counts.abertura} color="orange" icon="wb_twilight" />
+            {!isHoliday && <LunchSection label="Intermed." slots={getAvailableSlots(LUNCH_CONFIG.intermediario)} lunchData={lunchInter} count={counts.intermediario} color="sky" icon="sunny" />}
+            {isHoliday && <LunchSection label="Int 1 (H)" slots={getAvailableSlots(HOLIDAY_LUNCH_CONFIG.interm1)} lunchData={lunchInter1} count={counts.interm1} color="emerald" icon="sunny" />}
+            {isHoliday && <LunchSection label="Int 2 (H)" slots={getAvailableSlots(HOLIDAY_LUNCH_CONFIG.interm2)} lunchData={lunchInter2} count={counts.interm2} color="pink" icon="sunny" />}
+            <LunchSection label={isHoliday ? "Fech (H)" : "Fechamento"} slots={getAvailableSlots(isHoliday ? HOLIDAY_LUNCH_CONFIG.fechamento : LUNCH_CONFIG.fechamento)} lunchData={lunchFecha} count={counts.fechamento} color={isHoliday ? "rose" : "indigo"} icon="nightlight" />
           </div>
-
-          <p className="text-[9px] text-slate-300 mt-3 text-right font-medium">
-            * Sugestão automática para balanceamento de equipe.
-          </p>
         </div>
       )}
     </div>
@@ -225,21 +221,21 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
 };
 
 const ShiftBox: React.FC<{ label: string, range: string, count: number, names: string[], color: string, icon: any }> = ({ label, range, count, names, color, icon }) => (
-  <div className={`bg-${color}-50/60 p-4 rounded-xl border border-${color}-100 flex flex-col justify-center`}>
-    <div className={`flex items-center gap-2 mb-1 text-${color}-600`}>
-      <Icon name={icon} className="text-sm" />
-      <span className="text-[10px] font-extrabold uppercase tracking-tight">{label}</span>
-      <span className={`text-[9px] text-${color}-400 ml-auto`}>{range}</span>
+  <div className={`bg-${color}-50/40 p-2.5 rounded-xl border border-${color}-100/60 flex flex-col justify-center min-h-[60px] transition-all hover:bg-${color}-50/80`}>
+    <div className={`flex items-center gap-1.5 mb-0.5 text-${color}-600`}>
+      <Icon name={icon} className="text-[10px]" />
+      <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
+      <span className={`text-[7px] text-${color}-400 ml-auto font-bold`}>{range}</span>
     </div>
-    <p className="text-xl font-extrabold text-slate-900">{count} <span className="text-[10px] text-slate-400 font-bold uppercase">Colabs.</span></p>
-    {names.length > 0 && <p className={`text-[9px] text-${color}-500 mt-1 truncate`}>{names.join(', ')}</p>}
+    <p className="text-lg font-black text-slate-900 leading-none">{count} <span className="text-[8px] text-slate-300 font-black uppercase ml-0.5">Colab.</span></p>
+    {names.length > 0 && <p className={`text-[8px] font-bold text-${color}-500/80 mt-1 truncate max-w-full italic`}>{names.join(', ')}</p>}
   </div>
 );
 
 const StatCircle: React.FC<{ label: string, count: number, color: string }> = ({ label, count, color }) => (
   <div className="text-center">
-    <p className="text-[9px] font-extrabold text-slate-400 uppercase mb-2 tracking-tighter">{label}</p>
-    <div className={`w-10 h-10 rounded-full bg-${color}-100/50 flex items-center justify-center mx-auto text-${color}-700 font-extrabold text-sm border border-${color}-200`}>{count}</div>
+    <p className="text-[8px] font-black text-slate-400 uppercase mb-1 tracking-widest leading-none">{label}</p>
+    <div className={`w-8 h-8 rounded-lg bg-${color}-50 flex items-center justify-center mx-auto text-${color}-600 font-black text-xs border border-${color}-100 shadow-sm`}>{count}</div>
   </div>
 );
 
@@ -255,15 +251,15 @@ const LunchSection: React.FC<{ label: string, slots: string[], lunchData: any[],
         <span key={s} className={`text-[8px] font-bold text-${color}-300 border border-${color}-200 rounded px-1 py-0.5`}>{s}</span>
       ))}
     </div>
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       {lunchData.map((slot, i) => (
-        <div key={i} className={`flex items-start gap-2 ${slot.isDouble ? 'opacity-80' : ''}`}>
-          <span className={`w-14 flex-shrink-0 text-[10px] font-extrabold rounded px-1.5 py-0.5 text-center ${slot.isDouble ? 'bg-amber-100 text-amber-700 border border-amber-300' : `bg-${color}-100 text-${color}-600`}`}>
+        <div key={i} className={`flex items-start gap-1.5 ${slot.isDouble ? 'opacity-90' : ''}`}>
+          <span className={`text-[9px] font-black rounded px-1.5 py-0.5 text-center shrink-0 min-w-[38px] ${slot.isDouble ? 'bg-amber-100 text-amber-700 border border-amber-200' : `bg-${color}-100 text-${color}-600`}`}>
             {slot.time}
           </span>
-          <span className="text-[10px] font-bold text-slate-600 leading-snug">
+          <span className="text-[9px] font-bold text-slate-600 leading-tight truncate">
             {slot.names.join(', ')}
-            {slot.isDouble && <span className="ml-1 text-[8px] text-amber-500 font-extrabold">(2×)</span>}
+            {slot.isDouble && <span className="ml-1 text-[7px] text-amber-500 font-black">(2×)</span>}
           </span>
         </div>
       ))}
