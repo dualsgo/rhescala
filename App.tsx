@@ -23,7 +23,7 @@ const App: React.FC = () => {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [currentView, setCurrentView] = useState<'dashboard' | 'team'>('dashboard');
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
-  const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
+  const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate());
   const [waModal, setWaModal] = useState<{ show: boolean; text: string }>({ show: false, text: '' });
   const { showDialog } = useDialog();
 
@@ -67,7 +67,7 @@ const App: React.FC = () => {
 
     const confirmed = await showDialog({
       type: 'confirm',
-      message: `Atualizar escala de ${monthsNames[currentMY.month]} ${currentMY.year}?
+      message: `Deseja auto-preencher folgas e horários para ${monthsNames[currentMY.month]} ${currentMY.year}?
 
 ✅ Domingos — nova lógica:
 • ${sundayRotationStatus}

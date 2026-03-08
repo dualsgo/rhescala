@@ -2,10 +2,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Employee, MonthYear, ShiftType } from '../types';
 import { Icon } from './Icon';
+import { getPrevMonthConsecutive } from '../hooks/useScheduleEngine';
 
 interface InconsistencyPanelProps {
   employees:      Employee[];
   currentMY:      MonthYear;
+  today:          Date;
   onSelectDay:    (idx: number) => void;
   onApplyFix:     (empId: string, dayIdx: number, shift: ShiftType) => void;
 }
@@ -42,11 +44,21 @@ const isWorkShift = (s: ShiftType | undefined): boolean => s === 'T';
 function detectInconsistencies(
   employees:  Employee[],
   year:       number,
-  month:      number    // 0-indexed
+  month:      number,    // 0-indexed
+  today:      Date
 ): Inconsistency[] {
   const results:    Inconsistency[] = [];
   const monthKey    = `${year}-${String(month + 1).padStart(2, '0')}`;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+  const isPastMonth = year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth());
+  const todayIdx = today.getDate() - 1;
+
+  if (isPastMonth) return [];
+
+  // Previous month consecutive Sundays
+  const prevMonthConsecs = getPrevMonthConsecutive(employees.filter(e => e.status === 'active' && !e.isYoungApprentice), year, month);
 
   // Build Sundays list for this month only
   const sundaysThisMonth: number[] = [];
@@ -101,9 +113,11 @@ function detectInconsistencies(
       }
     }
 
-    // ── Rule 2: 3+ consecutive Sundays within this month only ────────────
-    // Track consecutive Sundays worked IN THIS MONTH
-    let sunStreak:  number[] = [];
+    // ── Rule 2: 3+ consecutive Sundays (considering retro) ────────────────
+    const initialStreak = prevMonthConsecs.get(emp.id) || 0;
+    let currentStreak = initialStreak;
+    let streakIndices: number[] = []; 
+    // Note: streakIndices only tracks indices in THIS month for the detail message
 
     for (const sunIdx of sundaysThisMonth) {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(sunIdx + 1).padStart(2, '0')}`;
@@ -111,27 +125,32 @@ function detectInconsistencies(
         dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd;
 
       if (isWorkShift(shifts[sunIdx]) && !onVacation) {
-        sunStreak.push(sunIdx);
+        currentStreak++;
+        streakIndices.push(sunIdx);
       } else {
-        sunStreak = [];
+        currentStreak = 0;
+        streakIndices = [];
       }
 
-      // Flag exactly when streak hits 3 (hard error)
-      if (sunStreak.length === 3) {
-        const offendingSunday = sunStreak[2];
-        const domDays = sunStreak.map(d => d + 1).join(', ');
+      // Flag if streak hits 3
+      if (currentStreak >= 3) {
+        const domDays = streakIndices.map(d => d + 1).join(', ');
+        const detailPrefix = initialStreak > 0 && streakIndices.length < currentStreak 
+          ? `Iniciou no mês anterior, totalizando ${currentStreak} domingos: ` 
+          : '';
+
         results.push({
-          id:       `${emp.id}-sun-${sunStreak[0]}`,
+          id:       `${emp.id}-sun-${sunIdx}`,
           empId:    emp.id,
           empName:  emp.name,
           type:     'consecutive_sunday',
-          severity: 'error',    // ← hard rule, was 'warning'
-          detail:   `3 domingos seguidos trabalhados (dias ${domDays}) — máximo é 2`,
-          dayIdx:   offendingSunday,
+          severity: 'error',
+          detail:   `${detailPrefix}${currentStreak} domingos seguidos trabalhados (mês atual: ${domDays || 'nenhum'})`,
+          dayIdx:   sunIdx,
           fix: {
-            label:    `Dar folga no domingo dia ${offendingSunday + 1}`,
+            label:    `Dar folga no domingo dia ${sunIdx + 1}`,
             empId:    emp.id,
-            dayIdx:   offendingSunday,
+            dayIdx:   sunIdx,
             newShift: 'F',
           },
         });
@@ -166,7 +185,11 @@ function detectInconsistencies(
     }
   }
 
-  return results;
+  // ── Final Filter: Only show issues for today or future days ───────────
+  return results.filter(issue => {
+    if (!isCurrentMonth) return true; // Show all for future months
+    return issue.dayIdx >= todayIdx;  // Only show today/future for current month
+  });
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -174,6 +197,7 @@ function detectInconsistencies(
 export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
   employees,
   currentMY,
+  today,
   onSelectDay,
   onApplyFix,
 }) => {
@@ -182,8 +206,8 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
   // issues re-computed EVERY TIME employees or month changes
   // — this is the ONLY source of truth; no local "applied" state needed
   const issues = useMemo(
-    () => detectInconsistencies(employees, currentMY.year, currentMY.month),
-    [employees, currentMY]
+    () => detectInconsistencies(employees, currentMY.year, currentMY.month, today),
+    [employees, currentMY, today]
   );
 
   const errors   = issues.filter(i => i.severity === 'error');

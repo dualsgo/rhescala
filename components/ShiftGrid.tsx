@@ -373,6 +373,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             <InconsistencyPanel
               employees={employees}
               currentMY={currentMY}
+              today={today}
               onSelectDay={onSelectDay}
               onApplyFix={(empId, dayIdx, nextShift) => {
                 onUpdateShift(empId, dayIdx, nextShift);
@@ -390,7 +391,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 <Icon name="event_busy" className="text-sm" /> Feriados
             </button>
             <button onClick={onResetMonth} className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg text-xs font-extrabold hover:bg-orange-600 shadow-sm transition-all">
-                <Icon name="sync" className="text-sm" /> Atualizar Mês
+                <Icon name="auto_fix_high" className="text-sm" /> Auto Preencher Folgas
             </button>
         </div>
 

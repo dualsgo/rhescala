@@ -65,7 +65,7 @@ function isSundayUnavailable(
  *   - if emp worked both last two Sundays of month N → consecutive = 2
  *     → they get the highest priority to rest on the first Sunday of month N+1
  */
-function getPrevMonthConsecutive(
+export function getPrevMonthConsecutive(
     activeRegular: Employee[],
     year: number,
     month: number   // 0-indexed target month
@@ -473,9 +473,13 @@ export function applyMonthUpdate(
         const newShifts: ShiftType[] = [
             ...(emp.shifts[monthKey] ?? (Array(daysInMonth).fill('T') as ShiftType[]))
         ];
-        const newHours: string[] = [
-            ...(emp.dailyHours[monthKey] ?? Array(daysInMonth).fill(emp.workPeriod))
-        ];
+
+        // Always recalculate hours to ensure consistency with saved shift/workPeriod
+        const newHours: string[] = Array.from({ length: daysInMonth }, (_, i) => {
+            const date = new Date(year, month, i + 1);
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
+            return getTargetHours(emp, date.getDay(), holidaySet.has(dateStr));
+        });
 
         // 1. First pass: Apply absolute constraints (Vacation, out-of-employment, Sundays, Holidays)
         for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
