@@ -49,7 +49,20 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
 
   const displayedEmployees = useMemo(() => {
-    return employees.filter(e => !e.isHidden);
+    const shiftPriority: Record<string, number> = {
+      'Abertura': 1,
+      'Intermediário': 2,
+      'Fechamento': 3
+    };
+
+    return [...employees]
+      .filter(e => !e.isHidden)
+      .sort((a, b) => {
+        const pA = shiftPriority[a.shiftName] || 99;
+        const pB = shiftPriority[b.shiftName] || 99;
+        if (pA !== pB) return pA - pB;
+        return a.name.localeCompare(b.name, 'pt-BR');
+      });
   }, [employees]);
 
   const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];

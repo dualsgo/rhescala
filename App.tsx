@@ -16,8 +16,8 @@ import { Employee, ShiftType, MonthYear, Holiday, EmployeeCargo } from './types'
 const CURRENT_YEAR = new Date().getFullYear(); // 2026
 
 const App: React.FC = () => {
-  const [employees, setEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', [PLACEHOLDER_EMPLOYEE]);
-  const [customHolidays, setCustomHolidays] = useLocalStorage<Holiday[]>('riHappyCustomHolidays', []);
+  const [employees, setEmployees, forceSyncEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', [PLACEHOLDER_EMPLOYEE]);
+  const [customHolidays, setCustomHolidays, forceSyncHolidays] = useLocalStorage<Holiday[]>('riHappyCustomHolidays', []);
   const [showHolidayManager, setShowHolidayManager] = useState(false);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -309,6 +309,10 @@ const App: React.FC = () => {
         employees={employees}
         customHolidays={customHolidays}
         onImportClick={() => fileInputRef.current?.click()}
+        onForceSync={async () => {
+          await forceSyncEmployees();
+          await forceSyncHolidays();
+        }}
       />
 
       {/* Holiday Manager Modal */}

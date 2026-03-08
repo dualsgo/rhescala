@@ -17,6 +17,7 @@ interface HeaderProps {
   employees: Employee[];
   customHolidays: Holiday[];
   onImportClick: () => void;
+  onForceSync: () => Promise<void>;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -26,6 +27,7 @@ export const Header: React.FC<HeaderProps> = ({
   employees,
   customHolidays,
   onImportClick,
+  onForceSync,
 }) => {
   const { showDialog } = useDialog();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -360,8 +362,8 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-[9px] font-extrabold uppercase tracking-tight">
                 {syncStatus.state === 'syncing' ? 'Sincronizando...' :
                  syncStatus.state === 'synced' ? 'Sincronizado' :
-                 syncStatus.state === 'error' ? 'Erro de Sinc.' :
-                 'Nuvem Ociosa'}
+                 syncStatus.state === 'error' ? 'Atenção: Offline' :
+                 'Nuvem Pronta'}
               </span>
               {syncStatus.lastSync && (
                 <span className="text-[8px] font-medium opacity-80">{syncStatus.lastSync}</span>
@@ -379,6 +381,15 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               </div>
               <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                <button
+                  onClick={async () => {
+                    await onForceSync();
+                    setShowSyncHistory(false);
+                  }}
+                  className="w-full py-2 px-3 bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-extrabold uppercase rounded-lg shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2 mb-2"
+                >
+                  <Icon name="sync" className="text-xs" /> Sincronizar Agora (Baixar Nuvem)
+                </button>
                 {syncStatus.history.length === 0 ? (
                   <p className="text-[10px] text-slate-400 italic text-center py-4">Nenhuma atividade registrada.</p>
                 ) : (
