@@ -257,7 +257,15 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                 ) : (
                   <div>
                     <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Horário Padrão</label>
-                    <select value={emp.workPeriod} onChange={(e) => onUpdateEmployee(emp.id, { workPeriod: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold p-3 outline-none focus:ring-2 focus:ring-orange-500">
+                    <select 
+                      value={emp.workPeriod} 
+                      onChange={(e) => {
+                        const wp = e.target.value;
+                        const sn = wp.includes('10h') ? 'Abertura' : wp.includes('12h') ? 'Intermediário' : 'Fechamento';
+                        onUpdateEmployee(emp.id, { workPeriod: wp, shiftName: sn });
+                      }} 
+                      className="w-full bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold p-3 outline-none focus:ring-2 focus:ring-orange-500"
+                    >
                       {SHIFT_HOURS.WEEKDAY.map(h => <option key={h} value={h}>{h}</option>)}
                     </select>
                   </div>

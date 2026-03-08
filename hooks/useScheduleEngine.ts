@@ -245,22 +245,17 @@ export function buildSundayAssignments(
 function getTargetHours(emp: Employee, dow: number, isHoliday: boolean): string {
     if (emp.isYoungApprentice) return APPRENTICE_WORK_PERIOD;
 
-    // Holidays (typically 6h work)
+    // Feriados (Padronizado conforme pedido: será ajustado manualmente)
     if (isHoliday && dow !== 0) {
-        if (emp.shiftName === 'Abertura') return SHIFT_HOURS.HOLIDAY[0];       // 12h-18h
-        if (emp.shiftName === 'Intermediário') return SHIFT_HOURS.HOLIDAY[1]; // 13h-19h
-        if (emp.shiftName === 'Fechamento') return SHIFT_HOURS.HOLIDAY[3];    // 15h-21h
-        return SHIFT_HOURS.HOLIDAY[0];
+        return SHIFT_HOURS.HOLIDAY[0]; // 12h às 18h
     }
 
-    // Sundays (typically 8h work)
+    // Domingos (Padronizado conforme pedido: será ajustado manualmente)
     if (dow === 0) {
-        if (emp.shiftName === 'Abertura') return SHIFT_HOURS.SUNDAY[0];       // 12h-20h
-        if (emp.shiftName === 'Fechamento') return SHIFT_HOURS.SUNDAY[1];    // 13h-21h
-        return SHIFT_HOURS.SUNDAY[0];
+        return SHIFT_HOURS.SUNDAY[0]; // 12h às 20h
     }
 
-    // Regular weekdays
+    // Dias de semana (Segue o horário pré-cadastrado do colaborador)
     return emp.workPeriod;
 }
 

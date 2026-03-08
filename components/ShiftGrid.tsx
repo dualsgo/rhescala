@@ -49,18 +49,15 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
 
   const displayedEmployees = useMemo(() => {
-    const shiftPriority: Record<string, number> = {
-      'Abertura': 1,
-      'Intermediário': 2,
-      'Fechamento': 3
-    };
-
     return [...employees]
       .filter(e => !e.isHidden)
       .sort((a, b) => {
-        const pA = shiftPriority[a.shiftName] || 99;
-        const pB = shiftPriority[b.shiftName] || 99;
-        if (pA !== pB) return pA - pB;
+        // Ordem por Turno (Horário Pré-Cadastrado)
+        const wpA = a.workPeriod || '';
+        const wpB = b.workPeriod || '';
+        if (wpA !== wpB) return wpA.localeCompare(wpB);
+        
+        // Ordem Alfabética secundária
         return a.name.localeCompare(b.name, 'pt-BR');
       });
   }, [employees]);
