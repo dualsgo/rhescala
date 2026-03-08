@@ -278,8 +278,8 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                 )}
               </div>
             </div>
-          );
-        })}
+          )
+        )}
       </div>
     </div>
   );
