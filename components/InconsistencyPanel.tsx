@@ -34,10 +34,10 @@ interface Inconsistency {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// Only 'T' (Trabalho) counts as actually working.
-// 'FF' = Feriado/Folga Especial = paid holiday OFF, not work.
-// 'FE' = vacation, 'F' = regular day off, 'C' = course.
-const isWorkShift = (s: ShiftType | undefined): boolean => s === 'T';
+// 'T' e 'C' (Curso) contam como atividade que impede a folga (regra 6x1).
+// Mas apenas 'T' conta como presença física na loja para cobertura.
+const isActivityShift = (s: ShiftType | undefined): boolean => s === 'T' || s === 'C';
+const isStorePresence = (s: ShiftType | undefined): boolean => s === 'T';
 
 // ─── Detection ────────────────────────────────────────────────────────────────
 
@@ -82,7 +82,7 @@ function detectInconsistencies(
       const onVacation = emp.vacationStart && emp.vacationEnd &&
         dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd;
 
-      if (isWorkShift(shifts[d]) && !onVacation) {
+      if (isActivityShift(shifts[d]) && !onVacation) {
         if (workStreak === 0) { streakStart = d; alreadyFlagged = false; }
         workStreak++;
 
@@ -124,7 +124,7 @@ function detectInconsistencies(
       const onVacation = emp.vacationStart && emp.vacationEnd &&
         dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd;
 
-      if (isWorkShift(shifts[sunIdx]) && !onVacation) {
+      if (isActivityShift(shifts[sunIdx]) && !onVacation) {
         currentStreak++;
         streakIndices.push(sunIdx);
       } else {
@@ -164,11 +164,12 @@ function detectInconsistencies(
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(sunIdx + 1).padStart(2, '0')}`;
 
     // Count CLTs actually working this Sunday (not on vacation, not resting)
-    const workers = employees.filter(emp => {
+      const workers = employees.filter(emp => {
       if (emp.isYoungApprentice || emp.status !== 'active') return false;
       const shifts = (emp.shifts[monthKey] ?? []) as ShiftType[];
       const s = shifts[sunIdx];
-      return s === 'T' || s === 'FF';
+      // Apenas T conta como presença na loja
+      return isStorePresence(s);
     });
 
     if (workers.length < MIN_WORKERS) {
@@ -238,7 +239,7 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
         // Count CLTs currently working this Sunday in saved shifts
         const currentWorkers = employees.filter(e => {
           if (e.isYoungApprentice || e.status !== 'active') return false;
-          return (e.shifts[mKey]?.[dayIdx]) === 'T';
+          return (e.shifts[mKey]?.[dayIdx]) === 'T'; // Apenas quem está em T
         }).length;
         const alreadyScheduledOff = fixesAppliedPerDay.get(dayIdx) ?? 0;
         // Skip if applying this fix would drop below the minimum

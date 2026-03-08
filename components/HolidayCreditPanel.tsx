@@ -60,7 +60,8 @@ export const HolidayCreditPanel: React.FC<HolidayCreditPanelProps> = ({
       const shifts = emp.shifts[monthKey] || [];
       
       holidaysInMonth.forEach(h => {
-        if (shifts[h.dayIdx] === 'T') {
+        // T e C contam como atividade (ganha crédito se trabalhar no feriado)
+        if (shifts[h.dayIdx] === 'T' || shifts[h.dayIdx] === 'C') {
           // Suggest a day off
           let bestDayIdx = -1;
           let maxCoverage = -1;
@@ -83,7 +84,8 @@ export const HolidayCreditPanel: React.FC<HolidayCreditPanelProps> = ({
             // Calculate team coverage for this candidate day
             const coverage = employees.filter(e => {
               const s = (e.shifts[monthKey] || [])[d];
-              return s === 'T' || s === 'C';
+              // Apenas T conta como presença na loja para os cálculos de cobertura
+              return s === 'T';
             }).length;
 
             if (coverage > maxCoverage) {

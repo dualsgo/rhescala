@@ -244,7 +244,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
   const isSuggestedWorkDay = (emp: Employee, dayIdx: number) => {
     const shift = getDayShift(emp, dayIdx);
-    if (shift === 'F' || shift === 'FF' || shift === 'FE') return false;
+    // Se NÃO é trabalho/curso, já está de folga/ausente.
+    if (shift !== 'T' && shift !== 'C') return false;
 
     let consecutiveWork = 0;
     for (let i = 1; i <= 6; i++) {
@@ -621,7 +622,9 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   const shift = getDayShift(emp, day.originalIdx);
                   const isLocked = isDayLocked(day.originalIdx);
                   const isWarningOff = isEarlyDayOff(emp, day.originalIdx); // Had another Folga within 6 days
-                  const isSuggestedWork = isSuggestedWorkDay(emp, day.originalIdx);
+                    const isSuggestedWork = isSuggestedWorkDay(emp, day.originalIdx);
+                    // Ausência é qualquer coisa que não seja T ou C
+                    const isAbsence = shift !== 'T' && shift !== 'C';
                   
                   return (
                     <td 
@@ -643,10 +646,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                       )}
 
                       {/* Suggestion / Warning Markers */}
-                      {isWarningOff && (
+                      {isAbsence && isEarlyDayOff(emp, day.originalIdx) && (
                         <div className="absolute inset-0 border-2 border-dashed border-red-400/60 rounded-lg pointer-events-none m-0.5 animate-pulse" title="Folga potencialmente removível (escala 6x1 ainda não completa)"></div>
                       )}
-                      {isSuggestedWork && shift !== 'F' && shift !== 'FF' && shift !== 'FE' && (
+                      {isSuggestedWork && (
                         <div className="absolute inset-0 border-2 border-dashed border-teal-400/30 rounded-lg pointer-events-none m-1"></div>
                       )}
 

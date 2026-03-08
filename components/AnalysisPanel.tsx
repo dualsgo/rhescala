@@ -32,7 +32,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
       const activeEmps = employees.filter(e => !e.isHidden && e.status === 'active');
       const working = activeEmps.filter(e => {
         const s = (e.shifts[monthKey] || [])[d];
-        return s === 'T' || s === 'C';
+        return s === 'T'; // Somente T conta como presença na LOJA
       });
 
       const shiftsCount = {
@@ -61,6 +61,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
 
       for (let d = 0; d < daysInMonth; d++) {
         const s = shifts[d];
+        // T e C contam como atividade (impede folga no 6x1)
         if (s === 'T' || s === 'C') {
           worked++;
           currentStreak++;
@@ -365,9 +366,12 @@ const IndividualWeeklyCalendar: React.FC<{ employee: Employee, currentMY: MonthY
     for (let i = 1; i <= daysInMonth; i++) {
         const shift = shifts[i - 1];
         const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-        const isOff = shift === 'F' || (typeof shift === 'string' && shift.startsWith('FF')) || shift === 'FE';
+        // Ausência é qualquer coisa que não seja T. 
+        // Mas para visualização de "Folga" no calendário individual, ignoramos o Curso (que é externo)
+        const isOff = shift !== 'T' && shift !== 'C'; 
+        const isCourse = shift === 'C';
         const isHoliday = holidaySet.has(dateStr);
-        calendarDays.push({ type: 'day', day: i, shift, isOff, isHoliday });
+        calendarDays.push({ type: 'day', day: i, shift, isOff, isCourse, isHoliday });
     }
 
     return (
@@ -390,13 +394,15 @@ const IndividualWeeklyCalendar: React.FC<{ employee: Employee, currentMY: MonthY
                         <div 
                             key={idx}
                             className={`aspect-square rounded-xl border flex flex-col items-center justify-center transition-all ${
-                                isWork 
+                                cell.shift === 'T' 
                                 ? 'bg-indigo-600 border-indigo-700 text-white shadow-sm' 
+                                : cell.isCourse
+                                ? 'bg-teal-500 border-teal-600 text-white shadow-sm'
                                 : cell.isHoliday ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-slate-50 border-slate-100 text-slate-300'
                             }`}
                         >
-                            <span className={`text-[8px] font-black absolute top-1 left-1 opacity-50 ${isWork ? 'text-indigo-200' : ''}`}>{cell.day}</span>
-                            <span className="text-[10px] font-black tracking-tighter">{isWork ? shiftLabel : 'F'}</span>
+                            <span className={`text-[8px] font-black absolute top-1 left-1 opacity-50 ${cell.shift === 'T' || cell.isCourse ? 'text-white/60' : ''}`}>{cell.day}</span>
+                            <span className="text-[10px] font-black tracking-tighter">{cell.shift === 'T' ? shiftLabel : cell.isCourse ? 'C' : 'F'}</span>
                         </div>
                     );
                 })}
@@ -416,8 +422,9 @@ const TeamMonthlyCalendar: React.FC<{ employees: Employee[], currentMY: MonthYea
     const workingDayData = employees.filter(e => !e.isHidden && e.status === 'active').map(emp => {
       const shift = (emp.shifts[monthKey] || [])[i - 1];
       const hours = (emp.dailyHours[monthKey] || [])[i - 1] || emp.workPeriod;
-      return { name: emp.name.split(' ')[0], shift, hours, isOff: shift === 'F' || (typeof shift === 'string' && shift.startsWith('FF')) || shift === 'FE', isCourse: shift === 'C' };
-    }).filter(d => !d.isOff);
+      const isOff = shift !== 'T' && shift !== 'C';
+      return { name: emp.name.split(' ')[0], shift, hours, isOff, isCourse: shift === 'C' };
+    }).filter(d => !d.isOff || d.isCourse); // Mostramos T e C no calendário geral
     cells.push({ type: 'day', date: i, dayData: workingDayData });
   }
 
@@ -436,9 +443,11 @@ const TeamMonthlyCalendar: React.FC<{ employees: Employee[], currentMY: MonthYea
                 <span className="text-xs font-black text-slate-400 mb-3">{cell.date}</span>
                 <div className="space-y-1.5">
                   {cell.dayData.map((d, i) => (
-                    <div key={i} className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50 border border-slate-100/50">
-                       <span className="text-[9px] font-black text-slate-800 uppercase truncate">{d.name}</span>
-                       <span className="text-[8px] font-bold text-slate-400 shrink-0">{d.hours.split(' ')[0]}</span>
+                    <div key={i} className={`flex items-center justify-between gap-2 p-2 rounded-xl border ${d.isCourse ? 'bg-teal-50 border-teal-100 text-teal-700' : 'bg-slate-50 border-slate-100/50 text-slate-800'}`}>
+                       <span className="text-[9px] font-black uppercase truncate">{d.name}</span>
+                       <span className={`text-[8px] font-bold shrink-0 ${d.isCourse ? 'mt-[-2px]' : 'text-slate-400'}`}>
+                          {d.isCourse ? <Icon name="school" className="text-[10px]" /> : d.hours.split(' ')[0]}
+                       </span>
                     </div>
                   ))}
                 </div>
