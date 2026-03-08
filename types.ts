@@ -51,3 +51,18 @@ export interface MonthYear {
   month: number; // 0-11
   year: number;
 }
+
+export type SyncState = 'idle' | 'syncing' | 'synced' | 'error';
+
+export interface SyncHistoryItem {
+  timestamp: string;
+  state: SyncState;
+  key: string;
+  message?: string;
+}
+
+export interface SyncStatus {
+  state: SyncState;
+  lastSync?: string;
+  history: SyncHistoryItem[];
+}

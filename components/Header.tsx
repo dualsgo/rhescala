@@ -2,9 +2,10 @@
 import React, { useState } from 'react';
 import { useDialog } from '../contexts/DialogContext';
 import { Icon } from './Icon';
-import { Employee, MonthYear, Holiday } from '../types';
+import { Employee, MonthYear, Holiday, SyncState } from '../types';
 import * as XLSX from 'xlsx';
 import { buildHolidaySet } from '../constants';
+import { useSyncStatus } from '../hooks/useLocalStorage';
 
 const WEEKDAY_ABBR = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
 const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -28,6 +29,8 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { showDialog } = useDialog();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showSyncHistory, setShowSyncHistory] = useState(false);
+  const syncStatus = useSyncStatus();
 
   const monthName = months[currentMY.month];
   const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
@@ -331,6 +334,75 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wide">
             {months[currentMY.month]} {currentMY.year}
           </span>
+        </div>
+
+        {/* Sync Status Badge */}
+        <div className="flex items-center gap-2 relative">
+          <button
+            onClick={() => setShowSyncHistory(!showSyncHistory)}
+            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border transition-all hover:bg-slate-50 active:scale-95 ${
+              syncStatus.state === 'syncing' ? 'bg-blue-50 border-blue-200 text-blue-600 animate-pulse' :
+              syncStatus.state === 'synced' ? 'bg-green-50 border-green-200 text-green-600' :
+              syncStatus.state === 'error' ? 'bg-red-50 border-red-200 text-red-600' :
+              'bg-slate-50 border-slate-200 text-slate-500'
+            }`}
+          >
+            <Icon 
+              name={
+                syncStatus.state === 'syncing' ? 'sync' :
+                syncStatus.state === 'synced' ? 'cloud_done' :
+                syncStatus.state === 'error' ? 'cloud_off' :
+                'cloud'
+              } 
+              className={`text-sm ${syncStatus.state === 'syncing' ? 'animate-spin' : ''}`} 
+            />
+            <div className="flex flex-col items-start leading-none">
+              <span className="text-[9px] font-extrabold uppercase tracking-tight">
+                {syncStatus.state === 'syncing' ? 'Sincronizando...' :
+                 syncStatus.state === 'synced' ? 'Sincronizado' :
+                 syncStatus.state === 'error' ? 'Erro de Sinc.' :
+                 'Nuvem Ociosa'}
+              </span>
+              {syncStatus.lastSync && (
+                <span className="text-[8px] font-medium opacity-80">{syncStatus.lastSync}</span>
+              )}
+            </div>
+          </button>
+
+          {/* Sync History Dropdown */}
+          {showSyncHistory && (
+            <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-[100] p-3 animate-fade-in">
+              <div className="flex justify-between items-center mb-3">
+                <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Histórico de Sinc.</h4>
+                <button onClick={() => setShowSyncHistory(false)} className="text-slate-400 hover:text-slate-600">
+                  <Icon name="close" className="text-sm" />
+                </button>
+              </div>
+              <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                {syncStatus.history.length === 0 ? (
+                  <p className="text-[10px] text-slate-400 italic text-center py-4">Nenhuma atividade registrada.</p>
+                ) : (
+                  syncStatus.history.map((item, idx) => (
+                    <div key={idx} className="flex gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100">
+                      <div className={`mt-0.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                        item.state === 'syncing' ? 'bg-blue-500' :
+                        item.state === 'synced' ? 'bg-green-500' :
+                        item.state === 'error' ? 'bg-red-500' :
+                        'bg-slate-300'
+                      }`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start">
+                          <span className="text-[9px] font-bold text-slate-700 truncate">{item.message || item.state}</span>
+                          <span className="text-[8px] text-slate-400 whitespace-nowrap">{item.timestamp}</span>
+                        </div>
+                        <p className="text-[8px] text-slate-500 truncate mt-0.5">Chave: {item.key}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right: Desktop action buttons */}
