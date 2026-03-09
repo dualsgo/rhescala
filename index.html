@@ -79,6 +79,31 @@
             from { opacity: 0; transform: translateY(5px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        @media print {
+            header,
+            button,
+            .no-print,
+            .bg-slate-50,
+            .custom-scrollbar {
+                display: none !important;
+            }
+            body, .bg-white {
+                background-color: white !important;
+                color: black !important;
+            }
+            #root {
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .grid {
+                gap: 2px !important;
+            }
+            .min-h-[160px] {
+                min-h-0 !important;
+                height: auto !important;
+                border: 1px solid #eee !important;
+            }
+        }
     </style>
 
 </head>

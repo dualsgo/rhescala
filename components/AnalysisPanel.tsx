@@ -169,6 +169,14 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
           
           <div className="flex items-center gap-3">
              <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl flex gap-1">
+                {viewMode === 'team-calendar' && (
+                  <button 
+                    onClick={() => window.print()}
+                    className="px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 bg-emerald-500 text-white hover:bg-emerald-600 transition-all shadow-sm mr-2"
+                  >
+                    <Icon name="print" className="text-sm" /> Imprimir
+                  </button>
+                )}
                 <button 
                   onClick={() => setViewMode('insights')}
                   className={`px-6 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${viewMode === 'insights' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-orange-400' : 'text-slate-500 dark:text-slate-400'}`}
@@ -451,7 +459,8 @@ const IndividualWeeklyCalendar: React.FC<{
         const isCourse = shift === 'C';
         const isVacation = shift === 'FE';
         const isHoliday = holidaySet.has(dateStr);
-        calendarDays.push({ type: 'day', day: i, shift, isOff, isCourse, isVacation, isHoliday });
+        const hours = (employee.dailyHours[monthKey] || [])[i - 1] || employee.workPeriod;
+        calendarDays.push({ type: 'day', day: i, shift, isOff, isCourse, isVacation, isHoliday, hours });
     }
 
     return (
@@ -474,7 +483,7 @@ const IndividualWeeklyCalendar: React.FC<{
                         <div 
                             key={idx}
                             title={cell.isVacation ? 'Férias' : (cell.shift as string)}
-                            className={`aspect-square rounded-xl border flex flex-col items-center justify-center transition-all ${
+                            className={`aspect-square rounded-xl border flex flex-col items-center justify-center transition-all relative ${
                                 cell.shift === 'T' 
                                 ? 'bg-indigo-600 dark:bg-indigo-700 border-indigo-700 dark:border-indigo-800 text-white shadow-sm' 
                                 : cell.isCourse
@@ -482,13 +491,18 @@ const IndividualWeeklyCalendar: React.FC<{
                                 : cell.isVacation
                                 ? 'bg-indigo-100 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400'
                                 : cell.isHoliday ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50 text-amber-600 dark:text-amber-400' 
-                                : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-600'
+                                : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-600'
                             }`}
                         >
-                            <span className={`text-[8px] font-black absolute top-1 left-1 opacity-50 ${cell.shift === 'T' || cell.isCourse ? 'text-white/60' : ''}`}>{cell.day}</span>
-                            <span className="text-[10px] font-black tracking-tighter">
+                            <span className={`text-[8px] font-black absolute top-1 left-1 ${cell.shift === 'T' || cell.isCourse ? 'text-white/80' : 'text-slate-500'}`}>{cell.day}</span>
+                            <span className={`text-[11px] font-black mt-1 ${cell.isOff && !cell.isVacation ? 'opacity-30' : ''}`}>
                                 {cell.shift === 'T' ? shiftLabel : cell.isCourse ? 'C' : cell.isVacation ? 'FE' : 'F'}
                             </span>
+                            {!cell.isOff && (
+                              <span className="text-[7px] font-bold opacity-80 mt-0.5 tracking-tighter">
+                                {cell.hours.split(' ')[0]}
+                              </span>
+                            )}
                         </div>
                     );
                 })}

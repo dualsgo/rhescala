@@ -104,7 +104,7 @@ export const Header: React.FC<HeaderProps> = ({
         const shiftCells = Array.from({ length: daysInMonth }, (_, i) => {
           const s = (emp.shifts[monthKey] || [])[i] || 'F';
           if (['F', 'FF', 'FE', 'C'].includes(s)) return s;
-          return 'T'; // Use 'T' for working days in the cells
+          return ''; // Deixa em branco para dias trabalhados
         });
         const mainPeriod = emp.workPeriod.includes(' às ') ? emp.workPeriod.replace(' às ', '-') : emp.workPeriod;
         return [emp.name, mainPeriod, ...shiftCells];
@@ -222,7 +222,7 @@ export const Header: React.FC<HeaderProps> = ({
         doc.setFont('helvetica', 'normal');
         birthdays.forEach((e, i) => {
           const d = e.birthday?.split('-')[2];
-          doc.text(`🎂 ${d}/${currentMY.month + 1}: ${e.name.toUpperCase()}`, birthdayX, infoY + 12 + (i * 10));
+          doc.text(`Aniver. ${d}/${currentMY.month + 1}: ${e.name.toUpperCase()}`, birthdayX, infoY + 12 + (i * 10));
         });
       }
 
@@ -244,9 +244,48 @@ export const Header: React.FC<HeaderProps> = ({
         onVacation.forEach((e, i) => {
           const s = e.vacationStart?.split('-').reverse().join('/');
           const f = e.vacationEnd?.split('-').reverse().join('/');
-          doc.text(`🌴 ${e.name.toUpperCase()}: ${s} até ${f}`, vacationX, infoY + 12 + (i * 10));
+          doc.text(`• ${e.name.toUpperCase()}: ${s} até ${f}`, vacationX, infoY + 12 + (i * 10));
         });
       }
+
+      // ── Quadro de Almoço & Regras ──────────────────────────────────────────
+      const footerY = Math.max(infoY + (monthHolidays.length || birthdays.length || onVacation.length) * 12 + 40, finalY + 140);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.text('DISTRIBUIÇÃO DE ALMOÇO (SLOTS):', 40, footerY);
+      
+      const lunchHead = [['Turno', 'Segunda a Sábado', 'Domingo', 'Feriado (15min)']];
+      const lunchBody = [
+        ['Abertura', '12:30 | 13:00 | 13:30 | 14:00', '13:30 | 14:00 | 14:30', '13:30 às 15:30'],
+        ['Intermediário', '14:00 | 14:30 | 15:00 | 15:30', '15:00 | 15:30 | 16:00', '14:30 às 16:30'],
+        ['Fechamento', '15:00 | 16:00 | 17:00 | 18:00', '16:00 | 17:00 | 18:00', '16:30 às 18:30'],
+      ];
+
+      autoTable(doc, {
+        head: lunchHead,
+        body: lunchBody,
+        startY: footerY + 10,
+        margin: { left: 40 },
+        tableWidth: 400,
+        styles: { fontSize: 6, cellPadding: 2 },
+        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0] }
+      });
+
+      const rulesX = 460;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.text('REGRAS DA ESCALA:', rulesX, footerY);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6);
+      const rules = [
+        '• Escala 6x1: Máximo de 6 dias seguidos de trabalho.',
+        '• Domingos: Revezamento obrigatório (sempre que possível).',
+        '• Limite: Não é permitido trabalhar 3 domingos consecutivos.',
+        '• Feriados: Geram crédito de folga para uso posterior.',
+        '• Divulgação: Escala deve ser fixada em local visível.'
+      ];
+      rules.forEach((r, i) => doc.text(r, rulesX, footerY + 15 + (i * 10)));
 
       // ── Assinatura ─────────────────────────────────────────────────────────
       const pageHeight = doc.internal.pageSize.getHeight();
