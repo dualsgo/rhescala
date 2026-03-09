@@ -541,27 +541,27 @@ const TeamMonthlyCalendar: React.FC<{
   }
 
   return (
-    <div className="w-full">
-      <div className="grid grid-cols-7 gap-4 mb-4">
+    <div className="w-full print:px-2">
+      <div className="grid grid-cols-7 gap-4 mb-4 print:gap-1 print:mb-2">
         {WEEKDAY_NAMES.map(wd => (
           <div key={wd} className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">{wd}</div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-4">
+      <div className="grid grid-cols-7 gap-4 print:gap-1">
         {cells.map((cell, idx) => (
-          <div key={idx} className={`min-h-[160px] rounded-[2rem] border p-5 flex flex-col gap-1.5 transition-all ${cell.type === 'empty' ? 'border-transparent' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800'}`}>
+          <div key={idx} className={`min-h-[160px] print:min-h-0 rounded-[2rem] print:rounded-lg border p-5 print:p-2 flex flex-col gap-1.5 print:gap-1 transition-all ${cell.type === 'empty' ? 'border-transparent' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800'}`}>
             {cell.type === 'day' && (
               <>
-                <div className="flex justify-between items-start mb-3">
-                  <span className="text-xs font-black text-slate-400 dark:text-slate-500">{cell.date}</span>
+                <div className="flex justify-between items-start mb-3 print:mb-1">
+                  <span className="text-xs font-black text-slate-400 dark:text-slate-500 print:text-[10px]">{cell.date}</span>
                   <span className="text-[8px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-tighter">
                     {WEEKDAY_NAMES[new Date(currentMY.year, currentMY.month, cell.date).getDay()].split('-')[0]}
                   </span>
                 </div>
                 <div className="space-y-1.5">
                   {cell.dayData.map((d, i) => (
-                    <div key={i} className={`flex items-center justify-between gap-2 p-2 rounded-xl border ${d.isCourse ? 'bg-teal-50 border-teal-100 text-teal-700' : 'bg-slate-50 border-slate-100/50 text-slate-800'}`}>
-                       <span className="text-[9px] font-black uppercase truncate">{d.name}</span>
+                    <div key={i} className={`flex items-center justify-between gap-1 p-2 print:p-1 rounded-xl print:rounded-md border ${d.isCourse ? 'bg-teal-50 border-teal-100 text-teal-700' : 'bg-slate-50 border-slate-100/50 text-slate-800'}`}>
+                       <span className="text-[9px] print:text-[8px] font-black uppercase truncate">{d.name}</span>
                        <span className={`text-[8px] font-bold shrink-0 ${d.isCourse ? 'mt-[-2px]' : 'text-slate-400'}`}>
                           {d.isCourse ? <Icon name="school" className="text-[10px]" /> : d.hours.split(' ')[0]}
                        </span>
