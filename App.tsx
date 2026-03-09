@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { useDialog } from './contexts/DialogContext';
-import { useLocalStorage } from './hooks/useLocalStorage';
+import { useLocalStorage, useLocalPreference } from './hooks/useLocalStorage';
 import { generateYearSchedule, applyMonthUpdate } from './hooks/useScheduleEngine';
 import { Header } from './components/Header';
 import { Icon } from './components/Icon';
@@ -27,7 +27,7 @@ const App: React.FC = () => {
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
   const [showDayDetail, setShowDayDetail] = useState(false);
   const [waModal, setWaModal] = useState<{ show: boolean; text: string }>({ show: false, text: '' });
-  const [isDarkMode, setIsDarkMode] = useLocalStorage<boolean>('riHappyDarkMode', false);
+  const [isDarkMode, setIsDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
   const { showDialog } = useDialog();
 
   const today = useMemo(() => new Date(), []); // Actual "today"
