@@ -142,11 +142,11 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
   // ── Render Helpers ───────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col h-full animate-fade-in transition-colors">
+    <div className="flex flex-col h-full animate-fade-in transition-colors bg-white dark:bg-slate-950">
       <div className="bg-white dark:bg-slate-950 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col flex-1">
         
         {/* Header */}
-        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-10 transition-colors">
+        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-10 transition-colors no-print">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-indigo-600 dark:bg-indigo-700 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100 dark:shadow-none">
                <Icon name="insights" className="text-2xl" />
@@ -390,7 +390,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
 
             </div>
           ) : (
-            <div className="h-full animate-fade-in bg-white dark:bg-slate-950 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-auto transition-colors">
+            <div id="printable-team-calendar" className="h-full animate-fade-in bg-white dark:bg-slate-950 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-auto transition-colors print:p-0 print:border-none print:shadow-none">
                <TeamMonthlyCalendar 
                  employees={employees} 
                  currentMY={currentMY} 
@@ -402,7 +402,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
         </div>
 
         {/* Footer */}
-        <div className="px-10 py-6 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between sticky bottom-0 transition-colors">
+        <div className="px-10 py-6 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between sticky bottom-0 transition-colors no-print">
            <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Insights Operacionais Mensal • Ri Happy Dashboard v2.0</p>
            <button 
              onClick={onClose} 
