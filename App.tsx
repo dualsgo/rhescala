@@ -22,9 +22,10 @@ const App: React.FC = () => {
   const [showHolidayManager, setShowHolidayManager] = useState(false);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'team' | 'analysis'>('dashboard');
+  const [currentView, setCurrentView] = useState<'team' | 'analysis' | 'grid'>('grid');
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
-  const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate());
+  const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
+  const [showDayDetail, setShowDayDetail] = useState(false);
   const [waModal, setWaModal] = useState<{ show: boolean; text: string }>({ show: false, text: '' });
   const [isDarkMode, setIsDarkMode] = useLocalStorage<boolean>('riHappyDarkMode', false);
   const { showDialog } = useDialog();
@@ -357,6 +358,47 @@ const App: React.FC = () => {
         />
       )}
 
+      {/* Day Detail Modal */}
+      {showDayDetail && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] w-full max-w-4xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 z-10">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-xl flex items-center justify-center">
+                  <Icon name="event_note" className="text-xl" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Detalhes do Dia</h4>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Resumo Operacional e Pausas Sugeridas</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowDayDetail(false)} 
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors order-last ml-2"
+              >
+                <Icon name="close" className="text-slate-400 dark:text-slate-500" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-slate-50/50 dark:bg-slate-900/50">
+              <DaySummaryCard
+                selectedDayIdx={selectedDayIdx}
+                employees={employees}
+                currentMY={currentMY}
+                customHolidays={customHolidays}
+              />
+            </div>
+            <div className="p-6 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+               <button 
+                onClick={() => setShowDayDetail(false)}
+                className="px-8 py-3 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-black rounded-2xl hover:bg-indigo-600 dark:hover:bg-white transition-all shadow-xl active:scale-95"
+               >
+                 Fechar Resumo
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* WhatsApp Modal */}
       {waModal.show && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-sm animate-fade-in">
@@ -386,48 +428,8 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-colors">
-        {currentView === 'dashboard' ? (
-          <div className="space-y-8 animate-fade-in">
-            {/* Legend card */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-6">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center">
-                            <Icon name="info" className="text-2xl" />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">Visão Geral do Mês</h3>
-                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Analise a distribution de equipe por dia</p>
-                        </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-6 bg-slate-50 dark:bg-slate-800/50 p-4 px-6 rounded-2xl border border-slate-100 dark:border-slate-700">
-                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-orange-500"></div> <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Folga</span></div>
-                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-red-500"></div> <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Feriado</span></div>
-                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-teal-500"></div> <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Curso</span></div>
-                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-indigo-600"></div> <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Férias</span></div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-                {Array.from({ length: new Date(currentMY.year, currentMY.month + 1, 0).getDate() }).map((_, i) => (
-                    <div 
-                      key={i} 
-                      onClick={() => { setSelectedDayIdx(i); setCurrentView('grid'); }}
-                      className="cursor-pointer active:scale-95 transition-all"
-                    >
-                        <DaySummaryCard
-                            selectedDayIdx={i}
-                            employees={employees}
-                            currentMY={currentMY}
-                            customHolidays={customHolidays}
-                        />
-                    </div>
-                ))}
-            </div>
-          </div>
-        ) : currentView === 'grid' ? (
+      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-colors flex-1 flex flex-col">
+        {currentView === 'grid' ? (
           <ShiftGrid
             employees={employees}
             currentMY={currentMY}
@@ -436,6 +438,10 @@ const App: React.FC = () => {
             customHolidays={customHolidays}
             onOpenAnalysis={() => setCurrentView('analysis')}
             onSelectDay={setSelectedDayIdx}
+            onOpenDayDetail={(idx) => {
+              setSelectedDayIdx(idx);
+              setShowDayDetail(true);
+            }}
             onUpdateShift={updateShift}
             onUpdateShifts={updateShifts}
             onUpdateEmployeeDailyHour={updateEmployeeDailyHour}
@@ -456,9 +462,9 @@ const App: React.FC = () => {
               employees={employees}
               currentMY={currentMY}
               customHolidays={customHolidays}
-              onClose={() => setCurrentView('dashboard')}
+              onClose={() => setCurrentView('grid')}
             />
-        ) : (
+        ) : currentView === 'team' ? (
           <div className="animate-fade-in">
              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 shadow-sm">
                 <div className="flex items-center justify-between mb-8">
@@ -485,6 +491,11 @@ const App: React.FC = () => {
                   onAddEmployee={addEmployee}
                 />
              </div>
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
+             <Icon name="grid_view" className="text-6xl mb-4 opacity-20" />
+             <p className="font-black uppercase tracking-widest">Acesse a Escala para começar</p>
           </div>
         )}
       </main>

@@ -19,6 +19,7 @@ interface ShiftGridProps {
   onUpdateShifts: (updates: { empId: string, dayIdx: number, newShift: ShiftType }[]) => void;
   onUpdateEmployeeDailyHour: (empId: string, dayIdx: number, newHour: string) => void;
   onShareWhatsApp: (dayIdx: number) => void;
+  onOpenDayDetail: (dayIdx: number) => void;
 
   onResetMonth: () => void;
   onOpenAnalysis: () => void;
@@ -38,6 +39,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onUpdateShifts,
   onUpdateEmployeeDailyHour,
   onShareWhatsApp,
+  onOpenDayDetail,
   onApplyBulkFixes,
   onResetMonth,
   onOpenAnalysis,
@@ -644,7 +646,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               {filteredDays.map((day) => (
                 <th
                   key={day.num}
-                  onClick={() => onSelectDay(day.originalIdx)}
+                  onClick={() => onOpenDayDetail(day.originalIdx)}
                   title={day.holidayName || undefined}
                   className={`p-1.5 text-center min-w-[60px] w-[60px] cursor-pointer transition-colors relative border-r border-b border-slate-100/50 dark:border-slate-700/80 ${
                     selectedDayIdx === day.originalIdx ? 'bg-orange-100/50 dark:bg-orange-900/20 ring-2 ring-inset ring-orange-400' : ''

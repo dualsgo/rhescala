@@ -17,8 +17,8 @@ const actions = [
 ];
 
 interface HeaderProps {
-  currentView: 'dashboard' | 'team';
-  onViewChange: (view: 'dashboard' | 'team') => void;
+  currentView: 'grid' | 'team' | 'analysis';
+  onViewChange: (view: 'grid' | 'team' | 'analysis') => void;
   currentMY: MonthYear;
   employees: Employee[];
   customHolidays: Holiday[];
@@ -297,12 +297,12 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const navItems = [
-    { id: 'dashboard', label: 'Escalas', icon: 'dashboard' },
+    { id: 'grid', label: 'Escala', icon: 'table_rows' },
     { id: 'team', label: 'Equipe', icon: 'groups' },
     { id: 'analysis', label: 'Análise', icon: 'insights' },
   ];
 
-  const handleNavClick = (view: 'dashboard' | 'team' | 'analysis') => {
+  const handleNavClick = (view: 'grid' | 'team' | 'analysis') => {
     onViewChange(view);
     setMobileMenuOpen(false);
   };
@@ -324,7 +324,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Logo */}
           <button
-            onClick={() => onViewChange('dashboard')}
+            onClick={() => onViewChange('grid')}
             className="flex items-center gap-2.5 flex-shrink-0 group"
           >
             <div className="w-8 h-8 text-orange-500 transition-transform group-hover:scale-110">
