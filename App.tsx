@@ -42,6 +42,50 @@ const App: React.FC = () => {
     }
   }, [isDarkMode]);
 
+  // Cloud Sync Protection (Conflict & Backup)
+  React.useEffect(() => {
+    const handleConflict = async (e: any) => {
+      const { resolve } = e.detail;
+      const choice = await showDialog({
+        title: '⚠️ Conflito de Sincronização Encontrado',
+        message: 'A nuvem contém uma versão mais recente que a sua (provavelmente feita em outro dispositivo), MAS você também fez alterações locais que não foram enviadas.\n\nQual versão você deseja manter?',
+        confirmText: 'Baixar da Nuvem (Descartar Local)',
+        cancelText: 'Manter Local (Sobrescrever Nuvem)',
+        type: 'confirm'
+      });
+      resolve(choice === true);
+    };
+
+    const handlePersistentError = async (e: any) => {
+      if (e.detail.key !== 'riHappyEmployeesData') return;
+      
+      const choice = await showDialog({
+        title: '⚠️ Nuvem Desconectada',
+        message: 'A sincronização falhou após várias tentativas. Não se preocupe, seus dados estão SALVOS NO SEU NAVEGADOR atual (não foram perdidos!).\n\nPorém, por segurança, sugerimos que baixe um arquivo de Backup.',
+        confirmText: 'Baixar Arquivo de Backup',
+        cancelText: 'Deixar Apenas no Navegador',
+        type: 'confirm'
+      });
+
+      if (choice === true) {
+        const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(e.detail.data);
+        const a = document.createElement('a');
+        a.setAttribute('href', dataStr);
+        a.setAttribute('download', `rihappy_backup_emergencia_${Date.now()}.json`);
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+    };
+
+    window.addEventListener('sync-conflict', handleConflict);
+    window.addEventListener('sync-persistent-error', handlePersistentError);
+    return () => {
+      window.removeEventListener('sync-conflict', handleConflict);
+      window.removeEventListener('sync-persistent-error', handlePersistentError);
+    };
+  }, [showDialog]);
+
   // Auto-generate month if it's completely empty
   React.useEffect(() => {
     // Se a lista de funcionários ainda é o placeholder ou está carregando dados, não gera nada

@@ -55,7 +55,15 @@ export const Header: React.FC<HeaderProps> = ({
       return `${String(i + 1).padStart(2, '0')}\n${WEEKDAY_ABBR[date.getDay()]}`;
     });
     const header = ['Nome', 'Horário', ...dayLabels];
-    const rows = employees.map(emp => {
+    const sortedEmployeesForExcel = [...employees].sort((a, b) => {
+      const orderMap: Record<string, number> = { 'Abertura': 1, 'Intermediário': 2, 'Fechamento': 3 };
+      const orderA = orderMap[a.shiftName] || 4;
+      const orderB = orderMap[b.shiftName] || 4;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.name.localeCompare(b.name, 'pt-BR');
+    });
+
+    const rows = sortedEmployeesForExcel.map(emp => {
       const row: (string | number)[] = [emp.name, emp.workPeriod];
       for (let i = 0; i < daysInMonth; i++) {
         const shift = (emp.shifts[monthKey] || [])[i] || 'F';
@@ -100,7 +108,16 @@ export const Header: React.FC<HeaderProps> = ({
         return `${i + 1}\n${WEEKDAY_ABBR[date.getDay()]}`;
       })]];
 
-      const body = employees.filter(e => !e.isHidden).map(emp => {
+      // Ordenação: Abertura -> Intermediário -> Fechamento, e depois por nome
+      const sortedEmployees = [...employees].filter(e => !e.isHidden).sort((a, b) => {
+        const orderMap: Record<string, number> = { 'Abertura': 1, 'Intermediário': 2, 'Fechamento': 3 };
+        const orderA = orderMap[a.shiftName] || 4;
+        const orderB = orderMap[b.shiftName] || 4;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.name.localeCompare(b.name, 'pt-BR');
+      });
+
+      const body = sortedEmployees.map(emp => {
         const shiftCells = Array.from({ length: daysInMonth }, (_, i) => {
           const s = (emp.shifts[monthKey] || [])[i] || 'F';
           if (['F', 'FF', 'FE', 'C'].includes(s)) return s;

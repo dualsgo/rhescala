@@ -63,7 +63,12 @@ export function useSyncStatus() {
 
 export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void, () => Promise<void>] {
     const [storedValue, setStoredValue] = useState<T>(initialValue);
+    const storedValueRef = useRef(storedValue);
     const [isLoaded, setIsLoaded] = useState(false);
+
+    useEffect(() => {
+        storedValueRef.current = storedValue;
+    }, [storedValue]);
 
     const isFirstLoadDone = useRef(false);
     const initialLoadSuccess = useRef(false);
@@ -90,9 +95,6 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
     const downloadFromCloud = async (force = false) => {
         if (!DB_API_URL || syncInProgress.current) return;
 
-        // Se houver edição local, não baixamos automaticamente para evitar atropelar o usuário
-        if (!force && isDirty.current) return;
-
         updateGlobalSync('syncing', key, force ? 'Forçando Download...' : 'Verificando Nuvem...');
         try {
             const res = await fetch(`${DB_API_URL}?key=${key}&_t=${Date.now()}`);
@@ -107,7 +109,36 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
 
             if (cloudData) {
                 const dataStr = JSON.stringify(cloudData);
+                const localStr = JSON.stringify(storedValueRef.current);
+
                 if (dataStr !== lastCloudValue.current || force) {
+                    if (isDirty.current && !force && dataStr !== localStr) {
+                        // CONFLITO: Usuário editou localmente, mas a nuvem tem uma versão diferente
+                        updateGlobalSync('error', key, 'Conflito de Versão');
+                        window.dispatchEvent(new CustomEvent('sync-conflict', {
+                            detail: {
+                                key,
+                                resolve: (useCloud: boolean) => {
+                                    if (useCloud) {
+                                        setStoredValue(cloudData);
+                                        lastCloudValue.current = dataStr;
+                                        isDirty.current = false;
+                                        updateGlobalSync('synced', key, 'Nuvem Restaurada');
+                                        try { new BroadcastChannel(`sync_${key}`).postMessage(cloudData); } catch (e) { }
+                                    } else {
+                                        // Vence o local: enganamos o lastCloudValue para forçar o próximo upload
+                                        lastCloudValue.current = dataStr; 
+                                        isDirty.current = true;
+                                        // Forçar um trigger invisível para o useEffect de upload rodar na próxima passada
+                                        setStoredValue(prev => (Array.isArray(prev) ? [...prev] : {...prev}) as any); 
+                                        updateGlobalSync('syncing', key, 'Preparando Envio...');
+                                    }
+                                }
+                            }
+                        }));
+                        return; // Aborta para esperar decisão
+                    }
+
                     setStoredValue(cloudData);
                     lastCloudValue.current = dataStr;
                     isDirty.current = false;
@@ -181,7 +212,11 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                             processSyncQueue();
                         }, 5000);
                     } else {
-                        updateGlobalSync('error', key, 'Erro ao Salvar');
+                        updateGlobalSync('error', key, 'Salvo Apenas Localmente');
+                        // Dispara evento para sugerir backup
+                        window.dispatchEvent(new CustomEvent('sync-persistent-error', {
+                            detail: { key, data: dataToSync }
+                        }));
                     }
                 } finally {
                     syncInProgress.current = false;
