@@ -42,13 +42,19 @@ function isSundayUnavailable(
     if (emp.vacationStart && emp.vacationEnd) {
         if (dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) return true;
     }
+    // 1b. Birthday
+    if (emp.birthday) {
+        const empMD = emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday;
+        const dateMD = dateStr.length > 5 ? dateStr.substring(5) : dateStr;
+        if (empMD === dateMD) return true;
+    }
     // 2. Preferred day off is Sunday
     if (emp.preferredDayOff === 'Domingo') return true;
     // 3. Not yet hired
     if (emp.hiredAt && dateStr < emp.hiredAt) return true;
     // 4. Already fired
     if (emp.firedAt && dateStr > emp.firedAt) return true;
-    // 5. Existing shift already FE (manually set vacation)
+    // 5. Existing shift already FE (manually set vacation) or F (manual birthday folga)
     const existing = (emp.shifts[monthKey] ?? [])[dayIdx] as string | undefined;
     if (existing === 'FE') return true;
     return false;
@@ -295,6 +301,18 @@ function getTargetHours(emp: Employee, dow: number, isHoliday: boolean): string 
     return emp.workPeriod;
 }
 
+/**
+ * Checks if the given date string is the employee's birthday.
+ */
+function isBirthday(emp: Employee, dateStr: string): boolean {
+    if (!emp.birthday) return false;
+    // Both are ISO YYYY-MM-DD or MM-DD, we compare the MM-DD part
+    // e.g., "1990-04-10" -> "04-10", "2026-04-10" -> "04-10"
+    const empMD = emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday;
+    const dateMD = dateStr.length > 5 ? dateStr.substring(5) : dateStr;
+    return empMD === dateMD;
+}
+
 export function generateMonthForEmployee(
     emp: Employee,
     year: number,
@@ -325,6 +343,9 @@ export function generateMonthForEmployee(
         // ── Overrides ──────────────────────────────────────────────────────
         if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
             shifts.push('FE'); hours.push(getTargetHours(emp, dow, isHoliday)); continue;
+        }
+        if (isBirthday(emp, dateStr)) {
+            shifts.push('F'); hours.push(getTargetHours(emp, dow, isHoliday)); continue;
         }
         if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) {
             shifts.push('F'); hours.push(getTargetHours(emp, dow, isHoliday)); continue;
@@ -516,6 +537,9 @@ export function applyMonthUpdate(
             if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
                 newShifts[dayIdx] = 'FE'; continue;
             }
+            if (isBirthday(emp, dateStr)) {
+                newShifts[dayIdx] = 'F'; continue;
+            }
             if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) {
                 newShifts[dayIdx] = 'F'; continue;
             }
@@ -581,6 +605,10 @@ export function applyMonthUpdate(
                 if (dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
                     newShifts[dayIdx] = 'FE'; continue;
                 }
+            }
+
+            if (isBirthday(emp, dateStr)) {
+                newShifts[dayIdx] = 'F'; continue;
             }
 
             if (dow === 0 || dow === 6) {
