@@ -54,9 +54,9 @@ function isSundayUnavailable(
     if (emp.hiredAt && dateStr < emp.hiredAt) return true;
     // 4. Already fired
     if (emp.firedAt && dateStr > emp.firedAt) return true;
-    // 5. Existing shift already FE (manually set vacation) or F (manual birthday folga)
+    // 5. Existing shift already FE (manually set vacation) or F or FF
     const existing = (emp.shifts[monthKey] ?? [])[dayIdx] as string | undefined;
-    if (existing === 'FE') return true;
+    if (existing === 'FE' || existing === 'F' || existing?.startsWith('FF') || existing === 'C') return true;
     return false;
 }
 
@@ -522,17 +522,26 @@ export function applyMonthUpdate(
 
     activeRegular.forEach(emp => {
         const restDays = sundayAssignments.get(emp.id) ?? new Set<number>();
+        const existingShifts = emp.shifts[monthKey] || [];
         const newShifts: ShiftType[] = Array(daysInMonth).fill('T');
 
         const newHours: string[] = Array.from({ length: daysInMonth }, (_, i) => {
             const date = new Date(year, month, i + 1);
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
+            const exH = (emp.dailyHours[monthKey] ?? [])[i];
+            if (exH) return exH;
             return getTargetHours(emp, date.getDay(), holidaySet.has(dateStr));
         });
 
-        // 1. Pass: Apply absolute constraints (Vacation, out-of-employment, Sundays, Holidays)
+        // 1. Pass: Apply manual overrides and absolute constraints
         for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+            const dow = new Date(year, month, dayIdx + 1).getDay();
+
+            // Retain any manual shift initially
+            if (existingShifts[dayIdx]) {
+                newShifts[dayIdx] = existingShifts[dayIdx];
+            }
 
             if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
                 newShifts[dayIdx] = 'FE'; continue;
@@ -544,42 +553,37 @@ export function applyMonthUpdate(
                 newShifts[dayIdx] = 'F'; continue;
             }
 
-            const dow = new Date(year, month, dayIdx + 1).getDay();
             if (dow === 0) {
-                if (emp.preferredDayOff === 'Domingo' || restDays.has(dayIdx)) {
+                const ex = existingShifts[dayIdx];
+                if (ex === 'FE' || ex?.startsWith('FF') || ex === 'F') {
+                    // Respect manual time off on Sundays!
+                    newShifts[dayIdx] = ex;
+                } else if (emp.preferredDayOff === 'Domingo' || restDays.has(dayIdx)) {
                     newShifts[dayIdx] = 'F';
+                } else {
+                    newShifts[dayIdx] = 'T'; // Keep working if they didn't get rest
                 }
             }
         }
 
         // 2. Pass: Streak-based Folga Application
-        // We ensure a folga is placed at least every 6 working days.
         let currentStreak = prevStreaks.get(emp.id) || 0;
 
         for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
             const shift = newShifts[dayIdx];
-            if (shift === 'FE' || shift === 'F') {
+            if (shift === 'FE' || shift === 'F' || shift?.startsWith('FF') || shift === 'C' || shift === 'N/A') {
                 currentStreak = 0;
                 continue;
             }
 
-            // Atividade detected (T or C - apprentices are handled separately, regular emps are mostly T here)
             currentStreak++;
 
-            // If we hit 7th day without folga, we MUST put one here or earlier in the week.
             if (currentStreak > 6) {
-                // To be smart, try to find the "preferredDayOff" within the LAST 6 days and move it there.
-                // Or just if today is the preferred day, it would have been caught if we checked ahead.
-                // Simplified: if currentStreak > 6, this MUST be a folga.
                 newShifts[dayIdx] = 'F';
                 currentStreak = 0;
             } else {
-                // If this is the preferred day off, and we haven't had a folga in the current "sequence",
-                // we should take it now to stay legally safe and follow preference.
                 const dow = new Date(year, month, dayIdx + 1).getDay();
-                if (WEEKDAY_NAMES[dow] === emp.preferredDayOff) {
-                    // Check ahead: if we don't take it now, will we hit 7 days before next Sunday?
-                    // For simplicity: always take the preferred day if it's been 0-5 days since last folga.
+                if (dow !== 0 && WEEKDAY_NAMES[dow] === emp.preferredDayOff) {
                     newShifts[dayIdx] = 'F';
                     currentStreak = 0;
                 }
@@ -591,10 +595,19 @@ export function applyMonthUpdate(
 
     // ── Apprentices ────────────────────────────────────────────────────────────
     activeApprentices.forEach(emp => {
+        const existingShifts = emp.shifts[monthKey] || [];
         const newShifts: ShiftType[] = Array(daysInMonth).fill('T');
-        const newHours: string[] = Array(daysInMonth).fill(APPRENTICE_WORK_PERIOD);
+        
+        const newHours: string[] = Array.from({ length: daysInMonth }, (_, i) => {
+            const exH = (emp.dailyHours[monthKey] ?? [])[i];
+            return exH || APPRENTICE_WORK_PERIOD;
+        });
 
         for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
+            if (existingShifts[dayIdx]) {
+                newShifts[dayIdx] = existingShifts[dayIdx];
+            }
+
             const dayNum = dayIdx + 1;
             const date = new Date(year, month, dayNum);
             const dow = date.getDay();
@@ -612,13 +625,22 @@ export function applyMonthUpdate(
             }
 
             if (dow === 0 || dow === 6) {
-                newShifts[dayIdx] = 'F'; continue;
+                if (existingShifts[dayIdx] !== 'FE' && !existingShifts[dayIdx]?.startsWith('FF')) {
+                    newShifts[dayIdx] = 'F';
+                }
+                continue;
             }
             if (isHoliday) {
-                newShifts[dayIdx] = 'F'; continue;
+                if (existingShifts[dayIdx] !== 'FE' && !existingShifts[dayIdx]?.startsWith('FF')) {
+                    newShifts[dayIdx] = 'F';
+                }
+                continue;
             }
             if (WEEKDAY_NAMES[dow] === emp.courseDay) {
-                newShifts[dayIdx] = 'C'; continue;
+                if (existingShifts[dayIdx] !== 'FE' && !existingShifts[dayIdx]?.startsWith('FF') && existingShifts[dayIdx] !== 'F') {
+                    newShifts[dayIdx] = 'C';
+                }
+                continue;
             }
         }
 
