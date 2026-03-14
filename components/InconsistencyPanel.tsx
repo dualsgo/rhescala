@@ -88,18 +88,16 @@ function detectInconsistencies(
       // ── Rule 1: 6×1 — more than 6 consecutive working days ─────────────────
       let workStreak    = 0;
       let streakStart   = 0;
-      let alreadyFlagged = false;
 
       for (let d = 0; d < daysInMonth; d++) {
         const s = getEffectiveShift(emp, year, month, d);
 
         if (isActivityShift(s)) {
-          if (workStreak === 0) { streakStart = d; alreadyFlagged = false; }
+          if (workStreak === 0) { streakStart = d; }
           workStreak++;
 
-          if (workStreak > 6 && !alreadyFlagged) {
-            alreadyFlagged = true;
-            const fixDay = streakStart + 6;
+          if (workStreak > 6) {
+            const fixDay = d;
             const fixDayNum = fixDay + 1;
             results.push({
               id:       `${emp.id}-6x1-${streakStart}`,
@@ -109,17 +107,18 @@ function detectInconsistencies(
               severity: 'error',
               detail:   `${workStreak}+ dias seguidos sem folga (${streakStart + 1} → ${d + 1})`,
               dayIdx:   d,
-              fix: fixDay < daysInMonth ? {
+              fix: {
                 label:    `Dar folga no dia ${fixDayNum}`,
                 empId:    emp.id,
                 dayIdx:   fixDay,
                 newShift: 'F',
-              } : null,
+              },
             });
+            // Assume the fix is applied so we can keep checking the rest of the month!
+            workStreak = 0;
           }
         } else {
           workStreak    = 0;
-          alreadyFlagged = false;
         }
       }
 

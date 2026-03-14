@@ -441,7 +441,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
+        <div className="flex flex-wrap items-center gap-2 pb-1 md:pb-0">
             {/* Month selector */}
             <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-xl p-1 gap-1">
                 <button onClick={onHandlePrevMonth} className="p-1 px-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-all text-slate-400 hover:text-orange-500">
