@@ -34,6 +34,13 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
       if (dateStr >= start && dateStr <= end) return 'FE';
     }
 
+    // Check if it's their birthday
+    if (emp.birthday) {
+      const empMD = emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday;
+      const dateMD = dateStr.substring(5);
+      if (empMD === dateMD) return 'F';
+    }
+
     const monthShifts = emp.shifts[monthKey] || [];
     return monthShifts[dayIdx] || 'F';
   };

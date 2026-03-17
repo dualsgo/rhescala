@@ -100,6 +100,10 @@ export const HolidayCreditPanel: React.FC<HolidayCreditPanelProps> = ({
               const dDateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`;
               if (e.vacationStart && e.vacationEnd && dDateStr >= e.vacationStart && dDateStr <= e.vacationEnd) {
                 s = 'FE';
+              } else if (e.birthday) {
+                const empMD = e.birthday.length > 5 ? e.birthday.substring(5) : e.birthday;
+                const dateMD = dDateStr.substring(5);
+                if (empMD === dateMD) s = 'F';
               }
               // Apenas T conta como presença na loja
               return s === 'T';

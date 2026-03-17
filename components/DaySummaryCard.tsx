@@ -104,9 +104,13 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
       const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
       let shift = (e.shifts[monthKey] || [])[selectedDayIdx];
 
-      // Override with vacation if applicable
+      // Override with vacation or birthday if applicable
       if (e.vacationStart && e.vacationEnd && dateStr >= e.vacationStart && dateStr <= e.vacationEnd) {
         shift = 'FE';
+      } else if (e.birthday) {
+        const empMD = e.birthday.length > 5 ? e.birthday.substring(5) : e.birthday;
+        const dateMD = dateStr.substring(5);
+        if (empMD === dateMD) shift = 'F';
       }
 
       const hForDay = (e.dailyHours[monthKey] || [])[selectedDayIdx] || e.workPeriod;

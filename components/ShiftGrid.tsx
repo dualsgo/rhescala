@@ -140,6 +140,9 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   const getDayShift = (emp: Employee, dayIdx: number) => {
     const day = days[dayIdx];
     if (!day) return 'F';
+
+    if (isBirthday(emp, dayIdx)) return 'F';
+
     if (emp.vacationStart && emp.vacationEnd) {
       if (day.dateStr >= emp.vacationStart && day.dateStr <= emp.vacationEnd) return 'FE';
     }
@@ -169,8 +172,12 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
   const isBirthday = (emp: Employee, dayIdx: number) => {
     if (!emp.birthday) return false;
-    const bDate = new Date(emp.birthday + 'T00:00:00');
-    return bDate.getDate() === (dayIdx + 1) && bDate.getMonth() === currentMY.month;
+    // emp.birthday can be YYYY-MM-DD or MM-DD
+    const empMD = emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday;
+    const dateStr = days[dayIdx]?.dateStr;
+    if (!dateStr) return false;
+    const dateMD = dateStr.substring(5); // skips YYYY-
+    return empMD === dateMD;
   };
 
   const isDayLocked = (dayIdx: number) => {
