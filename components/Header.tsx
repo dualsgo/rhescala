@@ -56,10 +56,13 @@ export const Header: React.FC<HeaderProps> = ({
     });
     const header = ['Nome', 'Horário', ...dayLabels];
     const sortedEmployeesForExcel = [...employees].sort((a, b) => {
-      const orderMap: Record<string, number> = { 'Abertura': 1, 'Intermediário': 2, 'Fechamento': 3 };
-      const orderA = orderMap[a.shiftName] || 4;
-      const orderB = orderMap[b.shiftName] || 4;
-      if (orderA !== orderB) return orderA - orderB;
+      const getStartHour = (wp: string) => {
+        const match = wp.match(/(\d+)h/);
+        return match ? parseInt(match[1]) : 99;
+      };
+      const hA = getStartHour(a.workPeriod || '');
+      const hB = getStartHour(b.workPeriod || '');
+      if (hA !== hB) return hA - hB;
       return a.name.localeCompare(b.name, 'pt-BR');
     });
 
@@ -110,10 +113,13 @@ export const Header: React.FC<HeaderProps> = ({
 
       // Ordenação: Abertura -> Intermediário -> Fechamento, e depois por nome
       const sortedEmployees = [...employees].filter(e => !e.isHidden).sort((a, b) => {
-        const orderMap: Record<string, number> = { 'Abertura': 1, 'Intermediário': 2, 'Fechamento': 3 };
-        const orderA = orderMap[a.shiftName] || 4;
-        const orderB = orderMap[b.shiftName] || 4;
-        if (orderA !== orderB) return orderA - orderB;
+        const getStartHour = (wp: string) => {
+          const match = wp.match(/(\d+)h/);
+          return match ? parseInt(match[1]) : 99;
+        };
+        const hA = getStartHour(a.workPeriod || '');
+        const hB = getStartHour(b.workPeriod || '');
+        if (hA !== hB) return hA - hB;
         return a.name.localeCompare(b.name, 'pt-BR');
       });
 

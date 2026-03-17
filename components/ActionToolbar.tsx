@@ -35,7 +35,18 @@ export const ActionToolbar: React.FC<ActionToolbarProps> = ({ employees, current
     // Row 1: header  (Nome | Horário | 01\nSEG | 02\nTER | ...)
     const header = ['Nome', 'Horário', ...dayLabels];
 
-    const rows = employees.map(emp => {
+    const sortedEmployeesForExcel = [...employees].sort((a, b) => {
+      const getStartHour = (wp: string) => {
+        const match = wp.match(/(\d+)h/);
+        return match ? parseInt(match[1]) : 99;
+      };
+      const hA = getStartHour(a.workPeriod || '');
+      const hB = getStartHour(b.workPeriod || '');
+      if (hA !== hB) return hA - hB;
+      return a.name.localeCompare(b.name, 'pt-BR');
+    });
+
+    const rows = sortedEmployeesForExcel.map(emp => {
       const row: (string | number)[] = [
         emp.name,
         emp.workPeriod, // horário padrão substituindo "Perfil"
@@ -102,7 +113,18 @@ export const ActionToolbar: React.FC<ActionToolbarProps> = ({ employees, current
         }),
       ]];
 
-      const body = employees.map(emp => {
+      const sortedEmployees = [...employees].sort((a, b) => {
+        const getStartHour = (wp: string) => {
+          const match = wp.match(/(\d+)h/);
+          return match ? parseInt(match[1]) : 99;
+        };
+        const hA = getStartHour(a.workPeriod || '');
+        const hB = getStartHour(b.workPeriod || '');
+        if (hA !== hB) return hA - hB;
+        return a.name.localeCompare(b.name, 'pt-BR');
+      });
+
+      const body = sortedEmployees.map(emp => {
         const shiftCells = Array.from({ length: daysInMonth }, (_, i) => {
           const s = (emp.shifts[monthKey] || [])[i] || 'F';
           if (['F', 'FF', 'FE', 'C'].includes(s)) return s;

@@ -530,8 +530,21 @@ const TeamMonthlyCalendar: React.FC<{
 
   const cells = [];
   for (let i = 0; i < firstDayOfMonth; i++) cells.push({ type: 'empty' });
+  const sortedEmployees = [...employees]
+    .filter(e => !e.isHidden && e.status === 'active')
+    .sort((a, b) => {
+      const getStartHour = (wp: string) => {
+        const match = wp.match(/(\d+)h/);
+        return match ? parseInt(match[1]) : 99;
+      };
+      const hA = getStartHour(a.workPeriod || '');
+      const hB = getStartHour(b.workPeriod || '');
+      if (hA !== hB) return hA - hB;
+      return a.name.localeCompare(b.name, 'pt-BR');
+    });
+
   for (let i = 1; i <= daysInMonth; i++) {
-    const workingDayData = employees.filter(e => !e.isHidden && e.status === 'active').map(emp => {
+    const workingDayData = sortedEmployees.map(emp => {
       const shift = getEffectiveShift(emp, i - 1);
       const hours = (emp.dailyHours[monthKey] || [])[i - 1] || emp.workPeriod;
       const isOff = shift !== 'T' && shift !== 'C';
