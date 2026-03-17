@@ -127,9 +127,13 @@ export const ActionToolbar: React.FC<ActionToolbarProps> = ({ employees, current
       const body = sortedEmployees.map(emp => {
         const shiftCells = Array.from({ length: daysInMonth }, (_, i) => {
           const s = (emp.shifts[monthKey] || [])[i] || 'F';
+          
+          const dDateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
+          const isBday = emp.birthday && (emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday) === dDateStr.substring(5);
+
+          if (isBday) return 'DO';
           if (['F', 'FF', 'FE', 'C'].includes(s)) return s;
-          const h = (emp.dailyHours[monthKey] || [])[i] || emp.workPeriod;
-          return h.split(' ')[0]; // "10h"
+          return ''; // Deixa em branco para dias trabalhados
         });
         return [emp.name, emp.workPeriod.split(' ')[0], ...shiftCells];
       });
@@ -156,7 +160,7 @@ export const ActionToolbar: React.FC<ActionToolbarProps> = ({ employees, current
         didParseCell: (data: any) => {
           if (data.section === 'body' && data.column.index >= 2) {
             const val = data.cell.raw as string;
-            if (val === 'F')  { data.cell.styles.fillColor = [253, 186, 116]; data.cell.styles.textColor = [154, 52, 18]; } // orange
+            if (val === 'F' || val === 'DO')  { data.cell.styles.fillColor = [253, 186, 116]; data.cell.styles.textColor = [154, 52, 18]; } // orange
             if (val === 'FF') { data.cell.styles.fillColor = [254, 202, 202]; data.cell.styles.textColor = [153, 27, 27]; } // red
             if (val === 'FE') { data.cell.styles.fillColor = [221, 214, 254]; data.cell.styles.textColor = [76, 29, 149]; } // purple
             if (val === 'C')  { data.cell.styles.fillColor = [204, 251, 241]; data.cell.styles.textColor = [15, 118, 110]; } // teal

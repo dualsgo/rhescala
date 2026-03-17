@@ -70,11 +70,18 @@ export const Header: React.FC<HeaderProps> = ({
       const row: (string | number)[] = [emp.name, emp.workPeriod];
       for (let i = 0; i < daysInMonth; i++) {
         const shift = (emp.shifts[monthKey] || [])[i] || 'F';
-        if (['F', 'FF', 'FE', 'C'].includes(shift)) {
+        
+        const dDateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
+        const isBday = emp.birthday && (emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday) === dDateStr.substring(5);
+
+        if (isBday) {
+          row.push('DO');
+        } else if (['F', 'FF', 'FE', 'C'].includes(shift)) {
           row.push(shift);
         } else {
+          // Show abbreviated hour if working
           const h = (emp.dailyHours[monthKey] || [])[i] || emp.workPeriod;
-          row.push(h.split(' ')[0]);
+          row.push(h.split(' ')[0]); // "10h" instead of full string
         }
       }
       return row;
@@ -126,6 +133,11 @@ export const Header: React.FC<HeaderProps> = ({
       const body = sortedEmployees.map(emp => {
         const shiftCells = Array.from({ length: daysInMonth }, (_, i) => {
           const s = (emp.shifts[monthKey] || [])[i] || 'F';
+          
+          const dDateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
+          const isBday = emp.birthday && (emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday) === dDateStr.substring(5);
+
+          if (isBday) return 'DO';
           if (['F', 'FF', 'FE', 'C'].includes(s)) return s;
           return ''; // Deixa em branco para dias trabalhados
         });
@@ -176,9 +188,9 @@ export const Header: React.FC<HeaderProps> = ({
              
              if (data.section === 'body') {
                const val = data.cell.raw as string;
-               if (['F', 'FF', 'FE', 'C'].includes(val)) {
-                 data.cell.styles.fontStyle = 'bold';
-               }
+                if (['F', 'FF', 'FE', 'C', 'DO'].includes(val)) {
+                  data.cell.styles.fontStyle = 'bold';
+                }
                
                if ((isSun || isHol)) {
                  data.cell.styles.fillColor = [245, 245, 245];
@@ -198,15 +210,18 @@ export const Header: React.FC<HeaderProps> = ({
       const legend = [
         'T: Trabalha',
         'F: Folga Normal',
+        'DO: Aniversário (Escala Especial)',
         'FF: Folga Feriado',
         'FE: Férias',
-        'C: Dia de Curso (Aprendiz)'
+        'C: Dia de Curso'
       ];
       
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
       legend.forEach((text, i) => {
-        doc.text(text, 40 + (i * 105), finalY + 15);
+        const col = i % 3;
+        const row = Math.floor(i / 3);
+        doc.text(text, 40 + (col * 140), finalY + 15 + (row * 10));
       });
 
       // ── Informações do Mês ────────────────────────────────────────────────
