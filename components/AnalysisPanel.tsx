@@ -1,13 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import { Employee, MonthYear, Holiday, ShiftType } from '../types';
 import { Icon } from './Icon';
-import { buildHolidaySet } from '../constants';
+import { buildHolidaySet, SHIFT_HOURS } from '../constants';
 
 interface AnalysisPanelProps {
   employees: Employee[];
   currentMY: MonthYear;
   customHolidays: Holiday[];
   onClose: () => void;
+  onUpdateShift?: (empId: string, dayIdx: number, newShift: ShiftType) => void;
+  onUpdateHour?: (empId: string, dayIdx: number, newHour: string) => void;
 }
 
 const WEEKDAY_NAMES = [
@@ -15,9 +17,10 @@ const WEEKDAY_NAMES = [
   'Quinta-feira', 'Sexta-feira', 'Sábado',
 ];
 
-export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, currentMY, customHolidays, onClose }) => {
+export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, currentMY, customHolidays, onClose, onUpdateShift, onUpdateHour }) => {
   const [viewMode, setViewMode] = useState<'insights' | 'team-calendar'>('insights');
   const [selectedEmpId, setSelectedEmpId] = useState<string | null>(employees.filter(e => !e.isHidden && e.status === 'active')[0]?.id || null);
+  const [showIndividualModal, setShowIndividualModal] = useState(false);
   
   const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
@@ -175,6 +178,17 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
           </div>
           
           <div className="flex items-center gap-3">
+             {showIndividualModal && selectedEmployee && (
+               <IndividualEditModal
+                 employee={selectedEmployee.emp}
+                 currentMY={currentMY}
+                 customHolidays={customHolidays}
+                 getEffectiveShift={getEffectiveShift}
+                 onUpdateShift={onUpdateShift}
+                 onUpdateHour={onUpdateHour}
+                 onClose={() => setShowIndividualModal(false)}
+               />
+             )}
              <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl flex gap-1">
                 {viewMode === 'team-calendar' && (
                   <button 
@@ -305,7 +319,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                             {employeeStats.map((s, idx) => (
                                 <button 
                                     key={s.id} 
-                                    onClick={() => setSelectedEmpId(s.id)}
+                                    onClick={() => { setSelectedEmpId(s.id); setShowIndividualModal(true); }}
                                     className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all border ${
                                         selectedEmpId === s.id 
                                         ? 'bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-100 scale-[1.02]' 
@@ -592,6 +606,171 @@ const TeamMonthlyCalendar: React.FC<{
             )}
           </div>
         ))}
+      </div>
+    </div>
+  );
+};
+
+// ─── Individual Edit Modal ───────────────────────────────────────────────────
+
+const SHIFT_OPTIONS_MODAL = [
+  { value: 'T', label: 'T — Trabalho' },
+  { value: 'F', label: 'F — Folga' },
+  { value: 'C', label: 'C — Curso' },
+  { value: 'FE', label: 'FE — Férias' },
+];
+
+interface IndividualEditModalProps {
+  employee: Employee;
+  currentMY: MonthYear;
+  customHolidays: Holiday[];
+  getEffectiveShift: (emp: Employee, dayIdx: number) => ShiftType;
+  onUpdateShift?: (empId: string, dayIdx: number, newShift: ShiftType) => void;
+  onUpdateHour?: (empId: string, dayIdx: number, newHour: string) => void;
+  onClose: () => void;
+}
+
+const IndividualEditModal: React.FC<IndividualEditModalProps> = ({
+  employee, currentMY, customHolidays, getEffectiveShift,
+  onUpdateShift, onUpdateHour, onClose,
+}) => {
+  const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
+  const firstDayOfMonth = new Date(currentMY.year, currentMY.month, 1).getDay();
+  const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
+  const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
+  const canEdit = !!onUpdateShift;
+  const MONTH_NAMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+  const getHour = (dayIdx: number): string => {
+    const mh = (employee.dailyHours || {})[monthKey] || [];
+    return mh[dayIdx] || employee.workPeriod || '';
+  };
+
+  const getAvailHours = (dayIdx: number): string[] => {
+    const date = new Date(currentMY.year, currentMY.month, dayIdx + 1);
+    const ds = `${currentMY.year}-${String(currentMY.month+1).padStart(2,'0')}-${String(dayIdx+1).padStart(2,'0')}`;
+    if (holidaySet.has(ds)) return SHIFT_HOURS.HOLIDAY;
+    if (date.getDay() === 0) return SHIFT_HOURS.SUNDAY;
+    return SHIFT_HOURS.WEEKDAY;
+  };
+
+  type CellDay = { type: 'day'; day: number; dayIdx: number; shift: ShiftType; isHoliday: boolean; isSunday: boolean; isSaturday: boolean; hour: string };
+  type Cell = { type: 'empty' } | CellDay;
+  const cells: Cell[] = [];
+  for (let i = 0; i < firstDayOfMonth; i++) cells.push({ type: 'empty' });
+  for (let i = 1; i <= daysInMonth; i++) {
+    const dayIdx = i - 1;
+    const ds = `${currentMY.year}-${String(currentMY.month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+    const date = new Date(currentMY.year, currentMY.month, i);
+    cells.push({ type: 'day', day: i, dayIdx, shift: getEffectiveShift(employee, dayIdx),
+      isHoliday: holidaySet.has(ds), isSunday: date.getDay()===0, isSaturday: date.getDay()===6, hour: getHour(dayIdx) });
+  }
+
+  const shiftBg = (s: ShiftType) => {
+    if (s==='T') return 'bg-sky-600';
+    if (s==='F') return 'bg-orange-500';
+    if (s?.startsWith('FF')) return 'bg-red-500';
+    if (s==='C') return 'bg-teal-500';
+    if (s==='FE') return 'bg-indigo-600';
+    return 'bg-slate-300';
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] w-full max-w-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[92vh] overflow-hidden">
+        <div className="px-8 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 z-10">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black text-lg uppercase shadow-sm">
+              {employee.name.substring(0,2)}
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">{employee.name}</h3>
+              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                Calendário Individual — {MONTH_NAMES[currentMY.month]} {currentMY.year}
+                {canEdit && <span className="ml-2 text-indigo-500">• Clique para editar</span>}
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+            <Icon name="close" className="text-slate-400 dark:text-slate-500" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-50/40 dark:bg-slate-900/30 custom-scrollbar">
+          <div className="grid grid-cols-7 gap-1.5 mb-2">
+            {WEEKDAY_NAMES.map(wd => (
+              <div key={wd} className="text-center text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase">{wd.substring(0,3)}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1.5">
+            {cells.map((cell, idx) => {
+              if (cell.type === 'empty') return <div key={idx} style={{minHeight:'70px'}} />;
+              const { day, dayIdx, shift, isHoliday, isSunday, isSaturday, hour } = cell;
+              const availH = getAvailHours(dayIdx);
+              return (
+                <div
+                  key={idx}
+                  style={{ minHeight: '70px' }}
+                  className={`rounded-xl border flex flex-col items-center justify-start pt-1 gap-0.5 p-1 relative ${
+                    isHoliday ? 'border-rose-300 bg-rose-50/70 dark:border-rose-900/50 dark:bg-rose-900/10' :
+                    isSunday  ? 'border-orange-300 bg-orange-50/70 dark:border-orange-900/50 dark:bg-orange-900/10' :
+                    isSaturday? 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/30' :
+                    'border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900'
+                  }`}
+                >
+                  <span className={`text-[8px] font-black self-start pl-0.5 ${isHoliday?'text-rose-400':isSunday?'text-orange-400':'text-slate-400 dark:text-slate-500'}`}>{day}</span>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-extrabold text-white shadow-sm ${shiftBg(shift)}`}>
+                    {shift?.split(' ')[0]}
+                  </div>
+                  {canEdit && (
+                    <select
+                      value={shift}
+                      onChange={e => onUpdateShift!(employee.id, dayIdx, e.target.value as ShiftType)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    >
+                      {SHIFT_OPTIONS_MODAL.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      {shift?.startsWith('FF ') && <option value={shift}>{shift}</option>}
+                    </select>
+                  )}
+                  {(shift==='T'||shift==='C') && (
+                    <div className="w-full px-0.5 relative z-20" onClick={e=>e.stopPropagation()}>
+                      {canEdit && onUpdateHour ? (
+                        <select
+                          value={hour}
+                          onChange={e=>onUpdateHour!(employee.id, dayIdx, e.target.value)}
+                          onClick={e=>e.stopPropagation()}
+                          className="w-full text-[7px] font-bold text-slate-500 dark:text-slate-400 bg-transparent border-none outline-none text-center cursor-pointer"
+                        >
+                          {availH.map(h=><option key={h} value={h}>{h}</option>)}
+                          {hour && !availH.includes(hour) && <option value={hour}>{hour}</option>}
+                        </select>
+                      ) : (
+                        <span className="text-[7px] font-bold text-slate-400 block text-center truncate">{hour.split(' ')[0]}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {canEdit && (
+            <div className="mt-4 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 flex flex-wrap gap-3 items-center justify-center">
+              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest w-full text-center">Clique em qualquer dia para alterar o turno • Alterações refletem na tabela principal</p>
+              {SHIFT_OPTIONS_MODAL.map(o => (
+                <div key={o.value} className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
+                  <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[8px] font-black text-white ${shiftBg(o.value as ShiftType)}`}>{o.value}</div>
+                  {o.label.split('—')[1]?.trim()}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="px-8 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end bg-white dark:bg-slate-900">
+          <button onClick={onClose} className="px-8 py-2.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-black rounded-2xl hover:bg-indigo-600 dark:hover:bg-white transition-all shadow-lg active:scale-95">
+            Fechar
+          </button>
+        </div>
       </div>
     </div>
   );

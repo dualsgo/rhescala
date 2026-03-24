@@ -507,6 +507,8 @@ const App: React.FC = () => {
               currentMY={currentMY}
               customHolidays={customHolidays}
               onClose={() => setCurrentView('grid')}
+              onUpdateShift={updateShift}
+              onUpdateHour={updateEmployeeDailyHour}
             />
         ) : currentView === 'team' ? (
           <div className="animate-fade-in">

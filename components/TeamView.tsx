@@ -188,13 +188,23 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">Horário Base</label>
-                  <input
-                    type="text"
+                  <select
                     value={emp.workPeriod}
                     onChange={(e) => onUpdateEmployee(emp.id, { workPeriod: e.target.value })}
-                    placeholder="ex: 10:00 às 18:20"
                     className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-xl px-3 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
-                  />
+                  >
+                    {emp.isYoungApprentice ? (
+                      <option value={APPRENTICE_WORK_PERIOD}>{APPRENTICE_WORK_PERIOD}</option>
+                    ) : (
+                      SHIFT_HOURS.WEEKDAY.map(h => (
+                        <option key={h} value={h}>{h}</option>
+                      ))
+                    )}
+                    {/* Fallback: se o horário cadastrado não está na lista padrão, mostra ele mesmo */}
+                    {!emp.isYoungApprentice && !SHIFT_HOURS.WEEKDAY.includes(emp.workPeriod) && emp.workPeriod && (
+                      <option value={emp.workPeriod}>{emp.workPeriod}</option>
+                    )}
+                  </select>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">Folga Fixa</label>
