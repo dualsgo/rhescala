@@ -21,6 +21,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
   const [viewMode, setViewMode] = useState<'insights' | 'team-calendar'>('insights');
   const [selectedEmpId, setSelectedEmpId] = useState<string | null>(employees.filter(e => !e.isHidden && e.status === 'active')[0]?.id || null);
   const [showIndividualModal, setShowIndividualModal] = useState(false);
+  const [showMiniCalendar, setShowMiniCalendar] = useState(true);
   
   const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
@@ -200,13 +201,13 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                 )}
                 <button 
                   onClick={() => setViewMode('insights')}
-                  className={`px-6 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${viewMode === 'insights' ? 'bg-white  shadow-sm text-indigo-600  : 'text-slate-500 }`}
+                  className={`px-6 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${viewMode === 'insights' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
                 >
                   <Icon name="analytics" className="text-sm" /> Insights
                 </button>
                 <button 
                   onClick={() => setViewMode('team-calendar')}
-                  className={`px-6 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${viewMode === 'team-calendar' ? 'bg-white  shadow-sm text-indigo-600  : 'text-slate-500 }`}
+                  className={`px-6 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${viewMode === 'team-calendar' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
                 >
                   <Icon name="calendar_view_month" className="text-sm" /> Escala Geral
                 </button>
@@ -281,6 +282,11 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                                 getEffectiveShift={getEffectiveShift}
                             />
                         )}
+                        {!selectedEmployee && (
+                          <div className="flex items-center justify-center h-40 text-slate-300">
+                            <p className="text-sm font-bold">Selecione um colaborador no ranking →</p>
+                          </div>
+                        )}
                     </div>
 
                     <div className="mt-6 grid grid-cols-2 gap-4 pt-6 border-t border-slate-100 ">
@@ -311,15 +317,25 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                 {/* Middle/Right: Overload Ranking with Click Interaction */}
                 <div className="lg:col-span-12 xl:col-span-7 flex flex-col gap-6">
                    <div className="bg-white  rounded-[2rem] border border-slate-200  p-8 shadow-sm flex flex-col max-h-[600px] transition-colors">
-                        <div className="mb-6">
-                            <h3 className="text-lg font-black text-slate-800 ">Ranking de Escala</h3>
-                            <p className="text-xs font-bold text-slate-400 ">Clique no colaborador para ver o calendário individual</p>
+                        <div className="mb-6 flex items-center justify-between">
+                            <div>
+                              <h3 className="text-lg font-black text-slate-800">Ranking de Escala</h3>
+                              <p className="text-xs font-bold text-slate-400">Clique para ver o calendário individual</p>
+                            </div>
+                            {selectedEmployee && onUpdateShift && (
+                              <button
+                                onClick={() => setShowIndividualModal(true)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-black rounded-lg hover:bg-indigo-700 transition-all"
+                              >
+                                <Icon name="edit" className="text-xs" /> Editar Escala
+                              </button>
+                            )}
                         </div>
                         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
                             {employeeStats.map((s, idx) => (
                                 <button 
                                     key={s.id} 
-                                    onClick={() => { setSelectedEmpId(s.id); setShowIndividualModal(true); }}
+                                    onClick={() => { setSelectedEmpId(s.id); }}
                                     className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all border ${
                                         selectedEmpId === s.id 
                                         ? 'bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-100 scale-[1.02]' 
@@ -332,14 +348,14 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                                         {idx + 1}
                                     </div>
                                     <div className="flex-1 text-left min-w-0">
-                                        <p className={`text-xs font-black uppercase truncate ${selectedEmpId === s.id ? 'text-white' : 'text-slate-900 }`}>
+                                        <p className={`text-xs font-black uppercase truncate ${selectedEmpId === s.id ? 'text-white' : 'text-slate-900'}`}>
                                             {s.name}
                                         </p>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${selectedEmpId === s.id ? 'bg-white/20' : 'bg-slate-200 }`}>
-                                                <div className={`h-full rounded-full ${s.isHeavy ? 'bg-rose-400' : 'bg-indigo-400 }`} style={{ width: `${(s.worked / daysInMonth) * 100}%` }}></div>
+                                            <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${selectedEmpId === s.id ? 'bg-white/20' : 'bg-slate-200'}`}>
+                                                <div className={`h-full rounded-full ${s.isHeavy ? 'bg-rose-400' : 'bg-indigo-400'}`} style={{ width: `${(s.worked / daysInMonth) * 100}%` }}></div>
                                             </div>
-                                            <span className={`text-[9px] font-black shrink-0 ${selectedEmpId === s.id ? 'text-white/80' : 'text-slate-500 }`}>
+                                            <span className={`text-[9px] font-black shrink-0 ${selectedEmpId === s.id ? 'text-white/80' : 'text-slate-500'}`}>
                                                 {s.worked}d • {s.sundaysWorked}D
                                             </span>
                                         </div>
@@ -369,9 +385,9 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                             {dailyCoverage.map(c => (
                                 <div 
                                     key={c.day}
-                                    className={`w-8 h-8 flex flex-col items-center justify-center rounded-lg border text-[9px] font-black transition-all ${
-                                        c.total < 6 ? 'bg-rose-50  border-rose-200  text-rose-600  : 'bg-indigo-50  border-indigo-100  text-indigo-600 
-                                    }`}
+                                        className={`w-8 h-8 flex flex-col items-center justify-center rounded-lg border text-[9px] font-black transition-all ${
+                                            c.total < 6 ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-indigo-50 border-indigo-100 text-indigo-600'
+                                        }`}
                                 >
                                     {c.total}
                                 </div>
@@ -438,18 +454,18 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
 };
 
  const InsightCard: React.FC<{ label: string, value: string, icon: any, color: any, description: string, urgent?: boolean }> = ({ label, value, icon, color, description, urgent }) => (
-  <div className={`bg-white  border rounded-3xl p-6 shadow-sm flex items-center gap-5 transition-all hover:translate-y-[-4px] hover:shadow-md ${urgent ? 'border-rose-300  ring-2 ring-rose-50  : 'border-slate-100 }`}>
+  <div className={`bg-white border rounded-3xl p-6 shadow-sm flex items-center gap-5 transition-all hover:translate-y-[-4px] hover:shadow-md ${urgent ? 'border-rose-300 ring-2 ring-rose-50' : 'border-slate-100'}`}>
      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
-       color === 'indigo' ? 'bg-indigo-50  text-indigo-600  : 
-       color === 'rose' ? 'bg-rose-50  text-rose-600  : 
-       color === 'amber' ? 'bg-amber-50  text-amber-600  : 'bg-sky-50  text-sky-600 
+       color === 'indigo' ? 'bg-indigo-50 text-indigo-600' : 
+       color === 'rose' ? 'bg-rose-50 text-rose-600' : 
+       color === 'amber' ? 'bg-amber-50 text-amber-600' : 'bg-sky-50 text-sky-600'
      }`}>
         <Icon name={icon} className="text-xl" />
      </div>
      <div className="min-w-0">
-        <p className="text-[9px] font-black text-slate-400  uppercase tracking-widest mb-0.5">{label}</p>
-        <h4 className={`text-xl font-black ${urgent ? 'text-rose-600  : 'text-slate-900 } leading-none`}>{value}</h4>
-        <p className="text-[9px] font-bold text-slate-400  truncate">{description}</p>
+        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
+        <h4 className={`text-xl font-black ${urgent ? 'text-rose-600' : 'text-slate-900'} leading-none`}>{value}</h4>
+        <p className="text-[9px] font-bold text-slate-400 truncate">{description}</p>
      </div>
   </div>
 );
@@ -510,9 +526,9 @@ const IndividualWeeklyCalendar: React.FC<{
                                 : cell.isCourse
                                 ? 'bg-teal-500  border-teal-600  text-white shadow-sm'
                                 : cell.isVacation
-                                ? 'bg-indigo-100  border-indigo-200  text-indigo-600 
-                                : cell.isHoliday ? 'bg-amber-50  border-amber-200  text-amber-600  
-                                : 'bg-slate-50  border-slate-100  text-slate-400 
+                                ? 'bg-indigo-100 border-indigo-200 text-indigo-600'
+                                : cell.isHoliday ? 'bg-amber-50 border-amber-200 text-amber-600'
+                                : 'bg-slate-50 border-slate-100 text-slate-400'
                             }`}
                         >
                             <span className={`text-[8px] font-black absolute top-1 left-1 ${cell.shift === 'T' || cell.isCourse ? 'text-white/80' : 'text-slate-500'}`}>{cell.day}</span>
@@ -583,7 +599,7 @@ const TeamMonthlyCalendar: React.FC<{
       </div>
       <div className="grid grid-cols-7 gap-4 print:gap-1">
         {cells.map((cell, idx) => (
-          <div key={idx} className={`min-h-[160px] print:min-h-0 rounded-[2rem] print:rounded-lg border p-5 print:p-2 flex flex-col gap-1.5 print:gap-1 transition-all ${cell.type === 'empty' ? 'border-transparent' : 'bg-white  border-slate-100 }`}>
+          <div key={idx} className={`min-h-[160px] print:min-h-0 rounded-[2rem] print:rounded-lg border p-5 print:p-2 flex flex-col gap-1.5 print:gap-1 transition-all ${cell.type === 'empty' ? 'border-transparent' : 'bg-white border-slate-100'}`}>
             {cell.type === 'day' && (
               <>
                 <div className="flex justify-between items-start mb-3 print:mb-1">
@@ -712,13 +728,13 @@ const IndividualEditModal: React.FC<IndividualEditModalProps> = ({
                   key={idx}
                   style={{ minHeight: '70px' }}
                   className={`rounded-xl border flex flex-col items-center justify-start pt-1 gap-0.5 p-1 relative ${
-                    isHoliday ? 'border-rose-300 bg-rose-50/70   :
-                    isSunday  ? 'border-orange-300 bg-orange-50/70   :
-                    isSaturday? 'border-slate-200 bg-slate-50   :
-                    'border-slate-100 bg-white  
+                    isHoliday ? 'border-rose-300 bg-rose-50/70' :
+                    isSunday  ? 'border-orange-300 bg-orange-50/70' :
+                    isSaturday? 'border-slate-200 bg-slate-50' :
+                    'border-slate-100 bg-white'
                   }`}
                 >
-                  <span className={`text-[8px] font-black self-start pl-0.5 ${isHoliday?'text-rose-400':isSunday?'text-orange-400':'text-slate-400 }`}>{day}</span>
+                  <span className={`text-[8px] font-black self-start pl-0.5 ${isHoliday?'text-rose-400':isSunday?'text-orange-400':'text-slate-400'}`}>{day}</span>
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-extrabold text-white shadow-sm ${shiftBg(shift)}`}>
                     {shift?.split(' ')[0]}
                   </div>

@@ -120,16 +120,16 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
                   {items.map((h: any) => (
                     <div key={h.id} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
                       h.isNational 
-                        ? 'bg-rose-50/50  border-rose-100  
-                        : 'bg-white  border-slate-100 
+                        ? 'bg-rose-50/50 border-rose-100'
+                        : 'bg-white border-slate-100'
                     }`}>
                       <div className="flex items-center gap-4">
-                        <div className={`text-lg font-black ${h.isNational ? 'text-rose-600  : 'text-slate-900 }`}>
+                        <div className={`text-lg font-black ${h.isNational ? 'text-rose-600' : 'text-slate-900'}`}>
                           {formatDate(h.date)}
                         </div>
                         <div>
                           <p className="text-xs font-black text-slate-900  uppercase tracking-tight leading-none mb-1">{h.name}</p>
-                          <p className={`text-[8px] font-black uppercase tracking-widest ${h.isNational ? 'text-rose-400' : 'text-slate-400 }`}>
+                          <p className={`text-[8px] font-black uppercase tracking-widest ${h.isNational ? 'text-rose-400' : 'text-slate-400'}`}>
                             {h.isNational ? '🇧🇷 Feriado Nacional' : '🏙 Feriado Local'}
                           </p>
                         </div>

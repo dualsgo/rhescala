@@ -654,21 +654,43 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 <th
                   key={day.num}
                   onClick={() => onOpenDayDetail(day.originalIdx)}
-                  title={day.holidayName || undefined}
-                  className={`p-1.5 text-center min-w-[60px] w-[60px] cursor-pointer transition-colors relative border-r border-b border-slate-100/50 dark:border-slate-700/80 ${
-                    selectedDayIdx === day.originalIdx ? 'bg-orange-100/50 dark:bg-orange-900/20 ring-2 ring-inset ring-orange-400' : ''
-                  } ${
-                    day.isHoliday ? 'bg-rose-100/80 dark:bg-rose-900/20' : day.isSunday ? 'bg-orange-100/60 dark:bg-orange-900/10' : day.isSaturday ? 'bg-slate-100/80 dark:bg-slate-800/50' : ''
+                  title={day.isHoliday ? `🗓️ Feriado: ${day.holidayName || 'Feriado'} — clique para ver escala do dia` : day.isSunday ? '🌅 Domingo — clique para ver a escala deste dia' : `Dia ${day.num} — clique para ver a escala`}
+                  className={`p-1.5 text-center min-w-[60px] w-[60px] cursor-pointer transition-all hover:brightness-95 relative border-r border-b ${
+                    selectedDayIdx === day.originalIdx
+                      ? 'bg-orange-200 dark:bg-orange-900/40 ring-2 ring-inset ring-orange-500 border-orange-300'
+                      : day.isHoliday
+                      ? 'bg-rose-200/90 dark:bg-rose-900/40 border-rose-300 dark:border-rose-800'
+                      : day.isSunday
+                      ? 'bg-orange-200/80 dark:bg-orange-900/30 border-orange-300 dark:border-orange-800'
+                      : day.isSaturday
+                      ? 'bg-slate-200/80 dark:bg-slate-800/60 border-slate-300 dark:border-slate-700'
+                      : 'border-slate-100/50 dark:border-slate-700/80'
                   }`}
                 >
-                  {(day.isSunday || day.isHoliday) && <div className={`absolute inset-0 border-2 pointer-events-none opacity-40 ${day.isHoliday ? 'border-rose-400' : 'border-orange-400'}`}></div>}
-                  {day.isHoliday && <div className="absolute top-0 right-0 w-0 h-0 border-t-[8px] border-r-[8px] border-t-rose-500 border-r-transparent" title={day.holidayName || ''}></div>}
+                  {(day.isSunday || day.isHoliday) && (
+                    <div className={`absolute inset-0 border-l-4 pointer-events-none ${
+                      day.isHoliday ? 'border-l-rose-500' : 'border-l-orange-400'
+                    }`}></div>
+                  )}
+                  {day.isHoliday && (
+                    <div
+                      className="absolute top-0 right-0 w-0 h-0 border-t-[10px] border-r-[10px] border-t-rose-500 border-r-transparent"
+                    ></div>
+                  )}
                   <div className={`text-sm font-extrabold ${
-                    day.isHoliday ? 'text-rose-600 dark:text-rose-400' : day.isSunday ? 'text-orange-600 dark:text-orange-400' : day.isSaturday ? 'text-slate-500 dark:text-slate-400' : 'text-slate-900 dark:text-slate-100'
+                    day.isHoliday
+                      ? 'text-rose-700 dark:text-rose-300'
+                      : day.isSunday
+                      ? 'text-orange-700 dark:text-orange-300'
+                      : day.isSaturday
+                      ? 'text-slate-600 dark:text-slate-300'
+                      : 'text-slate-900 dark:text-slate-100'
                   }`}>{day.num}</div>
-                  <div className="text-[9px] font-bold opacity-60">{day.weekday}</div>
+                  <div className={`text-[9px] font-black ${
+                    day.isHoliday ? 'text-rose-600 dark:text-rose-400 opacity-80' : day.isSunday ? 'text-orange-600 dark:text-orange-400 opacity-80' : 'opacity-60'
+                  }`}>{day.weekday}</div>
                   {day.isHoliday && day.holidayName && (
-                    <div className="text-[7px] font-extrabold text-rose-500 leading-tight mt-0.5 truncate max-w-[56px] mx-auto" title={day.holidayName}>
+                    <div className="text-[6px] font-extrabold text-rose-600 dark:text-rose-400 leading-tight mt-0.5 truncate max-w-[56px] mx-auto bg-rose-100 dark:bg-rose-900/30 rounded px-0.5">
                       {day.holidayName.split(' ').slice(0, 2).join(' ')}
                     </div>
                   )}
@@ -714,11 +736,18 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     <td 
                       key={day.num} 
                       onClick={() => handleCellClick(emp.id, day.originalIdx)}
+                      title={day.isHoliday && day.holidayName ? `🗓️ Feriado: ${day.holidayName}` : undefined}
                       className={`p-2 text-center relative border-r border-slate-100/50 transition-all ${
-                        isEditable && !isLocked && shift !== 'FE' ? 'cursor-pointer hover:bg-slate-100' : 'cursor-default'
-                      } ${selectedDayIdx === day.originalIdx ? 'bg-orange-50/50' : ''} ${
-                        day.isHoliday ? 'bg-rose-50/40' : day.isSunday ? 'bg-orange-50/30' : ''
-                      } ${is6x1Inconsistency(emp, day.originalIdx) ? 'bg-red-50' : ''}`}
+                        isEditable && !isLocked && shift !== 'FE' ? 'cursor-pointer hover:brightness-95' : 'cursor-default'
+                      } ${selectedDayIdx === day.originalIdx ? 'bg-orange-100/70 dark:bg-orange-900/20' : ''} ${
+                        is6x1Inconsistency(emp, day.originalIdx)
+                          ? 'bg-red-50 dark:bg-red-900/10'
+                          : day.isHoliday
+                          ? 'bg-rose-100/60 dark:bg-rose-900/20'
+                          : day.isSunday
+                          ? 'bg-orange-100/50 dark:bg-orange-900/10'
+                          : ''
+                      }`}
                     >
                       {(day.isSunday || day.isHoliday) && <div className={`absolute inset-y-0 left-0 right-0 border-x-2 pointer-events-none opacity-20 ${day.isHoliday ? 'border-rose-400' : 'border-orange-400'}`}></div>}
                       
