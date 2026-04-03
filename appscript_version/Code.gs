@@ -1,5 +1,5 @@
 /**
- * Backend do Google Apps Script para Gestão de Escala
+ * Backend do Google Apps Script para Gestão de Escala - Ri Happy
  * Este script deve ser copiado para o arquivo Code.gs no editor do GAS.
  */
 
@@ -9,7 +9,7 @@ function doGet() {
   console.log('Web App acessada');
   try {
     const output = HtmlService.createHtmlOutputFromFile('Index');
-    output.setTitle('Gestão de Escala')
+    output.setTitle('Gestão de Escala - Ri Happy')
           .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
           .addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
     return output;
