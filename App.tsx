@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { useDialog } from './contexts/DialogContext';
-import { useLocalStorage, useLocalPreference } from './hooks/useLocalStorage';
+import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
 import { generateYearSchedule, applyMonthUpdate } from './hooks/useScheduleEngine';
 import { Header } from './components/Header';
 import { Icon } from './components/Icon';
@@ -19,6 +19,7 @@ const CURRENT_YEAR = new Date().getFullYear(); // 2026
 const App: React.FC = () => {
   const [employees, setEmployees, forceSyncEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', [PLACEHOLDER_EMPLOYEE]);
   const [customHolidays, setCustomHolidays, forceSyncHolidays] = useLocalStorage<Holiday[]>('riHappyCustomHolidays', []);
+  const syncStatus = useSyncStatus();
   const [showHolidayManager, setShowHolidayManager] = useState(false);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -47,10 +48,10 @@ const App: React.FC = () => {
     const handleConflict = async (e: any) => {
       const { resolve } = e.detail;
       const choice = await showDialog({
-        title: '⚠️ Conflito de Sincronização Encontrado',
-        message: 'A nuvem contém uma versão mais recente que a sua (provavelmente feita em outro dispositivo), MAS você também fez alterações locais que não foram enviadas.\n\nQual versão você deseja manter?',
-        confirmText: 'Baixar da Nuvem (Descartar Local)',
-        cancelText: 'Manter Local (Sobrescrever Nuvem)',
+        title: '⚠️ Conflito de Sincronização',
+        message: 'A planilha contém uma versão mais recente que a sua (provavelmente feita em outro dispositivo), MAS você também fez alterações locais que não foram enviadas.\n\nQual versão você deseja manter?',
+        confirmText: 'Baixar da Planilha (Descartar Local)',
+        cancelText: 'Manter Local (Sobrescrever Planilha)',
         type: 'confirm'
       });
       resolve(choice === true);
@@ -60,8 +61,8 @@ const App: React.FC = () => {
       if (e.detail.key !== 'riHappyEmployeesData') return;
       
       const choice = await showDialog({
-        title: '⚠️ Nuvem Desconectada',
-        message: 'A sincronização falhou após várias tentativas. Não se preocupe, seus dados estão SALVOS NO SEU NAVEGADOR atual (não foram perdidos!).\n\nPorém, por segurança, sugerimos que baixe um arquivo de Backup.',
+        title: '⚠️ Planilha Offline',
+        message: 'A sincronização falhou após várias tentativas. Seus dados estão SALVOS NO SEU NAVEGADOR atual (não foram perdidos!).\n\nPor favor, baixe um backup para segurança e verifique sua conexão.',
         confirmText: 'Baixar Arquivo de Backup',
         cancelText: 'Deixar Apenas no Navegador',
         type: 'confirm'
@@ -543,6 +544,37 @@ const App: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Hidden File Input for Backup Import */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleImportBackup}
+        style={{ display: 'none' }}
+        accept=".json"
+      />
+
+      {/* Global Sync Indicator */}
+      {syncStatus.state === 'syncing' && (
+        <div className="fixed bottom-6 right-6 z-[200] animate-fade-in">
+          <div className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-700/50 dark:border-slate-200">
+            <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+            <div className="flex flex-col">
+              <span className="text-[11px] font-black uppercase tracking-widest">Salvando na Planilha</span>
+              <span className="text-[9px] font-bold opacity-60">Não feche a página agora</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {syncStatus.state === 'synced' && syncStatus.history.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-[200] pointer-events-none">
+           <div className="bg-emerald-500 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-fade-out" style={{ animationDelay: '3000ms' }}>
+             <Icon name="check_circle" className="text-xl" fill />
+             <span className="text-[11px] font-black uppercase tracking-widest">Dados Sincronizados</span>
+           </div>
+        </div>
+      )}
     </div>
   );
 };
