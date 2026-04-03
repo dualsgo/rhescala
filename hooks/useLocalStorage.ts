@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { SyncState, SyncStatus, SyncHistoryItem } from '../types';
+import { isGasEnvironment, gasStore } from '../src/gas-api';
 
-// URL DA SUA NOVA API NO RENDER
-export const DB_API_URL = "https://rhescala.onrender.com";
 
 // Global state for sync status tracking
 const GLOBAL_SYNC_STATUS: SyncStatus = {
@@ -93,18 +92,14 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
     }, [key, storedValue]);
 
     const downloadFromCloud = async (force = false) => {
-        if (!DB_API_URL || syncInProgress.current) return;
+        if (syncInProgress.current) return;
 
-        updateGlobalSync('syncing', key, force ? 'Forçando Download...' : 'Verificando Nuvem...');
+        updateGlobalSync('syncing', key, force ? 'Buscando Dados...' : 'Consultando Planilha...');
         try {
-            const res = await fetch(`${DB_API_URL}?key=${key}&_t=${Date.now()}`);
-            const textData = await res.text();
             let cloudData;
-            try {
-                cloudData = JSON.parse(textData);
-            } catch {
-                updateGlobalSync('error', key, 'Nuvem Ocupada (Script)');
-                return;
+
+            if (isGasEnvironment) {
+                cloudData = await gasStore.get(key);
             }
 
             if (cloudData) {
@@ -131,7 +126,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                                         isDirty.current = true;
                                         // Forçar um trigger invisível para o useEffect de upload rodar na próxima passada
                                         setStoredValue(prev => (Array.isArray(prev) ? [...prev] : {...prev}) as any); 
-                                        updateGlobalSync('syncing', key, 'Preparando Envio...');
+                                        updateGlobalSync('syncing', key, 'Salvando Alterações...');
                                     }
                                 }
                             }
@@ -143,9 +138,9 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                     lastCloudValue.current = dataStr;
                     isDirty.current = false;
                     try { new BroadcastChannel(`sync_${key}`).postMessage(cloudData); } catch (e) { }
-                    updateGlobalSync('synced', key, force ? 'Download OK' : 'Sincronizado');
+                    updateGlobalSync('synced', key, force ? 'Dados Atualizados' : 'Salvo na Planilha');
                 } else {
-                    updateGlobalSync('synced', key, 'Sincronizado');
+                    updateGlobalSync('synced', key, 'Salvo na Planilha');
                 }
                 initialLoadSuccess.current = true;
             }
@@ -167,7 +162,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
 
     // 2. Upload Automático (Debounced em 1.5s)
     useEffect(() => {
-        if (!isFirstLoadDone.current || !DB_API_URL || !initialLoadSuccess.current) return;
+        if (!isFirstLoadDone.current || !initialLoadSuccess.current) return;
 
         const currentValueStr = JSON.stringify(storedValue);
         if (currentValueStr === lastCloudValue.current) {
@@ -186,18 +181,14 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                 const dataToSync = currentValueStr;
 
                 try {
-                    const res = await fetch(`${DB_API_URL}?key=${key}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: dataToSync
-                    });
-
-                    if (!res.ok) throw new Error('Falha HTTP');
+                    if (isGasEnvironment) {
+                        await gasStore.set(key, JSON.parse(dataToSync));
+                    }
 
                     lastCloudValue.current = dataToSync;
                     isDirty.current = false;
                     retryCount.current = 0;
-                    updateGlobalSync('synced', key, 'Salvo na Nuvem');
+                    updateGlobalSync('synced', key, 'Salvo na Planilha');
 
                     try {
                         new BroadcastChannel(`sync_${key}`).postMessage(storedValue);

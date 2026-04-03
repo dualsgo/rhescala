@@ -1,7 +1,6 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Holiday } from '../types';
-import { getNationalHolidays } from '../constants';
 import { Icon } from './Icon';
 
 interface HolidayManagerProps {
@@ -12,139 +11,63 @@ interface HolidayManagerProps {
   onClose: () => void;
 }
 
-const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-                 'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+export const HolidayManager: React.FC<HolidayManagerProps> = ({ year, customHolidays, onAdd, onRemove, onClose }) => {
+  const [name, setName] = useState('');
+  const [date, setDate] = useState('');
 
-export const HolidayManager: React.FC<HolidayManagerProps> = ({
-  year, customHolidays, onAdd, onRemove, onClose,
-}) => {
-  const [newDate, setNewDate] = useState('');
-  const [newName, setNewName] = useState('');
-  const [newType, setNewType] = useState<'state' | 'municipal'>('state');
-
-  const nationals = useMemo(() => getNationalHolidays(year), [year]);
-
-  const allHolidays = useMemo(() => {
-    return [
-      ...nationals.map(h => ({ ...h, isNational: true })),
-      ...customHolidays.map(h => ({ ...h, isNational: false })),
-    ].sort((a, b) => a.date.localeCompare(b.date));
-  }, [nationals, customHolidays]);
-
-  const grouped = useMemo(() => {
-    return MONTHS.map((monthName, mi) => {
-      const prefix = `${year}-${String(mi + 1).padStart(2, '0')}`;
-      return {
-        monthName,
-        items: allHolidays.filter(h => h.date && h.date.startsWith(prefix)),
-      };
-    }).filter(g => g.items.length > 0);
-  }, [allHolidays, year]);
-
-  const handleAdd = () => {
-    if (!newDate || !newName.trim()) return;
-    onAdd({ date: newDate, name: newName.trim(), type: newType, recurring: false });
-    setNewDate('');
-    setNewName('');
-  };
-
-  const formatDate = (dateStr: string) => {
-    const [, , day] = dateStr.split('-');
-    return day;
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name && date) {
+      onAdd({ name: name.toUpperCase(), date });
+      setName('');
+      setDate('');
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh]">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-xl flex items-center justify-center">
-              <Icon name="event_busy" className="text-xl" fill />
-            </div>
-            <div>
-              <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">Feriados {year}</h3>
-              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Gestão de Datas Não-Ativas</p>
-            </div>
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-slate-200">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h4 className="text-xl font-black text-slate-800 uppercase tracking-tight">Gestão de Feriados</h4>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Ano de {year}</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all text-slate-400">
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
             <Icon name="close" />
           </button>
         </div>
 
-        {/* Add Form */}
-        <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-3">
-                <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">Novo Feriado Local</label>
-                    <input
-                      type="text"
-                      value={newName}
-                      onChange={e => setNewName(e.target.value)}
-                      placeholder="Título do Feriado"
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-rose-500/20 transition-all outline-none"
-                    />
-                </div>
-                <div className="flex gap-2">
-                    <input
-                      type="date"
-                      value={newDate}
-                      onChange={e => setNewDate(e.target.value)}
-                      className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-rose-500/20 transition-all outline-none"
-                    />
-                    <button
-                      onClick={handleAdd}
-                      disabled={!newName || !newDate}
-                      className="bg-rose-600 dark:bg-rose-700 text-white px-6 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-700 dark:hover:bg-rose-600 transition-all disabled:opacity-30 flex items-center gap-2 shadow-lg"
-                    >
-                      Salvar
-                    </button>
-                </div>
+        <form onSubmit={handleSubmit} className="space-y-4 mb-8">
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Nome do Feriado</label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold focus:ring-2 focus:ring-orange-500 outline-none uppercase text-xs" placeholder="Ex: ANIVERSÁRIO DA CIDADE" />
+            </div>
+            <div>
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Data</label>
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold focus:ring-2 focus:ring-orange-500 outline-none text-xs" />
             </div>
           </div>
-        </div>
+          <button type="submit" disabled={!name || !date} className="w-full bg-emerald-600 text-white font-black py-4 rounded-2xl shadow-xl hover:bg-emerald-700 transition-all uppercase tracking-widest text-[10px] disabled:opacity-50 active:scale-95">Adicionar Feriado</button>
+        </form>
 
-        {/* List */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-          {grouped.length === 0 ? (
-            <div className="text-center py-12 opacity-30 select-none">
-              <Icon name="event_available" className="text-5xl text-slate-300 dark:text-slate-600 mb-2" />
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Nenhum feriado registrado</p>
-            </div>
+        <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-2">
+          <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 border-b pb-2">Lista de Personalizados</h5>
+          {customHolidays.length === 0 ? (
+            <p className="text-[10px] text-slate-400 font-bold text-center py-4">Nenhum feriado personalizado cadastrado.</p>
           ) : (
-            grouped.map(({ monthName, items }) => (
-              <div key={monthName} className="space-y-3">
-                <h5 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{monthName}</h5>
-                <div className="grid grid-cols-1 gap-2">
-                  {items.map((h: any) => (
-                    <div key={h.id} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
-                      h.isNational 
-                        ? 'bg-rose-50/50 dark:bg-rose-900/10 border-rose-100 dark:border-rose-900/30' 
-                        : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700'
-                    }`}>
-                      <div className="flex items-center gap-4">
-                        <div className={`text-lg font-black ${h.isNational ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-100'}`}>
-                          {formatDate(h.date)}
-                        </div>
-                        <div>
-                          <p className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight leading-none mb-1">{h.name}</p>
-                          <p className={`text-[8px] font-black uppercase tracking-widest ${h.isNational ? 'text-rose-400' : 'text-slate-400 dark:text-slate-500'}`}>
-                            {h.isNational ? '🇧🇷 Feriado Nacional' : '🏙 Feriado Local'}
-                          </p>
-                        </div>
-                      </div>
-                      {!h.isNational && (
-                        <button
-                          onClick={() => onRemove(h.id)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-500 transition-all"
-                        >
-                          <Icon name="delete" className="text-sm" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
+            customHolidays.map(h => (
+              <div key={h.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group hover:border-orange-200 transition-all">
+                <div className="flex items-center gap-3">
+                   <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center font-black text-[10px]"><Icon name="event_busy" className="text-xs" /></div>
+                   <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-slate-900 uppercase leading-none">{h.name}</span>
+                      <span className="text-[9px] font-bold text-slate-400 mt-1">{h.date?.split('-').reverse().join('/')}</span>
+                   </div>
                 </div>
+                <button onClick={() => onRemove(h.id)} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+                  <Icon name="delete" className="text-sm" />
+                </button>
               </div>
             ))
           )}
