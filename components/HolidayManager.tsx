@@ -9,6 +9,7 @@ interface HolidayManagerProps {
   customHolidays: Holiday[];
   onAdd: (h: Omit<Holiday, 'id'>) => void;
   onRemove: (id: string) => void;
+  onReset?: () => void;
   onClose: () => void;
 }
 
@@ -16,7 +17,7 @@ const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 export const HolidayManager: React.FC<HolidayManagerProps> = ({
-  year, customHolidays, onAdd, onRemove, onClose,
+  year, customHolidays, onAdd, onRemove, onReset, onClose,
 }) => {
   const [newDate, setNewDate] = useState('');
   const [newName, setNewName] = useState('');
@@ -28,18 +29,42 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
     return [
       ...nationals.map(h => ({ ...h, isNational: true })),
       ...customHolidays.map(h => ({ ...h, isNational: false })),
-    ].sort((a, b) => a.date.localeCompare(b.date));
+    ].sort((a, b) => {
+        const d1 = a.date.length === 5 ? `0000-${a.date}` : a.date;
+        const d2 = b.date.length === 5 ? `0000-${b.date}` : b.date;
+        return d1.localeCompare(d2);
+    });
   }, [nationals, customHolidays]);
 
   const grouped = useMemo(() => {
-    return MONTHS.map((monthName, mi) => {
-      const prefix = `${year}-${String(mi + 1).padStart(2, '0')}`;
-      return {
-        monthName,
-        items: allHolidays.filter(h => h.date && h.date.startsWith(prefix)),
-      };
+    const list = MONTHS.map((monthName, mi) => {
+      const monthPrefix = `${String(mi + 1).padStart(2, '0')}-`;
+      
+      const items = allHolidays.filter(h => {
+        if (!h.date) return false;
+        // Se for MM-DD, checa o prefixo do mês
+        if (h.date.length === 5) return h.date.startsWith(monthPrefix);
+        // Se for YYYY-MM-DD, checa o prefixo do mês na posição correta
+        return h.date.includes(`-${monthPrefix}`);
+      });
+
+      return { monthName, items };
     }).filter(g => g.items.length > 0);
-  }, [allHolidays, year]);
+
+    // Adiciona feriados que não bateram em nenhum mês (formato inválido) ao final
+    const orphans = allHolidays.filter(h => {
+        if (!h.date) return true;
+        const parts = h.date.split('-');
+        return parts.length < 2;
+    });
+
+    if (orphans.length > 0) {
+        list.push({ monthName: 'Outros/Inválidos', items: orphans as any });
+    }
+
+    return list;
+  }, [allHolidays]);
+
 
   const handleAdd = () => {
     if (!newDate || !newName.trim()) return;
@@ -49,8 +74,9 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
   };
 
   const formatDate = (dateStr: string) => {
-    const [, , day] = dateStr.split('-');
-    return day;
+    if (dateStr.length === 5) return dateStr.split('-')[1]; // DD from MM-DD
+    const parts = dateStr.split('-');
+    return parts[2] || ''; // DD from YYYY-MM-DD
   };
 
   return (
@@ -67,9 +93,20 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
               <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Gestão de Datas Não-Ativas</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all text-slate-400">
-            <Icon name="close" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onReset && (
+              <button 
+                onClick={() => { if(confirm('Remover todos os feriados personalizados e manter apenas os nacionais?')) onReset(); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 text-[10px] font-black uppercase rounded-lg transition-all"
+                title="Restaurar padrões nacionais"
+              >
+                <Icon name="restore" className="text-sm" /> Limpar
+              </button>
+            )}
+            <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all text-slate-400">
+               <Icon name="close" />
+            </button>
+          </div>
         </div>
 
         {/* Add Form */}

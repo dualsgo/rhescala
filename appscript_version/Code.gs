@@ -3,7 +3,7 @@
  * Este script deve ser copiado para o arquivo Code.gs no editor do GAS.
  */
 
-// ─── SERVIDO DA WEB APP ──────────────────────────────────────────────────────
+// ─── SERVIDOR DA WEB APP ──────────────────────────────────────────────────────
 
 function doGet() {
   console.log('Web App acessada');
@@ -23,18 +23,31 @@ function doGet() {
 
 /**
  * Busca dados da Planilha por chave.
- * Os dados são armazenados na aba 'Database' em formato chave-valor.
+ * Os dados são armazenados na aba 'Database' em formato chave-valor (append-only log).
  */
 function getData(key) {
   console.log(`Buscando dados para chave: ${key}`);
   try {
     const sheet = getOrCreateSheet('Database');
-    const values = sheet.getDataRange().getValues();
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return null;
     
-    // Procura do fim para o início para pegar a versão mais recente
+    // Busca apenas as últimas 1000 linhas para performance
+    const lookback = Math.min(lastRow - 1, 1000);
+    const values = sheet.getRange(lastRow - lookback + 1, 1, lookback, 2).getValues();
+    
+    // Varre de baixo para cima para pegar a versão mais recente
     for (let i = values.length - 1; i >= 0; i--) {
       if (values[i][0] === key) {
-        return values[i][1];
+        let val = values[i][1];
+        if (typeof val === 'string' && (val.startsWith('{') || val.startsWith('['))) {
+          try {
+            return JSON.parse(val);
+          } catch(e) {
+            return val;
+          }
+        }
+        return val;
       }
     }
     return null;
@@ -44,12 +57,22 @@ function getData(key) {
   }
 }
 
-function setData(key, valueStr) {
+/**
+ * Salva dados na Planilha.
+ */
+function setData(key, value) {
+  const valueStr = typeof value === 'string' ? value : JSON.stringify(value);
   console.log(`Salvando dados para chave: ${key} (Tamanho: ${valueStr.length})`);
+  
   try {
     const sheet = getOrCreateSheet('Database');
-    // Sempre adiciona uma nova linha para manter histórico e evitar limite de caracteres da célula
     sheet.appendRow([key, valueStr, new Date()]);
+    
+    // Limpeza periódica: se a planilha estiver muito grande (ex: > 5000 linhas), limpamos duplicatas
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 5000) {
+      cleanupDatabase(sheet);
+    }
     return true;
   } catch (e) {
     console.error(`Erro ao salvar ${key}:`, e);
@@ -58,31 +81,75 @@ function setData(key, valueStr) {
 }
 
 /**
- * Helper para pegar ou criar a aba do banco de dados
+ * Especial: Salva log de alterações em aba separada para auditoria
+ */
+function saveChangeLog(logEntry) {
+  try {
+    const sheet = getOrCreateSheet('AuditLog');
+    sheet.appendRow([
+      new Date(),
+      logEntry.user || 'Desconhecido',
+      logEntry.action,
+      logEntry.details,
+      logEntry.type
+    ]);
+  } catch (e) {
+    console.error('Erro ao salvar log de auditoria:', e);
+  }
+}
+
+/**
+ * Remove registros antigos da tabela Database mantendo apenas o último de cada chave
+ */
+function cleanupDatabase(sheet) {
+  console.log('Iniciando limpeza do banco de dados...');
+  const values = sheet.getDataRange().getValues();
+  const latestData = {};
+  
+  // Mapeia a última ocorrência de cada chave
+  for (let i = 1; i < values.length; i++) {
+    const key = values[i][0];
+    latestData[key] = [values[i][0], values[i][1], values[i][2]];
+  }
+  
+  // Limpa tudo e reinsere apenas os mais recentes
+  sheet.clearContents();
+  sheet.appendRow(['Chave', 'Valor (JSON)', 'Última Atualização']);
+  const rowsToInsert = Object.values(latestData);
+  if (rowsToInsert.length > 0) {
+    sheet.getRange(2, 1, rowsToInsert.length, 3).setValues(rowsToInsert);
+  }
+  console.log('Limpeza concluída.');
+}
+
+
+/**
+ * Helper para pegar ou criar uma aba
  */
 function getOrCreateSheet(sheetName) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(sheetName);
   if (!sheet) {
     sheet = ss.insertSheet(sheetName);
-    sheet.appendRow(['Chave', 'Valor (JSON)', 'Última Atualização']);
-    sheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#f3f3f3');
-    // Esconder a aba do usuário casual para evitar edições manuais
-    // sheet.hideSheet(); 
+    if (sheetName === 'Database') {
+      sheet.appendRow(['Chave', 'Valor (JSON)', 'Última Atualização']);
+    } else if (sheetName === 'AuditLog') {
+      sheet.appendRow(['Data/Hora', 'Usuário', 'Ação', 'Detalhes', 'Tipo']);
+    }
+    sheet.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#f3f3f3');
   }
   return sheet;
 }
 
 /**
  * Funções auxiliares para incluir arquivos HTML (CSS/JS) se não estiverem inlined
- * (Embora estejamos usando o vite-plugin-singlefile, mantemos por segurança)
  */
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
 /**
- * LOGS (Opcional)
+ * LOGS genéricos
  */
 function logToSheet(message) {
   const sheet = getOrCreateSheet('Logs');

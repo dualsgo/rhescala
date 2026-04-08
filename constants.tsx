@@ -97,8 +97,28 @@ export function buildHolidaySet(
   customHolidays: Holiday[] = []
 ): Set<string> {
   const nationals = getNationalHolidays(year);
-  const allHolidays = [...nationals, ...customHolidays];
-  return new Set(allHolidays.map(h => h.date).filter(Boolean));
+  const result = new Set<string>();
+
+  // Use a local helper to handle MM-DD vs YYYY-MM-DD
+  const normalize = (dateStr: string) => {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+    const trimmed = dateStr.trim();
+    if (trimmed.length === 5 && trimmed.includes('-')) return `${year}-${trimmed}`; // MM-DD
+    if (trimmed.startsWith(`${year}-`) && trimmed.length >= 10) return trimmed.substring(0, 10); // YYYY-MM-DD
+    return null; // different year or invalid format
+  };
+
+  nationals.forEach(h => {
+    const d = normalize(h.date);
+    if (d) result.add(d);
+  });
+
+  customHolidays.forEach(h => {
+    const d = normalize(h.date);
+    if (d) result.add(d);
+  });
+
+  return result;
 }
 
 // ─── Mock employees ───────────────────────────────────────────────────────────

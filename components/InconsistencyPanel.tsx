@@ -51,7 +51,7 @@ function getEffectiveShift(emp: Employee, year: number, month: number, dayIdx: n
         const end = emp.vacationEnd || d.toISOString().split('T')[0];
         if (dateStr >= start && dateStr <= end) return 'FE';
     }
-    const shifts = (emp.shifts[monthKey] ?? []) as ShiftType[];
+    const shifts = (emp.shifts?.[monthKey] ?? []) as ShiftType[];
     return shifts[dayIdx] || 'F';
 }
 
@@ -261,7 +261,7 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
       // Count CLTs working TODAY (using the static employees prop as baseline)
       const currentWorkers = employees.filter(e => {
         if (e.isYoungApprentice || e.status !== 'active') return false;
-        return (e.shifts[mKey]?.[dayIdx]) === 'T';
+        return (e.shifts?.[mKey]?.[dayIdx]) === 'T';
       }).length;
 
       const alreadyScheduledOff = fixesAppliedPerDay.get(dayIdx) ?? 0;

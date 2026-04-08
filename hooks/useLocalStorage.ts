@@ -92,14 +92,19 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
     }, [key, storedValue]);
 
     const downloadFromCloud = async (force = false) => {
-        if (syncInProgress.current) return;
+        if (syncInProgress.current && !force) return;
 
         updateGlobalSync('syncing', key, force ? 'Buscando Dados...' : 'Consultando Planilha...');
         try {
-            let cloudData;
+            let cloudData = null;
 
             if (isGasEnvironment) {
-                cloudData = await gasStore.get(key);
+                // Add a timeout to the cloud call itself to be safe
+                const resultPromise = gasStore.get(key);
+                cloudData = await Promise.race([
+                    resultPromise,
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout local')), 31000))
+                ]);
             }
 
             if (cloudData) {
@@ -108,7 +113,6 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
 
                 if (dataStr !== lastCloudValue.current || force) {
                     if (isDirty.current && !force && dataStr !== localStr) {
-                        // CONFLITO: Usuário editou localmente, mas a nuvem tem uma versão diferente
                         updateGlobalSync('error', key, 'Conflito de Versão');
                         window.dispatchEvent(new CustomEvent('sync-conflict', {
                             detail: {
@@ -121,46 +125,49 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                                         updateGlobalSync('synced', key, 'Nuvem Restaurada');
                                         try { new BroadcastChannel(`sync_${key}`).postMessage(cloudData); } catch (e) { }
                                     } else {
-                                        // Vence o local: enganamos o lastCloudValue para forçar o próximo upload
                                         lastCloudValue.current = dataStr; 
                                         isDirty.current = true;
-                                        // Forçar um trigger invisível para o useEffect de upload rodar na próxima passada
                                         setStoredValue(prev => (Array.isArray(prev) ? [...prev] : {...prev}) as any); 
                                         updateGlobalSync('syncing', key, 'Salvando Alterações...');
                                     }
                                 }
                             }
                         }));
-                        return; // Aborta para esperar decisão
+                        return;
                     }
 
                     setStoredValue(cloudData);
                     lastCloudValue.current = dataStr;
                     isDirty.current = false;
                     try { new BroadcastChannel(`sync_${key}`).postMessage(cloudData); } catch (e) { }
-                    updateGlobalSync('synced', key, force ? 'Dados Atualizados' : 'Salvo na Planilha');
+                    updateGlobalSync('synced', key, force ? 'Dados Atualizados' : 'Sincronizado');
                 } else {
-                    updateGlobalSync('synced', key, 'Salvo na Planilha');
+                    updateGlobalSync('synced', key, 'Sincronizado');
                 }
                 initialLoadSuccess.current = true;
+            } else {
+                updateGlobalSync('synced', key, 'Usando Dados Locais');
+                initialLoadSuccess.current = true; 
             }
         } catch (err) {
             console.error('Download error:', err);
-            updateGlobalSync('error', key, 'Erro de Conexão');
+            updateGlobalSync('error', key, 'Planilha Indisponível');
+            // Resolvemos como sucesso inicial para permitir que o app funcione localmente
+            initialLoadSuccess.current = true;
         } finally {
             setIsLoaded(true);
             isFirstLoadDone.current = true;
         }
     };
 
-    // 1. Polling (30s) e Carga Inicial
+    // 1. Polling (45s) e Carga Inicial
     useEffect(() => {
         downloadFromCloud();
-        const interval = setInterval(() => downloadFromCloud(), 30000);
+        const interval = setInterval(() => downloadFromCloud(), 45000);
         return () => clearInterval(interval);
     }, [key]);
 
-    // 2. Upload Automático (Debounced em 1.5s)
+    // 2. Upload Automático (Debounced em 3s)
     useEffect(() => {
         if (!isFirstLoadDone.current || !initialLoadSuccess.current) return;
 
@@ -177,7 +184,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                 if (syncInProgress.current) return;
                 syncInProgress.current = true;
 
-                updateGlobalSync('syncing', key, 'Salvando Alterações...');
+                updateGlobalSync('syncing', key, 'Salvando...');
                 const dataToSync = currentValueStr;
 
                 try {
@@ -188,7 +195,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                     lastCloudValue.current = dataToSync;
                     isDirty.current = false;
                     retryCount.current = 0;
-                    updateGlobalSync('synced', key, 'Salvo na Planilha');
+                    updateGlobalSync('synced', key, 'Salvo');
 
                     try {
                         new BroadcastChannel(`sync_${key}`).postMessage(storedValue);
@@ -197,26 +204,26 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                     console.error('Sync failure:', err);
                     if (retryCount.current < 2) {
                         retryCount.current++;
-                        updateGlobalSync('error', key, `Tentando Salvar... (${retryCount.current}/2)`);
+                        updateGlobalSync('error', key, `Tentando... (${retryCount.current}/2)`);
                         setTimeout(() => {
                             syncQueue.push(syncTask);
                             processSyncQueue();
                         }, 5000);
                     } else {
-                        updateGlobalSync('error', key, 'Salvo Apenas Localmente');
-                        // Dispara evento para sugerir backup
+                        updateGlobalSync('error', key, 'Erro ao Salvar');
                         window.dispatchEvent(new CustomEvent('sync-persistent-error', {
                             detail: { key, data: dataToSync }
                         }));
                     }
                 } finally {
                     syncInProgress.current = false;
+                    isGlobalSyncing = false; // Garante liberação do lock global em caso de erro bizarro
                 }
             };
 
             syncQueue.push(syncTask);
             processSyncQueue();
-        }, 1500);
+        }, 3000);
 
         return () => clearTimeout(timer);
     }, [storedValue, key]);
@@ -234,10 +241,6 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
     return [storedValue, setValue, () => downloadFromCloud(true)];
 }
 
-/**
- * Hook para persistência local simples (sem sincronização com nuvem).
- * Ideal para preferências de UI como Tema Escuro, etc.
- */
 export function useLocalPreference<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void] {
     const [storedValue, setStoredValue] = useState<T>(() => {
         try {
@@ -260,3 +263,4 @@ export function useLocalPreference<T>(key: string, initialValue: T): [T, (value:
 
     return [storedValue, setValue];
 }
+

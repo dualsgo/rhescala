@@ -66,3 +66,27 @@ export interface SyncStatus {
   lastSync?: string;
   history: SyncHistoryItem[];
 }
+export interface ChangeLogEntry {
+  id: string;
+  timestamp: string;
+  user: string;
+  action: string;
+  details: string;
+  type: 'edit' | 'auto' | 'system';
+}
+
+export interface ShiftTemplate {
+  id: string;
+  name: string; // e.g. "Padrao", "Final de Ano"
+  type: 'weekday' | 'sunday' | 'holiday';
+  hours: string[];
+  isActive: boolean;
+}
+
+export interface LunchRule {
+  id: string;
+  time: string; // HH:mm
+  duration: number; // minutes
+  priority: number;
+  condition?: string; // e.g. "isApprentice", "isStockist", "shift:abertura"
+}
