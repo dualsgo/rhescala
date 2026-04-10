@@ -3,16 +3,17 @@ import { Employee, ShiftType } from '../types';
 
 export interface LunchSlot {
   time: string;
-  employees: { id: string; name: string; isApprentice: boolean; isStockist: boolean }[];
+  employees: { id: string; name: string; isApprentice: boolean; isStockist: boolean; cargo?: string }[];
   duration: number; // in minutes
 }
 
 /**
- * Rules:
- * - Apprentice: 15 min only.
- * - Stockist: Joker (flexible).
- * - Weekday Opening (10h-18h20) needs cover at 13:45 when closing arrives.
- * - Ideal max lunch time: 17:00.
+ * Nova Lógica de Almoço:
+ * - Máximo 2 pessoas saindo simultaneamente.
+ * - Jovem Aprendiz: 12:45 (15 min).
+ * - Estoquista: Horário flexível.
+ * - Slots Fixos:
+ *   13:00, 13:30, 14:00, 14:30, 15:30, 16:00, 16:30, 17:00 (1 vaga cada)
  */
 export function calculateLunchSchedule(
   employees: Employee[],
@@ -24,8 +25,6 @@ export function calculateLunchSchedule(
   const workingInStore = employees.filter(emp => {
     if (emp.status !== 'active') return false;
     const shift = (emp.shifts[monthKey] || [])[dayIdx] || 'F';
-    // Codigo 'C' (Curso) significa trabalho externo, não está na loja.
-    // Apenas turnos 'T' (Trabalho) contam para o escalonamento de almoço.
     return shift === 'T'; 
   });
 
@@ -42,82 +41,77 @@ export function calculateLunchSchedule(
         id: e.id,
         name: e.name.split(' ')[0],
         isApprentice: e.isYoungApprentice,
-        isStockist: e.cargo === 'Estoquista'
+        isStockist: e.cargo === 'Estoquista',
+        cargo: e.cargo
       }))
     });
   };
 
-  if (isHoliday) {
-    // Holidays: 15 minutes for everyone, starting from 13:00
-    // Strictly sequential to ensure no more than 2 (actually 1 here) out.
+  // Simplificação para feriados e domingos se não houver regra específica
+  if (isHoliday || isSunday) {
     let currentTime = 13 * 60; // 13:00
-    workingInStore.forEach((emp) => {
-        const timeStr = `${Math.floor(currentTime / 60)}:${(currentTime % 60).toString().padStart(2, '0')}`;
-        addSlot(timeStr, 15, [emp]);
-        currentTime += 15;
-    });
-    return slots;
-  }
-
-  if (isSunday) {
-    // Sundays: Starts at 13:00, hourly groups, MAX 2 people at a time
-    const startTime = 13 * 60;
-    const groupSize = 2; // Fixed at 2 to obey user limit
+    const groupSize = 2;
     for (let i = 0; i < workingInStore.length; i += groupSize) {
-        const time = startTime + (Math.floor(i / groupSize) * 60);
-        const timeStr = `${Math.floor(time / 60)}:00`;
-        addSlot(timeStr, 60, workingInStore.slice(i, i + groupSize));
+        const timeStr = `${Math.floor(currentTime / 60)}:00`;
+        addSlot(timeStr, isHoliday ? 15 : 60, workingInStore.slice(i, i + groupSize));
+        currentTime += 60;
     }
     return slots;
   }
 
-  // Weekdays - Robust logic for "Max 2 simultaneous" and "13h-17h window"
+  // Regra Dias Úteis (Weekday)
   const apprentices = workingInStore.filter(e => e.isYoungApprentice);
   const stockists = workingInStore.filter(e => e.cargo === 'Estoquista');
   const regulars = workingInStore.filter(e => !e.isYoungApprentice && e.cargo !== 'Estoquista');
 
-  // Order of priority for lunch
-  const abertura: typeof regulars = [];
-  const intermediario: typeof regulars = [];
-  const fechamento: typeof regulars = [];
-
-  regulars.forEach(r => {
-      const h = (r.dailyHours[monthKey] || [])[dayIdx] || r.workPeriod;
-      if (h.includes('10h')) abertura.push(r);
-      else if (h.includes('12h')) intermediario.push(r);
-      else fechamento.push(r);
+  // Ordenar regulares por horário de início (abertura primeiro)
+  const sortedRegulars = [...regulars].sort((a, b) => {
+    const hA = (a.dailyHours[monthKey] || [])[dayIdx] || a.workPeriod;
+    const hB = (b.dailyHours[monthKey] || [])[dayIdx] || b.workPeriod;
+    return hA.localeCompare(hB);
   });
 
-  // Flat queue of all employees with their specific constraints
-  const queue = [
-    ...abertura.map(e => ({ emp: e, duration: 60, minStart: 13 * 60 })), // 13:00
-    ...intermediario.map(e => ({ emp: e, duration: 60, minStart: 13 * 60 })), // 13:00
-    ...apprentices.map(e => ({ emp: e, duration: 15, minStart: 13 * 60 })), // 13:00
-    ...stockists.map(e => ({ emp: e, duration: 60, minStart: 14 * 60 })), // 14:00
-    ...fechamento.map(e => ({ emp: e, duration: 60, minStart: 14 * 45 })) // 14:45 (after arriving at 13h40)
+  // Aloca Jovem Aprendiz às 12:45
+  if (apprentices.length > 0) {
+    addSlot("12:45", 15, apprentices);
+  }
+
+  // Slots de almoço conforme solicitado: 13h, 13h30, 14h, 14h30, 15h30, 16h, 16h30 e 17h
+  const mainSlots = [
+    { time: "13:00", capacity: 1 },
+    { time: "13:30", capacity: 1 },
+    { time: "14:00", capacity: 1 },
+    { time: "14:30", capacity: 1 },
+    { time: "15:30", capacity: 1 },
+    { time: "16:00", capacity: 1 },
+    { time: "16:30", capacity: 1 },
+    { time: "17:00", capacity: 1 }
   ];
 
-  // Logic: 2 "seats" for lunch
-  let seat1FreeAt = 13 * 60;
-  let seat2FreeAt = 13 * 60;
-
-  queue.forEach(item => {
-    // Pick the seat that is free earliest
-    let selectedStartTime: number;
-    let isSeat1 = seat1FreeAt <= seat2FreeAt;
-    
-    if (isSeat1) {
-      selectedStartTime = Math.max(seat1FreeAt, item.minStart);
-      const timeStr = `${Math.floor(selectedStartTime / 60)}:${(selectedStartTime % 60).toString().padStart(2, '0')}`;
-      addSlot(timeStr, item.duration, [item.emp]);
-      seat1FreeAt = selectedStartTime + item.duration;
-    } else {
-      selectedStartTime = Math.max(seat2FreeAt, item.minStart);
-      const timeStr = `${Math.floor(selectedStartTime / 60)}:${(selectedStartTime % 60).toString().padStart(2, '0')}`;
-      addSlot(timeStr, item.duration, [item.emp]);
-      seat2FreeAt = selectedStartTime + item.duration;
+  let regIdx = 0;
+  mainSlots.forEach(slot => {
+    const batch: typeof regulars = [];
+    for (let i = 0; i < slot.capacity && regIdx < sortedRegulars.length; i++) {
+      batch.push(sortedRegulars[regIdx]);
+      regIdx++;
     }
+    addSlot(slot.time, 60, batch);
   });
+
+  // Se sobrarem regulares (time muito grande), alocar no final ou onde couber
+  while (regIdx < sortedRegulars.length) {
+    const lastTime = mainSlots[mainSlots.length - 1].time;
+    const [h, m] = lastTime.split(':').map(Number);
+    const nextTimeInMinutes = h * 60 + m + 60;
+    const nextTimeStr = `${Math.floor(nextTimeInMinutes / 60)}:${(nextTimeInMinutes % 60).toString().padStart(2, '0')}`;
+    addSlot(nextTimeStr, 60, [sortedRegulars[regIdx]]);
+    regIdx++;
+  }
+
+  // Estoquistas: Flexível (Adicionamos um slot especial sem horário rígido ou apenas listamos)
+  if (stockists.length > 0) {
+    addSlot("Flexível", 60, stockists);
+  }
 
   return slots;
 }

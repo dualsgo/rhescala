@@ -3,6 +3,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
 import { generateYearSchedule, applyMonthUpdate, applyRulesSync, applyFullRotation } from './hooks/useScheduleEngine';
+import { calculateLunchSchedule } from './hooks/useLunchEngine';
 import { Sidebar } from './components/Sidebar';
 import { Icon } from './components/Icon';
 import { DaySummaryCard } from './components/DaySummaryCard';
@@ -249,6 +250,27 @@ const App: React.FC = () => {
         });
         text += `\n`;
     });
+
+    // Add Lunch Schedule
+    const hSet = buildHolidaySet(currentMY.year, customHolidays);
+    const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+    const isHoliday = hSet.has(dateStr);
+    const isSunday = d.getDay() === 0;
+
+    const lunchSlots = calculateLunchSchedule(employees, dayIdx, isSunday, isHoliday, monthKey);
+    
+    if (lunchSlots.length > 0) {
+        text += `🍱 HORÁRIOS DE ALMOÇO\n`;
+        lunchSlots.forEach(slot => {
+            const names = slot.employees.map(e => e.name).join(', ');
+            if (slot.time === 'Flexível') {
+                text += `Estoquista: ${names} (Flexível)\n`;
+            } else {
+                text += `${slot.time}: ${names}\n`;
+            }
+        });
+        text += `\n`;
+    }
 
     if (workingEmployees.length === 0) {
         text = `📅 Escala - ${fullDayName}, ${dayIdx + 1} de ${monthName}\n\nNenhum colaborador escalado para este dia.`;
