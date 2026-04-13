@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
-import { generateYearSchedule, applyMonthUpdate, applyRulesSync, applyFullRotation } from './hooks/useScheduleEngine';
+import { generateYearSchedule, applyMonthUpdate, applyRulesSync, applyFullRotation, getTargetHours } from './hooks/useScheduleEngine';
 import { calculateLunchSchedule } from './hooks/useLunchEngine';
 import { Sidebar } from './components/Sidebar';
 import { Icon } from './components/Icon';
@@ -38,7 +38,7 @@ const App: React.FC = () => {
   ]);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [currentView, setCurrentView] = useState<'team' | 'analysis' | 'grid' | 'calendar' | 'alerts'>('grid');
+  const [currentView, setCurrentView] = useState<'team' | 'analysis' | 'grid' | 'calendar' | 'alerts' | 'config'>('grid');
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
   const [showDayDetail, setShowDayDetail] = useState(false);
@@ -48,12 +48,13 @@ const App: React.FC = () => {
   const [isEditable, setIsEditable] = useState(false);
   const [allowRetroactive, setAllowRetroactive] = useState(false);
   const [isGridLocked, setIsGridLocked] = useState(true); 
-  const [isZenMode, setIsZenMode] = useState(false); 
+  const [isZenMode, setIsZenMode] = useState(true); 
   const [showHolidayCredit, setShowHolidayCredit] = useState(false);
   
   // Filters
-  const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
+  const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week' | 'today' | 'tomorrow'>('all');
   const [selectedWeek, setSelectedWeek] = useState(1);
+  const [showOnlyActive, setShowOnlyActive] = useState(false);
   
   // History
   const [changeLogs, setChangeLogs] = useLocalStorage<ChangeLogEntry[]>('escalaChangeLogs', []);
@@ -176,6 +177,11 @@ const App: React.FC = () => {
     }));
   };
 
+  const selectDayAndFilter = (idx: number) => {
+    setSelectedDayIdx(idx);
+    setShowOnlyActive(true);
+  };
+
   const updateShifts = (updates: { empId: string, dayIdx: number, newShift: ShiftType }[]) => {
     setEmployees(prev => {
       let nextList = [...prev];
@@ -228,8 +234,12 @@ const App: React.FC = () => {
 
     // Group by hours
     const groups: Record<string, typeof workingEmployees> = {};
+    const hSet = buildHolidaySet(currentMY.year, customHolidays);
+    const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+    const isHoliday = hSet.has(dateStr);
+
     workingEmployees.forEach(emp => {
-        const hour = emp.dailyHours[monthKey]?.[dayIdx] || emp.workPeriod;
+        const hour = emp.dailyHours[monthKey]?.[dayIdx] || getTargetHours(emp, d.getDay(), isHoliday);
         if (!groups[hour]) groups[hour] = [];
         groups[hour].push(emp);
     });
@@ -243,30 +253,60 @@ const App: React.FC = () => {
         const isFechamento = hour.includes('22') || hour.includes('21') || hour.includes('20');
         const groupLabel = isAbertura ? 'Abertura' : isFechamento ? 'Fechamento' : 'Intermediário';
         
-        text += `⏰ ${groupLabel} (${hour})\n`;
+        // Format range: "13:00 às 22:00" -> "13h às 22h" OR "10h às 18h20" (preserves existing h)
+        const formattedHourRange = hour.replace(/:/g, 'h').replace(/h00\b/g, 'h');
+        
+        text += `⏰ ${groupLabel} (${formattedHourRange})\n`;
         emps.forEach(e => {
             const firstName = e.name.split(' ')[0];
-            text += `${firstName} - ${hour}\n`;
+            const formattedName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+            text += `${formattedName} - ${formattedHourRange}\n`;
         });
         text += `\n`;
     });
 
+    // Add Absences and Time Off
+    const absences = employees.filter(e => {
+        if (e.isHidden || e.status !== 'active') return false;
+        let s = (e.shifts[monthKey] || [])[dayIdx] || 'F';
+        // Vacation check
+        const ds = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+        if (e.vacationStart && e.vacationEnd && ds >= e.vacationStart && ds <= e.vacationEnd) s = 'FE';
+        return s === 'F' || s === 'FF';
+    });
+
+    if (absences.length > 0) {
+        text += `🏖️ Ausências e Folgas:\n`;
+        absences.forEach(a => {
+            const shift = (a.shifts[monthKey] || [])[dayIdx] || 'F';
+            const reason = shift === 'FF' ? 'Folga Feriado' : 'Folga';
+            const name = a.name.split(' ')[0].charAt(0).toUpperCase() + a.name.split(' ')[0].slice(1).toLowerCase();
+            text += `${name} (${reason})\n`;
+        });
+        text += `\n`;
+    }
+
     // Add Lunch Schedule
-    const hSet = buildHolidaySet(currentMY.year, customHolidays);
-    const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
-    const isHoliday = hSet.has(dateStr);
+
     const isSunday = d.getDay() === 0;
 
     const lunchSlots = calculateLunchSchedule(employees, dayIdx, isSunday, isHoliday, monthKey);
     
     if (lunchSlots.length > 0) {
-        text += `🍱 HORÁRIOS DE ALMOÇO\n`;
+        text += `🍱 Horários de Almoço\n`;
         lunchSlots.forEach(slot => {
-            const names = slot.employees.map(e => e.name).join(', ');
-            if (slot.time === 'Flexível') {
-                text += `Estoquista: ${names} (Flexível)\n`;
-            } else {
-                text += `${slot.time}: ${names}\n`;
+            const formattedNames = slot.employees.map(e => {
+                 const firstName = e.name.split(' ')[0];
+                 return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+            }).join(', ');
+
+            let timeLabel = slot.time;
+            if (timeLabel !== 'Flexível') {
+                timeLabel = timeLabel.replace(':', 'h').replace(/h00\b/g, 'h');
+            }
+
+            if (timeLabel !== 'Flexível') {
+                text += `${timeLabel}: ${formattedNames}\n`;
             }
         });
         text += `\n`;
@@ -341,13 +381,15 @@ const App: React.FC = () => {
             onToggleZen={handleToggleZenMode}
             
             filter={filter}
-            onFilterChange={setFilter}
+            onFilterChange={(f) => { setFilter(f); if (f === 'all') setShowOnlyActive(false); }}
+            showOnlyActive={showOnlyActive}
+            onShowOnlyActiveChange={setShowOnlyActive}
             selectedWeek={selectedWeek}
             onWeekChange={setSelectedWeek}
             weeksInMonth={weeksInMonth}
             daysInMonth={daysInMonth}
             selectedDayIdx={selectedDayIdx}
-            onSelectDay={setSelectedDayIdx}
+            onSelectDay={selectDayAndFilter}
             onShareWhatsApp={shareWhatsApp}
             days={days}
             today={today}
@@ -377,18 +419,80 @@ const App: React.FC = () => {
                     </span>
                     <button onClick={onNextMonth} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all text-slate-400 hover:text-orange-500"><Icon name="chevron_right" /></button>
                 </div>
+
+                <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
+
+                <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-1 border border-slate-100 dark:border-slate-800">
+                   <button 
+                      onClick={() => setCurrentView('grid')}
+                      className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${currentView === 'grid' ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-md scale-105' : 'text-slate-400 hover:text-slate-600'}`}
+                   >
+                      <Icon name="table_rows" className="text-sm" fill={currentView === 'grid'} /> Grade
+                   </button>
+                   <button 
+                      onClick={() => setCurrentView('calendar')}
+                      className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${currentView === 'calendar' ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-md scale-105' : 'text-slate-400 hover:text-slate-600'}`}
+                   >
+                      <Icon name="calendar_view_month" className="text-sm" fill={currentView === 'calendar'} /> Calendário
+                   </button>
+                </div>
+
+                {currentView === 'grid' && (
+                  <>
+                    <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
+                    <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-1 border border-slate-100 dark:border-slate-800">
+                        <button onClick={() => { setFilter('all'); setShowOnlyActive(false); }} className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filter === 'all' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Mês</button>
+                        <button onClick={() => setFilter('today')} className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filter === 'today' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Hoje</button>
+                        <button onClick={() => setFilter('tomorrow')} className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filter === 'tomorrow' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Amanhã</button>
+                        <button onClick={() => setFilter('sunday')} className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filter === 'sunday' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Dom</button>
+                        <button onClick={() => setFilter('holiday')} className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filter === 'holiday' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Fer</button>
+                        <button onClick={() => setFilter('week')} className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filter === 'week' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Sem</button>
+                     </div>
+                     <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1" />
+
+                    {filter === 'week' && (
+                       <div className="flex items-center gap-1 bg-orange-50 dark:bg-orange-950/20 rounded-xl p-1 border border-orange-100 dark:border-orange-900/40 animate-fade-in">
+                          {Array.from({ length: weeksInMonth }, (_, i) => (
+                             <button key={i} onClick={() => setSelectedWeek(i+1)} className={`w-7 h-7 rounded-lg text-[9px] font-black transition-all ${selectedWeek === i+1 ? 'bg-orange-500 text-white shadow-sm' : 'text-orange-600 hover:bg-orange-100'}`}>{i+1}</button>
+                          ))}
+                       </div>
+                    )}
+                  </>
+                )}
              </div>
 
-             <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 group cursor-help">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 group cursor-help mr-2">
                    <Icon name="info" className="text-orange-500 text-sm" />
-                   <span className="text-[10px] font-bold text-slate-400 group-hover:text-slate-600 transition-colors uppercase">Clique na grade para detalhes diários</span>
+                   <span className="text-[10px] font-bold text-slate-400 group-hover:text-slate-600 transition-colors uppercase">Clique na grade para detalhes</span>
                 </div>
+
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <button 
+                    onClick={() => { if (!isGridLocked) setIsEditable(!isEditable); }}
+                    disabled={isGridLocked}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${isEditable ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'} ${isGridLocked ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    title={isGridLocked ? "Desbloqueie para editar" : (isEditable ? "Salvar Alterações" : "Ativar Edição")}
+                  >
+                    <Icon name={isEditable ? 'save' : 'edit_square'} className="text-sm" /> {isEditable ? 'Salvar' : 'Editar'}
+                  </button>
+
+                  <button 
+                    onClick={() => shareWhatsApp(selectedDayIdx)}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition-all shadow-md active:scale-95"
+                    title={`Compartilhar Dia ${selectedDayIdx + 1}`}
+                  >
+                    <Icon name="send" className="text-sm" /> WhatsApp
+                  </button>
+                </div>
+
+                <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1" />
+
                 <button 
                   onClick={() => setIsZenMode(false)}
                   className="flex items-center gap-2 px-6 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-[10px] font-black uppercase hover:bg-slate-800 dark:hover:bg-white transition-all shadow-lg active:scale-95"
                 >
-                   <Icon name="exit_to_app" className="text-sm" /> Sair da Vista
+                   <Icon name="exit_to_app" className="text-sm" /> Sair
                 </button>
              </div>
           </header>
@@ -399,6 +503,7 @@ const App: React.FC = () => {
             <div className={`h-full ${isZenMode ? 'w-full' : 'max-w-[1600px] mx-auto animate-fade-in'}`}>
               <ShiftGrid 
                 currentMY={currentMY}
+                shiftTemplates={shiftTemplates}
                 employees={employees}
                 today={today}
                 customHolidays={customHolidays}
@@ -415,10 +520,11 @@ const App: React.FC = () => {
                 onShowHolidayManager={() => setShowHolidayManager(true)}
                 onShowShiftManager={() => setShowShiftManager(true)}
                 onShowPrintView={() => setShowPrintView(true)}
-                onSelectDay={setSelectedDayIdx}
-                onOpenDayDetail={(idx) => { setSelectedDayIdx(idx); setShowDayDetail(true); }}
+                onSelectDay={selectDayAndFilter}
+                onOpenDayDetail={(idx) => { selectDayAndFilter(idx); setShowDayDetail(true); }}
                 onShareWhatsApp={shareWhatsApp}
                 filter={filter}
+                showOnlyActive={showOnlyActive}
                 selectedWeek={selectedWeek}
                 isZenMode={isZenMode}
                 onExitZen={() => setIsZenMode(false)}
@@ -427,7 +533,7 @@ const App: React.FC = () => {
           )}
 
           {currentView === 'calendar' && (
-            <div className="max-w-[1200px] mx-auto animate-fade-in h-fit overflow-y-auto max-h-full">
+            <div className={`${isZenMode ? 'w-full h-full p-8' : 'max-w-[1200px] mx-auto'} animate-fade-in h-fit overflow-y-auto max-h-full`}>
               <CalendarView
                 employees={employees}
                 currentMY={currentMY}
@@ -468,6 +574,16 @@ const App: React.FC = () => {
                   onApplyFix={updateShift}
                   onApplyBulkFixes={updateShifts}
                   onClose={() => setCurrentView('grid')}
+               />
+            </div>
+          )}
+          {currentView === 'config' && (
+            <div className="max-w-[1400px] mx-auto animate-fade-in h-[calc(100vh-100px)] flex flex-col">
+               <ShiftTemplateManager 
+                  templates={shiftTemplates} 
+                  onUpdate={setShiftTemplates} 
+                  onClose={() => setCurrentView('grid')} 
+                  isTabMode={true}
                />
             </div>
           )}

@@ -185,21 +185,6 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
               </div>
 
               <div className="space-y-3 pt-2">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">Horário Base</label>
-                  <select
-                    value={emp.workPeriod}
-                    onChange={(e) => onUpdateEmployee(emp.id, { workPeriod: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
-                  >
-                    <option value="">Não definido</option>
-                    <option value="10h às 18h20">10h às 18h20</option>
-                    <option value="12h às 20h20">12h às 20h20</option>
-                    <option value="13h40 às 22h">13h40 às 22h</option>
-                    <option value="14h às 22h20">14h às 22h20</option>
-                  </select>
-                </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">Folga Fixa</label>
                   <select
@@ -213,7 +198,6 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                     ))}
                   </select>
                 </div>
-              </div>
 
               <div className="grid grid-cols-2 gap-3">
                  <div className="space-y-1">

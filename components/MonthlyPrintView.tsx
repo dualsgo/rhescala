@@ -139,28 +139,55 @@ export const MonthlyPrintView: React.FC<MonthlyPrintViewProps> = ({ employees, c
             </tbody>
         </table>
 
-        <div className="grid grid-cols-2 gap-8 items-start">
-            {/* LUNCH SCHEDULES - MONDAY (Average Weekday example as user specified weekday/sunday differences) */}
-            <section>
-                <h3 className="text-[9px] font-black uppercase mb-2 border-b-2 border-black inline-block">Sugestão de Almoços (Seg-Sáb)</h3>
-                <div className="grid grid-cols-2 gap-4">
-                    {/* Assuming first monday for logic */}
-                    {(() => {
-                        const firstMonday = days.find(d => d.weekday === 'Seg')?.num ? (days.find(d => d.weekday === 'Seg')!.num - 1) : 0;
-                        const slots = calculateLunchSchedule(employees, firstMonday, false, false, monthKey);
-                        return slots.map((s, i) => (
-                            <div key={i} className="flex gap-2 text-[8px] font-bold">
-                                <span className="font-black border border-black px-1 min-w-[35px] text-center">{s.time}</span>
-                                <span>{s.employees.map(e => e.name).join(', ')}</span>
-                            </div>
-                        ));
-                    })()}
-                </div>
-                <p className="text-[6px] uppercase mt-4 italic">* Domingo e Feriados possuem rotação diferenciada (ver sistema digital para detalhes específicos por data)</p>
-            </section>
+        <div className="w-full h-px bg-black mb-4" />
+
+        <div className="flex flex-col mb-4">
+           <h4 className="text-[10px] font-black uppercase mb-1">Ausências e folgas:</h4>
+           <div className="border border-black p-4 min-h-[40px] text-[8px] font-bold text-slate-500 italic">
+              * Verifique as datas individuais na grade acima para detalhes de Folgas (F) e Folgas Feriado (FF).
+           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-8 mb-6">
+                {/* LUNCH SCHEDULES - WEEKDAY */}
+                <section>
+                    <h3 className="text-[9px] font-black uppercase mb-2 border-b-2 border-black inline-block">Sugestão de Almoços (Seg-Sáb)</h3>
+                    <div className="grid grid-cols-1 gap-1">
+                        {(() => {
+                            const firstMonday = days.find(d => d.weekday === 'Seg')?.num ? (days.find(d => d.weekday === 'Seg')!.num - 1) : 0;
+                            const slots = calculateLunchSchedule(employees, firstMonday, false, false, monthKey);
+                            return slots.map((s, i) => (
+                                <div key={i} className="flex gap-2 text-[8px] font-bold">
+                                    <span className="font-black border border-black px-1 min-w-[35px] text-center">{s.time}</span>
+                                    <span>{s.employees.map(e => e.name).join(', ')}</span>
+                                </div>
+                            ));
+                        })()}
+                    </div>
+                </section>
+
+                {/* LUNCH SCHEDULES - SUNDAY */}
+                <section>
+                    <h3 className="text-[9px] font-black uppercase mb-2 border-b-2 border-black inline-block">Sugestão de Almoços (Domingo)</h3>
+                    <div className="grid grid-cols-1 gap-1">
+                        {(() => {
+                            const firstSunday = days.find(d => d.isSunday)?.num ? (days.find(d => d.isSunday)!.num - 1) : 0;
+                            const slots = calculateLunchSchedule(employees, firstSunday, true, false, monthKey);
+                            return slots.map((s, i) => (
+                                <div key={i} className="flex gap-2 text-[8px] font-bold">
+                                    <span className="font-black border border-black px-1 min-w-[35px] text-center">{s.time}</span>
+                                    <span>{s.employees.map(e => e.name).join(', ')}</span>
+                                </div>
+                            ));
+                        })()}
+                    </div>
+                </section>
+            </div>
+            
+            <p className="text-[6px] uppercase mt-2 italic font-black">* Feriados: Pausas de 15 minutos, um colaborador por vez sequencialmente as 13h.</p>
 
             {/* ADDITIONAL INFO */}
-            <section className="space-y-4">
+            <section className="space-y-4 mt-6">
                 {birthdays.length > 0 && (
                     <div className="border border-black p-3 rounded-xl">
                         <h4 className="text-[9px] font-black uppercase mb-2 flex items-center gap-2">🍰 Aniversariantes do Mês</h4>
@@ -185,11 +212,10 @@ export const MonthlyPrintView: React.FC<MonthlyPrintViewProps> = ({ employees, c
             </section>
         </div>
 
-        <footer className="mt-12 pt-8 border-t-2 border-dashed border-slate-300 flex justify-center gap-24 no-print">
+        <footer className="mt-12 pt-8 border-t-2 border-dashed border-slate-300 flex justify-center gap-24 no-print h-32">
             <div className="w-[200px] border-t border-black text-center pt-1 text-[8px] font-bold uppercase">Assinatura Gerência</div>
             <div className="w-[200px] border-t border-black text-center pt-1 text-[8px] font-bold uppercase">Data de Divulgação</div>
         </footer>
       </div>
-    </div>
-  );
-};
+    );
+  };

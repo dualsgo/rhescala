@@ -284,7 +284,7 @@ export function buildSundayAssignments(
 /**
  * Helper to select the best shift hours based on the day type and employee role.
  */
-function getTargetHours(emp: Employee, dow: number, isHoliday: boolean): string {
+export function getTargetHours(emp: Employee, dow: number, isHoliday: boolean): string {
     if (emp.isYoungApprentice) return APPRENTICE_WORK_PERIOD;
 
     // Feriados (Padronizado conforme pedido: será ajustado manualmente)
@@ -486,7 +486,7 @@ export function applyRulesSync(
         const newHours: string[] = Array.from({ length: daysInMonth }, (_, i) => {
             const date = new Date(year, month, i + 1);
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
-            if (existingHours[i] && existingHours[i] !== emp.workPeriod) return existingHours[i];
+            if (existingHours[i]) return existingHours[i];
             return getTargetHours(emp, date.getDay(), holidaySet.has(dateStr));
         });
 
@@ -529,6 +529,62 @@ export function applyRulesSync(
                 }
             }
         }
+
+        // Cleanup pass: Enforce only one rest day (F/FE/FF) between Monday and Saturday
+        if (!emp.isYoungApprentice) {
+            for (let d = 0; d < daysInMonth; d++) {
+                const date = new Date(year, month, d + 1);
+                const dow = date.getDay();
+                
+                if (dow === 1 || d === 0) { // Start of Mon-Sat block
+                    let endIdx = d;
+                    while (endIdx < daysInMonth) {
+                        const dNext = new Date(year, month, endIdx + 1);
+                        if (dNext.getDay() === 0) break; // Stop before Sunday
+                        endIdx++;
+                    }
+                    
+                    const weekIndices = [];
+                    for (let i = d; i <= endIdx && i < daysInMonth; i++) {
+                        const iDate = new Date(year, month, i + 1);
+                        if (iDate.getDay() !== 0) weekIndices.push(i);
+                    }
+                    
+                    if (weekIndices.length > 0) {
+                        const isHardRest = (idx: number) => {
+                            const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(idx + 1).padStart(2, '0')}`;
+                            const dDate = new Date(year, month, idx + 1);
+                            const iDow = dDate.getDay();
+                            const v = emp.vacationStart && emp.vacationEnd && dStr >= emp.vacationStart && dStr <= emp.vacationEnd;
+                            const b = isBirthday(emp, dStr);
+                            const f = emp.preferredDayOff && WEEKDAY_NAMES[iDow] === emp.preferredDayOff;
+                            return v || b || f;
+                        };
+
+                        const rests = weekIndices.filter(i => newShifts[i] === 'F' || newShifts[i] === 'FE' || newShifts[i]?.startsWith('FF'));
+                        
+                        if (rests.length > 1) {
+                            const hRests = rests.filter(isHardRest);
+                            if (hRests.length > 0) {
+                                // Keep all hard rests, remove others
+                                rests.forEach(i => {
+                                    if (newShifts[i] === 'F' && !isHardRest(i)) {
+                                        newShifts[i] = 'T';
+                                    }
+                                });
+                            } else {
+                                // No hard rests, keep only the first 'F'
+                                rests.slice(1).forEach(i => {
+                                    if (newShifts[i] === 'F') newShifts[i] = 'T';
+                                });
+                            }
+                        }
+                    }
+                    d = endIdx; 
+                }
+            }
+        }
+        
         result[emp.id] = { shifts: newShifts, hours: newHours };
     });
 
@@ -611,7 +667,11 @@ export function applyMonthUpdate(
             const date = new Date(year, month, i + 1);
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
             const exH = existingHours[i];
-            if (exH && exH !== emp.workPeriod) return exH;
+            
+            // Se já existe um horário definido manualmente (diferente de undefined/null)
+            // nós o preservamos. Caso contrário, usamos a regra padrão.
+            if (exH) return exH;
+            
             return getTargetHours(emp, date.getDay(), holidaySet.has(dateStr));
         });
 

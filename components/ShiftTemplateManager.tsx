@@ -7,9 +7,10 @@ interface ShiftTemplateManagerProps {
   templates: ShiftTemplate[];
   onUpdate: (templates: ShiftTemplate[]) => void;
   onClose: () => void;
+  isTabMode?: boolean;
 }
 
-export const ShiftTemplateManager: React.FC<ShiftTemplateManagerProps> = ({ templates, onUpdate, onClose }) => {
+export const ShiftTemplateManager: React.FC<ShiftTemplateManagerProps> = ({ templates, onUpdate, onClose, isTabMode }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const toggleActive = (id: string) => {
@@ -40,8 +41,8 @@ export const ShiftTemplateManager: React.FC<ShiftTemplateManagerProps> = ({ temp
   };
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-fade-in">
-       <div className="bg-white dark:bg-slate-900 rounded-[3rem] w-full max-w-4xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[85vh] overflow-hidden">
+    <div className={isTabMode ? "w-full h-full animate-fade-in" : "fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-fade-in"}>
+       <div className={isTabMode ? "bg-white dark:bg-slate-900 w-full h-full flex flex-col" : "bg-white dark:bg-slate-900 rounded-[3rem] w-full max-w-4xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[85vh] overflow-hidden"}>
           <header className="px-10 py-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
              <div className="flex items-center gap-5">
                 <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-500/20">

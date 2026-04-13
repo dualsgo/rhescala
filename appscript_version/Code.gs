@@ -1,6 +1,6 @@
 /**
  * Backend do Google Apps Script para Gestão de Escala - Ri Happy
- * Este script deve ser copiado para o arquivo Code.gs no editor do GAS.
+ * Versão: 2.1 (Suporte a Auditoria e Sincronização em Tempo Real)
  */
 
 // ─── SERVIDOR DA WEB APP ──────────────────────────────────────────────────────
@@ -23,31 +23,26 @@ function doGet() {
 
 /**
  * Busca dados da Planilha por chave.
- * Os dados são armazenados na aba 'Database' em formato chave-valor (append-only log).
  */
 function getData(key) {
-  console.log(`Buscando dados para chave: ${key}`);
   try {
     const sheet = getOrCreateSheet('Database');
     const lastRow = sheet.getLastRow();
     if (lastRow <= 1) return null;
     
-    // Busca apenas as últimas 1000 linhas para performance
+    // Busca as últimas 1000 linhas para performance
     const lookback = Math.min(lastRow - 1, 1000);
     const values = sheet.getRange(lastRow - lookback + 1, 1, lookback, 2).getValues();
     
-    // Varre de baixo para cima para pegar a versão mais recente
+    // Varre de baixo para cima (mais recente primeiro)
     for (let i = values.length - 1; i >= 0; i--) {
       if (values[i][0] === key) {
         let val = values[i][1];
-        if (typeof val === 'string' && (val.startsWith('{') || val.startsWith('['))) {
-          try {
-            return JSON.parse(val);
-          } catch(e) {
-            return val;
-          }
+        try {
+          return JSON.parse(val);
+        } catch(e) {
+          return val;
         }
-        return val;
       }
     }
     return null;
@@ -58,19 +53,27 @@ function getData(key) {
 }
 
 /**
- * Salva dados na Planilha.
+ * Salva dados na Planilha (Logs de Auditoria e Estado do App).
  */
 function setData(key, value) {
   const valueStr = typeof value === 'string' ? value : JSON.stringify(value);
-  console.log(`Salvando dados para chave: ${key} (Tamanho: ${valueStr.length})`);
   
   try {
     const sheet = getOrCreateSheet('Database');
     sheet.appendRow([key, valueStr, new Date()]);
     
-    // Limpeza periódica: se a planilha estiver muito grande (ex: > 5000 linhas), limpamos duplicatas
-    const lastRow = sheet.getLastRow();
-    if (lastRow > 5000) {
+    // Se for uma alteração manual (escala ou horas), também registramos no Log de Auditoria real
+    if (key === 'escalaChangeLogs') {
+      try {
+        const logs = JSON.parse(valueStr);
+        if (logs && Array.isArray(logs) && logs.length > 0) {
+          saveRealTimeAudit(logs[logs.length - 1]);
+        }
+      } catch (err) {}
+    }
+
+    // Limpeza se passar de 5000 linhas
+    if (sheet.getLastRow() > 5000) {
       cleanupDatabase(sheet);
     }
     return true;
@@ -81,50 +84,45 @@ function setData(key, value) {
 }
 
 /**
- * Especial: Salva log de alterações em aba separada para auditoria
+ * Registra especificamente a última ação na aba de Auditoria
  */
-function saveChangeLog(logEntry) {
+function saveRealTimeAudit(logEntry) {
   try {
     const sheet = getOrCreateSheet('AuditLog');
     sheet.appendRow([
       new Date(),
-      logEntry.user || 'Desconhecido',
-      logEntry.action,
-      logEntry.details,
-      logEntry.type
+      logEntry.user || 'Gestor',
+      logEntry.action || '-',
+      logEntry.details || '-',
+      logEntry.type || 'edit'
     ]);
   } catch (e) {
-    console.error('Erro ao salvar log de auditoria:', e);
+    console.error('Erro na auditoria:', e);
   }
 }
 
 /**
- * Remove registros antigos da tabela Database mantendo apenas o último de cada chave
+ * Remove registros antigos mantendo apenas o mais recente de cada chave
  */
 function cleanupDatabase(sheet) {
-  console.log('Iniciando limpeza do banco de dados...');
   const values = sheet.getDataRange().getValues();
   const latestData = {};
   
-  // Mapeia a última ocorrência de cada chave
   for (let i = 1; i < values.length; i++) {
     const key = values[i][0];
     latestData[key] = [values[i][0], values[i][1], values[i][2]];
   }
   
-  // Limpa tudo e reinsere apenas os mais recentes
   sheet.clearContents();
   sheet.appendRow(['Chave', 'Valor (JSON)', 'Última Atualização']);
-  const rowsToInsert = Object.values(latestData);
-  if (rowsToInsert.length > 0) {
-    sheet.getRange(2, 1, rowsToInsert.length, 3).setValues(rowsToInsert);
+  const rows = Object.values(latestData);
+  if (rows.length > 0) {
+    sheet.getRange(2, 1, rows.length, 3).setValues(rows);
   }
-  console.log('Limpeza concluída.');
 }
 
-
 /**
- * Helper para pegar ou criar uma aba
+ * Helper: Cria aba se não existir
  */
 function getOrCreateSheet(sheetName) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -141,17 +139,6 @@ function getOrCreateSheet(sheetName) {
   return sheet;
 }
 
-/**
- * Funções auxiliares para incluir arquivos HTML (CSS/JS) se não estiverem inlined
- */
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
-}
-
-/**
- * LOGS genéricos
- */
-function logToSheet(message) {
-  const sheet = getOrCreateSheet('Logs');
-  sheet.appendRow([new Date(), message]);
 }

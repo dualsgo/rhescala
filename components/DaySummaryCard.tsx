@@ -26,6 +26,7 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({
 
   const data = useMemo(() => {
     const counts = { total: 0, folga: 0, ferias: 0, curso: 0 };
+    const absences: { name: string, reason: string }[] = [];
     const working: Employee[] = [];
 
     employees.filter(e => !e.isHidden && e.status === 'active').forEach(e => {
@@ -40,13 +41,16 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({
         counts.ferias++;
       } else {
         counts.folga++;
+        if (shift === 'F' || shift === 'FF') {
+           absences.push({ name: e.name.split(' ')[0], reason: shift === 'FF' ? 'Folga Feriado' : 'Folga' });
+        }
       }
     });
 
-    return { counts, working };
+    return { counts, working, absences };
   }, [employees, monthKey, selectedDayIdx, dateStr]);
 
-  const { counts, working } = data;
+  const { counts, working, absences } = data;
   const lunchSlots = useMemo(() => 
     calculateLunchSchedule(employees, selectedDayIdx, isSunday, isHoliday, monthKey),
     [employees, selectedDayIdx, isSunday, isHoliday, monthKey]
@@ -156,6 +160,24 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({
                 })}
             </div>
           </section>
+
+          {absences.length > 0 && (
+             <section className="animate-fade-in">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2rem] mb-2 flex items-center gap-2">
+                    <div className="w-1 h-3 bg-rose-400 rounded-full" /> Ausências e folgas
+                </h4>
+                <div className="bg-rose-50/30 dark:bg-rose-950/10 border border-rose-100 dark:border-rose-900/20 rounded-2xl p-4">
+                   <p className="text-[10px] font-black text-rose-800 dark:text-rose-400 uppercase tracking-tight">
+                      {absences.map((a, i) => (
+                        <span key={a.name}>
+                          {a.name} <span className="opacity-50 text-[8px]">({a.reason})</span>
+                          {i < absences.length - 1 ? ' • ' : ''}
+                        </span>
+                      ))}
+                   </p>
+                </div>
+             </section>
+          )}
 
           {lunchSlots.length > 0 && (
             <section className="bg-slate-50 dark:bg-slate-900/60 rounded-[2rem] p-6 lg:p-8 border border-slate-200 dark:border-slate-800 shadow-inner">

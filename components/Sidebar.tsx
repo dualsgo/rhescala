@@ -5,8 +5,8 @@ import { Employee, MonthYear, Holiday, SyncStatus, ShiftType } from '../types';
 import { InconsistencyPanel } from './InconsistencyPanel';
 
 interface SidebarProps {
-  currentView: 'grid' | 'team' | 'analysis' | 'calendar' | 'alerts';
-  onViewChange: (view: 'grid' | 'team' | 'analysis' | 'calendar' | 'alerts') => void;
+  currentView: 'grid' | 'team' | 'analysis' | 'calendar' | 'alerts' | 'config';
+  onViewChange: (view: 'grid' | 'team' | 'analysis' | 'calendar' | 'alerts' | 'config') => void;
   currentMY: MonthYear;
   onNextMonth: () => void;
   onPrevMonth: () => void;
@@ -32,8 +32,10 @@ interface SidebarProps {
   onToggleZen: () => void;
   
   // Grid Filters & Actions
-  filter: 'all' | 'sunday' | 'holiday' | 'week';
-  onFilterChange: (f: 'all' | 'sunday' | 'holiday' | 'week') => void;
+  filter: 'all' | 'sunday' | 'holiday' | 'week' | 'today' | 'tomorrow';
+  onFilterChange: (f: 'all' | 'sunday' | 'holiday' | 'week' | 'today' | 'tomorrow') => void;
+  showOnlyActive: boolean;
+  onShowOnlyActiveChange: (v: boolean) => void;
   selectedWeek: number;
   onWeekChange: (w: number) => void;
   weeksInMonth: number;
@@ -45,6 +47,7 @@ interface SidebarProps {
   onUpdateShift: (empId: string, dayIdx: number, newShift: ShiftType) => void;
   onUpdateShifts: (updates: { empId: string, dayIdx: number, newShift: ShiftType }[]) => void;
   onShowHistory: () => void;
+  onOpenAnalysis: () => void;
 }
 
 const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -77,6 +80,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleZen,
   filter,
   onFilterChange,
+  showOnlyActive,
+  onShowOnlyActiveChange,
   selectedWeek,
   onWeekChange,
   weeksInMonth,
@@ -97,6 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'grid', label: 'Escala', icon: 'table_rows' },
     { id: 'calendar', label: 'Calendário', icon: 'calendar_view_month' },
     { id: 'team', label: 'Equipe', icon: 'groups' },
+    { id: 'config', label: 'Jornadas', icon: 'settings' },
     { id: 'analysis', label: 'Análise', icon: 'insights' },
     { id: 'alerts', label: 'Alertas', icon: 'notifications_active' },
   ];
@@ -244,10 +250,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {!isMinimized && <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 mb-2">Visualização</p>}
               <div className={`flex flex-col gap-1 ${isMinimized ? 'items-center' : ''}`}>
                  <SidebarFilterItem id="all" label="Mês Inteiro" icon="calendar_view_month" current={filter} onClick={onFilterChange} isMinimized={isMinimized} />
+                 <SidebarFilterItem id="today" label="Ver Hoje" icon="today" current={filter} onClick={onFilterChange} isMinimized={isMinimized} />
+                 <SidebarFilterItem id="tomorrow" label="Ver Amanhã" icon="event" current={filter} onClick={onFilterChange} isMinimized={isMinimized} />
                  <SidebarFilterItem id="sunday" label="Domingos" icon="event_seat" current={filter} onClick={onFilterChange} isMinimized={isMinimized} />
                  <SidebarFilterItem id="holiday" label="Feriados" icon="event_busy" current={filter} onClick={onFilterChange} isMinimized={isMinimized} />
                  <SidebarFilterItem id="week" label="Por Semana" icon="view_week" current={filter} onClick={onFilterChange} isMinimized={isMinimized} />
               </div>
+              
+
               
               {filter === 'week' && !isMinimized && (
                 <div className="px-4 py-2 bg-orange-50 dark:bg-orange-950/20 rounded-xl grid grid-cols-5 gap-1 animate-fade-in border border-orange-100 dark:border-orange-900/30">
