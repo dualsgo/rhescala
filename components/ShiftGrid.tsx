@@ -264,6 +264,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 if (isHoliday) baseClass = 'bg-rose-200 border-rose-300 text-rose-900 font-black';
                 else if (isSunday) baseClass = 'bg-amber-200 border-amber-300 text-amber-900 font-black';
 
+                const coverageMsg = dayWorkers < 6 ? 'Abaixo do ideal' : dayWorkers === 6 ? 'Ideal' : 'Alta cobertura';
+                let tooltip = isHoliday ? day.holidayName : isSunday ? 'Domingo' : '';
+                tooltip += tooltip ? ` | Cobertura: ${dayWorkers} (${coverageMsg})` : `Cobertura: ${dayWorkers} (${coverageMsg})`;
+
                 return (
                   <th 
                     key={day.num} 
@@ -271,7 +275,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                       onSelectDay(day.originalIdx);
                       setManualDayType(null); // Reset manual choice when switching days
                     }} 
-                    title={isHoliday ? day.holidayName : (isSunday ? 'Domingo' : '')}
+                    title={tooltip}
                     className={`p-2 text-center min-w-[64px] cursor-pointer transition-all border-r border-b relative ${
                       isSelected 
                         ? 'bg-orange-500 text-white shadow-lg z-10' 
