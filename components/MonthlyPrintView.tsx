@@ -141,10 +141,22 @@ export const MonthlyPrintView: React.FC<MonthlyPrintViewProps> = ({ employees, c
 
         <div className="w-full h-px bg-black mb-4" />
 
-        <div className="flex flex-col mb-4">
-           <h4 className="text-[10px] font-black uppercase mb-1">Ausências e folgas:</h4>
-           <div className="border border-black p-4 min-h-[40px] text-[8px] font-bold text-slate-500 italic">
-              * Verifique as datas individuais na grade acima para detalhes de Folgas (F) e Folgas Feriado (FF).
+        <div className="grid grid-cols-2 gap-4 mb-4">
+           <div className="flex flex-col">
+              <h4 className="text-[10px] font-black uppercase mb-1">Ausências e folgas:</h4>
+              <div className="border border-black p-4 min-h-[40px] text-[8px] font-bold text-slate-500 italic">
+                 * Verifique as datas individuais na grade acima para detalhes de Folgas (F) e Folgas Feriado (FF).
+              </div>
+           </div>
+           
+           <div className="flex flex-col">
+              <h4 className="text-[10px] font-black uppercase mb-1">Posicionamento Tático (Legenda):</h4>
+              <div className="border border-black p-2 min-h-[40px] text-[8px] font-bold text-slate-800 grid grid-cols-2 gap-2 items-center">
+                 <div className="flex items-center gap-1"><span>🟦</span> P1 (Caixa)</div>
+                 <div className="flex items-center gap-1"><span>🟩</span> P2 (Porta/Entrada)</div>
+                 <div className="flex items-center gap-1"><span>🟧</span> P3 (Salão)</div>
+                 <div className="flex items-center gap-1"><span>🟪</span> P4 (Coringa/Flexível)</div>
+              </div>
            </div>
         </div>
 

@@ -4,6 +4,7 @@ import { Icon } from './Icon';
 import { Employee, MonthYear, Holiday, ShiftType } from '../types';
 import { buildHolidaySet } from '../constants';
 import { calculateLunchSchedule } from '../hooks/useLunchEngine';
+import { TacticalBoard } from './TacticalBoard';
 
 interface DaySummaryCardProps {
   employees: Employee[];
@@ -178,6 +179,14 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({
                 </div>
              </section>
           )}
+
+          <TacticalBoard 
+             employees={employees} 
+             dayIdx={selectedDayIdx} 
+             monthKey={monthKey} 
+             isSunday={isSunday} 
+             isHoliday={isHoliday} 
+          />
 
           {lunchSlots.length > 0 && (
             <section className="bg-slate-50 dark:bg-slate-900/60 rounded-[2rem] p-6 lg:p-8 border border-slate-200 dark:border-slate-800 shadow-inner">

@@ -21,6 +21,7 @@ export interface Employee {
   firedAt?: string;       // YYYY-MM-DD — used to stop generating after termination
   birthday?: string;       // YYYY-MM-DD or MM-DD
   isHidden?: boolean;      // To hide collaborator from the grid
+  tacticalPosition?: string; // P1 | P2 | P3 | P4 | P5+
 }
 
 export interface Holiday {

@@ -135,41 +135,55 @@ export function calculateLunchSchedule(
   }
 
   // 2. Abertura
-  // 13h - Máximo 1 colaborador da abertura
-  if (abertura.length > 0) {
+  let extraAbertura: typeof others = [];
+  if (abertura.length === 1) {
     addSlot("13h", 60, [abertura[0]]);
-  }
-  // 14h - Máximo 2 colaboradores da abertura
-  if (abertura.length > 1) {
+  } else if (abertura.length === 2) {
+    addSlot("14h", 60, abertura.slice(0, 2));
+  } else if (abertura.length === 3) {
+    addSlot("13h", 60, [abertura[0]]);
     addSlot("14h", 60, abertura.slice(1, 3));
+  } else if (abertura.length >= 4) {
+    addSlot("13h", 60, abertura.slice(0, 2));
+    addSlot("14h", 60, abertura.slice(2, 4));
+    extraAbertura = abertura.slice(4);
   }
-  
-  // Qualquer abertura extra (ex: se tiverem 4) vai para o pool da tarde
-  const extraAbertura = abertura.slice(3);
 
   // 3. Tarde (Intermediários e Fechamentos)
-  // O pool da tarde começa com extras da abertura, depois intermediários, depois fechamento
   const afternoonPool = [...extraAbertura, ...intermediario, ...fechamento];
   
   if (afternoonPool.length > 0) {
-    // 15h - Até 2 colaboradores
-    // Condição: > 4 no fechamento OU presença de intermediário OU extra da abertura
-    const useTwoAt15h = (fechamento.length > 4) || (intermediario.length > 0) || (extraAbertura.length > 0);
-    const countAt15h = useTwoAt15h ? 2 : 1;
-    
-    addSlot("15h", 60, afternoonPool.slice(0, countAt15h));
-    
-    const remaining = afternoonPool.slice(countAt15h);
-    
-    // 16h, 16h30, 17h - Sequencial (1 por vez)
-    const followUpSlots = ["16h", "16h30", "17h"];
-    remaining.forEach((e, i) => {
-      if (i < followUpSlots.length) {
-        addSlot(followUpSlots[i], 60, [e]);
-      } else {
-        addSlot("17h30", 60, [e]);
-      }
-    });
+    const M = afternoonPool.length;
+
+    if (M === 1) {
+        addSlot("15h", 60, [afternoonPool[0]]);
+    } else if (M === 2) {
+        addSlot("15h", 60, [afternoonPool[0]]);
+        addSlot("16h", 60, [afternoonPool[1]]);
+    } else if (M === 3) {
+        addSlot("15h", 60, [afternoonPool[0]]);
+        addSlot("16h", 60, [afternoonPool[1]]);
+        addSlot("17h", 60, [afternoonPool[2]]);
+    } else if (M === 4) {
+        addSlot("15h", 60, [afternoonPool[0]]);
+        addSlot("16h", 60, [afternoonPool[1]]);
+        addSlot("16h30", 60, [afternoonPool[2]]);
+        addSlot("17h", 60, [afternoonPool[3]]);
+    } else {
+        // >= 5 people
+        addSlot("15h", 60, afternoonPool.slice(0, 2));
+        addSlot("16h", 60, [afternoonPool[2]]);
+        addSlot("16h30", 60, [afternoonPool[3]]);
+        addSlot("17h", 60, [afternoonPool[4]]);
+        
+        // If more than 5, distribute every 30 mins after 17h
+        const extras = afternoonPool.slice(5);
+        const lateTimes = ["17h30", "18h", "18h30", "19h"];
+        extras.forEach((emp, i) => {
+            const time = i < lateTimes.length ? lateTimes[i] : `19h30+ (${i})`;
+            addSlot(time, 60, [emp]);
+        });
+    }
   }
 
   // 5. Estoquista (Flexível)

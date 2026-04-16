@@ -7,6 +7,8 @@ import { buildHolidaySet, getNationalHolidays } from '../constants';
 interface CalendarViewProps {
   employees: Employee[];
   currentMY: MonthYear;
+  onNextMonth: () => void;
+  onPrevMonth: () => void;
   customHolidays: Holiday[];
   today: Date;
   onOpenDayDetail: (dayIdx: number) => void;
@@ -17,10 +19,14 @@ const WEEKDAY_NAMES = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 export const CalendarView: React.FC<CalendarViewProps> = ({
   employees,
   currentMY,
+  onNextMonth,
+  onPrevMonth,
   customHolidays,
   today,
   onOpenDayDetail,
 }) => {
+  const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
   const holidaySet = useMemo(() => buildHolidaySet(currentMY.year, customHolidays), [currentMY.year, customHolidays]);
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMY.year, currentMY.month, 1).getDay();
@@ -76,6 +82,23 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl p-8 border border-slate-200 dark:border-slate-800 animate-fade-in flex flex-col h-full overflow-y-auto custom-scrollbar">
+      {/* Month Header */}
+      <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center">
+                  <Icon name="calendar_month" className="text-2xl" fill />
+              </div>
+              <div>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">{months[currentMY.month]} {currentMY.year}</h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Visão Mensal de Cobertura</p>
+              </div>
+          </div>
+          <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 rounded-xl p-1 border border-slate-100 dark:border-slate-800">
+              <button onClick={onPrevMonth} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all text-slate-400 hover:text-orange-500"><Icon name="chevron_left" /></button>
+              <button onClick={onNextMonth} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all text-slate-400 hover:text-orange-500"><Icon name="chevron_right" /></button>
+          </div>
+      </div>
+
       {/* Weekday Headers */}
       <div className="grid grid-cols-7 gap-4 mb-4">
         {WEEKDAY_NAMES.map((name, i) => (

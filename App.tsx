@@ -49,12 +49,9 @@ const App: React.FC = () => {
   const [allowRetroactive, setAllowRetroactive] = useState(false);
   const [isGridLocked, setIsGridLocked] = useState(true); 
   const [isZenMode, setIsZenMode] = useState(true); 
-  const [showHolidayCredit, setShowHolidayCredit] = useState(false);
-  
-  // Filters
-  const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week' | 'today' | 'tomorrow'>('all');
+  const [showHolidayCredit, setShowHolidayCredit] = useState(false);  // Filters
+  const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week' | 'today' | 'tomorrow' | 'day'>('all');
   const [selectedWeek, setSelectedWeek] = useState(1);
-  const [showOnlyActive, setShowOnlyActive] = useState(false);
   
   // History
   const [changeLogs, setChangeLogs] = useLocalStorage<ChangeLogEntry[]>('escalaChangeLogs', []);
@@ -127,42 +124,54 @@ const App: React.FC = () => {
 
   // Auto-generate month
   React.useEffect(() => {
-    if (employees.length <= 1 && (employees[0]?.id === PLACEHOLDER_EMPLOYEE_ID || !employees[0])) return;
-    const hasData = employees.some(e => e.status === 'active' && e.shifts[monthKey] && e.shifts[monthKey].length > 0);
+    if (!Array.isArray(employees) || (employees.length <= 1 && (employees[0]?.id === PLACEHOLDER_EMPLOYEE_ID || !employees[0]))) return;
+    const hasData = employees.some(e => e && e.status === 'active' && e.shifts[monthKey] && e.shifts[monthKey].length > 0);
     if (!hasData) {
       const updated = applyMonthUpdate(employees, currentMY.year, currentMY.month, customHolidays);
-      setEmployees(prev => prev.map(emp => {
-        const empUpdated = updated[emp.id];
-        if (!empUpdated) return emp;
-        return { ...emp, shifts: { ...emp.shifts, [monthKey]: empUpdated.shifts }, dailyHours: { ...emp.dailyHours, [monthKey]: empUpdated.hours } };
-      }));
+      setEmployees(prev => {
+        if (!Array.isArray(prev)) return prev;
+        return prev.map(emp => {
+          const empUpdated = updated[emp.id];
+          if (!empUpdated) return emp;
+          return { ...emp, shifts: { ...emp.shifts, [monthKey]: empUpdated.shifts }, dailyHours: { ...emp.dailyHours, [monthKey]: empUpdated.hours } };
+        });
+      });
     }
   }, [currentMY, monthKey, customHolidays, setEmployees, employees]); 
 
   const syncRules = useCallback(async () => {
+    if (!Array.isArray(employees)) return;
     const updated = applyRulesSync(employees, currentMY.year, currentMY.month, customHolidays);
-    setEmployees(prev => prev.map(emp => {
-      const empUpdated = updated[emp.id];
-      if (!empUpdated) return emp;
-      return { ...emp, shifts: { ...emp.shifts, [monthKey]: empUpdated.shifts }, dailyHours: { ...emp.dailyHours, [monthKey]: empUpdated.hours } };
-    }));
+    setEmployees(prev => {
+      if (!Array.isArray(prev)) return prev;
+      return prev.map(emp => {
+        const empUpdated = updated[emp.id];
+        if (!empUpdated) return emp;
+        return { ...emp, shifts: { ...emp.shifts, [monthKey]: empUpdated.shifts }, dailyHours: { ...emp.dailyHours, [monthKey]: empUpdated.hours } };
+      });
+    });
     addLog('Sincronizar Regras', 'Dados de colaboradores (férias, folgas fixas) atualizados na grade.', 'system');
   }, [currentMY, employees, customHolidays, monthKey, setEmployees, addLog]);
 
   const runFullRotation = useCallback(async () => {
+    if (!Array.isArray(employees)) return;
     const confirmed = await showDialog({
       type: 'confirm',
       message: 'Deseja realizar o SORTEIO da escala? Isso irá recalcular os domingos e revezamentos, preservando apenas as folgas absolutas.',
     });
     if (!confirmed) return;
     const updated = applyFullRotation(employees, currentMY.year, currentMY.month, customHolidays);
-    setEmployees(prev => prev.map(emp => {
-      const empUpdated = updated[emp.id];
-      if (!empUpdated) return emp;
-      return { ...emp, shifts: { ...emp.shifts, [monthKey]: empUpdated.shifts }, dailyHours: { ...emp.dailyHours, [monthKey]: empUpdated.hours } };
-    }));
+    setEmployees(prev => {
+      if (!Array.isArray(prev)) return prev;
+      return prev.map(emp => {
+        const empUpdated = updated[emp.id];
+        if (!empUpdated) return emp;
+        return { ...emp, shifts: { ...emp.shifts, [monthKey]: empUpdated.shifts }, dailyHours: { ...emp.dailyHours, [monthKey]: empUpdated.hours } };
+      });
+    });
     addLog('Sorteio de Escala', 'Revezamentos de domingos e regras 6x1 recalculados.', 'auto');
   }, [currentMY, employees, customHolidays, monthKey, showDialog, setEmployees, addLog]);
+
 
   const updateShift = (empId: string, dayIdx: number, newShift: ShiftType) => {
     const emp = employees.find(e => e.id === empId);
@@ -179,8 +188,8 @@ const App: React.FC = () => {
 
   const selectDayAndFilter = (idx: number) => {
     setSelectedDayIdx(idx);
-    setShowOnlyActive(true);
   };
+
 
   const updateShifts = (updates: { empId: string, dayIdx: number, newShift: ShiftType }[]) => {
     setEmployees(prev => {
@@ -200,10 +209,20 @@ const App: React.FC = () => {
   const updateEmployeeDailyHour = (empId: string, dayIdx: number, newHour: string) => {
     const emp = employees.find(e => e.id === empId);
     if (emp) {
-        addLog('Alteração de Horário', `${emp.name.split(' ')[0]}: Horário do dia ${dayIdx + 1} para ${newHour}`, 'edit');
+        if (dayIdx === -1) {
+            addLog('Alteração de Horário Base', `${emp.name.split(' ')[0]}: Horário base alterado para ${newHour}`, 'edit');
+        } else {
+            addLog('Alteração de Horário', `${emp.name.split(' ')[0]}: Horário do dia ${dayIdx + 1} para ${newHour}`, 'edit');
+        }
     }
     setEmployees(prev => prev.map(emp => {
       if (emp.id !== empId) return emp;
+      
+      if (dayIdx === -1) {
+          // If -1 is passed, change the base work period rather than a single day overriding.
+          return { ...emp, workPeriod: newHour, dailyHours: { ...emp.dailyHours, [monthKey]: [] } };
+      }
+
       const current = emp.dailyHours[monthKey] || Array(31).fill(emp.workPeriod);
       const updated = [...current]; updated[dayIdx] = newHour;
       return { ...emp, dailyHours: { ...emp.dailyHours, [monthKey]: updated } };
@@ -224,7 +243,9 @@ const App: React.FC = () => {
     const fullDayName = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][d.getDay()];
     const monthName = months[currentMY.month];
     
-    let text = `📅 Escala - ${fullDayName}, ${dayIdx + 1} de ${monthName}\n\n`;
+    const legendText = `📍 Posicionamento\n🟦 P1 Caixa\n🟩 P2 Porta\n🟧 P3 Salão\n🟪 P4 Coringa\n\n`;
+    const formattedDayName = fullDayName.charAt(0).toUpperCase() + fullDayName.slice(1);
+    let text = `📅 Escala ${formattedDayName} ${String(dayIdx + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}\n\n${legendText}`;
 
     const workingEmployees = employees.filter(emp => {
         if (emp.status !== 'active') return false;
@@ -239,13 +260,38 @@ const App: React.FC = () => {
     const isHoliday = hSet.has(dateStr);
 
     workingEmployees.forEach(emp => {
-        const hour = emp.dailyHours[monthKey]?.[dayIdx] || getTargetHours(emp, d.getDay(), isHoliday);
+        const hour = emp.workPeriod || '10h às 18h20';
         if (!groups[hour]) groups[hour] = [];
         groups[hour].push(emp);
     });
 
     // Sort hours (Abertura first, then others)
     const sortedHours = Object.keys(groups).sort();
+    
+    // Get Lunch times
+    const isSunday = d.getDay() === 0;
+    const lunchSlots = calculateLunchSchedule(employees, dayIdx, isSunday, isHoliday, monthKey);
+    const getLunchTime = (empId: string) => {
+        const slot = lunchSlots.find(s => s.employees.some(e => e.id === empId));
+        return slot ? slot.time : '';
+    };
+    
+    const groupEmpsCount = { 'Abertura': 0, 'Intermediário': 0, 'Fechamento': 0 };
+    sortedHours.forEach(h => {
+        const isA = h.startsWith('07') || h.startsWith('08') || h.startsWith('09') || h.startsWith('10');
+        const isF = h.includes('22') || h.includes('21') || h.includes('20');
+        const gl = isA ? 'Abertura' : isF ? 'Fechamento' : 'Intermediário';
+        groupEmpsCount[gl] += groups[h].length;
+    });
+    
+    let maxTurno = 'Abertura';
+    if (groupEmpsCount['Fechamento'] > groupEmpsCount[maxTurno]) maxTurno = 'Fechamento';
+    if (groupEmpsCount['Intermediário'] > groupEmpsCount[maxTurno]) maxTurno = 'Intermediário';
+
+    let rankAbertura = 1;
+    let rankFechamento = 1;
+    let rankIntermediario = 1;
+    let assignedP4M = false;
 
     sortedHours.forEach((hour) => {
         const emps = groups[hour];
@@ -256,11 +302,37 @@ const App: React.FC = () => {
         // Format range: "13:00 às 22:00" -> "13h às 22h" OR "10h às 18h20" (preserves existing h)
         const formattedHourRange = hour.replace(/:/g, 'h').replace(/h00\b/g, 'h');
         
-        text += `⏰ ${groupLabel} (${formattedHourRange})\n`;
+        text += `⏰ ${groupLabel} ${formattedHourRange}\n`;
         emps.forEach(e => {
             const firstName = e.name.split(' ')[0];
             const formattedName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
-            text += `${formattedName} - ${formattedHourRange}\n`;
+            const emojiMap: Record<string, string> = { 'P1': '🟦', 'P2': '🟩', 'P3': '🟧', 'P4': '🟪', 'P5+': '⬜', 'Estoque': '📦' };
+            
+            let posKey = e.tacticalPosition;
+            if (!posKey) {
+                if (e.cargo === 'Estoquista') posKey = 'Estoque';
+                else {
+                    let rankRef = groupLabel === 'Abertura' ? rankAbertura : groupLabel === 'Fechamento' ? rankFechamento : rankIntermediario;
+                    
+                    if (rankRef === 1) posKey = 'P1';
+                    else if (rankRef === 2) posKey = 'P2';
+                    else if (groupLabel === maxTurno && !assignedP4M) {
+                        posKey = 'P4';
+                        assignedP4M = true;
+                    } else {
+                        posKey = 'P3';
+                    }
+
+                    if (groupLabel === 'Abertura') rankAbertura++;
+                    else if (groupLabel === 'Fechamento') rankFechamento++;
+                    else rankIntermediario++;
+                }
+            }
+            
+            const posEmoji = (emojiMap[posKey] || '') + ' ';
+            const lunchTime = getLunchTime(e.id);
+            const lunchText = lunchTime ? ` (almoço ${lunchTime})` : '';
+            text += `${posEmoji}${formattedName}${lunchText}\n`;
         });
         text += `\n`;
     });
@@ -276,38 +348,11 @@ const App: React.FC = () => {
     });
 
     if (absences.length > 0) {
-        text += `🏖️ Ausências e Folgas:\n`;
+        text += `🏖️ Folga\n`;
         absences.forEach(a => {
-            const shift = (a.shifts[monthKey] || [])[dayIdx] || 'F';
-            const reason = shift === 'FF' ? 'Folga Feriado' : 'Folga';
-            const name = a.name.split(' ')[0].charAt(0).toUpperCase() + a.name.split(' ')[0].slice(1).toLowerCase();
-            text += `${name} (${reason})\n`;
-        });
-        text += `\n`;
-    }
-
-    // Add Lunch Schedule
-
-    const isSunday = d.getDay() === 0;
-
-    const lunchSlots = calculateLunchSchedule(employees, dayIdx, isSunday, isHoliday, monthKey);
-    
-    if (lunchSlots.length > 0) {
-        text += `🍱 Horários de Almoço\n`;
-        lunchSlots.forEach(slot => {
-            const formattedNames = slot.employees.map(e => {
-                 const firstName = e.name.split(' ')[0];
-                 return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
-            }).join(', ');
-
-            let timeLabel = slot.time;
-            if (timeLabel !== 'Flexível') {
-                timeLabel = timeLabel.replace(':', 'h').replace(/h00\b/g, 'h');
-            }
-
-            if (timeLabel !== 'Flexível') {
-                text += `${timeLabel}: ${formattedNames}\n`;
-            }
+            const name = a.name.split(' ')[0];
+            const formattedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+            text += `${formattedName}\n`;
         });
         text += `\n`;
     }
@@ -381,9 +426,7 @@ const App: React.FC = () => {
             onToggleZen={handleToggleZenMode}
             
             filter={filter}
-            onFilterChange={(f) => { setFilter(f); if (f === 'all') setShowOnlyActive(false); }}
-            showOnlyActive={showOnlyActive}
-            onShowOnlyActiveChange={setShowOnlyActive}
+            onFilterChange={(f) => { setFilter(f); }}
             selectedWeek={selectedWeek}
             onWeekChange={setSelectedWeek}
             weeksInMonth={weeksInMonth}
@@ -510,6 +553,7 @@ const App: React.FC = () => {
                 onUpdateShift={updateShift}
                 onUpdateShifts={updateShifts}
                 onUpdateEmployeeDailyHour={updateEmployeeDailyHour}
+                onUpdateEmployee={handleUpdateEmployee}
                 onOpenAnalysis={() => setCurrentView('analysis')}
                 isEditable={isEditable}
                 setIsEditable={setIsEditable}
@@ -524,7 +568,6 @@ const App: React.FC = () => {
                 onOpenDayDetail={(idx) => { selectDayAndFilter(idx); setShowDayDetail(true); }}
                 onShareWhatsApp={shareWhatsApp}
                 filter={filter}
-                showOnlyActive={showOnlyActive}
                 selectedWeek={selectedWeek}
                 isZenMode={isZenMode}
                 onExitZen={() => setIsZenMode(false)}
@@ -537,6 +580,8 @@ const App: React.FC = () => {
               <CalendarView
                 employees={employees}
                 currentMY={currentMY}
+                onNextMonth={onNextMonth}
+                onPrevMonth={onPrevMonth}
                 customHolidays={customHolidays}
                 today={today}
                 onOpenDayDetail={(idx) => { setSelectedDayIdx(idx); setShowDayDetail(true); }}

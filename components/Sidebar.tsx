@@ -34,8 +34,6 @@ interface SidebarProps {
   // Grid Filters & Actions
   filter: 'all' | 'sunday' | 'holiday' | 'week' | 'today' | 'tomorrow';
   onFilterChange: (f: 'all' | 'sunday' | 'holiday' | 'week' | 'today' | 'tomorrow') => void;
-  showOnlyActive: boolean;
-  onShowOnlyActiveChange: (v: boolean) => void;
   selectedWeek: number;
   onWeekChange: (w: number) => void;
   weeksInMonth: number;
@@ -80,8 +78,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleZen,
   filter,
   onFilterChange,
-  showOnlyActive,
-  onShowOnlyActiveChange,
   selectedWeek,
   onWeekChange,
   weeksInMonth,

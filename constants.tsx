@@ -99,13 +99,52 @@ export function buildHolidaySet(
   const nationals = getNationalHolidays(year);
   const result = new Set<string>();
 
-  // Use a local helper to handle MM-DD vs YYYY-MM-DD
+  // Helper to ensure padding
+  const pad = (s: string) => s.padStart(2, '0');
+
   const normalize = (dateStr: string) => {
     if (!dateStr || typeof dateStr !== 'string') return null;
     const trimmed = dateStr.trim();
-    if (trimmed.length === 5 && trimmed.includes('-')) return `${year}-${trimmed}`; // MM-DD
-    if (trimmed.startsWith(`${year}-`) && trimmed.length >= 10) return trimmed.substring(0, 10); // YYYY-MM-DD
-    return null; // different year or invalid format
+    
+    // Support both - and /
+    const parts = trimmed.split(/[-/]/);
+    
+    if (parts.length === 3) {
+      // YYYY-MM-DD or DD-MM-YYYY
+      let mmIdx = 1;
+      let ddIdx = 2;
+      
+      if (parts[2].length === 4) { // DD-MM-YYYY
+          ddIdx = 0;
+          mmIdx = 1;
+      }
+      
+      const mm = parseInt(parts[mmIdx]);
+      const dd = parseInt(parts[ddIdx]);
+      
+      if (!isNaN(mm) && !isNaN(dd) && mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+          return `${year}-${pad(mm.toString())}-${pad(dd.toString())}`;
+      }
+    }
+    
+    if (parts.length === 2) {
+      // MM-DD or DD-MM
+      const p1 = parseInt(parts[0]);
+      const p2 = parseInt(parts[1]);
+      
+      if (!isNaN(p1) && !isNaN(p2)) {
+          // Check if first is Month or Day based on values (>12 means Day)
+          let mm = p1;
+          let dd = p2;
+          if (p1 > 12) { dd = p1; mm = p2; }
+          
+          if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+              return `${year}-${pad(mm.toString())}-${pad(dd.toString())}`;
+          }
+      }
+    }
+    
+    return null; 
   };
 
   nationals.forEach(h => {
