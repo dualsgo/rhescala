@@ -241,7 +241,7 @@ const App: React.FC = () => {
   const handleUpdateEmployee = (id: string, data: Partial<Employee>) => setEmployees(prev => prev.map(e => e.id === id ? { ...e, ...data } : e));
   const handleDeleteEmployee = (id: string) => setEmployees(prev => prev.filter(e => e.id !== id));
   const addEmployee = (name: string, isYoung: boolean, courseDay: string, cargo: EmployeeCargo, birthday: string) => {
-    const newEmp: Employee = { id: `emp-${Date.now()}`, name, isYoungApprentice: isYoung, courseDay, cargo, birthday, status: 'active', statusColor: 'bg-green-500', shifts: {}, dailyHours: {}, workPeriod: isYoung ? '10h às 16h20' : '10h às 18h20', preferredDayOff: 'Segunda-feira', shiftName: 'T' };
+    const newEmp: Employee = { id: `emp-${Date.now()}`, name, isYoungApprentice: isYoung, courseDay, cargo, birthday, status: 'active', statusColor: 'bg-green-500', shifts: {}, dailyHours: {}, workPeriod: isYoung ? APPRENTICE_WORK_PERIOD : '10h às 18h20', preferredDayOff: 'Segunda-feira', shiftName: 'T' };
     setEmployees(prev => [...prev, newEmp]);
   };
 

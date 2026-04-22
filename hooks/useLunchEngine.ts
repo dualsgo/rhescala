@@ -1,5 +1,5 @@
 
-import { Employee, ShiftType } from '../types';
+import { Employee } from '../types';
 
 export interface LunchSlot {
   time: string;
@@ -7,13 +7,71 @@ export interface LunchSlot {
   duration: number; // in minutes
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function getEmpHour(e: Employee, dayIdx: number, monthKey: string): string {
+  return (e.dailyHours[monthKey] || [])[dayIdx] || e.workPeriod || '';
+}
+
+function getStartHour(e: Employee, dayIdx: number, monthKey: string): number {
+  const h = getEmpHour(e, dayIdx, monthKey);
+  const match = h.match(/^(\d+)/);
+  return match ? parseInt(match[1]) : 0;
+}
+
+function addSlot(
+  slots: LunchSlot[],
+  time: string,
+  duration: number,
+  emps: Employee[]
+): void {
+  if (emps.length === 0) return;
+  slots.push({
+    time,
+    duration,
+    employees: emps.map(e => ({
+      id: e.id,
+      name: e.name.split(' ')[0],
+      isApprentice: e.isYoungApprentice,
+      isStockist: e.cargo === 'Estoquista',
+      cargo: e.cargo,
+    })),
+  });
+}
+
+// ─── Main Logic ──────────────────────────────────────────────────────────────
+
 /**
- * Nova Lógica de Almoço:
- * - Máximo 2 pessoas saindo simultaneamente.
- * - Jovem Aprendiz: 12:45 (15 min).
- * - Estoquista: Horário flexível.
- * - Slots Fixos:
- *   13:00, 13:30, 14:00, 14:30, 15:30, 16:00, 16:30, 17:00 (1 vaga cada)
+ * Regras de almoço (dias úteis):
+ *
+ * APRENDIZ: sempre 12h45 (15 min) — independente de qualquer outra regra.
+ * ESTOQUISTA: Flexível — sem horário definido.
+ *
+ * ABERTURA (turno com início ≤ 10h → normalmente 10h às 18h20):
+ *   n=1 → 13h
+ *   n=2 → 14h, 14h  (ambos juntos no slot 14h)
+ *   n=3 → 13h  |  14h, 14h
+ *   n=4 → 13h  |  13h30  |  14h, 14h
+ *   n=5 → 13h  |  13h30  |  14h, 14h  |  15h
+ *   n=6 → 13h  |  13h30  |  14h, 14h  |  15h, 15h
+ *   ...extras: 15h (máx 2) → 15h30, 16h
+ *
+ * INTERMEDIÁRIO (turno com início entre 11h e 12h):
+ *   Tratado como "tarde" — come junto com fechamento (pool unificado abaixo).
+ *
+ * FECHAMENTO/TARDE (turno com início ≥ 13h, ex: 13h40 às 22h):
+ *   O pool "tarde" combina intermediário (12h) + fechamento (13h40+).
+ *   n=1 → 15h
+ *   n=2 → 15h, 16h
+ *   n=3 → 15h, 16h, 17h
+ *   n=4 → 15h(2), 16h, 17h
+ *   n=5 → 15h(2), 16h, 16h30, 17h
+ *   n=6 → 15h(2), 16h, 16h30, 17h, 17h30
+ *   ...
+ *
+ * Princípio geral: no máximo 2 pessoas em almoço no mesmo slot de 1h,
+ * exceção permitida no slot 13h30 (que pode ter 1 pessoa) para não
+ * ultrapassar 3 no intervalo global.
  */
 export function calculateLunchSchedule(
   employees: Employee[],
@@ -22,173 +80,167 @@ export function calculateLunchSchedule(
   isHoliday: boolean,
   monthKey: string
 ): LunchSlot[] {
-  const workingInStore = employees.filter(emp => {
+  const working = employees.filter(emp => {
     if (emp.status !== 'active') return false;
     const shift = (emp.shifts[monthKey] || [])[dayIdx] || 'F';
-    return shift === 'T'; 
+    return shift === 'T';
   });
 
-  if (workingInStore.length === 0) return [];
+  if (working.length === 0) return [];
 
   const slots: LunchSlot[] = [];
 
-  const addSlot = (time: string, duration: number, emps: typeof workingInStore) => {
-    if (emps.length === 0) return;
-    slots.push({
-      time,
-      duration,
-      employees: emps.map(e => ({
-        id: e.id,
-        name: e.name.split(' ')[0],
-        isApprentice: e.isYoungApprentice,
-        isStockist: e.cargo === 'Estoquista',
-        cargo: e.cargo
-      }))
-    });
-  };
+  // Separate fixed-rule groups
+  const apprentices = working.filter(e => e.isYoungApprentice);
+  const stockists   = working.filter(e => !e.isYoungApprentice && e.cargo === 'Estoquista');
+  const others      = working.filter(e => !e.isYoungApprentice && e.cargo !== 'Estoquista');
 
-  const apprentices = workingInStore.filter(e => e.isYoungApprentice);
-  const stockists = workingInStore.filter(e => e.cargo === 'Estoquista');
-  const others = workingInStore.filter(e => !e.isYoungApprentice && e.cargo !== 'Estoquista');
+  // 1. Aprendizes: always 12h45
+  addSlot(slots, '12h45', 15, apprentices);
 
-  const getEmpHour = (e: Employee) => (e.dailyHours[monthKey] || [])[dayIdx] || e.workPeriod || '';
-  const getStartHour = (e: Employee) => {
-    const h = getEmpHour(e);
-    const match = h.match(/^(\d+)/);
-    return match ? parseInt(match[1]) : 0;
-  };
+  // 2. Estoquistas: flexible
+  addSlot(slots, 'Flexível', 60, stockists);
 
-  // REGRA ESPECIAL: DOMINGO
+  // ── DOMINGO ──────────────────────────────────────────────────────────────
   if (isSunday) {
-    const openers = others.filter(e => getStartHour(e) === 12);
-    const nonOpeners = others.filter(e => getStartHour(e) !== 12);
+    const openers    = others.filter(e => getStartHour(e, dayIdx, monthKey) <= 12);
+    const closers    = others.filter(e => getStartHour(e, dayIdx, monthKey) > 12);
 
-    // 2 abertura as 13h
-    if (openers.length > 0) addSlot("13:00", 60, openers.slice(0, 2));
-    if (openers.length > 2) nonOpeners.unshift(...openers.slice(2));
-
-    // Slots sequenciais: 14h, 15h, 16h, 17h
-    const sSlots = ["14:00", "15:00", "16:00", "17:00"];
-    let nIdx = 0;
-    
-    // Aloca 1 por slot iniciamente
-    sSlots.forEach(time => {
-      if (nIdx < nonOpeners.length) {
-        addSlot(time, 60, [nonOpeners[nIdx]]);
-        nIdx++;
-      }
-    });
-
-    // Se houver mais gente, preenche 16h e 17h ate 2 pessoas
-    if (nIdx < nonOpeners.length) {
-       addSlot("16:00", 60, [nonOpeners[nIdx]]); // Atua como adição ao slot já criado? 
-       // Na verdade, a lógica de slots deve ser agrupada.
+    // Abertura do domingo (12h): slots 13h, 14h, 15h, 16h, 17h
+    const sundayOpenSlots = ['13h', '14h', '15h', '16h', '17h'];
+    let pool = [...openers];
+    let slotIdx = 0;
+    while (pool.length > 0 && slotIdx < sundayOpenSlots.length) {
+      const take = Math.min(2, pool.length);
+      addSlot(slots, sundayOpenSlots[slotIdx], 60, pool.splice(0, take));
+      slotIdx++;
     }
-    
-    // Recalculo dos slots de domingo para permitir múltiplos
-    const finalSundaySlots: Record<string, Employee[]> = {};
-    if (openers.length > 0) finalSundaySlots["13h"] = openers.slice(0, 2);
-    
-    const othersForSlots = [...(openers.slice(2)), ...nonOpeners];
-    let currentIdx = 0;
-    ["14h", "15h", "16h", "17h"].forEach(time => {
-      if (currentIdx < othersForSlots.length) {
-        let count = 1;
-        if ((time === "16h" || time === "17h") && (othersForSlots.length - currentIdx) > (4 - ["14h", "15h", "16h", "17h"].indexOf(time))) {
-          count = 2; // Cabe 2 se sobrar gente
-        }
-        finalSundaySlots[time] = othersForSlots.slice(currentIdx, currentIdx + count);
-        currentIdx += count;
-      }
+    // Fechamento domingo
+    const sundayCloseSlots = ['15h', '16h', '17h'];
+    closers.forEach((emp, i) => {
+      const time = i < sundayCloseSlots.length ? sundayCloseSlots[i] : '17h30';
+      addSlot(slots, time, 60, [emp]);
     });
 
-    // Cleanup and return for Sunday
-    slots.length = 0; // Clear previous adds
-    if (apprentices.length > 0) addSlot("12h45", 15, apprentices);
-    Object.entries(finalSundaySlots).forEach(([time, emps]) => addSlot(time, 60, emps as any));
-    if (stockists.length > 0) addSlot("Flexível", 60, stockists);
     return slots;
   }
 
-  // REGRA ESPECIAL: FERIADO (15 min, 1 por vez)
+  // ── FERIADO ───────────────────────────────────────────────────────────────
   if (isHoliday) {
-    let startMinutes = 13 * 60; // Começa as 13h
+    let startMinutes = 13 * 60;
     others.forEach(e => {
-       const h = Math.floor(startMinutes / 60);
-       const m = startMinutes % 60;
-       const timeStr = m === 0 ? `${h}h` : `${h}h${m}`;
-       addSlot(timeStr, 15, [e]);
-       startMinutes += 15;
+      const h = Math.floor(startMinutes / 60);
+      const m = startMinutes % 60;
+      const timeStr = m === 0 ? `${h}h` : `${h}h${m}`;
+      addSlot(slots, timeStr, 15, [e]);
+      startMinutes += 15;
     });
-    if (apprentices.length > 0) addSlot("12h45", 15, apprentices);
-    if (stockists.length > 0) addSlot("Flexível", 15, stockists);
     return slots;
   }
 
-  const abertura = others.filter(e => getStartHour(e) <= 10);
-  const intermediario = others.filter(e => getStartHour(e) > 10 && getStartHour(e) <= 13);
-  const fechamento = others.filter(e => getStartHour(e) >= 14);
+  // ── DIA ÚTIL ─────────────────────────────────────────────────────────────
 
-  // 1. Jovem Aprendiz @ 12h45
-  if (apprentices.length > 0) {
-    addSlot("12h45", 15, apprentices);
-  }
+  // Classify by shift start time
+  const abertura    = others.filter(e => getStartHour(e, dayIdx, monthKey) <= 10);
+  const tarde       = others.filter(e => getStartHour(e, dayIdx, monthKey) > 10);
+  // "tarde" = intermediário (12h) + fechamento (13h40+) — all eat 15h-17h
 
-  // 2. Abertura
-  let extraAbertura: typeof others = [];
-  if (abertura.length === 1) {
-    addSlot("13h", 60, [abertura[0]]);
-  } else if (abertura.length === 2) {
-    addSlot("14h", 60, abertura.slice(0, 2));
-  } else if (abertura.length === 3) {
-    addSlot("13h", 60, [abertura[0]]);
-    addSlot("14h", 60, abertura.slice(1, 3));
-  } else if (abertura.length >= 4) {
-    addSlot("13h", 60, abertura.slice(0, 2));
-    addSlot("14h", 60, abertura.slice(2, 4));
-    extraAbertura = abertura.slice(4);
-  }
+  // ── ABERTURA LUNCH SLOTS (13h – 15h) ─────────────────────────────────────
+  // Ordered: 13h → 13h30 → 14h (max 2) → 15h (overflow)
+  //
+  // n | slots
+  // 1 | 13h
+  // 2 | 14h, 14h
+  // 3 | 13h  +  14h, 14h
+  // 4 | 13h  +  13h30  +  14h, 14h
+  // 5 | 13h  +  13h30  +  14h, 14h  +  15h
+  // 6 | 13h  +  13h30  +  14h, 14h  +  15h, 15h
+  // 7+ : continue distributing 2 per slot from 15h30, 16h...
 
-  // 3. Tarde (Intermediários e Fechamentos)
-  const afternoonPool = [...extraAbertura, ...intermediario, ...fechamento];
-  
-  if (afternoonPool.length > 0) {
-    const M = afternoonPool.length;
+  const n = abertura.length;
 
-    if (M === 1) {
-        addSlot("15h", 60, [afternoonPool[0]]);
-    } else if (M === 2) {
-        addSlot("15h", 60, [afternoonPool[0]]);
-        addSlot("16h", 60, [afternoonPool[1]]);
-    } else if (M === 3) {
-        addSlot("15h", 60, [afternoonPool[0]]);
-        addSlot("16h", 60, [afternoonPool[1]]);
-        addSlot("17h", 60, [afternoonPool[2]]);
-    } else if (M === 4) {
-        addSlot("15h", 60, [afternoonPool[0]]);
-        addSlot("16h", 60, [afternoonPool[1]]);
-        addSlot("16h30", 60, [afternoonPool[2]]);
-        addSlot("17h", 60, [afternoonPool[3]]);
-    } else {
-        // >= 5 people
-        addSlot("15h", 60, afternoonPool.slice(0, 2));
-        addSlot("16h", 60, [afternoonPool[2]]);
-        addSlot("16h30", 60, [afternoonPool[3]]);
-        addSlot("17h", 60, [afternoonPool[4]]);
-        
-        // If more than 5, distribute every 30 mins after 17h
-        const extras = afternoonPool.slice(5);
-        const lateTimes = ["17h30", "18h", "18h30", "19h"];
-        extras.forEach((emp, i) => {
-            const time = i < lateTimes.length ? lateTimes[i] : `19h30+ (${i})`;
-            addSlot(time, 60, [emp]);
-        });
+  if (n === 1) {
+    addSlot(slots, '13h', 60, [abertura[0]]);
+
+  } else if (n === 2) {
+    addSlot(slots, '14h', 60, abertura.slice(0, 2));
+
+  } else if (n === 3) {
+    addSlot(slots, '13h', 60, [abertura[0]]);
+    addSlot(slots, '14h', 60, abertura.slice(1, 3));
+
+  } else if (n === 4) {
+    addSlot(slots, '13h',   60, [abertura[0]]);
+    addSlot(slots, '13h30', 60, [abertura[1]]);
+    addSlot(slots, '14h',   60, abertura.slice(2, 4));
+
+  } else if (n >= 5) {
+    addSlot(slots, '13h',   60, [abertura[0]]);
+    addSlot(slots, '13h30', 60, [abertura[1]]);
+    addSlot(slots, '14h',   60, abertura.slice(2, 4));
+
+    // Overflow: 2 per slot from 15h onwards
+    const overflowSlots = ['15h', '15h', '15h30', '15h30', '16h', '16h'];
+    const extra = abertura.slice(4);
+    let oi = 0;
+    while (extra.length > 0) {
+      const take = Math.min(2, extra.length);
+      const time = oi < overflowSlots.length ? overflowSlots[oi] : '16h30';
+      addSlot(slots, time, 60, extra.splice(0, take));
+      oi += 2;
     }
   }
 
-  // 5. Estoquista (Flexível)
-  if (stockists.length > 0) {
-    addSlot("Flexível", 60, stockists);
+  // ── TARDE LUNCH SLOTS (15h – 17h) ────────────────────────────────────────
+  // Pool = intermediário (12h) + fechamento (13h40+)
+  // n | slots
+  // 1 | 15h
+  // 2 | 15h, 16h
+  // 3 | 15h, 16h, 17h
+  // 4 | 15h(2), 16h, 17h
+  // 5 | 15h(2), 16h, 16h30, 17h
+  // 6 | 15h(2), 16h, 16h30, 17h, 17h30
+  // 7+: continue at 17h30, 18h...
+
+  const m = tarde.length;
+
+  if (m === 1) {
+    addSlot(slots, '15h', 60, [tarde[0]]);
+
+  } else if (m === 2) {
+    addSlot(slots, '15h', 60, [tarde[0]]);
+    addSlot(slots, '16h', 60, [tarde[1]]);
+
+  } else if (m === 3) {
+    addSlot(slots, '15h', 60, [tarde[0]]);
+    addSlot(slots, '16h', 60, [tarde[1]]);
+    addSlot(slots, '17h', 60, [tarde[2]]);
+
+  } else if (m === 4) {
+    addSlot(slots, '15h', 60, tarde.slice(0, 2));
+    addSlot(slots, '16h', 60, [tarde[2]]);
+    addSlot(slots, '17h', 60, [tarde[3]]);
+
+  } else if (m === 5) {
+    addSlot(slots, '15h',   60, tarde.slice(0, 2));
+    addSlot(slots, '16h',   60, [tarde[2]]);
+    addSlot(slots, '16h30', 60, [tarde[3]]);
+    addSlot(slots, '17h',   60, [tarde[4]]);
+
+  } else if (m >= 6) {
+    addSlot(slots, '15h',   60, tarde.slice(0, 2));
+    addSlot(slots, '16h',   60, [tarde[2]]);
+    addSlot(slots, '16h30', 60, [tarde[3]]);
+    addSlot(slots, '17h',   60, [tarde[4]]);
+    addSlot(slots, '17h30', 60, [tarde[5]]);
+
+    // Further overflow
+    const lateExtra = tarde.slice(6);
+    const lateSlots = ['18h', '18h30', '19h'];
+    lateExtra.forEach((emp, i) => {
+      const time = i < lateSlots.length ? lateSlots[i] : '19h30';
+      addSlot(slots, time, 60, [emp]);
+    });
   }
 
   return slots;
