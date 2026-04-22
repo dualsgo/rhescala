@@ -310,28 +310,37 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     <span className="text-[7px] font-bold text-slate-400 uppercase">{emp.cargo}</span>
                   </div>
                 </td>
-                <td className={`sticky left-[150px] z-20 p-2 border-r border-b border-slate-200 w-[120px] shadow-md text-center transition-colors ${shiftRowClass || 'bg-white dark:bg-slate-900'}`}>
+                <td className={`sticky left-[150px] z-20 p-2 border-r border-b border-slate-200 w-[120px] shadow-md text-center transition-colors ${shiftRowClass || 'bg-white dark:bg-slate-900'} ${selectedDayIdx >= 0 ? 'bg-orange-50/50 dark:bg-orange-950/30' : ''}`}>
                    <select 
-                    value={emp.workPeriod || ''}
-                    onChange={(e) => onUpdateEmployeeDailyHour(emp.id, -1, e.target.value)}
-                    className={`bg-transparent w-full text-[10px] font-black focus:ring-0 border-none p-0 cursor-pointer outline-none ${getShiftTextColor(emp.workPeriod)}`}
+                    value={getDayHour(emp, selectedDayIdx)}
+                    onChange={(e) => onUpdateEmployeeDailyHour(emp.id, selectedDayIdx, e.target.value)}
+                    className={`bg-transparent w-full text-[10px] font-black focus:ring-0 border-none p-0 cursor-pointer outline-none ${getShiftTextColor(getDayHour(emp, selectedDayIdx))}`}
                   >
                     {availableHours.map(h => <option key={h} value={h}>{h}</option>)}
                   </select>
                 </td>
                 <td className={`sticky left-[270px] z-20 p-2 border-r border-b border-slate-200 w-[90px] shadow-md text-center transition-colors hidden md:table-cell ${shiftRowClass || 'bg-white dark:bg-slate-900'}`}>
                    <select 
-                    value={emp.tacticalPosition || ''}
-                    onChange={(e) => onUpdateEmployee?.(emp.id, { tacticalPosition: e.target.value })}
+                    value={emp.preferredPositions?.[0] || emp.tacticalPosition || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const prefs = [...(emp.preferredPositions || [])];
+                      if (val === '') {
+                        prefs.splice(0, 1);
+                      } else {
+                        prefs[0] = val;
+                      }
+                      onUpdateEmployee?.(emp.id, { preferredPositions: prefs.filter(Boolean), tacticalPosition: val || undefined });
+                    }}
                     className="bg-transparent w-full text-[10px] font-black focus:ring-0 border-none p-0 cursor-pointer outline-none text-slate-600"
                   >
-                    <option value="">Auto</option>
-                    <option value="P1">P1 (🟦)</option>
-                    <option value="P2">P2 (🟩)</option>
-                    <option value="P3">P3 (🟧)</option>
-                    <option value="P4">P4 (🟪)</option>
-                    <option value="P5+">P5+ (⬜)</option>
-                    <option value="Estoque">Estoque (📦)</option>
+                    <option value="">⚡ Auto</option>
+                    <option value="P1">P1 🟦</option>
+                    <option value="P2">P2 🟩</option>
+                    <option value="P3">P3 🟧</option>
+                    <option value="P4">P4 🟪</option>
+                    <option value="P5+">P5+ ⬜</option>
+                    <option value="Estoque">📦 Estoque</option>
                   </select>
                 </td>
                 {filteredDays.map((day) => {
@@ -348,7 +357,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                         if (isZenMode && !isEditable) onOpenDayDetail(day.originalIdx);
                       }} 
                       className={`p-3 text-center border-r border-b border-slate-50 relative transition-all duration-200 ${
-                        isSelectedColumn ? 'bg-orange-50/30' : ''
+                        isSelectedColumn ? 'bg-orange-50 dark:bg-orange-950/20 ring-1 ring-inset ring-orange-200/50 dark:ring-orange-800/30 z-10' : ''
                       } ${isZenMode ? 'cursor-pointer' : ''} ${day.isPast ? 'opacity-40 grayscale-[0.5]' : ''}`}
                     >
                         <div className={`mx-auto w-8 h-8 flex items-center justify-center rounded-lg text-white font-black shadow-sm transform transition-all ${isSelectedColumn ? 'scale-110 shadow-sm' : ''} ${shift === 'T' ? 'bg-emerald-600' : shift === 'F' ? 'bg-slate-900' : shift.startsWith('FF') ? 'bg-rose-600' : shift === 'C' ? 'bg-blue-600' : shift === 'FE' ? 'bg-slate-400 opacity-60' : 'bg-slate-100 text-slate-400'}`}>

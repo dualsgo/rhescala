@@ -4,6 +4,7 @@ import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
 import { generateYearSchedule, applyMonthUpdate, applyRulesSync, applyFullRotation, getTargetHours } from './hooks/useScheduleEngine';
 import { calculateLunchSchedule } from './hooks/useLunchEngine';
+import { calculateTacticalPositions } from './hooks/useTacticalEngine';
 import { Sidebar } from './components/Sidebar';
 import { Icon } from './components/Icon';
 import { DaySummaryCard } from './components/DaySummaryCard';
@@ -139,6 +140,12 @@ const App: React.FC = () => {
     }
   }, [currentMY, monthKey, customHolidays, setEmployees, employees]); 
 
+  // Clamp selectedDayIdx
+  React.useEffect(() => {
+    if (selectedDayIdx >= daysInMonth) {
+      setSelectedDayIdx(daysInMonth - 1);
+    }
+  }, [currentMY, daysInMonth, selectedDayIdx]);
   const syncRules = useCallback(async () => {
     if (!Array.isArray(employees)) return;
     const updated = applyRulesSync(employees, currentMY.year, currentMY.month, customHolidays);
@@ -260,7 +267,7 @@ const App: React.FC = () => {
     const isHoliday = hSet.has(dateStr);
 
     workingEmployees.forEach(emp => {
-        const hour = emp.workPeriod || '10h às 18h20';
+        const hour = (emp.dailyHours?.[monthKey]?.[dayIdx]) || emp.workPeriod || '10h às 18h20';
         if (!groups[hour]) groups[hour] = [];
         groups[hour].push(emp);
     });
@@ -293,6 +300,13 @@ const App: React.FC = () => {
     let rankIntermediario = 1;
     let assignedP4M = false;
 
+    // Build a position map using the tactical engine (respects preferredPositions)
+    const hSet2 = buildHolidaySet(currentMY.year, customHolidays);
+    const isHoliday2 = hSet2.has(dateStr);
+    const tacticalAllocs = calculateTacticalPositions(employees, dayIdx, monthKey, '12h', isSunday, isHoliday2);
+    const positionMap: Record<string, string> = {};
+    tacticalAllocs.forEach(a => { positionMap[a.id] = a.position; });
+
     sortedHours.forEach((hour) => {
         const emps = groups[hour];
         const isAbertura = hour.startsWith('07') || hour.startsWith('08') || hour.startsWith('09') || hour.startsWith('10');
@@ -308,7 +322,8 @@ const App: React.FC = () => {
             const formattedName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
             const emojiMap: Record<string, string> = { 'P1': '🟦', 'P2': '🟩', 'P3': '🟧', 'P4': '🟪', 'P5+': '⬜', 'Estoque': '📦' };
             
-            let posKey = e.tacticalPosition;
+            // Use tactical engine result first, then preferredPositions[0], then legacy tacticalPosition
+            let posKey = positionMap[e.id] || (e.preferredPositions?.[0]) || e.tacticalPosition;
             if (!posKey) {
                 if (e.cargo === 'Estoquista') posKey = 'Estoque';
                 else {
@@ -484,7 +499,7 @@ const App: React.FC = () => {
                   <>
                     <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
                     <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-1 border border-slate-100 dark:border-slate-800">
-                        <button onClick={() => { setFilter('all'); setShowOnlyActive(false); }} className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filter === 'all' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Mês</button>
+                        <button onClick={() => { setFilter('all'); }} className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filter === 'all' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Mês</button>
                         <button onClick={() => setFilter('today')} className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filter === 'today' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Hoje</button>
                         <button onClick={() => setFilter('tomorrow')} className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filter === 'tomorrow' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Amanhã</button>
                         <button onClick={() => setFilter('sunday')} className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filter === 'sunday' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Dom</button>

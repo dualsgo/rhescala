@@ -4,6 +4,7 @@ import { useDialog } from '../contexts/DialogContext';
 import { Employee, EmployeeCargo } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, PLACEHOLDER_EMPLOYEE_ID } from '../constants';
+import { TACTICAL_POSITION_META } from '../hooks/useTacticalEngine';
 
 interface TeamViewProps {
   employees: Employee[];
@@ -13,6 +14,8 @@ interface TeamViewProps {
 }
 
 const CARGO_OPTIONS: EmployeeCargo[] = ['Auxiliar de Loja', 'Estoquista'];
+
+const POSITION_OPTIONS = ['P1', 'P2', 'P3', 'P4', 'P5+', 'Estoque'];
 
 /** Adds `days` calendar days to a YYYY-MM-DD string and returns YYYY-MM-DD */
 function addDays(dateStr: string, days: number): string {
@@ -30,6 +33,146 @@ function handleVacationStart(empId: string, startDate: string, onUpdate: (id: st
   const endDate = addDays(startDate, 30);
   onUpdate(empId, { vacationStart: startDate, vacationEnd: endDate });
 }
+
+// ─── Preferred Position Selector Component ───────────────────────────────────
+
+interface PreferredPositionSelectorProps {
+  empId: string;
+  cargo?: string;
+  preferredPositions: string[];
+  onChange: (empId: string, positions: string[]) => void;
+}
+
+const PreferredPositionSelector: React.FC<PreferredPositionSelectorProps> = ({
+  empId, cargo, preferredPositions, onChange
+}) => {
+  const [showGuide, setShowGuide] = useState(false);
+
+  const availablePositions = cargo === 'Estoquista'
+    ? ['Estoque', 'P1']
+    : POSITION_OPTIONS.filter(p => p !== 'Estoque');
+
+  const setPref = (slot: 0 | 1, value: string) => {
+    const current = [...(preferredPositions || [])];
+    if (value === 'auto') {
+      // Clear this slot and all after
+      current[slot] = '';
+    } else {
+      current[slot] = value;
+    }
+    // Remove empty trailing entries
+    const cleaned = current.filter((v, i) => i < slot + 1 || v !== '');
+    onChange(empId, cleaned.filter(v => v !== ''));
+  };
+
+  const pref1 = preferredPositions?.[0] || '';
+  const pref2 = preferredPositions?.[1] || '';
+
+  const meta1 = pref1 ? TACTICAL_POSITION_META[pref1] : null;
+  const meta2 = pref2 ? TACTICAL_POSITION_META[pref2] : null;
+
+  return (
+    <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+      <div className="flex items-center justify-between">
+        <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">
+          Posições Preferenciais
+        </label>
+        <button
+          onClick={() => setShowGuide(g => !g)}
+          className="flex items-center gap-1 text-[8px] font-black text-orange-500 uppercase tracking-wider hover:text-orange-600 transition-colors"
+        >
+          <Icon name="help_outline" className="text-[11px]" />
+          Guia
+        </button>
+      </div>
+
+      {/* Quick Guide Tooltip */}
+      {showGuide && (
+        <div className="bg-slate-900 text-white rounded-xl p-3 space-y-2 text-[9px] leading-relaxed animate-fade-in">
+          {Object.entries(TACTICAL_POSITION_META).filter(([k]) => k !== 'Estoque' || cargo === 'Estoquista').map(([key, m]) => (
+            <div key={key} className="flex items-start gap-2">
+              <span className="text-base leading-none mt-0.5">{m.emoji}</span>
+              <div>
+                <span className="font-black uppercase">{m.label}</span>
+                <span className="text-slate-400"> · {m.location}</span>
+                <p className="text-slate-300 mt-0.5">{m.mission}</p>
+              </div>
+            </div>
+          ))}
+          <p className="text-slate-500 border-t border-slate-700 pt-2 mt-1">
+            Defina até 2 posições em ordem de preferência. No modo <strong className="text-orange-400">Auto</strong>, o sistema alocará conforme disponibilidade respeitando as preferências.
+          </p>
+        </div>
+      )}
+
+      {/* Priority 1 */}
+      <div className="flex items-center gap-2">
+        <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-black flex-shrink-0 ${meta1 ? meta1.bgColor + ' ' + meta1.color : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+          1
+        </div>
+        <select
+          value={pref1 || 'auto'}
+          onChange={e => setPref(0, e.target.value)}
+          className={`flex-1 rounded-lg border px-2 py-1.5 text-[10px] font-black outline-none focus:ring-1 transition-all cursor-pointer ${
+            meta1
+              ? `${meta1.bgColor} ${meta1.color} ${meta1.borderColor} focus:ring-orange-400`
+              : 'bg-slate-50 dark:bg-slate-900 text-slate-400 border-slate-100 dark:border-slate-700 focus:ring-orange-400'
+          }`}
+        >
+          <option value="auto">⚡ Auto</option>
+          {availablePositions.map(p => (
+            <option key={p} value={p} disabled={p === pref2}>
+              {TACTICAL_POSITION_META[p]?.emoji || ''} {TACTICAL_POSITION_META[p]?.label || p}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Priority 2 — only shows if P1 is set */}
+      {pref1 && (
+        <div className="flex items-center gap-2 animate-fade-in">
+          <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-black flex-shrink-0 ${meta2 ? meta2.bgColor + ' ' + meta2.color : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+            2
+          </div>
+          <select
+            value={pref2 || 'auto'}
+            onChange={e => setPref(1, e.target.value)}
+            className={`flex-1 rounded-lg border px-2 py-1.5 text-[10px] font-black outline-none focus:ring-1 transition-all cursor-pointer ${
+              meta2
+                ? `${meta2.bgColor} ${meta2.color} ${meta2.borderColor} focus:ring-orange-400`
+                : 'bg-slate-50 dark:bg-slate-900 text-slate-400 border-slate-100 dark:border-slate-700 focus:ring-orange-400'
+            }`}
+          >
+            <option value="auto">— Nenhuma</option>
+            {availablePositions.filter(p => p !== pref1).map(p => (
+              <option key={p} value={p}>
+                {TACTICAL_POSITION_META[p]?.emoji || ''} {TACTICAL_POSITION_META[p]?.label || p}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Preview badge */}
+      {(pref1 || pref2) && (
+        <div className="flex items-center gap-1 flex-wrap">
+          {[pref1, pref2].filter(Boolean).map((p, i) => {
+            const m = TACTICAL_POSITION_META[p];
+            return m ? (
+              <span key={p} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black border ${m.bgColor} ${m.color} ${m.borderColor}`}>
+                <span>{m.emoji}</span>
+                <span>{i + 1}ª: {p}</span>
+              </span>
+            ) : null;
+          })}
+          <span className="text-[8px] text-slate-400 ml-1 font-bold">— Auto respeitará essa ordem</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee, onDeleteEmployee, onAddEmployee }) => {
   const [showAddModal, setShowAddModal] = useState(false);
@@ -72,6 +215,38 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
         >
           <Icon name="person_add" /> Novo Colaborador
         </button>
+      </div>
+
+      {/* Tactical Guide Banner */}
+      <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-5 border border-slate-700 shadow-lg">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center shadow">
+            <Icon name="emoji_events" className="text-white text-base" fill />
+          </div>
+          <div>
+            <h4 className="text-sm font-black text-white uppercase tracking-widest">Matriz de Posições Táticas</h4>
+            <p className="text-[10px] text-slate-400 font-bold">Distribuição cumulativa obrigatória — P1 → P2 → P3 → P4</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {(['P1', 'P2', 'P3', 'P4'] as const).map(key => {
+            const m = TACTICAL_POSITION_META[key];
+            return (
+              <div key={key} className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/50 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{m.emoji}</span>
+                  <span className="text-[10px] font-black text-white uppercase">{key}</span>
+                </div>
+                <p className="text-[9px] text-slate-400 font-bold leading-tight">{m.location}</p>
+                <p className="text-[8px] text-slate-500 leading-tight">{m.mobility}</p>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-[9px] text-slate-500 mt-3 font-bold border-t border-slate-700 pt-2">
+          ⚡ <span className="text-orange-400">Auto</span> = O sistema respeita as posições preferenciais de cada colaborador e distribui de acordo com a equipe disponível no dia.
+          &nbsp;|&nbsp; 🔐 Estoquista <span className="text-slate-400">só assume P1 se for o único na loja.</span>
+        </p>
       </div>
 
       {showAddModal && (
@@ -133,7 +308,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto max-h-[calc(100vh-260px)] custom-scrollbar">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto max-h-[calc(100vh-380px)] custom-scrollbar">
         {employees.map(emp => (
           <div key={emp.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
             {/* Status indicator */}
@@ -264,10 +439,17 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                     />
                   </div>
                 )}
-              </div>
+
+                {/* ── Preferred Positions ── */}
+                <PreferredPositionSelector
+                  empId={emp.id}
+                  cargo={emp.cargo}
+                  preferredPositions={emp.preferredPositions || []}
+                  onChange={(id, positions) => onUpdateEmployee(id, { preferredPositions: positions })}
+                />
             </div>
-          )
-        )}
+          </div>
+        ))}
       </div>
     </div>
   );
