@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { useDialog } from '../contexts/DialogContext';
 import { Icon } from './Icon';
 import { Employee, MonthYear, Holiday, SyncState } from '../types';
-import * as XLSX from 'xlsx';
 import { buildHolidaySet } from '../constants';
 import { useSyncStatus } from '../hooks/useLocalStorage';
 
@@ -11,9 +10,8 @@ const WEEKDAY_ABBR = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
 const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 const actions = [
-    { label: 'Excel', id: 'excel', icon: 'table_view',     color: 'text-green-600', bg: 'bg-green-50',  border: 'border-green-200' },
-    { label: 'PDF',   id: 'pdf',   icon: 'picture_as_pdf', color: 'text-red-600',   bg: 'bg-red-50',    border: 'border-red-200'   },
-    { label: 'Dados', id: 'backup', icon: 'storage',      color: 'text-sky-600',   bg: 'bg-sky-50',    border: 'border-sky-200'   },
+    { label: 'Imprimir', id: 'print', icon: 'print', color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200' },
+    { label: 'Dados', id: 'backup', icon: 'storage', color: 'text-sky-600', bg: 'bg-sky-50', border: 'border-sky-200' },
 ];
 
 interface HeaderProps {
@@ -26,6 +24,7 @@ interface HeaderProps {
   onForceSync: () => Promise<void>;
   isDarkMode: boolean;
   onDarkModeToggle: () => void;
+  onShowPrintView: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -38,6 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
   onForceSync,
   isDarkMode,
   onDarkModeToggle,
+  onShowPrintView,
 }) => {
   const { showDialog } = useDialog();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -49,297 +49,9 @@ export const Header: React.FC<HeaderProps> = ({
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
 
   // ── Excel export ──────────────────────────────────────────────────────────
-  const handleExportExcel = () => {
-    const dayLabels = Array.from({ length: daysInMonth }, (_, i) => {
-      const date = new Date(currentMY.year, currentMY.month, i + 1);
-      return `${String(i + 1).padStart(2, '0')}\n${WEEKDAY_ABBR[date.getDay()]}`;
-    });
-    const header = ['Nome', 'Horário', ...dayLabels];
-    const sortedEmployeesForExcel = [...employees].sort((a, b) => {
-      const getStartHour = (wp: string) => {
-        const match = wp.match(/(\d+)h/);
-        return match ? parseInt(match[1]) : 99;
-      };
-      const hA = getStartHour(a.workPeriod || '');
-      const hB = getStartHour(b.workPeriod || '');
-      if (hA !== hB) return hA - hB;
-      return a.name.localeCompare(b.name, 'pt-BR');
-    });
-
-    const rows = sortedEmployeesForExcel.map(emp => {
-      const row: (string | number)[] = [emp.name, emp.workPeriod];
-      for (let i = 0; i < daysInMonth; i++) {
-        const shift = (emp.shifts[monthKey] || [])[i] || 'F';
-        
-        const dDateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
-        const isBday = emp.birthday && (emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday) === dDateStr.substring(5);
-
-        if (isBday) {
-          row.push('DO');
-        } else if (['F', 'FF', 'FE', 'C'].includes(shift)) {
-          row.push(shift);
-        } else {
-          // Show abbreviated hour if working
-          const h = (emp.dailyHours[monthKey] || [])[i] || emp.workPeriod;
-          row.push(h.split(' ')[0]); // "10h" instead of full string
-        }
-      }
-      return row;
-    });
-    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-    ws['!cols'] = [{ wch: 22 }, { wch: 14 }, ...Array(daysInMonth).fill({ wch: 6 })];
-    ws['!rows'] = [{ hpt: 28 }];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Escala');
-    XLSX.writeFile(wb, `Escala_${monthKey}.xlsx`);
-  };
-
-  // ── PDF export ────────────────────────────────────────────────────────────
-  const handleExportPDF = async () => {
-    try {
-      const { default: jsPDF } = await import('jspdf');
-      const { default: autoTable } = await import('jspdf-autotable');
-      
-      const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-      const monthName = months[currentMY.month];
-      
-      doc.setFontSize(13);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Escala Operacional – ${monthName} ${currentMY.year}`, 40, 35);
-      
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(120, 120, 120);
-      doc.text(`Gerado em ${new Date().toLocaleDateString('pt-BR')}`, 40, 48);
-      doc.setTextColor(0, 0, 0);
-
-      const head = [['Colaborador', 'Horário', ...Array.from({ length: daysInMonth }, (_, i) => {
-        const date = new Date(currentMY.year, currentMY.month, i + 1);
-        return `${i + 1}\n${WEEKDAY_ABBR[date.getDay()]}`;
-      })]];
-
-      // Ordenação: Abertura -> Intermediário -> Fechamento, e depois por nome
-      const sortedEmployees = [...employees].filter(e => !e.isHidden).sort((a, b) => {
-        const getStartHour = (wp: string) => {
-          const match = wp.match(/(\d+)h/);
-          return match ? parseInt(match[1]) : 99;
-        };
-        const hA = getStartHour(a.workPeriod || '');
-        const hB = getStartHour(b.workPeriod || '');
-        if (hA !== hB) return hA - hB;
-        return a.name.localeCompare(b.name, 'pt-BR');
-      });
-
-      const body = sortedEmployees.map(emp => {
-        const shiftCells = Array.from({ length: daysInMonth }, (_, i) => {
-          const s = (emp.shifts[monthKey] || [])[i] || 'F';
-          
-          const dDateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
-          const isBday = emp.birthday && (emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday) === dDateStr.substring(5);
-
-          if (isBday) return 'DO';
-          if (['F', 'FF', 'FE', 'C'].includes(s)) return s;
-          return ''; // Deixa em branco para dias trabalhados
-        });
-        const mainPeriod = emp.workPeriod.includes(' às ') ? emp.workPeriod.replace(' às ', '-') : emp.workPeriod;
-        return [emp.name, mainPeriod, ...shiftCells];
-      });
-
-      const hSet = buildHolidaySet(currentMY.year, customHolidays);
-
-      autoTable(doc, {
-        head,
-        body,
-        startY: 55,
-        margin: { top: 20, right: 20, bottom: 20, left: 20 },
-        styles: { 
-          fontSize: 6, // Increased back slightly as 'T' is small
-          cellPadding: 1.5, 
-          halign: 'center', 
-          valign: 'middle', 
-          lineWidth: 0.5, 
-          lineColor: [0, 0, 0],
-          overflow: 'linebreak'
-        },
-        headStyles: { 
-          fillColor: [255, 255, 255], 
-          textColor: [0, 0, 0], 
-          fontStyle: 'bold', 
-          fontSize: 6, 
-          minCellHeight: 25 
-        },
-        bodyStyles: { textColor: [0, 0, 0], minCellHeight: 15 },
-        alternateRowStyles: { fillColor: [255, 255, 255] },
-        columnStyles: { 
-          0: { cellWidth: 70, halign: 'center' }, 
-          1: { cellWidth: 45, halign: 'center' } 
-        },
-        didParseCell: (data: any) => {
-          if (data.column.index >= 2) {
-             const dayNum = data.column.index - 1; 
-             const date = new Date(currentMY.year, currentMY.month, dayNum);
-             const isSun = date.getDay() === 0;
-             const hKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-             const isHol = hSet.has(hKey);
-
-             if (data.section === 'head') {
-                if (isSun || isHol) data.cell.styles.fillColor = [240, 240, 240]; 
-             }
-             
-             if (data.section === 'body') {
-               const val = data.cell.raw as string;
-                if (['F', 'FF', 'FE', 'C', 'DO'].includes(val)) {
-                  data.cell.styles.fontStyle = 'bold';
-                }
-               
-               if ((isSun || isHol)) {
-                 data.cell.styles.fillColor = [245, 245, 245];
-               }
-             }
-          }
-        },
-      });
-
-      const finalY = (doc as any).lastAutoTable.finalY + 30;
-      
-      // ── Legenda ───────────────────────────────────────────────────────────
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.text('LEGENDA:', 40, finalY);
-      
-      const legend = [
-        'T: Trabalha',
-        'F: Folga Normal',
-        'DO: Aniversário (Escala Especial)',
-        'FF: Folga Feriado',
-        'FE: Férias',
-        'C: Dia de Curso'
-      ];
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      legend.forEach((text, i) => {
-        const col = i % 3;
-        const row = Math.floor(i / 3);
-        doc.text(text, 40 + (col * 140), finalY + 15 + (row * 10));
-      });
-
-      // ── Informações do Mês ────────────────────────────────────────────────
-      let infoY = finalY + 45;
-      const colWidth = 250;
-      
-      // Feriados do Mês
-      const monthHolidays = customHolidays.filter(h => {
-        if (!h.date) return false;
-        const hDate = new Date(h.date + 'T00:00:00');
-        return hDate.getMonth() === currentMY.month && hDate.getFullYear() === currentMY.year;
-      });
-
-      if (monthHolidays.length > 0) {
-        doc.setFont('helvetica', 'bold');
-        doc.text('FERIADOS DO MÊS:', 40, infoY);
-        doc.setFont('helvetica', 'normal');
-        monthHolidays.forEach((h, i) => {
-          if (!h.date) return;
-          const d = h.date.split('-')[2];
-          doc.text(`• ${d}/${currentMY.month + 1}: ${h.name}`, 40, infoY + 12 + (i * 10));
-        });
-      }
-
-      // Aniversariantes do Mês
-      const birthdays = employees.filter(e => {
-        if (!e.birthday || e.id === 'placeholder-em-id') return false;
-        const bDate = new Date(e.birthday + 'T00:00:00');
-        return bDate.getMonth() === currentMY.month;
-      });
-
-      const birthdayX = 40 + colWidth;
-      if (birthdays.length > 0) {
-        doc.setFont('helvetica', 'bold');
-        doc.text('ANIVERSARIANTES DO MÊS:', birthdayX, infoY);
-        doc.setFont('helvetica', 'normal');
-        birthdays.forEach((e, i) => {
-          const d = e.birthday?.split('-')[2];
-          doc.text(`Aniver. ${d}/${currentMY.month + 1}: ${e.name.toUpperCase()}`, birthdayX, infoY + 12 + (i * 10));
-        });
-      }
-
-      // Colaboradores em Férias
-      const onVacation = employees.filter(e => {
-        if (!e.vacationStart || !e.vacationEnd || e.id === 'placeholder-em-id') return false;
-        const start = new Date(e.vacationStart + 'T00:00:00');
-        const end = new Date(e.vacationEnd + 'T00:00:00');
-        const monthStart = new Date(currentMY.year, currentMY.month, 1);
-        const monthEnd = new Date(currentMY.year, currentMY.month + 1, 0);
-        return (start <= monthEnd && end >= monthStart);
-      });
-
-      const vacationX = 40 + (colWidth * 2);
-      if (onVacation.length > 0) {
-        doc.setFont('helvetica', 'bold');
-        doc.text('COLABORADORES EM FÉRIAS:', vacationX, infoY);
-        doc.setFont('helvetica', 'normal');
-        onVacation.forEach((e, i) => {
-          const s = e.vacationStart?.split('-').reverse().join('/');
-          const f = e.vacationEnd?.split('-').reverse().join('/');
-          doc.text(`• ${e.name.toUpperCase()}: ${s} até ${f}`, vacationX, infoY + 12 + (i * 10));
-        });
-      }
-
-      // ── Quadro de Almoço & Regras ──────────────────────────────────────────
-      const footerY = Math.max(infoY + (monthHolidays.length || birthdays.length || onVacation.length) * 12 + 40, finalY + 140);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.text('DISTRIBUIÇÃO DE ALMOÇO (SLOTS):', 40, footerY);
-      
-      const lunchHead = [['Turno', 'Segunda a Sábado', 'Domingo', 'Feriado (15min)']];
-      const lunchBody = [
-        ['Abertura', '12:30 | 13:00 | 13:30 | 14:00', '13:30 | 14:00 | 14:30', '13:30 às 15:30'],
-        ['Intermediário', '14:00 | 14:30 | 15:00 | 15:30', '15:00 | 15:30 | 16:00', '14:30 às 16:30'],
-        ['Fechamento', '15:00 | 16:00 | 17:00 | 18:00', '16:00 | 17:00 | 18:00', '16:30 às 18:30'],
-      ];
-
-      autoTable(doc, {
-        head: lunchHead,
-        body: lunchBody,
-        startY: footerY + 10,
-        margin: { left: 40 },
-        tableWidth: 400,
-        styles: { fontSize: 6, cellPadding: 2 },
-        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0] }
-      });
-
-      const rulesX = 460;
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.text('REGRAS DA ESCALA:', rulesX, footerY);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6);
-      const rules = [
-        '• Escala 6x1: Máximo de 6 dias seguidos de trabalho.',
-        '• Domingos: Revezamento obrigatório (sempre que possível).',
-        '• Limite: Não é permitido trabalhar 3 domingos consecutivos.',
-        '• Feriados: Geram crédito de folga para uso posterior.',
-        '• Divulgação: Escala deve ser fixada em local visível.'
-      ];
-      rules.forEach((r, i) => doc.text(r, rulesX, footerY + 15 + (i * 10)));
-
-      // ── Assinatura ─────────────────────────────────────────────────────────
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      
-      doc.setDrawColor(0);
-      doc.line(pageWidth - 240, pageHeight - 50, pageWidth - 40, pageHeight - 50);
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'bold');
-      doc.text('ASSINATURA DO GERENTE / RESPONSÁVEL', pageWidth - 140, pageHeight - 38, { align: 'center' });
-
-      doc.save(`Escala_${monthKey}.pdf`);
-    } catch (err) {
-      console.error('PDF export error:', err);
-      await showDialog({ type: 'alert', message: 'Erro ao gerar PDF. Verifique se as dependências estão instaladas corretamente.' });
-    }
+  // ── Print ────────────────────────────────────────────────────────────
+  const handlePrint = () => {
+    onShowPrintView();
   };
 
   // ── Backup ────────────────────────────────────────────────────────────────
@@ -369,8 +81,7 @@ export const Header: React.FC<HeaderProps> = ({
     if (id === 'backup') { await handleBackup(); return; }
     const confirmed = await showDialog({ type: 'confirm', message: `Deseja iniciar a operação: ${label}?` });
     if (!confirmed) return;
-    if (id === 'excel') handleExportExcel();
-    if (id === 'pdf')   handleExportPDF();
+    if (id === 'print')  handlePrint();
   };
 
   const navItems = [
