@@ -6,18 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:gas": "$env:VITE_GAS='true'; vite build; Copy-Item -Path 'dist/index.html' -Destination 'appscript_version/Index.html' -Force; node 'appscript_version/fix_bundle.cjs'",
+    "build:gas": "npx cross-env VITE_GAS=true vite build && npx shx cp dist/index.html appscript_version/Index.html && node appscript_version/fix_bundle.cjs",
     "preview": "vite preview"
   },
   "dependencies": {
-    "jspdf": "^4.2.0",
-    "jspdf-autotable": "^5.0.7",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "xlsx": "^0.18.5"
+    "react-dom": "^19.2.4"
   },
   "devDependencies": {
-    "@types/jspdf": "^1.3.3",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.8.2",
