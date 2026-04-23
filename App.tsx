@@ -19,6 +19,7 @@ import { MonthlyPrintView } from './components/MonthlyPrintView';
 import { APPRENTICE_WORK_PERIOD, PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, buildHolidaySet, SHIFT_HOURS } from './constants';
 import { ShiftTemplateManager } from './components/ShiftTemplateManager';
 
+import { MonthEditorMenu } from './components/MonthEditorMenu';
 import { Employee, ShiftType, MonthYear, Holiday, EmployeeCargo, ChangeLogEntry, ShiftTemplate } from './types';
 import { HistoryPanel } from './components/HistoryPanel';
 
@@ -32,6 +33,7 @@ const App: React.FC = () => {
   const [showHolidayManager, setShowHolidayManager] = useState(false);
   const [showShiftManager, setShowShiftManager] = useState(false);
   const [showPrintView, setShowPrintView] = useState(false);
+  const [showMonthEditor, setShowMonthEditor] = useState(false);
   const [shiftTemplates, setShiftTemplates] = useLocalStorage<ShiftTemplate[]>('riHappyShiftTemplates', [
     { id: 't1', name: 'Padrão', type: 'weekday', hours: SHIFT_HOURS.WEEKDAY, isActive: true },
     { id: 't2', name: 'Padrão', type: 'sunday', hours: SHIFT_HOURS.SUNDAY, isActive: true },
@@ -146,38 +148,84 @@ const App: React.FC = () => {
       setSelectedDayIdx(daysInMonth - 1);
     }
   }, [currentMY, daysInMonth, selectedDayIdx]);
-  const syncRules = useCallback(async () => {
+  const syncRules = useCallback(async (targetMY?: MonthYear) => {
     if (!Array.isArray(employees)) return;
-    const updated = applyRulesSync(employees, currentMY.year, currentMY.month, customHolidays);
+    const my = targetMY || currentMY;
+    const mKey = `${my.year}-${String(my.month + 1).padStart(2, '0')}`;
+    const updated = applyRulesSync(employees, my.year, my.month, customHolidays);
     setEmployees(prev => {
       if (!Array.isArray(prev)) return prev;
       return prev.map(emp => {
         const empUpdated = updated[emp.id];
         if (!empUpdated) return emp;
-        return { ...emp, shifts: { ...emp.shifts, [monthKey]: empUpdated.shifts }, dailyHours: { ...emp.dailyHours, [monthKey]: empUpdated.hours } };
+        return { ...emp, shifts: { ...emp.shifts, [mKey]: empUpdated.shifts }, dailyHours: { ...emp.dailyHours, [mKey]: empUpdated.hours } };
       });
     });
-    addLog('Sincronizar Regras', 'Dados de colaboradores (férias, folgas fixas) atualizados na grade.', 'system');
-  }, [currentMY, employees, customHolidays, monthKey, setEmployees, addLog]);
+    addLog('Sincronizar Regras', `Dados de colaboradores atualizados na grade (${mKey}).`, 'system');
+  }, [currentMY, employees, customHolidays, setEmployees, addLog]);
 
-  const runFullRotation = useCallback(async () => {
+  const runFullRotation = useCallback(async (targetMY?: MonthYear) => {
     if (!Array.isArray(employees)) return;
-    const confirmed = await showDialog({
-      type: 'confirm',
-      message: 'Deseja realizar o SORTEIO da escala? Isso irá recalcular os domingos e revezamentos, preservando apenas as folgas absolutas.',
-    });
-    if (!confirmed) return;
-    const updated = applyFullRotation(employees, currentMY.year, currentMY.month, customHolidays);
+    const my = targetMY || currentMY;
+    const mKey = `${my.year}-${String(my.month + 1).padStart(2, '0')}`;
+    
+    if (!targetMY) {
+      const confirmed = await showDialog({
+        type: 'confirm',
+        message: 'Deseja realizar o SORTEIO da escala? Isso irá recalcular os domingos e revezamentos, preservando apenas as folgas absolutas.',
+      });
+      if (!confirmed) return;
+    }
+
+    const updated = applyFullRotation(employees, my.year, my.month, customHolidays);
     setEmployees(prev => {
       if (!Array.isArray(prev)) return prev;
       return prev.map(emp => {
         const empUpdated = updated[emp.id];
         if (!empUpdated) return emp;
-        return { ...emp, shifts: { ...emp.shifts, [monthKey]: empUpdated.shifts }, dailyHours: { ...emp.dailyHours, [monthKey]: empUpdated.hours } };
+        return { ...emp, shifts: { ...emp.shifts, [mKey]: empUpdated.shifts }, dailyHours: { ...emp.dailyHours, [mKey]: empUpdated.hours } };
       });
     });
-    addLog('Sorteio de Escala', 'Revezamentos de domingos e regras 6x1 recalculados.', 'auto');
-  }, [currentMY, employees, customHolidays, monthKey, showDialog, setEmployees, addLog]);
+    addLog('Sorteio de Escala', `Revezamentos de domingos e regras 6x1 recalculados (${mKey}).`, 'auto');
+  }, [currentMY, employees, customHolidays, showDialog, setEmployees, addLog]);
+
+  const runCombinedProcess = useCallback(async (targetMY: MonthYear) => {
+    if (!Array.isArray(employees)) return;
+    const my = targetMY;
+    const mKey = `${my.year}-${String(my.month + 1).padStart(2, '0')}`;
+    
+    // 1. Sync rules first
+    const rulesUpdated = applyRulesSync(employees, my.year, my.month, customHolidays);
+    
+    // Create temp list to pass to rotation
+    const tempEmployees = employees.map(emp => {
+      const empUpdated = rulesUpdated[emp.id];
+      if (!empUpdated) return emp;
+      return { 
+        ...emp, 
+        shifts: { ...emp.shifts, [mKey]: empUpdated.shifts }, 
+        dailyHours: { ...emp.dailyHours, [mKey]: empUpdated.hours } 
+      };
+    });
+
+    // 2. Run rotation on the synced data
+    const finalUpdated = applyFullRotation(tempEmployees, my.year, my.month, customHolidays);
+    
+    setEmployees(prev => {
+      if (!Array.isArray(prev)) return prev;
+      return prev.map(emp => {
+        const empUpdated = finalUpdated[emp.id];
+        if (!empUpdated) return emp;
+        return { 
+          ...emp, 
+          shifts: { ...emp.shifts, [mKey]: empUpdated.shifts }, 
+          dailyHours: { ...emp.dailyHours, [mKey]: empUpdated.hours } 
+        };
+      });
+    });
+    
+    addLog('Escala Automática', `Processo completo (Sync + Sorteio) realizado para ${mKey}.`, 'auto');
+  }, [employees, customHolidays, setEmployees, addLog]);
 
 
   const updateShift = (empId: string, dayIdx: number, newShift: ShiftType) => {
@@ -272,8 +320,12 @@ const App: React.FC = () => {
         groups[hour].push(emp);
     });
 
-    // Sort hours (Abertura first, then others)
-    const sortedHours = Object.keys(groups).sort();
+    const getHourStart = (h: string) => {
+        const match = h.match(/^(\d+)/);
+        return match ? parseInt(match[1]) : 0;
+    };
+
+    const sortedHours = Object.keys(groups).sort((a, b) => getHourStart(a) - getHourStart(b));
     
     // Get Lunch times
     const isSunday = d.getDay() === 0;
@@ -285,9 +337,8 @@ const App: React.FC = () => {
     
     const groupEmpsCount = { 'Abertura': 0, 'Intermediário': 0, 'Fechamento': 0 };
     sortedHours.forEach(h => {
-        const isA = h.startsWith('07') || h.startsWith('08') || h.startsWith('09') || h.startsWith('10');
-        const isF = h.includes('22') || h.includes('21') || h.includes('20');
-        const gl = isA ? 'Abertura' : isF ? 'Fechamento' : 'Intermediário';
+        const start = getHourStart(h);
+        const gl = start <= 10 ? 'Abertura' : (start >= 13 ? 'Fechamento' : 'Intermediário');
         groupEmpsCount[gl] += groups[h].length;
     });
     
@@ -298,22 +349,13 @@ const App: React.FC = () => {
     let rankAbertura = 1;
     let rankFechamento = 1;
     let rankIntermediario = 1;
-    let assignedP4M = false;
-
-    // Build a position map using the tactical engine (respects preferredPositions)
-    const hSet2 = buildHolidaySet(currentMY.year, customHolidays);
-    const isHoliday2 = hSet2.has(dateStr);
-    const tacticalAllocs = calculateTacticalPositions(employees, dayIdx, monthKey, '12h', isSunday, isHoliday2);
-    const positionMap: Record<string, string> = {};
-    tacticalAllocs.forEach(a => { positionMap[a.id] = a.position; });
 
     sortedHours.forEach((hour) => {
-        const emps = groups[hour];
-        const isAbertura = hour.startsWith('07') || hour.startsWith('08') || hour.startsWith('09') || hour.startsWith('10');
-        const isFechamento = hour.includes('22') || hour.includes('21') || hour.includes('20');
-        const groupLabel = isAbertura ? 'Abertura' : isFechamento ? 'Fechamento' : 'Intermediário';
+        // Sort employees in this hour group alphabetically
+        const emps = [...groups[hour]].sort((a, b) => a.name.localeCompare(b.name));
+        const start = getHourStart(hour);
+        const groupLabel = start <= 10 ? 'Abertura' : (start >= 13 ? 'Fechamento' : 'Intermediário');
         
-        // Format range: "13:00 às 22:00" -> "13h às 22h" OR "10h às 18h20" (preserves existing h)
         const formattedHourRange = hour.replace(/:/g, 'h').replace(/h00\b/g, 'h');
         
         text += `⏰ ${groupLabel} ${formattedHourRange}\n`;
@@ -322,21 +364,21 @@ const App: React.FC = () => {
             const formattedName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
             const emojiMap: Record<string, string> = { 'P1': '🟦', 'P2': '🟩', 'P3': '🟧', 'P4': '🟪', 'P5+': '⬜', 'Estoque': '📦' };
             
-            // Use tactical engine result first, then preferredPositions[0], then legacy tacticalPosition
-            let posKey = positionMap[e.id] || (e.preferredPositions?.[0]) || e.tacticalPosition;
-            if (!posKey) {
-                if (e.cargo === 'Estoquista') posKey = 'Estoque';
-                else {
+            // Prioritize manual marking (first preferred position)
+            let posKey = e.preferredPositions?.[0] || e.tacticalPosition;
+            
+            if (!posKey || posKey === '') {
+                if (e.cargo === 'Estoquista') {
+                    posKey = 'Estoque';
+                } else {
+                    // Auto-assignment based on rank within the shift group
                     let rankRef = groupLabel === 'Abertura' ? rankAbertura : groupLabel === 'Fechamento' ? rankFechamento : rankIntermediario;
                     
                     if (rankRef === 1) posKey = 'P1';
                     else if (rankRef === 2) posKey = 'P2';
-                    else if (groupLabel === maxTurno && !assignedP4M) {
-                        posKey = 'P4';
-                        assignedP4M = true;
-                    } else {
-                        posKey = 'P3';
-                    }
+                    else if (rankRef === 3) posKey = 'P3';
+                    else if (rankRef === 4) posKey = 'P4';
+                    else posKey = 'P5+';
 
                     if (groupLabel === 'Abertura') rankAbertura++;
                     else if (groupLabel === 'Fechamento') rankFechamento++;
@@ -351,6 +393,8 @@ const App: React.FC = () => {
         });
         text += `\n`;
     });
+
+
 
     // Add Absences and Time Off
     const absences = employees.filter(e => {
@@ -435,6 +479,7 @@ const App: React.FC = () => {
             onShowHolidayManager={() => setShowHolidayManager(true)}
             onShowShiftManager={() => setShowShiftManager(true)}
             onShowPrintView={() => setShowPrintView(true)}
+            onShowMonthEditor={() => setShowMonthEditor(true)}
             onOpenAnalysis={() => setCurrentView('analysis')}
             onShowHolidayCredit={() => setShowHolidayCredit(true)}
             isZenMode={isZenMode}
@@ -728,6 +773,20 @@ const App: React.FC = () => {
           currentMY={currentMY} 
           customHolidays={customHolidays} 
           onClose={() => setShowPrintView(false)} 
+        />
+      )}
+
+
+      {showMonthEditor && (
+        <MonthEditorMenu 
+          employees={employees}
+          currentMY={currentMY}
+          customHolidays={customHolidays}
+          onSyncRules={syncRules}
+          onSortSchedule={runFullRotation}
+          onRunFullProcess={runCombinedProcess}
+          onClose={() => setShowMonthEditor(false)}
+          onJumpToMonth={(my) => { setCurrentMY(my); setShowMonthEditor(false); }}
         />
       )}
 

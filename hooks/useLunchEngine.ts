@@ -140,46 +140,34 @@ export function calculateLunchSchedule(
 
   // ── DIA ÚTIL ─────────────────────────────────────────────────────────────
 
-  // Classify by shift start time
-  const abertura    = others.filter(e => getStartHour(e, dayIdx, monthKey) <= 10);
-  const tarde       = others.filter(e => getStartHour(e, dayIdx, monthKey) > 10);
-  // "tarde" = intermediário (12h) + fechamento (13h40+) — all eat 15h-17h
+  // 1. Sort alphabetically to ensure deterministic results regardless of list order
+  const sortedOthers = [...others].sort((a, b) => a.name.localeCompare(b.name));
+
+  // 2. Classify by shift start time more strictly
+  const abertura      = sortedOthers.filter(e => getStartHour(e, dayIdx, monthKey) <= 10);
+  const intermediario = sortedOthers.filter(e => {
+    const h = getStartHour(e, dayIdx, monthKey);
+    return h > 10 && h < 13;
+  });
+  const fechamento    = sortedOthers.filter(e => getStartHour(e, dayIdx, monthKey) >= 13);
 
   // ── ABERTURA LUNCH SLOTS (13h – 15h) ─────────────────────────────────────
-  // Ordered: 13h → 13h30 → 14h (max 2) → 15h (overflow)
-  //
-  // n | slots
-  // 1 | 13h
-  // 2 | 14h, 14h
-  // 3 | 13h  +  14h, 14h
-  // 4 | 13h  +  13h30  +  14h, 14h
-  // 5 | 13h  +  13h30  +  14h, 14h  +  15h
-  // 6 | 13h  +  13h30  +  14h, 14h  +  15h, 15h
-  // 7+ : continue distributing 2 per slot from 15h30, 16h...
-
   const n = abertura.length;
-
   if (n === 1) {
     addSlot(slots, '13h', 60, [abertura[0]]);
-
   } else if (n === 2) {
     addSlot(slots, '14h', 60, abertura.slice(0, 2));
-
   } else if (n === 3) {
     addSlot(slots, '13h', 60, [abertura[0]]);
     addSlot(slots, '14h', 60, abertura.slice(1, 3));
-
   } else if (n === 4) {
     addSlot(slots, '13h',   60, [abertura[0]]);
     addSlot(slots, '13h30', 60, [abertura[1]]);
     addSlot(slots, '14h',   60, abertura.slice(2, 4));
-
   } else if (n >= 5) {
     addSlot(slots, '13h',   60, [abertura[0]]);
     addSlot(slots, '13h30', 60, [abertura[1]]);
     addSlot(slots, '14h',   60, abertura.slice(2, 4));
-
-    // Overflow: 2 per slot from 15h onwards
     const overflowSlots = ['15h', '15h', '15h30', '15h30', '16h', '16h'];
     const extra = abertura.slice(4);
     let oi = 0;
@@ -191,57 +179,20 @@ export function calculateLunchSchedule(
     }
   }
 
-  // ── TARDE LUNCH SLOTS (15h – 17h) ────────────────────────────────────────
-  // Pool = intermediário (12h) + fechamento (13h40+)
-  // n | slots
-  // 1 | 15h
-  // 2 | 15h, 16h
-  // 3 | 15h, 16h, 17h
-  // 4 | 15h(2), 16h, 17h
-  // 5 | 15h(2), 16h, 16h30, 17h
-  // 6 | 15h(2), 16h, 16h30, 17h, 17h30
-  // 7+: continue at 17h30, 18h...
+  // ── INTERMEDIÁRIO LUNCH SLOTS (15h – 16h30) ──────────────────────────────
+  intermediario.forEach((emp, i) => {
+    const interSlots = ['15h', '15h30', '16h'];
+    const time = i < interSlots.length ? interSlots[i] : '16h30';
+    addSlot(slots, time, 60, [emp]);
+  });
 
-  const m = tarde.length;
-
-  if (m === 1) {
-    addSlot(slots, '15h', 60, [tarde[0]]);
-
-  } else if (m === 2) {
-    addSlot(slots, '15h', 60, [tarde[0]]);
-    addSlot(slots, '16h', 60, [tarde[1]]);
-
-  } else if (m === 3) {
-    addSlot(slots, '15h', 60, [tarde[0]]);
-    addSlot(slots, '16h', 60, [tarde[1]]);
-    addSlot(slots, '17h', 60, [tarde[2]]);
-
-  } else if (m === 4) {
-    addSlot(slots, '15h', 60, tarde.slice(0, 2));
-    addSlot(slots, '16h', 60, [tarde[2]]);
-    addSlot(slots, '17h', 60, [tarde[3]]);
-
-  } else if (m === 5) {
-    addSlot(slots, '15h',   60, tarde.slice(0, 2));
-    addSlot(slots, '16h',   60, [tarde[2]]);
-    addSlot(slots, '16h30', 60, [tarde[3]]);
-    addSlot(slots, '17h',   60, [tarde[4]]);
-
-  } else if (m >= 6) {
-    addSlot(slots, '15h',   60, tarde.slice(0, 2));
-    addSlot(slots, '16h',   60, [tarde[2]]);
-    addSlot(slots, '16h30', 60, [tarde[3]]);
-    addSlot(slots, '17h',   60, [tarde[4]]);
-    addSlot(slots, '17h30', 60, [tarde[5]]);
-
-    // Further overflow
-    const lateExtra = tarde.slice(6);
-    const lateSlots = ['18h', '18h30', '19h'];
-    lateExtra.forEach((emp, i) => {
-      const time = i < lateSlots.length ? lateSlots[i] : '19h30';
-      addSlot(slots, time, 60, [emp]);
-    });
-  }
+  // ── FECHAMENTO LUNCH SLOTS (16h30 – 18h+) ───────────────────────────────
+  fechamento.forEach((emp, i) => {
+    // Escalonamento para fechamento começa mais tarde
+    const closeSlots = ['16h30', '17h', '17h30', '18h'];
+    const time = i < closeSlots.length ? closeSlots[i] : '18h30';
+    addSlot(slots, time, 60, [emp]);
+  });
 
   return slots;
 }

@@ -23,6 +23,7 @@ interface SidebarProps {
   onToggleRetroactive: () => void;
   onSyncRules: () => void;
   onSortSchedule: () => void;
+  onShowMonthEditor: () => void;
   onShowHolidayManager: () => void;
   onShowShiftManager: () => void;
   onShowPrintView: () => void;
@@ -69,6 +70,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleRetroactive,
   onSyncRules,
   onSortSchedule,
+  onShowMonthEditor,
   onShowHolidayManager,
   onShowShiftManager,
   onShowPrintView,
@@ -223,20 +225,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   color={isEditable ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'text-slate-700 dark:text-slate-300'}
                 />
                  <SidebarActionButton 
-                   icon="sync" 
-                   label="Sincronizar Dados" 
-                   onClick={onSyncRules} 
+                   icon="rocket_launch" 
+                   label="Auto-Escala Mensal" 
+                   onClick={onShowMonthEditor} 
                    disabled={isGridLocked || isZenMode}
                    isMinimized={isMinimized} 
-                   color="bg-sky-600 text-white shadow-md font-black"
-                 />
-                 <SidebarActionButton 
-                   icon="auto_fix_high" 
-                   label="Sortear Escala" 
-                   onClick={onSortSchedule} 
-                   disabled={isGridLocked || isZenMode}
-                   isMinimized={isMinimized} 
-                   color="bg-orange-500 text-white shadow-md font-black"
+                   color="bg-orange-500 text-white shadow-xl shadow-orange-500/20 font-black border-orange-400"
                  />
               </div>
             </section>
