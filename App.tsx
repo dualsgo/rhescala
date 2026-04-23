@@ -22,6 +22,7 @@ import { ShiftTemplateManager } from './components/ShiftTemplateManager';
 import { MonthEditorMenu } from './components/MonthEditorMenu';
 import { Employee, ShiftType, MonthYear, Holiday, EmployeeCargo, ChangeLogEntry, ShiftTemplate } from './types';
 import { HistoryPanel } from './components/HistoryPanel';
+import { Header } from './components/Header';
 
 
 const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -455,151 +456,48 @@ const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen flex flex-col sm:flex-row bg-slate-50 dark:bg-slate-950 transition-colors overflow-hidden ${showPrintView ? 'print:block' : ''}`}>
+
       {!isZenMode && (
         <div className="no-print contents">
           <Sidebar 
             currentView={currentView}
             onViewChange={setCurrentView}
             currentMY={currentMY}
-            onNextMonth={onNextMonth}
-            onPrevMonth={onPrevMonth}
             employees={employees}
-            customHolidays={customHolidays}
             syncStatus={syncStatus}
             onForceSync={async () => { await forceSyncEmployees(); await forceSyncHolidays(); }}
             onImportClick={() => fileInputRef.current?.click()}
-            isGridLocked={isGridLocked}
-            onToggleLock={handleToggleLock}
-            isEditable={isEditable}
-            onToggleEdit={() => { if (!isGridLocked) setIsEditable(!isEditable); }}
-            allowRetroactive={allowRetroactive}
-            onToggleRetroactive={() => setAllowRetroactive(!allowRetroactive)}
-            onSyncRules={syncRules}
-            onSortSchedule={runFullRotation}
             onShowHolidayManager={() => setShowHolidayManager(true)}
-            onShowShiftManager={() => setShowShiftManager(true)}
             onShowPrintView={() => setShowPrintView(true)}
-            onShowMonthEditor={() => setShowMonthEditor(true)}
-            onOpenAnalysis={() => setCurrentView('analysis')}
             onShowHolidayCredit={() => setShowHolidayCredit(true)}
-            isZenMode={isZenMode}
-            onToggleZen={handleToggleZenMode}
-            
-            filter={filter}
-            onFilterChange={(f) => { setFilter(f); }}
-            selectedWeek={selectedWeek}
-            onWeekChange={setSelectedWeek}
-            weeksInMonth={weeksInMonth}
-            daysInMonth={daysInMonth}
-            selectedDayIdx={selectedDayIdx}
-            onSelectDay={selectDayAndFilter}
+            onShowHistory={() => setShowHistory(true)}
             onShareWhatsApp={shareWhatsApp}
-            days={days}
-            today={today}
-            onUpdateShift={updateShift}
-            onUpdateShifts={updateShifts}
+            selectedDayIdx={selectedDayIdx}
           />
         </div>
       )}
 
       <div className={`flex-1 flex flex-col min-w-0 h-screen relative bg-slate-50 dark:bg-slate-950 no-print`}>
         
-        {/* Zen Mode Top Menu */}
-        {isZenMode && (
-          <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 shrink-0 shadow-sm animate-slide-down">
-             <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                   <div className="w-8 h-8 bg-orange-500 text-white rounded-lg flex items-center justify-center shadow-md">
-                      <Icon name="visibility" className="text-lg" fill />
-                   </div>
-                   <span className="text-xs font-black uppercase tracking-widest text-slate-400">Modo de Exibição</span>
-                </div>
-                <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
-                <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-1 border border-slate-100 dark:border-slate-800">
-                    <button onClick={onPrevMonth} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all text-slate-400 hover:text-orange-500"><Icon name="chevron_left" /></button>
-                    <span className="px-4 text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest min-w-[140px] text-center">
-                      {months[currentMY.month]} {currentMY.year}
-                    </span>
-                    <button onClick={onNextMonth} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all text-slate-400 hover:text-orange-500"><Icon name="chevron_right" /></button>
-                </div>
 
-                <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
-
-                <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-1 border border-slate-100 dark:border-slate-800">
-                   <button 
-                      onClick={() => setCurrentView('grid')}
-                      className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${currentView === 'grid' ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-md scale-105' : 'text-slate-400 hover:text-slate-600'}`}
-                   >
-                      <Icon name="table_rows" className="text-sm" fill={currentView === 'grid'} /> Grade
-                   </button>
-                   <button 
-                      onClick={() => setCurrentView('calendar')}
-                      className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${currentView === 'calendar' ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-md scale-105' : 'text-slate-400 hover:text-slate-600'}`}
-                   >
-                      <Icon name="calendar_view_month" className="text-sm" fill={currentView === 'calendar'} /> Calendário
-                   </button>
-                </div>
-
-                {currentView === 'grid' && (
-                  <>
-                    <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
-                    <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-1 border border-slate-100 dark:border-slate-800">
-                        <button onClick={() => { setFilter('all'); }} className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filter === 'all' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Mês</button>
-                        <button onClick={() => setFilter('today')} className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filter === 'today' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Hoje</button>
-                        <button onClick={() => setFilter('tomorrow')} className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filter === 'tomorrow' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Amanhã</button>
-                        <button onClick={() => setFilter('sunday')} className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filter === 'sunday' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Dom</button>
-                        <button onClick={() => setFilter('holiday')} className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filter === 'holiday' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Fer</button>
-                        <button onClick={() => setFilter('week')} className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filter === 'week' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Sem</button>
-                     </div>
-                     <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1" />
-
-                    {filter === 'week' && (
-                       <div className="flex items-center gap-1 bg-orange-50 dark:bg-orange-950/20 rounded-xl p-1 border border-orange-100 dark:border-orange-900/40 animate-fade-in">
-                          {Array.from({ length: weeksInMonth }, (_, i) => (
-                             <button key={i} onClick={() => setSelectedWeek(i+1)} className={`w-7 h-7 rounded-lg text-[9px] font-black transition-all ${selectedWeek === i+1 ? 'bg-orange-500 text-white shadow-sm' : 'text-orange-600 hover:bg-orange-100'}`}>{i+1}</button>
-                          ))}
-                       </div>
-                    )}
-                  </>
-                )}
-             </div>
-
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 group cursor-help mr-2">
-                   <Icon name="info" className="text-orange-500 text-sm" />
-                   <span className="text-[10px] font-bold text-slate-400 group-hover:text-slate-600 transition-colors uppercase">Clique na grade para detalhes</span>
-                </div>
-
-                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
-                  <button 
-                    onClick={() => { if (!isGridLocked) setIsEditable(!isEditable); }}
-                    disabled={isGridLocked}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${isEditable ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'} ${isGridLocked ? 'opacity-40 cursor-not-allowed' : ''}`}
-                    title={isGridLocked ? "Desbloqueie para editar" : (isEditable ? "Salvar Alterações" : "Ativar Edição")}
-                  >
-                    <Icon name={isEditable ? 'save' : 'edit_square'} className="text-sm" /> {isEditable ? 'Salvar' : 'Editar'}
-                  </button>
-
-                  <button 
-                    onClick={() => shareWhatsApp(selectedDayIdx)}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition-all shadow-md active:scale-95"
-                    title={`Compartilhar Dia ${selectedDayIdx + 1}`}
-                  >
-                    <Icon name="send" className="text-sm" /> WhatsApp
-                  </button>
-                </div>
-
-                <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1" />
-
-                <button 
-                  onClick={() => setIsZenMode(false)}
-                  className="flex items-center gap-2 px-6 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-[10px] font-black uppercase hover:bg-slate-800 dark:hover:bg-white transition-all shadow-lg active:scale-95"
-                >
-                   <Icon name="exit_to_app" className="text-sm" /> Sair
-                </button>
-             </div>
-          </header>
-        )}
+        <Header 
+          currentMY={currentMY}
+          onNextMonth={onNextMonth}
+          onPrevMonth={onPrevMonth}
+          currentView={currentView}
+          onViewChange={setCurrentView}
+          isGridLocked={isGridLocked}
+          onToggleLock={handleToggleLock}
+          isEditable={isEditable}
+          onToggleEdit={() => { if (!isGridLocked) setIsEditable(!isEditable); }}
+          isZenMode={isZenMode}
+          onToggleZen={handleToggleZenMode}
+          syncStatus={syncStatus}
+          onShowMonthEditor={() => setShowMonthEditor(true)}
+          filter={filter}
+          onFilterChange={setFilter}
+          months={months}
+        />
 
         <main className={`flex-1 overflow-hidden relative ${isZenMode ? 'p-0' : 'p-4 sm:p-6 lg:p-8 overflow-y-auto'}`}>
           {currentView === 'grid' && (
