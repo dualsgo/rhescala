@@ -133,6 +133,14 @@ const App: React.FC = () => {
     text += `📅 ${dayIdx + 1} de ${months[currentMY.month].toUpperCase()}${isHoliday ? ' (🚩 FERIADO)' : ''}\n`;
     text += `------------------------------------------\n\n`;
 
+    // Posicionamento Legend (from Production)
+    text += `📍 *POSICIONAMENTO:*\n`;
+    text += `🟥 P1 - CAIXA\n`;
+    text += `🟧 P2 - PORTA\n`;
+    text += `🟩 P3 - SALÃO\n`;
+    text += `🟦 P4 - FLEXÍVEL\n\n`;
+    text += `------------------------------------------\n\n`;
+
     const shiftGroups = [
       { label: '🌞 ABERTURA', range: isHoliday ? '12h às 18h' : '10h às 18h20', members: [] as any[] },
       { label: '⛅ INTERMEDIÁRIO', range: isHoliday ? '13h às 19h' : '12h às 20h20', members: [] as any[] },
@@ -171,7 +179,8 @@ const App: React.FC = () => {
                       g.label.includes('INTERMEDIÁRIO') ? (isHoliday ? '15:00' : '14:30') : 
                       (isHoliday ? '17:00' : '16:00');
         
-        text += `• ${m.name}: ${m.hour}${m.pos ? ` [${m.pos}]` : ''} _(Pausa: ${lunch})_\n`;
+        const posLabel = m.pos === 'P1' ? '🟥' : m.pos === 'P2' ? '🟧' : m.pos === 'P3' ? '🟩' : m.pos === 'P4' ? '🟦' : m.pos ? `[${m.pos}]` : '';
+        text += `• ${m.name}: ${m.hour} ${posLabel} _(almoço ${lunch})_\n`;
       });
       text += '\n';
     });
