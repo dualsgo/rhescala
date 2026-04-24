@@ -163,16 +163,43 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     }
                     const hasAlert = streak >= 7;
 
+                    const handleShiftClick = () => {
+                      if (!isEditable) return;
+                      const sequence: ShiftType[] = ['T', 'F', 'FF', 'FE', 'C'];
+                      const currentIdx = sequence.indexOf(shift as ShiftType);
+                      const nextShift = sequence[(currentIdx + 1) % sequence.length];
+                      onUpdateShift(emp.id, d.num - 1, nextShift);
+                    };
+
                     return (
-                      <td key={d.num} className={`p-2 border-b border-slate-200 dark:border-slate-700 text-center relative ${hasAlert ? 'ring-2 ring-inset ring-rose-500 ring-offset-2 ring-offset-transparent outline-dotted outline-2 outline-rose-500' : ''}`}>
-                        <div className={`w-10 h-10 mx-auto rounded-xl flex items-center justify-center text-xs font-black transition-all ${
-                          shift === 'F' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
-                          shift === 'FF' ? 'bg-amber-100 text-amber-600' :
-                          shift === 'FE' ? 'bg-blue-100 text-blue-600' :
-                          'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20'
-                        }`}>
+                      <td key={d.num} className={`p-2 border-b border-slate-200 dark:border-slate-700 text-center relative group ${hasAlert ? 'ring-2 ring-inset ring-rose-500' : ''}`}>
+                        <button
+                          onClick={handleShiftClick}
+                          disabled={!isEditable}
+                          className={`w-10 h-10 mx-auto rounded-xl flex items-center justify-center text-xs font-black transition-all shadow-sm ${
+                            shift === 'F' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
+                            shift === 'FF' ? 'bg-amber-100 text-amber-600' :
+                            shift === 'FE' ? 'bg-blue-100 text-blue-600' :
+                            shift === 'C' ? 'bg-indigo-100 text-indigo-600' :
+                            'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20'
+                          } ${isEditable ? 'hover:scale-110 hover:shadow-md cursor-pointer' : 'cursor-default'}`}
+                        >
                           {shift}
-                        </div>
+                        </button>
+                        
+                        {isEditable && (
+                           <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onOpenDayDetail(d.num - 1);
+                                }}
+                                className="w-5 h-5 bg-white dark:bg-slate-800 rounded-full shadow-md border border-slate-200 dark:border-slate-700 flex items-center justify-center text-indigo-500"
+                              >
+                                <Icon name="settings" className="text-[10px]" />
+                              </button>
+                           </div>
+                        )}
                       </td>
                     );
                   })}

@@ -89,7 +89,19 @@ const App: React.FC = () => {
         onMonthChange={setCurrentMY}
         onFilterChange={setFilter}
         onShareWhatsApp={() => {
-           const text = `Escala Ri Happy - ${currentMY.month + 1}/${currentMY.year}\nConsulte o painel para detalhes.`;
+           const day = selectedDayIdx + 1;
+           const weekday = new Date(currentMY.year, currentMY.month, day).toLocaleDateString('pt-BR', { weekday: 'long' });
+           let text = `*ESCALA RI HAPPY - ${String(day).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')} (${weekday})*\n\n`;
+           
+           const activeEmps = employees.filter(e => e.status === 'active' && !e.isHidden);
+           
+           text += activeEmps.map(e => {
+             const shift = e.shifts[monthKey]?.[selectedDayIdx] || 'T';
+             const hour = e.dailyHours[monthKey]?.[selectedDayIdx] || e.workPeriod;
+             const pos = e.tacticalPositions?.[monthKey]?.[selectedDayIdx];
+             return `• *${e.name}*: ${shift} (${hour})${pos ? ` [${pos}]` : ''}`;
+           }).join('\n');
+
            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`);
         }}
         syncStatus={syncStatus}
@@ -155,6 +167,67 @@ const App: React.FC = () => {
           </div>
         )}
       </main>
+
+      {showDayDetail && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-black uppercase tracking-tight">Detalhes do Dia {selectedDayIdx + 1}</h2>
+                <p className="text-xs text-slate-500 font-bold uppercase">{new Date(currentMY.year, currentMY.month, selectedDayIdx + 1).toLocaleDateString('pt-BR', { weekday: 'long' })}</p>
+              </div>
+              <button onClick={() => setShowDayDetail(false)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 transition-colors">
+                <Icon name="close" />
+              </button>
+            </div>
+            
+            <div className="max-h-[60vh] overflow-y-auto p-6 custom-scrollbar">
+              <div className="space-y-4">
+                {employees.filter(e => e.status === 'active' && !e.isHidden).map(emp => (
+                  <div key={emp.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-black uppercase">{emp.name}</span>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase">{emp.workPeriod}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[8px] font-black text-slate-400 uppercase">Horário</span>
+                        <input 
+                          type="text" 
+                          value={emp.dailyHours[monthKey]?.[selectedDayIdx] || emp.workPeriod}
+                          onChange={(e) => onUpdateEmployeeDailyHour(emp.id, selectedDayIdx, e.target.value)}
+                          className="w-24 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                        />
+                      </div>
+                      
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[8px] font-black text-slate-400 uppercase">Posição</span>
+                        <select
+                          value={emp.tacticalPositions?.[monthKey]?.[selectedDayIdx] || ''}
+                          onChange={(e) => onUpdateTacticalPosition(emp.id, selectedDayIdx, e.target.value || null)}
+                          className="w-24 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                        >
+                          <option value="">Nenhum</option>
+                          {Array.from({ length: 14 }, (_, i) => `P${i + 1}`).map(p => (
+                            <option key={p} value={p}>{p}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="p-6 bg-slate-50 dark:bg-slate-800/30 flex justify-end">
+              <button onClick={() => setShowDayDetail(false)} className="px-8 py-3 bg-orange-500 text-white rounded-xl font-black uppercase text-xs shadow-lg hover:bg-orange-600 transition-all">
+                Concluído
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showHolidayManager && <HolidayManager holidays={customHolidays} onUpdateHolidays={setCustomHolidays} onClose={() => setShowHolidayManager(false)} />}
     </div>
