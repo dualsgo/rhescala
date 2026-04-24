@@ -220,16 +220,17 @@ const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'dark bg-slate-950' : 'bg-slate-50'} transition-colors font-sans`}>
-            <Header 
-        currentView={currentView}
-        currentMY={currentMY}
-        filter={filter}
-        onViewChange={setCurrentView}
-        onMonthChange={setCurrentMY}
-        onFilterChange={setFilter}
-        onShareWhatsApp={() => handleShareWhatsApp(selectedDayIdx)}
-        syncStatus={syncStatus}
-      />
+      <Header 
+              currentView={currentView}
+              currentMY={currentMY}
+              filter={filter}
+              onViewChange={setCurrentView}
+              onMonthChange={setCurrentMY}
+              onFilterChange={setFilter}
+              onShareWhatsApp={() => handleShareWhatsApp(selectedDayIdx)}
+              syncStatus={syncStatus}
+              selectedDayIdx={selectedDayIdx}
+            />
 
       <main className="max-w-[1600px] mx-auto p-4 animate-fade-in">
         {currentView === 'grid' ? (

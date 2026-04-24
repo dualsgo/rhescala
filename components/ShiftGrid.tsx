@@ -184,12 +184,28 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     </div>
                   </td>
                   <td className="sticky left-[180px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-2 min-w-[100px] w-[100px]">
-                    <input 
-                      type="text"
+                    <select
                       value={emp.dailyHours[monthKey]?.[selectedDayIdx] || emp.workPeriod}
                       onChange={(e) => onUpdateEmployeeDailyHour(emp.id, selectedDayIdx, e.target.value)}
                       className="w-full bg-transparent border-none p-0 text-[11px] font-black text-orange-600 focus:ring-0 uppercase"
-                    />
+                    >
+                      {(() => {
+                        const date = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1);
+                        const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
+                        const isHol = buildHolidaySet(currentMY.year, customHolidays).has(dateStr);
+                        const isSun = date.getDay() === 0;
+
+                        let options = SHIFT_HOURS.WEEKDAY;
+                        if (isHol) options = SHIFT_HOURS.HOLIDAY;
+                        else if (isSun) options = SHIFT_HOURS.SUNDAY;
+                        
+                        if (emp.isYoungApprentice) options = SHIFT_HOURS.APPRENTICE;
+
+                        return [...new Set([...options, emp.workPeriod])].map(h => (
+                          <option key={h} value={h}>{h}</option>
+                        ));
+                      })()}
+                    </select>
                   </td>
                   <td className="sticky left-[280px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-2 min-w-[100px] w-[100px]">
                     <select
@@ -198,7 +214,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                       className="w-full bg-transparent border-none p-0 text-[11px] font-black text-slate-900 dark:text-slate-100 focus:ring-0 uppercase"
                     >
                       <option value="">-</option>
-                      {['P1 🟥', 'P2 🟨', 'P3 🟩', 'P4 🟦', 'ESTOQUE 📦', 'BALCÃO 🏷️', 'AUTO 🤖'].map(p => (
+                      {['P1 🟥', 'P2 🟨', 'P3 🟩', 'P4 🟦', 'ESTOQUE 📦'].map(p => (
                         <option key={p} value={p.split(' ')[0]}>{p}</option>
                       ))}
                     </select>

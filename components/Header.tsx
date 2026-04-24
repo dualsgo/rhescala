@@ -12,6 +12,7 @@ interface HeaderProps {
   onFilterChange: (f: any) => void;
   onShareWhatsApp: () => void;
   syncStatus: SyncStatus;
+  selectedDayIdx: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -23,6 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
   onFilterChange,
   onShareWhatsApp,
   syncStatus,
+  selectedDayIdx,
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);
   const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -123,7 +125,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={onShareWhatsApp}
             className="bg-green-600 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase flex items-center gap-2 hover:bg-green-700 transition-all shadow-sm"
           >
-            <Icon name="send" className="text-sm" /> WhatsApp
+            <Icon name="send" className="text-sm" /> WhatsApp (Dia {selectedDayIdx + 1})
           </button>
           
           <div className={`w-2 h-2 rounded-full ${syncStatus.state === 'synced' ? 'bg-green-500' : syncStatus.state === 'syncing' ? 'bg-blue-500 animate-pulse' : 'bg-red-500'}`} title={syncStatus.state} />
