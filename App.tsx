@@ -16,12 +16,47 @@ const App: React.FC = () => {
   const [customHolidays, setCustomHolidays] = useLocalStorage<Holiday[]>('riHappyCustomHolidays', []);
   const syncStatus = useSyncStatus();
   const [showHolidayManager, setShowHolidayManager] = useState(false);
+  const [showDayDetail, setShowDayDetail] = useState(false);
   const [currentView, setCurrentView] = useState<'grid' | 'analysis' | 'team' | 'jornada' | 'data'>('grid');
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
   const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
   const [isDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
   const { showDialog } = useDialog();
+
+  const onUpdateEmployee = useCallback((empId: string, data: Partial<Employee>) => {
+    setEmployees(prev => prev.map(emp => emp.id === empId ? { ...emp, ...data } : emp));
+  }, [setEmployees]);
+
+  const onDeleteEmployee = useCallback((empId: string) => {
+    setEmployees(prev => prev.filter(emp => emp.id !== empId));
+  }, [setEmployees]);
+
+  const onAddEmployee = useCallback((name: string, isYoung: boolean, courseDay: string, cargo: any, birthday: string) => {
+    const newEmp: Employee = {
+      ...PLACEHOLDER_EMPLOYEE,
+      id: Math.random().toString(36).substring(2, 9),
+      name,
+      isYoungApprentice: isYoung,
+      courseDay: isYoung ? courseDay : undefined,
+      cargo,
+      birthday,
+      status: 'active',
+      shifts: {},
+      dailyHours: {},
+      tacticalPositions: {},
+    };
+    setEmployees(prev => [...prev.filter(e => e.id !== PLACEHOLDER_EMPLOYEE_ID), newEmp]);
+  }, [setEmployees]);
+
+  const onAddHoliday = useCallback((h: Omit<Holiday, 'id'>) => {
+    const newHoliday: Holiday = { ...h, id: Math.random().toString(36).substring(2, 9) };
+    setCustomHolidays(prev => [...prev, newHoliday]);
+  }, [setCustomHolidays]);
+
+  const onRemoveHoliday = useCallback((id: string) => {
+    setCustomHolidays(prev => prev.filter(h => h.id !== id));
+  }, [setCustomHolidays]);
 
   const monthKey = useMemo(() => `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`, [currentMY]);
 
@@ -137,7 +172,10 @@ const App: React.FC = () => {
             onUpdateEmployeeDailyHour={onUpdateEmployeeDailyHour}
             onUpdateTacticalPosition={onUpdateTacticalPosition}
             onShareWhatsApp={() => {}}
-            onOpenDayDetail={() => {}}
+            onOpenDayDetail={(idx) => {
+              setSelectedDayIdx(idx);
+              setShowDayDetail(true);
+            }}
             onResetMonth={handleCreateMonth}
             onApplyFolgas={handleApplyFolgas}
             onSortearDomingo={handleSortearDomingo}
@@ -153,7 +191,12 @@ const App: React.FC = () => {
         )}
 
         {currentView === 'team' && (
-          <TeamView employees={employees} onUpdateEmployees={setEmployees} onClose={() => setCurrentView('grid')} />
+          <TeamView 
+            employees={employees} 
+            onUpdateEmployee={onUpdateEmployee}
+            onDeleteEmployee={onDeleteEmployee}
+            onAddEmployee={onAddEmployee}
+          />
         )}
 
         {['jornada', 'data'].includes(currentView) && (
@@ -229,7 +272,15 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {showHolidayManager && <HolidayManager holidays={customHolidays} onUpdateHolidays={setCustomHolidays} onClose={() => setShowHolidayManager(false)} />}
+      {showHolidayManager && (
+        <HolidayManager 
+          year={currentMY.year}
+          customHolidays={customHolidays} 
+          onAdd={onAddHoliday}
+          onRemove={onRemoveHoliday}
+          onClose={() => setShowHolidayManager(false)} 
+        />
+      )}
     </div>
   );
 };

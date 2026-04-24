@@ -42,10 +42,14 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onUpdateEmployeeDailyHour,
   onUpdateTacticalPosition,
   onShareWhatsApp,
+  onOpenDayDetail,
   onResetMonth,
   onApplyFolgas,
   onSortearDomingo,
+  onOpenAnalysis,
   onShowHolidayManager,
+  onNextMonth,
+  onPrevMonth,
 }) => {
   const [isEditable, setIsEditable] = useState(false);
   const [allowRetroactive, setAllowRetroactive] = useState(false);
