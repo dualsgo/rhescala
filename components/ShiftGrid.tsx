@@ -4,9 +4,7 @@ import { useDialog } from '../contexts/DialogContext';
 import { Employee, ShiftType, MonthYear, Holiday } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays } from '../constants';
-import { InconsistencyPanel } from './InconsistencyPanel';
-import { AnalysisPanel } from './AnalysisPanel';
-import { HolidayCreditPanel } from './HolidayCreditPanel';
+import { getShiftClassification } from '../hooks/useScheduleEngine';
 
 interface ShiftGridProps {
   employees: Employee[];
@@ -14,6 +12,7 @@ interface ShiftGridProps {
   selectedDayIdx: number;
   today: Date;
   customHolidays: Holiday[];
+  filter: 'all' | 'sunday' | 'holiday' | 'week';
   onSelectDay: (idx: number) => void;
   onUpdateShift: (empId: string, dayIdx: number, newShift: ShiftType) => void;
   onUpdateShifts: (updates: { empId: string, dayIdx: number, newShift: ShiftType }[]) => void;
@@ -21,8 +20,9 @@ interface ShiftGridProps {
   onUpdateTacticalPosition: (empId: string, dayIdx: number, newPos: string | null) => void;
   onShareWhatsApp: (dayIdx: number) => void;
   onOpenDayDetail: (dayIdx: number) => void;
-
   onResetMonth: () => void;
+  onApplyFolgas: () => void;
+  onSortearDomingo: () => void;
   onOpenAnalysis: () => void;
   onShowHolidayManager: () => void;
   onNextMonth: () => void;
@@ -35,801 +35,152 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   selectedDayIdx,
   today,
   customHolidays,
+  filter,
   onSelectDay,
   onUpdateShift,
   onUpdateShifts,
   onUpdateEmployeeDailyHour,
   onUpdateTacticalPosition,
   onShareWhatsApp,
-  onOpenDayDetail,
-  onApplyBulkFixes,
   onResetMonth,
-  onOpenAnalysis,
+  onApplyFolgas,
+  onSortearDomingo,
   onShowHolidayManager,
-  onNextMonth,
-  onPrevMonth,
 }) => {
   const [isEditable, setIsEditable] = useState(false);
   const [allowRetroactive, setAllowRetroactive] = useState(false);
-  const [isGridLocked, setIsGridLocked] = useState(false);
-  const [showAnalysis, setShowAnalysis] = useState(false);
-  const [showHolidayCredit, setShowHolidayCredit] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
-  const [selectedWeek, setSelectedWeek] = useState(1);
   const { showDialog } = useDialog();
-
+  const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
 
   const displayedEmployees = useMemo(() => {
     return [...employees]
-      .filter(e => !e.isHidden)
-      .sort((a, b) => {
-        // Ordem por Turno (Horário Pré-Cadastrado)
-        const wpA = a.workPeriod || '';
-        const wpB = b.workPeriod || '';
-        if (wpA !== wpB) return wpA.localeCompare(wpB);
-        
-        // Ordem Alfabética secundária
-        return a.name.localeCompare(b.name, 'pt-BR');
-      });
+      .filter(e => !e.isHidden && e.status === 'active')
+      .sort((a, b) => (a.workPeriod || '').localeCompare(b.workPeriod || '') || a.name.localeCompare(b.name));
   }, [employees]);
 
-  const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-
-  const daysInMonth = useMemo(() => {
-    return new Date(currentMY.year, currentMY.month + 1, 0).getDate();
-  }, [currentMY.year, currentMY.month]);
-
-  const holidaySet = useMemo(() => {
-    const yearHolidays = customHolidays.filter(h => h?.date?.startsWith(`${currentMY.year}`));
-    return buildHolidaySet(currentMY.year, yearHolidays);
-  }, [currentMY.year, customHolidays]);
-
-  const holidayNames = useMemo(() => {
-    const nationals = getNationalHolidays(currentMY.year);
-    const yearCustom = customHolidays.filter(h => h?.date?.startsWith(`${currentMY.year}`));
-    const map: Record<string, string> = {};
-    [...nationals, ...yearCustom].forEach(h => { if(h?.date) map[h.date] = h.name; });
-    return map;
-  }, [currentMY.year, customHolidays]);
+  const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
+  const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
 
   const days = useMemo(() => {
-    const weekdays = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
-    const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth();
-    const currentDay = today.getDate();
-
     return Array.from({ length: daysInMonth }, (_, i) => {
       const date = new Date(currentMY.year, currentMY.month, i + 1);
-      const isPast = (currentMY.year < currentYear) ||
-                     (currentMY.year === currentYear && currentMY.month < currentMonth) ||
-                     (currentMY.year === currentYear && currentMY.month === currentMonth && (i + 1) < currentDay);
-      const isToday = (currentMY.year === currentYear && currentMY.month === currentMonth && (i + 1) === currentDay);
+      const dow = date.getDay();
       const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
-
-      return {
-        num: (i + 1).toString().padStart(2, '0'),
-        weekday: weekdays[date.getDay()],
-        isSunday: date.getDay() === 0,
-        isSaturday: date.getDay() === 6,
-        isHoliday: holidaySet.has(dateStr),
-        holidayName: holidayNames[dateStr] || null,
-        isPast,
-        isToday,
-        dateStr,
-      };
+      const isHoliday = holidaySet.has(dateStr);
+      return { num: i + 1, weekday: ['DOM','SEG','TER','QUA','QUI','SEX','SAB'][dow], isSunday: dow === 0, isHoliday, dateStr };
     });
-  }, [currentMY, daysInMonth, today, holidaySet, holidayNames]);
+  }, [currentMY, daysInMonth, holidaySet]);
 
-  const weeksInMonth = useMemo(() => {
-    return Math.ceil(daysInMonth / 7);
-  }, [daysInMonth]);
-
+  // Filtering logic
   const filteredDays = useMemo(() => {
-    if (filter === 'sunday') return days.map((d, i) => ({ ...d, originalIdx: i })).filter(d => d.isSunday);
-    if (filter === 'holiday') return days.map((d, i) => ({ ...d, originalIdx: i })).filter(d => d.isHoliday);
-    if (filter === 'week') {
-      const start = (selectedWeek - 1) * 7;
-      const end = Math.min(start + 7, daysInMonth);
-      return days.slice(start, end).map((d, i) => ({ ...d, originalIdx: start + i }));
-    }
-    return days.map((d, i) => ({ ...d, originalIdx: i }));
-  }, [days, filter, selectedWeek, daysInMonth]);
-
-  const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
-  console.log('ShiftGrid render:', { monthKey, isEditable });
-
-  const getDayShift = (emp: Employee, dayIdx: number) => {
-    const day = days[dayIdx];
-    if (!day) return 'F';
-
-    if (isBirthday(emp, dayIdx)) return 'F';
-
-    if (emp.vacationStart && emp.vacationEnd) {
-      if (day.dateStr >= emp.vacationStart && day.dateStr <= emp.vacationEnd) return 'FE';
-    }
-    const monthShifts = (emp.shifts || {})[monthKey] || [];
-    return monthShifts[dayIdx] || 'F';
-  };
-
-  const isPastMonth = useMemo(() => {
-    const todayLocal = new Date();
-    return currentMY.year < todayLocal.getFullYear() || (currentMY.year === todayLocal.getFullYear() && currentMY.month < todayLocal.getMonth());
-  }, [currentMY]);
-
-  const onHandlePrevMonth = () => {
-    const todayLocal = new Date();
-    const isMinMonth = (currentMY.year < todayLocal.getFullYear()) || (currentMY.year === todayLocal.getFullYear() && currentMY.month <= todayLocal.getMonth());
-    if (isMinMonth) {
-      showDialog({ type: 'alert', message: 'Visualização restrita ao mês vigente em diante.' });
-      return;
-    }
-    onPrevMonth();
-  };
-
-  const getDayHour = (emp: Employee, dayIdx: number): string => {
-    const mHours = (emp.dailyHours || {})[monthKey] || [];
-    return mHours[dayIdx] || emp.workPeriod || '';
-  };
-
-  const isBirthday = (emp: Employee, dayIdx: number) => {
-    if (!emp.birthday) return false;
-    // emp.birthday can be YYYY-MM-DD or MM-DD
-    const empMD = emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday;
-    const dateStr = days[dayIdx]?.dateStr;
-    if (!dateStr) return false;
-    const dateMD = dateStr.substring(5); // skips YYYY-
-    return empMD === dateMD;
-  };
-
-  const isDayLocked = (dayIdx: number) => {
-    if (isGridLocked) return true;
-    const day = days[dayIdx];
-    if (!day) return true;
-    const isPastOrToday = day.isPast || day.isToday;
-    if (isPastOrToday && !allowRetroactive) return true;
-    return false;
-  };
-
-  const handleToggleEditMode = async () => {
-    if (isGridLocked) return;
-    
-    if (isEditable) {
-      // Bulk check for inconsistencies before closing edit mode
-      let hasInconsistencies = false;
-      for (const emp of displayedEmployees) {
-        for (let d = 0; d < daysInMonth; d++) {
-          if (is6x1Inconsistency(emp, d)) {
-            hasInconsistencies = true;
-            break;
-          }
-        }
-        if (hasInconsistencies) break;
-      }
-
-      const confirmed = await showDialog({
-        type: 'confirm',
-        message: hasInconsistencies 
-          ? '⚠️ A escala ainda possui inconsistências (6x1). Deseja salvar assim mesmo?' 
-          : 'Deseja confirmar o salvamento das alterações?'
-      });
-      if (confirmed) {
-        setIsEditable(false);
-      }
-    } else {
-      setIsEditable(true);
-      if (!isFullscreen) setIsFullscreen(true);
-    }
-  };
-
-  const handleToggleLock = async () => {
-    if (isGridLocked) {
-      const confirmation = await showDialog({
-        type: 'prompt',
-        message: 'Para DESTRVAR a escala, digite a SENHA DE ACESSO:',
-        confirmText: 'Desbloquear',
-        cancelText: 'Cancelar'
-      });
-      // Senha padrão 1234 para demonstração, conforme solicitado
-      if (confirmation === '1234') {
-        setIsGridLocked(false);
-      } else if (confirmation !== null) {
-        await showDialog({
-          type: 'alert',
-          message: 'Senha incorreta! O acesso às edições permanece bloqueado por segurança.'
-        });
-      }
-    } else {
-      const confirmed = await showDialog({
-        type: 'confirm',
-        message: 'Deseja BLOQUEAR a escala? Isso impedirá qualquer edição acidental até que a senha seja inserida.'
-      });
-      if (confirmed) {
-        setIsGridLocked(true);
-        setIsEditable(false);
-      }
-    }
-  };
-
-  const isEarlyDayOff = (emp: Employee, dayIdx: number) => {
-    const shift = getDayShift(emp, dayIdx);
-    // Só analisamos folgas comuns (F) ou folgas de feriado (FF)
-    if (shift !== 'F' && !shift.startsWith('FF')) return false;
-
-    // Um dia de folga é considerado "excessivo" se ele puder ser removido 
-    // sem quebrar a regra de 6x1 em nenhuma das janelas de 7 dias das quais ele faz parte.
-    // Analisamos o contexto de 14 dias (as 7 janelas que contêm este dia).
-    
-    for (let start = dayIdx - 6; start <= dayIdx; start++) {
-      let hasAlternativeOff = false;
-      for (let d = start; d <= start + 6; d++) {
-        if (d === dayIdx) continue; // Simulamos a remoção do dia atual
-        
-        // Ignoramos dias fora do mês para não gerar falsos positivos nas bordas
-        if (d < 0 || d >= daysInMonth) continue;
-
-        const s = getDayShift(emp, d);
-        // Qualquer coisa que NÃO seja Trabalho (T) ou Curso (C) conta como descanso
-        if (s !== 'T' && s !== 'C') {
-          hasAlternativeOff = true;
-          break;
-        }
-      }
-      
-      // Se encontrarmos UMA janela onde ESTE dia é a única folga, ele é OBRIGATÓRIO.
-      // Portanto, não é uma folga em excesso.
-      if (!hasAlternativeOff) return false;
-    }
-    
-    // Se em todas as janelas possíveis existe outra alternativa de folga, esta é excessiva.
-    return true;
-  };
-
-  const isSuggestedWorkDay = (emp: Employee, dayIdx: number) => {
-    const shift = getDayShift(emp, dayIdx);
-    // Se NÃO é trabalho/curso, já está de folga/ausente.
-    if (shift !== 'T' && shift !== 'C') return false;
-
-    let consecutiveWork = 0;
-    for (let i = 1; i <= 6; i++) {
-      const prevIdx = dayIdx - i;
-      if (prevIdx < 0) break;
-      const prevShift = getDayShift(emp, prevIdx);
-      if (prevShift === 'T' || prevShift === 'C' || prevShift === 'FF') {
-        consecutiveWork++;
-      } else {
-        break;
-      }
-    }
-    return consecutiveWork >= 6;
-  };
-
-  const is6x1Inconsistency = (emp: Employee, dayIdx: number) => {
-    const shift = getDayShift(emp, dayIdx);
-    if (shift !== 'T' && shift !== 'C') return false;
-
-    let streakCount = 0;
-    let start = dayIdx;
-    while (start >= 0) {
-      const s = getDayShift(emp, start);
-      if (s === 'T' || s === 'C') start--;
-      else break;
-    }
-    start++;
-
-    let current = start;
-    while (current < daysInMonth) {
-      const s = getDayShift(emp, current);
-      if (s === 'T' || s === 'C') {
-        streakCount++;
-        current++;
-      } else {
-        break;
-      }
-    }
-    return streakCount > 6;
-  };
-
-  const handleCellClick = (empId: string, dayIdx: number) => {
-    onSelectDay(dayIdx);
-  };
-
-  const handleShiftChange = async (empId: string, dayIdx: number, newShift: ShiftType) => {
-    if (newShift === 'T' || newShift === 'C') {
-        let consecutive = 1;
-        const emp = employees.find(e => e.id === empId);
-        if (emp) {
-            for (let i = dayIdx - 1; i >= 0; i--) {
-                const s = getDayShift(emp, i);
-                if (s === 'T' || s === 'C') consecutive++; else break;
-            }
-            for (let i = dayIdx + 1; i < daysInMonth; i++) {
-                const s = getDayShift(emp, i);
-                if (s === 'T' || s === 'C') consecutive++; else break;
-            }
-        }
-
-        if (consecutive > 6) {
-           const goAhead = await showDialog({
-             type: 'confirm',
-             message: `⚠️ Atenção: Esta alteração criará uma sequência de ${consecutive} dias seguidos de trabalho (Quebra de 6x1). Deseja continuar?`
-           });
-           if (!goAhead) return;
-        }
-    }
-    onUpdateShift(empId, dayIdx, newShift);
-    onSelectDay(dayIdx);
-  };
-
-  const getShiftTextColor = (hour: string | undefined) => {
-    if (!hour) return 'text-slate-900';
-    if (hour.includes('10h')) return 'text-orange-600'; 
-    if (hour.includes('12h')) return 'text-sky-600'; 
-    if (hour.includes('13h')) return 'text-emerald-600'; 
-    if (hour.includes('14h')) return 'text-pink-600'; 
-    if (hour.includes('15h')) return 'text-rose-600';
-    if (hour.includes('13h40')) return 'text-indigo-600'; 
-    return 'text-slate-900';
-  };
-
-
-  const selectedDay = days[selectedDayIdx] || days[0];
-  const currentDayType = selectedDay?.isHoliday ? 'HOLIDAY' : selectedDay?.isSunday ? 'SUNDAY' : 'WEEKDAY';
-  const availableHours = SHIFT_HOURS[currentDayType] || [];
-
-  const getAvailableHolidayCredits = (emp: Employee) => {
-    const yearHolidays = [...getNationalHolidays(currentMY.year), ...customHolidays.filter(h => h?.date?.startsWith(`${currentMY.year}`))];
-    const earned: string[] = [];
-    const spent: Set<string> = new Set();
-
-    const todayLocal = new Date();
-    todayLocal.setHours(0, 0, 0, 0); // Normalized today for comparison
-
-    const cutoffYear = todayLocal.getFullYear();
-    const cutoffMonth = todayLocal.getMonth() + 1;
-
-    const safeShifts = emp.shifts || {};
-    Object.keys(safeShifts).forEach(mk => {
-      const [y, m] = mk.split('-').map(Number);
-      if (y < cutoffYear || (y === cutoffYear && m < cutoffMonth)) return;
-      
-      safeShifts[mk].forEach((s, idx) => {
-        if (s && s.startsWith('FF ') && s.length > 3) {
-          spent.add(s.replace('FF ', ''));
-        }
-      });
-    });
-
-    const viewedMonthEnd = new Date(currentMY.year, currentMY.month + 1, 0);
-    viewedMonthEnd.setHours(23, 59, 59, 999);
-
-    for (const h of yearHolidays) {
-      const hDate = new Date(h.date + 'T00:00:00');
-      const hY = hDate.getFullYear();
-      const hM = hDate.getMonth() + 1;
-      
-      // Regel 1: Só ganha crédito se o feriado já PASSOU em tempo real
-      if (hDate > todayLocal) continue;
-
-      // Regel 2: Só exibe o alerta se o feriado é no mês sendo visualizado (ou anterior)
-      if (hDate > viewedMonthEnd) continue;
-      
-      if (hY < cutoffYear || (hY === cutoffYear && hM < cutoffMonth)) continue;
-
-      const hMK = `${hY}-${String(hM).padStart(2, '0')}`;
-      const hDayIdx = hDate.getDate() - 1;
-      
-      const empShifts = (emp.shifts || {})[hMK] || [];
-      if (empShifts[hDayIdx] === 'T' || empShifts[hDayIdx] === 'C') {
-        const creditLabel = `${String(hDate.getDate()).padStart(2, '0')}/${String(hDate.getMonth() + 1).padStart(2, '0')}`;
-        if (!spent.has(creditLabel)) {
-          earned.push(creditLabel);
-        }
-      }
-    }
-    return earned;
-  };
+    if (filter === 'sunday') return days.filter(d => d.isSunday);
+    if (filter === 'holiday') return days.filter(d => d.isHoliday);
+    return days;
+  }, [days, filter]);
 
   return (
-    <div className={`flex flex-col bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden h-full transition-all duration-300 ${
-      isFullscreen ? 'fixed inset-0 z-[100] rounded-none border-none' : 'relative'
-    }`}>
-      {/* Grid Header / Toolbar */}
-      <div className={`flex flex-col md:flex-row items-start md:items-center justify-between p-4 px-6 gap-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/20 ${isFullscreen ? 'py-3' : ''}`}>
-        <div className="flex items-center gap-6">
-            <div className={`w-12 h-12 ${isPastMonth ? 'bg-slate-100 dark:bg-slate-800 text-slate-400' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'} rounded-2xl flex items-center justify-center shadow-sm`}>
-                <Icon name="calendar_month" className="text-2xl" fill />
-            </div>
-            <div>
-                <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-                    {months[currentMY.month]}
-                    <span className="text-orange-500">{currentMY.year}</span>
-                    {isPastMonth && <span className="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full uppercase ml-2 tracking-widest font-black">Histórico</span>}
-                </h2>
-                <p className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-0.5">Gestão de Escala Operacional {isPastMonth ? '· Visualização N/A' : ''}</p>
-            </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 pb-1 md:pb-0">
-            {/* Month selector */}
-            <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-xl p-1 gap-1">
-                <button onClick={onHandlePrevMonth} className="p-1 px-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-all text-slate-400 hover:text-orange-500">
-                    <Icon name="chevron_left" />
-                </button>
-                <div className="px-2 text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest min-w-[100px] text-center">
-                    {months[currentMY.month]}
-                </div>
-                <button onClick={onNextMonth} className="p-1 px-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-all text-slate-400 hover:text-orange-500">
-                    <Icon name="chevron_right" />
-                </button>
-            </div>
-            
-            <button 
-              onClick={() => setShowHolidayCredit(true)} 
-              className="flex items-center gap-2 px-3 py-2 bg-rose-500 text-white rounded-lg text-[10px] font-extrabold hover:bg-rose-600 shadow-lg active:scale-95 transition-all whitespace-nowrap"
-            >
-                <Icon name="event_repeat" className="text-sm" /> <span className="hidden xs:inline">Folgas Feriado</span><span className="xs:hidden">Feriado</span>
-            </button>
-            <button 
-              onClick={onOpenAnalysis} 
-              className="flex items-center gap-2 px-3 py-2 bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white rounded-lg text-[10px] font-extrabold hover:bg-slate-800 dark:hover:bg-white shadow-lg active:scale-95 transition-all whitespace-nowrap"
-            >
-                <Icon name="analytics" className="text-sm" /> <span className="hidden xs:inline">Painel de Análise</span><span className="xs:hidden">Análise</span>
-            </button>
-            <InconsistencyPanel
-              employees={employees}
-              currentMY={currentMY}
-              today={today}
-              onSelectDay={onSelectDay}
-              onApplyFix={(empId, dayIdx, nextShift) => {
-                onUpdateShift(empId, dayIdx, nextShift);
-                onSelectDay(dayIdx);
-              }}
-              onApplyBulkFixes={(updates) => {
-                onUpdateShifts(updates);
-              }}
-            />
-            <button 
-              onClick={handleToggleLock} 
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-extrabold transition-all border ${isGridLocked ? 'bg-red-50 dark:bg-red-900/40 border-red-200 dark:border-red-900/50 text-red-600 dark:text-rose-400' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'}`}
-            >
-                <Icon name={isGridLocked ? 'lock' : 'lock_open'} className="text-sm" /> 
-                <span className="hidden sm:inline">{isGridLocked ? 'Escala Bloqueada' : 'Bloquear Escala'}</span>
-                <span className="sm:hidden">{isGridLocked ? 'Trancado' : 'Trancar'}</span>
-            </button>
-            <button onClick={onShowHolidayManager} className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 rounded-lg text-[10px] font-extrabold hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all whitespace-nowrap">
-                <Icon name="event_busy" className="text-sm" /> <span className="hidden sm:inline">Feriados</span>
-            </button>
-            <button onClick={onResetMonth} className="flex items-center gap-2 px-3 py-2 bg-orange-500 text-white rounded-lg text-[10px] font-extrabold hover:bg-orange-600 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap" disabled={isGridLocked}>
-                <Icon name="auto_fix_high" className="text-sm" /> <span className="hidden sm:inline">Auto Preencher</span>
-            </button>
-        </div>
-
-        {showAnalysis && (
-          <AnalysisPanel 
-            employees={employees} 
-            currentMY={currentMY} 
-            customHolidays={customHolidays}
-            onClose={() => setShowAnalysis(false)} 
-          />
-        )}
-
-        {showHolidayCredit && (
-          <HolidayCreditPanel
-            employees={employees}
-            currentMY={currentMY}
-            customHolidays={customHolidays}
-            onClose={() => setShowHolidayCredit(false)}
-            onApplyFix={(empId, dayIdx, nextShift) => {
-              onUpdateShift(empId, dayIdx, nextShift);
-            }}
-          />
-        )}
-      </div>
-
-
-      {/* Toolbar */}
-      <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-30 gap-4 transition-colors">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
-            <button onClick={() => setFilter('all')} className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'all' ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600 dark:text-orange-500' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Mês Inteiro</button>
-            <button onClick={() => setFilter('sunday')} className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'sunday' ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600 dark:text-orange-500' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Somente Domingos</button>
-            <button onClick={() => setFilter('holiday')} className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'holiday' ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600 dark:text-orange-500' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Visão Feriados</button>
-            <button
-              onClick={() => { setFilter('week'); setSelectedWeek(1); }}
-              className={`px-4 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${filter === 'week' ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600 dark:text-orange-500' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
-            >Por Semana</button>
-          </div>
-
-          {filter === 'week' && (
-            <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 p-1 rounded-lg animate-fade-in">
-              <span className="text-[10px] font-extrabold text-orange-400 uppercase tracking-widest px-2">Sem.</span>
-              {Array.from({ length: weeksInMonth }, (_, i) => {
-                const weekNum = i + 1;
-                const startDay = (weekNum - 1) * 7 + 1;
-                const endDay = Math.min(weekNum * 7, daysInMonth);
-                return (
-                  <button
-                    key={weekNum}
-                    onClick={() => setSelectedWeek(weekNum)}
-                    title={`Dias ${startDay}–${endDay}`}
-                    className={`px-3 py-1.5 rounded-md text-[11px] font-extrabold transition-all ${
-                      selectedWeek === weekNum
-                        ? 'bg-orange-500 text-white shadow-sm'
-                        : 'text-orange-600 hover:bg-orange-100'
-                    }`}
-                  >
-                    {startDay}–{endDay}
-                  </button>
-                );
-              })}
+    <div className="flex flex-col gap-4">
+      {/* Top Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsEditable(!isEditable)}
+            className={`px-6 py-2 rounded-xl text-[11px] font-black uppercase transition-all flex items-center gap-2 ${isEditable ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'}`}
+          >
+            <Icon name={isEditable ? 'save' : 'edit'} className="text-sm" />
+            {isEditable ? 'Salvar' : 'Editar Escala'}
+          </button>
+          
+          {isEditable && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-900/50">
+              <span className="text-[10px] font-bold text-indigo-600 uppercase">Retroativo</span>
+              <button
+                onClick={() => setAllowRetroactive(!allowRetroactive)}
+                className={`w-8 h-4 rounded-full relative transition-colors ${allowRetroactive ? 'bg-indigo-500' : 'bg-slate-300'}`}
+              >
+                <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${allowRetroactive ? 'left-4.5' : 'left-0.5'}`} />
+              </button>
             </div>
           )}
-          
-          <div className="flex items-center gap-2 bg-green-50 border border-green-100 p-1 rounded-lg">
-             <select 
-               value={selectedDayIdx} 
-               onChange={(e) => onSelectDay(parseInt(e.target.value))}
-               className="bg-transparent text-[11px] font-extrabold text-green-700 focus:ring-0 border-none py-1 pl-2 outline-none"
-             >
-               {days.map((d, i) => <option key={i} value={i}>Dia {d.num} ({d.weekday})</option>)}
-             </select>
-             <button onClick={() => onShareWhatsApp(selectedDayIdx)} className="px-4 py-1.5 bg-green-600 text-white rounded-md text-[11px] font-extrabold hover:bg-green-700 transition-all flex items-center gap-2">
-               <Icon name="send" className="text-[14px]" /> Enviar WhatsApp
-             </button>
-          </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Zen Mode Toggle (Fullscreen without Edit) */}
-          <button
-             onClick={() => setIsFullscreen(!isFullscreen)}
-             className={`p-2 rounded-lg border transition-all ${isFullscreen ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-900/50 shadow-inner' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm'}`}
-             title={isFullscreen ? 'Sair do Modo Zen' : 'Modo Zen (Tela Cheia)'}
-          >
-             <Icon name={isFullscreen ? 'fullscreen_exit' : 'zoom_out_map'} className="text-lg" />
+          <button onClick={onApplyFolgas} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase hover:bg-orange-500 hover:text-white transition-all">
+            Aplicar Folgas
           </button>
-
-          <button 
-            onClick={handleToggleEditMode} 
-            disabled={isGridLocked}
-            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-xs font-extrabold transition-all border ${isGridLocked ? 'bg-slate-50 dark:bg-slate-900/30 border-slate-200 dark:border-slate-800 text-slate-300 dark:text-slate-700 cursor-not-allowed' : isEditable ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg scale-105' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm'}`}
-          >
-            <Icon name={isEditable ? 'save' : 'edit_square'} className="text-sm" fill={isEditable} />
-            <span className="hidden sm:inline">{isEditable ? 'Salvar Alterações' : 'Editar Escala'}</span>
-            <span className="sm:hidden">{isEditable ? 'Salvar' : 'Editar'}</span>
+          <button onClick={onSortearDomingo} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase hover:bg-orange-500 hover:text-white transition-all">
+            Sortear Domingos
           </button>
-
-          {isEditable && (
-            <button
-              onClick={() => setAllowRetroactive(!allowRetroactive)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-extrabold transition-all border opacity-80 hover:opacity-100 ${allowRetroactive ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-white border-slate-200 text-slate-400'}`}
-              title="Permitir edição de dias passados e hoje"
-            >
-              <Icon name={allowRetroactive ? 'lock_open' : 'lock'} className="text-xs" />
-              {allowRetroactive ? 'Antigos Liberados' : 'Antigos Bloqueados'}
-            </button>
-          )}
-
-          <div className="w-px h-8 bg-slate-200 mx-1"></div>
-
-          <button 
-            onClick={handleToggleLock} 
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-extrabold transition-all border ${isGridLocked ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100' : 'bg-white border-slate-200 text-slate-400 hover:text-slate-600'}`}
-            title={isGridLocked ? 'Desbloquear Escala' : 'Proteger Escala'}
-          >
-              <Icon name={isGridLocked ? 'lock' : 'lock_open'} className="text-sm" fill={isGridLocked} /> 
-              {isGridLocked ? 'Desbloquear' : 'Bloquear'}
+          <button onClick={onResetMonth} className="px-6 py-2 bg-orange-500 text-white rounded-xl text-[11px] font-black uppercase shadow-md hover:bg-orange-600 transition-all flex items-center gap-2">
+            <Icon name="add" className="text-sm" /> Criar Mês
           </button>
         </div>
       </div>
 
-      {/* Table Section */}
-      <div className="flex-1 overflow-auto custom-scrollbar relative bg-slate-50/20 dark:bg-slate-900/40">
-        {/* Safety Lock Overlay */}
-        {isGridLocked && (
-          <div className="absolute inset-0 z-[70] bg-slate-900/5 dark:bg-slate-950/20 backdrop-blur-[1px] flex items-center justify-center p-8 pointer-events-none select-none">
-             <div className="bg-white/90 dark:bg-slate-800/95 border border-slate-200 dark:border-slate-700 shadow-2xl rounded-3xl p-8 flex flex-col items-center gap-4 animate-scale-up border-b-4 border-b-rose-500 pointer-events-auto">
-                <div className="w-16 h-16 bg-rose-50 dark:bg-rose-900/20 text-rose-500 rounded-full flex items-center justify-center shadow-inner">
-                   <Icon name="lock" className="text-3xl" fill />
-                </div>
-                <div className="text-center">
-                   <h4 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Escala Protegida</h4>
-                   <p className="text-xs font-bold text-slate-400 dark:text-slate-500 max-w-[200px] mt-1">Edições bloqueadas para evitar alterações acidentais.</p>
-                </div>
-                <button 
-                  onClick={handleToggleLock}
-                  className="mt-2 px-6 py-2.5 bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white rounded-xl text-xs font-extrabold hover:bg-slate-800 dark:hover:bg-white transition-all flex items-center gap-2 shadow-lg active:scale-95"
-                >
-                   <Icon name="lock_open" className="text-sm" /> Desbloquear Agora
-                </button>
-             </div>
-          </div>
-        )}
-
-        <table className="w-full text-left border-separate border-spacing-0 min-w-[max-content] table-fixed">
-          <thead className="sticky top-0 z-40 bg-white dark:bg-slate-900 transition-colors">
-            <tr className="bg-slate-100/90 dark:bg-slate-800/90 backdrop-blur-sm text-[10px] font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-widest border-b border-slate-300 dark:border-slate-700">
-              <th className="sticky left-0 top-0 z-[61] bg-slate-100 dark:bg-slate-800 p-3 pl-4 border-r border-b border-slate-300 dark:border-slate-700 min-w-[120px] w-[120px] sm:min-w-[150px] sm:w-[150px] shadow-[2px_0_5px_rgba(0,0,0,0.05)] transition-colors">Colaborador</th>
-              <th className="sticky left-[120px] sm:left-[150px] top-0 z-[61] bg-slate-100 dark:bg-slate-800 p-3 border-r border-b border-slate-300 dark:border-slate-700 min-w-[100px] w-[100px] sm:min-w-[120px] sm:w-[120px] shadow-[2px_0_5px_rgba(0,0,0,0.05)] text-center transition-colors">Horário Diário</th>
-              {filteredDays.map((day) => (
-                <th
-                  key={day.num}
-                  onClick={() => onOpenDayDetail(day.originalIdx)}
-                  title={day.isHoliday ? `🗓️ Feriado: ${day.holidayName || 'Feriado'} — clique para ver escala do dia` : day.isSunday ? '🌅 Domingo — clique para ver a escala deste dia' : `Dia ${day.num} — clique para ver a escala`}
-                  className={`p-1.5 text-center min-w-[60px] w-[60px] cursor-pointer transition-all hover:brightness-95 relative border-r border-b ${
-                    selectedDayIdx === day.originalIdx
-                      ? 'bg-orange-200 dark:bg-orange-900/40 ring-2 ring-inset ring-orange-500 border-orange-300'
-                      : day.isHoliday
-                      ? 'bg-rose-200/90 dark:bg-rose-900/40 border-rose-300 dark:border-rose-800'
-                      : day.isSunday
-                      ? 'bg-orange-200/80 dark:bg-orange-900/30 border-orange-300 dark:border-orange-800'
-                      : day.isSaturday
-                      ? 'bg-slate-200/80 dark:bg-slate-800/60 border-slate-300 dark:border-slate-700'
-                      : 'border-slate-100/50 dark:border-slate-700/80'
-                  }`}
-                >
-                  {(day.isSunday || day.isHoliday) && (
-                    <div className={`absolute inset-0 border-l-4 pointer-events-none ${
-                      day.isHoliday ? 'border-l-rose-500' : 'border-l-orange-400'
-                    }`}></div>
-                  )}
-                  {day.isHoliday && (
-                    <div
-                      className="absolute top-0 right-0 w-0 h-0 border-t-[10px] border-r-[10px] border-t-rose-500 border-r-transparent"
-                    ></div>
-                  )}
-                  <div className={`text-sm font-extrabold ${
-                    day.isHoliday
-                      ? 'text-rose-700 dark:text-rose-300'
-                      : day.isSunday
-                      ? 'text-orange-700 dark:text-orange-300'
-                      : day.isSaturday
-                      ? 'text-slate-600 dark:text-slate-300'
-                      : 'text-slate-900 dark:text-slate-100'
-                  }`}>{day.num}</div>
-                  <div className={`text-[9px] font-black ${
-                    day.isHoliday ? 'text-rose-600 dark:text-rose-400 opacity-80' : day.isSunday ? 'text-orange-600 dark:text-orange-400 opacity-80' : 'opacity-60'
-                  }`}>{day.weekday}</div>
-                  {day.isHoliday && day.holidayName && (
-                    <div className="text-[6px] font-extrabold text-rose-600 dark:text-rose-400 leading-tight mt-0.5 truncate max-w-[56px] mx-auto bg-rose-100 dark:bg-rose-900/30 rounded px-0.5">
-                      {day.holidayName.split(' ').slice(0, 2).join(' ')}
-                    </div>
-                  )}
+      {/* Grid Container */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-slate-50 dark:bg-slate-800/50">
+                <th className="sticky left-0 z-20 bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[200px]">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</span>
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {displayedEmployees.map((emp) => (
-              <tr key={emp.id} className={`group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors ${emp.isHidden ? 'hidden' : ''}`}>
-                <td className="sticky left-0 z-20 bg-white group-hover:bg-slate-50 dark:bg-slate-900 dark:group-hover:bg-slate-800/50 p-2 pl-4 border-r border-b border-slate-200 dark:border-slate-800 min-w-[120px] w-[120px] sm:min-w-[150px] sm:w-[150px] shadow-[4px_0_10px_rgba(0,0,0,0.05)] transition-colors">
-                  <div className="flex flex-col truncate">
-                    <span className={`font-black text-[10px] uppercase tracking-tight truncate ${getShiftTextColor(getDayHour(emp, selectedDayIdx))} dark:text-slate-100`} title={emp.name}>
-                      {emp.name.split(' ').slice(0, 2).join(' ')}
-                    </span>
-                    {emp.isYoungApprentice ? (
-                      <span className="text-[7px] font-black text-teal-600 uppercase tracking-widest truncate">Aprendiz</span>
-                    ) : (
-                      <span className="text-[7px] font-bold text-slate-300 dark:text-slate-500 uppercase tracking-widest truncate">{emp.cargo}</span>
-                    )}
-                  </div>
-                </td>
-                <td className="sticky left-[120px] sm:left-[150px] z-20 bg-white group-hover:bg-slate-100 dark:bg-slate-900 dark:group-hover:bg-slate-800/50 p-1.5 border-r border-b border-slate-200 dark:border-slate-800 min-w-[100px] w-[100px] sm:min-w-[120px] sm:w-[120px] shadow-[4px_0_10px_rgba(0,0,0,0.05)] transition-colors">
-                  <select 
-                    value={getDayHour(emp, selectedDayIdx)}
-                    disabled={isDayLocked(selectedDayIdx)}
-                    onChange={(e) => onUpdateEmployeeDailyHour(emp.id, selectedDayIdx, e.target.value)}
-                    className={`bg-transparent w-full text-[11px] font-extrabold focus:ring-0 border-none p-0 cursor-pointer outline-none transition-colors ${getShiftTextColor(getDayHour(emp, selectedDayIdx))} disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    {availableHours.map(h => <option key={h} value={h}>{h}</option>)}
-                    {getDayHour(emp, selectedDayIdx) && !availableHours.includes(getDayHour(emp, selectedDayIdx)) && <option value={getDayHour(emp, selectedDayIdx)}>{getDayHour(emp, selectedDayIdx)}</option>}
-                  </select>
-                </td>
-                {filteredDays.map((day) => {
-                  const shift = getDayShift(emp, day.originalIdx);
-                  const isLocked = isDayLocked(day.originalIdx);
-                  const isWarningOff = isEarlyDayOff(emp, day.originalIdx); // Had another Folga within 6 days
-                    const isSuggestedWork = isSuggestedWorkDay(emp, day.originalIdx);
-                    // Ausência é qualquer coisa que não seja T ou C
-                    const isAbsence = shift !== 'T' && shift !== 'C';
-                  
-                  return (
-                    <td 
-                      key={day.num} 
-                      onClick={() => handleCellClick(emp.id, day.originalIdx)}
-                      title={day.isHoliday && day.holidayName ? `🗓️ Feriado: ${day.holidayName}` : undefined}
-                      className={`p-2 text-center relative border-r border-slate-100/50 transition-all ${
-                        isEditable && !isLocked && shift !== 'FE' ? 'cursor-pointer hover:brightness-95' : 'cursor-default'
-                      } ${selectedDayIdx === day.originalIdx ? 'bg-orange-100/70 dark:bg-orange-900/20' : ''} ${
-                        is6x1Inconsistency(emp, day.originalIdx)
-                          ? 'bg-red-50 dark:bg-red-900/10'
-                          : day.isHoliday
-                          ? 'bg-rose-100/60 dark:bg-rose-900/20'
-                          : day.isSunday
-                          ? 'bg-orange-100/50 dark:bg-orange-900/10'
-                          : ''
-                      }`}
-                    >
-                      {(day.isSunday || day.isHoliday) && <div className={`absolute inset-y-0 left-0 right-0 border-x-2 pointer-events-none opacity-20 ${day.isHoliday ? 'border-rose-400' : 'border-orange-400'}`}></div>}
-                      
-                      {/* Inconsistency Highlight (6x1) */}
-                      {is6x1Inconsistency(emp, day.originalIdx) && (
-                        <div className="absolute inset-0 border-2 border-red-500 rounded-lg pointer-events-none m-0.5 animate-pulse flex items-start justify-end p-0.5">
-                            <Icon name="priority_high" className="text-[8px] text-red-600 bg-white rounded-full font-black shadow-sm" />
-                        </div>
-                      )}
-
-                      {/* Suggestion / Warning Markers */}
-                      {isAbsence && isEarlyDayOff(emp, day.originalIdx) && (
-                        <div className="absolute inset-0 border-2 border-dashed border-red-400/60 rounded-lg pointer-events-none m-0.5 animate-pulse" title="Folga potencialmente removível (escala 6x1 ainda não completa)"></div>
-                      )}
-                      {isSuggestedWork && (
-                        <div className="absolute inset-0 border-2 border-dashed border-teal-400/30 rounded-lg pointer-events-none m-1"></div>
-                      )}
-
-                      <div className="relative inline-block w-8 h-8">
-                        <div 
-                          className={`absolute inset-0 flex items-center justify-center rounded-lg text-white text-[10px] font-extrabold shadow-sm transition-all pointer-events-none z-10 ${
-                            isLocked ? 'opacity-90 grayscale-[0.3]' : ''
-                          } ${
-                            shift === 'T' ? 'bg-sky-600' : 
-                            shift === 'F' ? 'bg-orange-500' : 
-                            shift.startsWith('FF') ? 'bg-red-500' : 
-                            shift === 'C' ? 'bg-teal-500' : 
-                            shift === 'N/A' ? 'bg-slate-300' : 'bg-indigo-600'
-                          }`}
-                        >
-                          {isBirthday(emp, day.originalIdx) ? '🎂' : shift}
-                        </div>
-                      </div>
-
-                        {isEditable && !isLocked && shift !== 'FE' && (
-                          <select
-                            value={shift}
-                            onChange={(e) => {
-                               handleShiftChange(emp.id, day.originalIdx, e.target.value as ShiftType);
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            onMouseDown={(e) => e.stopPropagation()}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
-                            title="Alterar status"
-                          >
-                          <option value="T">T - Trabalho</option>
-                          <option value="F">F - Folga</option>
-                          {emp.shifts && getAvailableHolidayCredits(emp).map(credit => (
-                             <option key={credit} value={`FF ${credit}`}>FF {credit} - Folga Feriado</option>
-                          ))}
-                          {shift && shift.startsWith('FF ') && !getAvailableHolidayCredits(emp).includes(shift.replace('FF ', '')) && (
-                             <option value={shift}>{shift} - Folga Feriado (Usado)</option>
-                          )}
-                          <option value="C">C - Curso</option>
-                        </select>
-                      )}
-                    </td>
-                  );
-                })}
+                {filteredDays.map(d => (
+                  <th key={d.num} className={`p-3 border-b border-slate-200 dark:border-slate-700 min-w-[60px] ${d.isSunday ? 'bg-rose-50 dark:bg-rose-900/20' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-900/20' : ''}`}>
+                    <div className="flex flex-col items-center">
+                      <span className="text-[10px] font-black text-slate-400">{d.weekday}</span>
+                      <span className={`text-sm font-black ${d.isSunday ? 'text-rose-600' : 'text-slate-900 dark:text-slate-100'}`}>{d.num}</span>
+                    </div>
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      
-      {/* Footer Info */}
-      <div className="bg-slate-50 dark:bg-slate-800 px-6 py-3 border-t border-slate-200 dark:border-slate-700 flex flex-wrap gap-6 items-center transition-colors">
-         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-sky-600"></div> <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase">Trabalho</span></div>
-         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-orange-500"></div> <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase">Folga</span></div>
-         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-red-500"></div> <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase">Feriado</span></div>
-         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-teal-500"></div> <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase">Curso</span></div>
-         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-indigo-600"></div> <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase">Férias</span></div>
-         <div className="ml-4 flex items-center gap-2"><div className="w-3 h-3 rounded border-2 border-dashed border-teal-400"></div> <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase">Sugerido p/ Folga (6x1)</span></div>
-         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded border-2 border-dashed border-red-500 animate-pulse"></div> <span className="text-[10px] font-extrabold text-rose-600 dark:text-rose-400 uppercase">Alerta: Excesso de Folga</span></div>
-         <div className="ml-auto flex items-center gap-2 opacity-60">
-            <Icon name={isGridLocked ? 'lock' : 'lock_open'} className="text-xs text-slate-500 dark:text-slate-400" />
-            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">
-              {isGridLocked ? 'Escala bloqueada para edições' : 'Edições liberadas (use o Modo de Edição)'}
-            </span>
-         </div>
+            </thead>
+            <tbody>
+              {displayedEmployees.map(emp => (
+                <tr key={emp.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-4">
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase">{emp.name}</span>
+                        {emp.tacticalPositions?.[monthKey]?.[selectedDayIdx] && (
+                          <span className="bg-orange-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">
+                            {emp.tacticalPositions[monthKey][selectedDayIdx]}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase">{emp.workPeriod}</span>
+                    </div>
+                  </td>
+                  {filteredDays.map(d => {
+                    const shift = emp.shifts[monthKey]?.[d.num - 1] || 'T';
+                    const isSunday = d.isSunday;
+                    // Detect 7-day streak
+                    let streak = 0;
+                    for(let i=d.num-1; i>=0; i--) {
+                       if(emp.shifts[monthKey]?.[i] === 'T') streak++;
+                       else break;
+                    }
+                    const hasAlert = streak >= 7;
+
+                    return (
+                      <td key={d.num} className={`p-2 border-b border-slate-200 dark:border-slate-700 text-center relative ${hasAlert ? 'ring-2 ring-inset ring-rose-500 ring-offset-2 ring-offset-transparent outline-dotted outline-2 outline-rose-500' : ''}`}>
+                        <div className={`w-10 h-10 mx-auto rounded-xl flex items-center justify-center text-xs font-black transition-all ${
+                          shift === 'F' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
+                          shift === 'FF' ? 'bg-amber-100 text-amber-600' :
+                          shift === 'FE' ? 'bg-blue-100 text-blue-600' :
+                          'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20'
+                        }`}>
+                          {shift}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
