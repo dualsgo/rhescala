@@ -12,6 +12,7 @@ export interface Employee {
   statusColor: string;
   shifts: Record<string, ShiftType[]>;     // Keyed by "YYYY-MM"
   dailyHours: Record<string, string[]>;    // Keyed by "YYYY-MM"
+  tacticalPositions: Record<string, (string | null)[]>; // Keyed by "YYYY-MM", e.g. 'P1', 'P2'
   workPeriod: string;                      // Default work period
   preferredDayOff: string;                 // e.g. 'Segunda-feira'
   shiftName: string;
