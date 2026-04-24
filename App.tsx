@@ -100,14 +100,42 @@ const App: React.FC = () => {
   };
 
   const handleSortearDomingo = () => {
-     // Trigger Sunday Rotation logic
-     showDialog({ title: 'Sortear Domingos', message: 'Deseja realizar o sorteio dos domingos para este mês?', type: 'confirm' }).then(ok => {
-        if (ok) {
-           const updated = applyMonthUpdate(employees, currentMY.year, currentMY.month, customHolidays);
-           setEmployees(updated);
-        }
-     });
+    // Trigger Sunday Rotation logic
+    showDialog({ title: 'Sortear Domingos', message: 'Deseja realizar o sorteio dos domingos para este mês?', type: 'confirm' }).then(ok => {
+      if (ok) {
+        const updatedData = applyMonthUpdate(employees, currentMY.year, currentMY.month, customHolidays);
+        setEmployees(prev => prev.map(emp => {
+          if (updatedData[emp.id]) {
+            return {
+              ...emp,
+              shifts: { ...emp.shifts, [monthKey]: updatedData[emp.id].shifts },
+              dailyHours: { ...emp.dailyHours, [monthKey]: updatedData[emp.id].hours }
+            };
+          }
+          return emp;
+        }));
+      }
+    });
   };
+
+  const handleShareWhatsApp = useCallback((dayIdx: number) => {
+    const day = dayIdx + 1;
+    const date = new Date(currentMY.year, currentMY.month, day);
+    const weekday = date.toLocaleDateString('pt-BR', { weekday: 'long' });
+    let text = `*ESCALA RI HAPPY - ${String(day).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')} (${weekday})*\n\n`;
+    
+    const activeEmps = employees.filter(e => e.status === 'active' && !e.isHidden);
+    
+    text += activeEmps.map(e => {
+      const shift = e.shifts[monthKey]?.[dayIdx] || 'T';
+      const hour = e.dailyHours[monthKey]?.[dayIdx] || e.workPeriod;
+      const pos = e.tacticalPositions?.[monthKey]?.[dayIdx];
+      return `• *${e.name}*: ${shift} (${hour})${pos ? ` [${pos}]` : ''}`;
+    }).join('\n');
+
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  }, [currentMY, employees, monthKey]);
 
   const handleCreateMonth = () => {
     handleApplyFolgas();
@@ -123,22 +151,7 @@ const App: React.FC = () => {
         onViewChange={setCurrentView}
         onMonthChange={setCurrentMY}
         onFilterChange={setFilter}
-        onShareWhatsApp={() => {
-           const day = selectedDayIdx + 1;
-           const weekday = new Date(currentMY.year, currentMY.month, day).toLocaleDateString('pt-BR', { weekday: 'long' });
-           let text = `*ESCALA RI HAPPY - ${String(day).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')} (${weekday})*\n\n`;
-           
-           const activeEmps = employees.filter(e => e.status === 'active' && !e.isHidden);
-           
-           text += activeEmps.map(e => {
-             const shift = e.shifts[monthKey]?.[selectedDayIdx] || 'T';
-             const hour = e.dailyHours[monthKey]?.[selectedDayIdx] || e.workPeriod;
-             const pos = e.tacticalPositions?.[monthKey]?.[selectedDayIdx];
-             return `• *${e.name}*: ${shift} (${hour})${pos ? ` [${pos}]` : ''}`;
-           }).join('\n');
-
-           window.open(`https://wa.me/?text=${encodeURIComponent(text)}`);
-        }}
+        onShareWhatsApp={() => handleShareWhatsApp(selectedDayIdx)}
         syncStatus={syncStatus}
       />
 
@@ -171,7 +184,7 @@ const App: React.FC = () => {
             }}
             onUpdateEmployeeDailyHour={onUpdateEmployeeDailyHour}
             onUpdateTacticalPosition={onUpdateTacticalPosition}
-            onShareWhatsApp={() => {}}
+            onShareWhatsApp={handleShareWhatsApp}
             onOpenDayDetail={(idx) => {
               setSelectedDayIdx(idx);
               setShowDayDetail(true);

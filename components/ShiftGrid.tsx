@@ -127,8 +127,14 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-800/50">
-                <th className="sticky left-0 z-20 bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[200px]">
+                <th className="sticky left-0 z-20 bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[180px] w-[180px]">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</span>
+                </th>
+                <th className="sticky left-[180px] z-20 bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[100px] w-[100px]">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horário</span>
+                </th>
+                <th className="sticky left-[280px] z-20 bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[100px] w-[100px]">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Posição</span>
                 </th>
                 {filteredDays.map(d => (
                   <th key={d.num} className={`p-3 border-b border-slate-200 dark:border-slate-700 min-w-[60px] ${d.isSunday ? 'bg-rose-50 dark:bg-rose-900/20' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-900/20' : ''}`}>
@@ -143,18 +149,31 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             <tbody>
               {displayedEmployees.map(emp => (
                 <tr key={emp.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                  <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-4">
+                  <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-4 min-w-[180px] w-[180px]">
                     <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase">{emp.name}</span>
-                        {emp.tacticalPositions?.[monthKey]?.[selectedDayIdx] && (
-                          <span className="bg-orange-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">
-                            {emp.tacticalPositions[monthKey][selectedDayIdx]}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase">{emp.workPeriod}</span>
+                      <span className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase truncate">{emp.name}</span>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase">{emp.cargo || 'Auxiliar'}</span>
                     </div>
+                  </td>
+                  <td className="sticky left-[180px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-2 min-w-[100px] w-[100px]">
+                    <input 
+                      type="text"
+                      value={emp.dailyHours[monthKey]?.[selectedDayIdx] || emp.workPeriod}
+                      onChange={(e) => onUpdateEmployeeDailyHour(emp.id, selectedDayIdx, e.target.value)}
+                      className="w-full bg-transparent border-none p-0 text-[11px] font-black text-orange-600 focus:ring-0 uppercase"
+                    />
+                  </td>
+                  <td className="sticky left-[280px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-2 min-w-[100px] w-[100px]">
+                    <select
+                      value={emp.tacticalPositions?.[monthKey]?.[selectedDayIdx] || ''}
+                      onChange={(e) => onUpdateTacticalPosition(emp.id, selectedDayIdx, e.target.value || null)}
+                      className="w-full bg-transparent border-none p-0 text-[11px] font-black text-slate-900 dark:text-slate-100 focus:ring-0 uppercase"
+                    >
+                      <option value="">-</option>
+                      {Array.from({ length: 15 }, (_, i) => `P${i + 1}`).map(p => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
                   </td>
                   {filteredDays.map(d => {
                     const shift = emp.shifts[monthKey]?.[d.num - 1] || 'T';
