@@ -663,3 +663,12 @@ export function applyMonthUpdate(
 
     return result;
 }
+export function getShiftClassification(hourRange: string): 'Abertura' | 'Intermediário' | 'Fechamento' | 'N/A' {
+    if (!hourRange || hourRange === 'OFF' || hourRange === 'FOLGA') return 'N/A';
+    const match = hourRange.match(/^(\d{1,2})[h:]/);
+    if (!match) return 'Intermediário';
+    const startHour = parseInt(match[1]);
+    if (startHour < 10) return 'Abertura';
+    if (startHour >= 14) return 'Fechamento';
+    return 'Intermediário';
+}

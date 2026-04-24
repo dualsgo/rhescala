@@ -186,15 +186,23 @@ const App: React.FC = () => {
     });
   };
 
-  const updateEmployeeDailyHour = (empId: string, dayIdx: number, newHour: string) => {
+  const onUpdateEmployeeDailyHour = useCallback((empId: string, dayIdx: number, newHour: string) => {
     setEmployees(prev => prev.map(emp => {
       if (emp.id !== empId) return emp;
-      const current = emp.dailyHours[monthKey] || Array(31).fill(emp.workPeriod);
-      const updated = [...current];
-      updated[dayIdx] = newHour;
-      return { ...emp, dailyHours: { ...emp.dailyHours, [monthKey]: updated } };
+      const hours = [...(emp.dailyHours[monthKey] || [])];
+      hours[dayIdx] = newHour;
+      return { ...emp, dailyHours: { ...emp.dailyHours, [monthKey]: hours } };
     }));
-  };
+  }, [monthKey, setEmployees]);
+
+  const onUpdateTacticalPosition = useCallback((empId: string, dayIdx: number, newPos: string | null) => {
+    setEmployees(prev => prev.map(emp => {
+      if (emp.id !== empId) return emp;
+      const positions = [...(emp.tacticalPositions?.[monthKey] || [])];
+      positions[dayIdx] = newPos;
+      return { ...emp, tacticalPositions: { ...emp.tacticalPositions, [monthKey]: positions } };
+    }));
+  }, [monthKey, setEmployees]);
 
   // ─── Holiday management ───────────────────────────────────────────────────
   const addHoliday = (h: Omit<Holiday, 'id'>) => {

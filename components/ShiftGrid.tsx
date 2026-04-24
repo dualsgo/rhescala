@@ -18,6 +18,7 @@ interface ShiftGridProps {
   onUpdateShift: (empId: string, dayIdx: number, newShift: ShiftType) => void;
   onUpdateShifts: (updates: { empId: string, dayIdx: number, newShift: ShiftType }[]) => void;
   onUpdateEmployeeDailyHour: (empId: string, dayIdx: number, newHour: string) => void;
+  onUpdateTacticalPosition: (empId: string, dayIdx: number, newPos: string | null) => void;
   onShareWhatsApp: (dayIdx: number) => void;
   onOpenDayDetail: (dayIdx: number) => void;
 
@@ -38,6 +39,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onUpdateShift,
   onUpdateShifts,
   onUpdateEmployeeDailyHour,
+  onUpdateTacticalPosition,
   onShareWhatsApp,
   onOpenDayDetail,
   onApplyBulkFixes,
