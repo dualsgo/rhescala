@@ -23,6 +23,7 @@ const App: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
   const [isDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
   const { showDialog } = useDialog();
+  const [waModal, setWaModal] = useState<{ show: boolean, text: string }>({ show: false, text: '' });
 
   const onUpdateEmployee = useCallback((empId: string, data: Partial<Employee>) => {
     setEmployees(prev => prev.map(emp => emp.id === empId ? { ...emp, ...data } : emp));
@@ -119,23 +120,63 @@ const App: React.FC = () => {
   };
 
   const handleShareWhatsApp = useCallback((dayIdx: number) => {
-    const day = dayIdx + 1;
-    const date = new Date(currentMY.year, currentMY.month, day);
-    const weekday = date.toLocaleDateString('pt-BR', { weekday: 'long' });
-    let text = `*ESCALA RI HAPPY - ${String(day).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')} (${weekday})*\n\n`;
-    
-    const activeEmps = employees.filter(e => e.status === 'active' && !e.isHidden);
-    
-    text += activeEmps.map(e => {
+    const weekdaysFull = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+    const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    const date = new Date(currentMY.year, currentMY.month, dayIdx + 1);
+    const weekdayName = weekdaysFull[date.getDay()];
+    const weekdayLabel = weekdayName.charAt(0).toUpperCase() + weekdayName.slice(1);
+
+    const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+    const isHoliday = buildHolidaySet(currentMY.year, customHolidays).has(dateStr);
+
+    let text = `📅 *ESCALA - ${weekdayLabel.toUpperCase()}, ${dayIdx + 1} DE ${months[currentMY.month].toUpperCase()}* ${isHoliday ? '(🚩 FERIADO)' : ''}\n`;
+    text += `------------------------------------------\n\n`;
+
+    const shiftGroups = [
+      { label: '🌞 ABERTURA', range: '10h às 18h20', members: [] as any[] },
+      { label: '⛅ INTERMEDIÁRIO', range: '12h às 20h20', members: [] as any[] },
+      { label: '🌙 FECHAMENTO', range: '13h40 às 22h', members: [] as any[] },
+    ];
+
+    const absent: { name: string; code: string }[] = [];
+
+    employees.filter(e => !e.isHidden && e.status === 'active').forEach(e => {
       const shift = e.shifts[monthKey]?.[dayIdx] || 'T';
       const hour = e.dailyHours[monthKey]?.[dayIdx] || e.workPeriod;
       const pos = e.tacticalPositions?.[monthKey]?.[dayIdx];
-      return `• *${e.name}*: ${shift} (${hour})${pos ? ` [${pos}]` : ''}`;
-    }).join('\n');
+      const firstName = e.name.split(' ')[0];
 
-    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
-  }, [currentMY, employees, monthKey]);
+      if (shift === 'T' || shift.startsWith('FF')) {
+        const startH = hour.split('h')[0];
+        let group;
+        if (parseInt(startH) < 11) group = shiftGroups[0];
+        else if (parseInt(startH) >= 13) group = shiftGroups[2];
+        else group = shiftGroups[1];
+        
+        group.members.push({ name: firstName, hour, pos });
+      } else {
+        absent.push({ name: firstName, code: shift });
+      }
+    });
+
+    shiftGroups.forEach(g => {
+      if (g.members.length === 0) return;
+      text += `*${g.label}*\n`;
+      g.members.sort((a, b) => a.name.localeCompare(b.name)).forEach(m => {
+        text += `• ${m.name}: ${m.hour}${m.pos ? ` [${m.pos}]` : ''}\n`;
+      });
+      text += '\n';
+    });
+
+    if (absent.length > 0) {
+      text += `*OUTROS:*\n`;
+      absent.sort((a, b) => a.name.localeCompare(b.name)).forEach(a => {
+        text += `• ${a.name} (${a.code})\n`;
+      });
+    }
+
+    setWaModal({ show: true, text });
+  }, [currentMY, employees, monthKey, customHolidays]);
 
   const handleCreateMonth = () => {
     handleApplyFolgas();
@@ -293,6 +334,38 @@ const App: React.FC = () => {
           onRemove={onRemoveHoliday}
           onClose={() => setShowHolidayManager(false)} 
         />
+      )}
+      {/* WhatsApp Modal */}
+      {waModal.show && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800">
+            <div className="flex justify-between items-center mb-6">
+              <h4 className="text-xl font-extrabold flex items-center gap-2 text-slate-900 dark:text-slate-100">
+                <Icon name="chat" className="text-green-600 dark:text-green-500" /> Escala Diária
+              </h4>
+              <button onClick={() => setWaModal({ show: false, text: '' })} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400">
+                <Icon name="close" />
+              </button>
+            </div>
+            <textarea
+              readOnly
+              className="w-full h-80 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm font-medium focus:ring-0 resize-none whitespace-pre-wrap outline-none text-slate-700 dark:text-slate-300"
+              value={waModal.text}
+            />
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={async () => { 
+                  navigator.clipboard.writeText(waModal.text); 
+                  await showDialog({ message: 'Copiado!' }); 
+                  window.open(`https://wa.me/?text=${encodeURIComponent(waModal.text)}`, '_blank');
+                }}
+                className="flex-1 bg-green-600 dark:bg-green-700 text-white font-extrabold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:bg-green-700 dark:hover:bg-green-600 transition-all active:scale-95"
+              >
+                <Icon name="content_copy" /> Copiar e Abrir WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
