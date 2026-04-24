@@ -9,7 +9,7 @@ import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet } from '../constan
  * Rotation (giving rest) only activates when available > this threshold.
  * Hard constraint verified by isSundayUnavailable + safety cap in buildSundayAssignments.
  */
-const MIN_SUNDAY_WORKERS = 6;
+const MIN_SUNDAY_WORKERS = 5;
 
 // ─── Shared weekday names ─────────────────────────────────────────────────────
 

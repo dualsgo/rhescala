@@ -129,13 +129,14 @@ const App: React.FC = () => {
     const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
     const isHoliday = buildHolidaySet(currentMY.year, customHolidays).has(dateStr);
 
-    let text = `📅 *ESCALA - ${weekdayLabel.toUpperCase()}, ${dayIdx + 1} DE ${months[currentMY.month].toUpperCase()}* ${isHoliday ? '(🚩 FERIADO)' : ''}\n`;
+    let text = `✨ *ESCADA DO DIA - ${weekdayLabel.toUpperCase()}* ✨\n`;
+    text += `📅 ${dayIdx + 1} de ${months[currentMY.month].toUpperCase()}${isHoliday ? ' (🚩 FERIADO)' : ''}\n`;
     text += `------------------------------------------\n\n`;
 
     const shiftGroups = [
-      { label: '🌞 ABERTURA', range: '10h às 18h20', members: [] as any[] },
-      { label: '⛅ INTERMEDIÁRIO', range: '12h às 20h20', members: [] as any[] },
-      { label: '🌙 FECHAMENTO', range: '13h40 às 22h', members: [] as any[] },
+      { label: '🌞 ABERTURA', range: isHoliday ? '12h às 18h' : '10h às 18h20', members: [] as any[] },
+      { label: '⛅ INTERMEDIÁRIO', range: isHoliday ? '13h às 19h' : '12h às 20h20', members: [] as any[] },
+      { label: '🌙 FECHAMENTO', range: isHoliday ? '15h às 21h' : '13h40 às 22h', members: [] as any[] },
     ];
 
     const absent: { name: string; code: string }[] = [];
@@ -155,26 +156,36 @@ const App: React.FC = () => {
         
         group.members.push({ name: firstName, hour, pos });
       } else {
-        absent.push({ name: firstName, code: shift });
+        const codeMap: any = { 'F': 'Folga', 'FE': 'Férias', 'C': 'Curso' };
+        absent.push({ name: firstName, code: codeMap[shift] || shift });
       }
     });
 
     shiftGroups.forEach(g => {
       if (g.members.length === 0) return;
-      text += `*${g.label}*\n`;
-      g.members.sort((a, b) => a.name.localeCompare(b.name)).forEach(m => {
-        text += `• ${m.name}: ${m.hour}${m.pos ? ` [${m.pos}]` : ''}\n`;
+      text += `*${g.label}* (${g.range})\n`;
+      g.members.sort((a, b) => a.name.localeCompare(b.name)).forEach((m, idx) => {
+        // Suggested lunch slot (simplified logic from DaySummaryCard)
+        const lunchSlots = isHoliday ? ['13:30', '14:00', '14:30'] : ['12:30', '13:00', '13:30'];
+        const lunch = g.label.includes('ABERTURA') ? lunchSlots[idx % lunchSlots.length] : 
+                      g.label.includes('INTERMEDIÁRIO') ? (isHoliday ? '15:00' : '14:30') : 
+                      (isHoliday ? '17:00' : '16:00');
+        
+        text += `• ${m.name}: ${m.hour}${m.pos ? ` [${m.pos}]` : ''} _(Pausa: ${lunch})_\n`;
       });
       text += '\n';
     });
 
     if (absent.length > 0) {
-      text += `*OUTROS:*\n`;
+      text += `------------------------------------------\n`;
+      text += `*FORA DE ESCALA:*\n`;
       absent.sort((a, b) => a.name.localeCompare(b.name)).forEach(a => {
         text += `• ${a.name} (${a.code})\n`;
       });
+      text += '\n';
     }
 
+    text += `_Favor confirmar leitura no grupo._ 🤝`;
     setWaModal({ show: true, text });
   }, [currentMY, employees, monthKey, customHolidays]);
 
