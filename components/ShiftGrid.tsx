@@ -145,8 +145,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     if (shift === 'T' || shift.startsWith('FF')) {
                       acc.total++;
                       const startH = parseInt(hour.split('h')[0]);
-                      if (startH < 11) acc.opening++;
-                      else if (startH >= 13) acc.closing++;
+                      if (!isNaN(startH)) {
+                        if (startH < 11) acc.opening++;
+                        else if (startH >= 13) acc.closing++;
+                      }
                     }
                     return acc;
                   }, { total: 0, opening: 0, closing: 0 });

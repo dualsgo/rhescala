@@ -24,7 +24,6 @@ const App: React.FC = () => {
   const [isDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
   const { showDialog } = useDialog();
   const [waModal, setWaModal] = useState<{ show: boolean, text: string }>({ show: false, text: '' });
-  const [showDayDetail, setShowDayDetail] = useState(false);
 
   const onUpdateEmployee = useCallback((empId: string, data: Partial<Employee>) => {
     setEmployees(prev => prev.map(emp => emp.id === empId ? { ...emp, ...data } : emp));
@@ -218,7 +217,7 @@ const App: React.FC = () => {
       />
 
       <main className="max-w-[1600px] mx-auto p-4 animate-fade-in">
-        {currentView === 'grid' && (
+        {currentView === 'grid' ? (
           <ShiftGrid
             employees={employees}
             currentMY={currentMY}
@@ -256,14 +255,12 @@ const App: React.FC = () => {
             onSortearDomingo={handleSortearDomingo}
             onOpenAnalysis={() => setCurrentView('analysis')}
             onShowHolidayManager={() => setShowHolidayManager(true)}
-              onNextMonth={() => setCurrentMY(prev => prev.month === 11 ? { month: 0, year: prev.year + 1 } : { ...prev, month: prev.month + 1 })}
-              onPrevMonth={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })}
-              onSelectDay={setSelectedDayIdx}
-              onOpenDayDetail={(idx) => { setSelectedDayIdx(idx); setShowDayDetail(true); }}
-            />
-          ) : currentView === 'analysis' ? (
+            onNextMonth={() => setCurrentMY(prev => prev.month === 11 ? { month: 0, year: prev.year + 1 } : { ...prev, month: prev.month + 1 })}
+            onPrevMonth={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })}
+          />
+        ) : currentView === 'analysis' ? (
           <AnalysisPanel employees={employees} currentMY={currentMY} customHolidays={customHolidays} onClose={() => setCurrentView('grid')} />
-        )}
+        ) : null}
 
         {currentView === 'team' && (
           <TeamView 
@@ -286,66 +283,6 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {showDayDetail && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-              <div>
-                <h2 className="text-xl font-black uppercase tracking-tight">Detalhes do Dia {selectedDayIdx + 1}</h2>
-                <p className="text-xs text-slate-500 font-bold uppercase">{new Date(currentMY.year, currentMY.month, selectedDayIdx + 1).toLocaleDateString('pt-BR', { weekday: 'long' })}</p>
-              </div>
-              <button onClick={() => setShowDayDetail(false)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 transition-colors">
-                <Icon name="close" />
-              </button>
-            </div>
-            
-            <div className="max-h-[60vh] overflow-y-auto p-6 custom-scrollbar">
-              <div className="space-y-4">
-                {employees.filter(e => e.status === 'active' && !e.isHidden).map(emp => (
-                  <div key={emp.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                    <div className="flex flex-col">
-                      <span className="text-[11px] font-black uppercase">{emp.name}</span>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase">{emp.workPeriod}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-4">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[8px] font-black text-slate-400 uppercase">Horário</span>
-                        <input 
-                          type="text" 
-                          value={emp.dailyHours[monthKey]?.[selectedDayIdx] || emp.workPeriod}
-                          onChange={(e) => onUpdateEmployeeDailyHour(emp.id, selectedDayIdx, e.target.value)}
-                          className="w-24 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold outline-none focus:ring-2 focus:ring-orange-500"
-                        />
-                      </div>
-                      
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[8px] font-black text-slate-400 uppercase">Posição</span>
-                        <select
-                          value={emp.tacticalPositions?.[monthKey]?.[selectedDayIdx] || ''}
-                          onChange={(e) => onUpdateTacticalPosition(emp.id, selectedDayIdx, e.target.value || null)}
-                          className="w-24 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold outline-none focus:ring-2 focus:ring-orange-500"
-                        >
-                          <option value="">Nenhum</option>
-                          {Array.from({ length: 14 }, (_, i) => `P${i + 1}`).map(p => (
-                            <option key={p} value={p}>{p}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            <div className="p-6 bg-slate-50 dark:bg-slate-800/30 flex justify-end">
-              <button onClick={() => setShowDayDetail(false)} className="px-8 py-3 bg-orange-500 text-white rounded-xl font-black uppercase text-xs shadow-lg hover:bg-orange-600 transition-all">
-                Concluído
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showHolidayManager && (
         <HolidayManager 
