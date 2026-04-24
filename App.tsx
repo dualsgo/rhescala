@@ -24,6 +24,7 @@ const App: React.FC = () => {
   const [isDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
   const { showDialog } = useDialog();
   const [waModal, setWaModal] = useState<{ show: boolean, text: string }>({ show: false, text: '' });
+  const [showDayDetail, setShowDayDetail] = useState(false);
 
   const onUpdateEmployee = useCallback((empId: string, data: Partial<Employee>) => {
     setEmployees(prev => prev.map(emp => emp.id === empId ? { ...emp, ...data } : emp));
@@ -173,7 +174,7 @@ const App: React.FC = () => {
       if (g.members.length === 0) return;
       text += `*${g.label}* (${g.range})\n`;
       g.members.sort((a, b) => a.name.localeCompare(b.name)).forEach((m, idx) => {
-        // Suggested lunch slot (simplified logic from DaySummaryCard)
+        // Suggested lunch slot
         const lunchSlots = isHoliday ? ['13:30', '14:00', '14:30'] : ['12:30', '13:00', '13:30'];
         const lunch = g.label.includes('ABERTURA') ? lunchSlots[idx % lunchSlots.length] : 
                       g.label.includes('INTERMEDIÁRIO') ? (isHoliday ? '15:00' : '14:30') : 
@@ -205,7 +206,7 @@ const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'dark bg-slate-950' : 'bg-slate-50'} transition-colors font-sans`}>
-      <Header 
+            <Header 
         currentView={currentView}
         currentMY={currentMY}
         filter={filter}
@@ -255,12 +256,12 @@ const App: React.FC = () => {
             onSortearDomingo={handleSortearDomingo}
             onOpenAnalysis={() => setCurrentView('analysis')}
             onShowHolidayManager={() => setShowHolidayManager(true)}
-            onNextMonth={() => {}}
-            onPrevMonth={() => {}}
-          />
-        )}
-
-        {currentView === 'analysis' && (
+              onNextMonth={() => setCurrentMY(prev => prev.month === 11 ? { month: 0, year: prev.year + 1 } : { ...prev, month: prev.month + 1 })}
+              onPrevMonth={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })}
+              onSelectDay={setSelectedDayIdx}
+              onOpenDayDetail={(idx) => { setSelectedDayIdx(idx); setShowDayDetail(true); }}
+            />
+          ) : currentView === 'analysis' ? (
           <AnalysisPanel employees={employees} currentMY={currentMY} customHolidays={customHolidays} onClose={() => setCurrentView('grid')} />
         )}
 
@@ -355,6 +356,59 @@ const App: React.FC = () => {
           onClose={() => setShowHolidayManager(false)} 
         />
       )}
+
+      {/* Day Detail Modal */}
+      {showDayDetail && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] w-full max-w-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 z-10 no-print">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center">
+                  <Icon name="event_available" className="text-xl" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Escala do Dia</h4>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => setSelectedDayIdx(prev => Math.max(0, prev - 1))}
+                      className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"
+                    >
+                      <Icon name="chevron_left" />
+                    </button>
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{selectedDayIdx + 1}/{currentMY.month + 1}/{currentMY.year}</p>
+                    <button 
+                      onClick={() => setSelectedDayIdx(prev => Math.min(30, prev + 1))}
+                      className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"
+                    >
+                      <Icon name="chevron_right" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => handleShareWhatsApp(selectedDayIdx)}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md active:scale-95"
+                >
+                  <Icon name="chat" className="text-sm" /> WhatsApp
+                </button>
+                <button onClick={() => setShowDayDetail(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400">
+                  <Icon name="close" />
+                </button>
+              </div>
+            </div>
+            <div id="day-detail-screenshot" className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-white dark:bg-slate-900">
+              <DaySummaryCard 
+                selectedDayIdx={selectedDayIdx} 
+                employees={employees} 
+                currentMY={currentMY} 
+                customHolidays={customHolidays} 
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* WhatsApp Modal */}
       {waModal.show && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-sm animate-fade-in">

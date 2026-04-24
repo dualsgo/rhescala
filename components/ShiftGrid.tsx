@@ -136,14 +136,40 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 <th className="sticky left-[280px] z-20 bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[100px] w-[100px]">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Posição</span>
                 </th>
-                {filteredDays.map(d => (
-                  <th key={d.num} className={`p-3 border-b border-slate-200 dark:border-slate-700 min-w-[60px] ${d.isSunday ? 'bg-rose-50 dark:bg-rose-900/20' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-900/20' : ''}`}>
-                    <div className="flex flex-col items-center">
-                      <span className="text-[10px] font-black text-slate-400">{d.weekday}</span>
-                      <span className={`text-sm font-black ${d.isSunday ? 'text-rose-600' : 'text-slate-900 dark:text-slate-100'}`}>{d.num}</span>
-                    </div>
-                  </th>
-                ))}
+                {filteredDays.map(d => {
+                  const dayIdx = d.num - 1;
+                  const stats = employees.reduce((acc, emp) => {
+                    if (emp.isHidden || emp.status !== 'active') return acc;
+                    const shift = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
+                    const hour = (emp.dailyHours[monthKey] || [])[dayIdx] || emp.workPeriod;
+                    if (shift === 'T' || shift.startsWith('FF')) {
+                      acc.total++;
+                      const startH = parseInt(hour.split('h')[0]);
+                      if (startH < 11) acc.opening++;
+                      else if (startH >= 13) acc.closing++;
+                    }
+                    return acc;
+                  }, { total: 0, opening: 0, closing: 0 });
+
+                  const isSelected = selectedDayIdx === dayIdx;
+
+                  return (
+                    <th 
+                      key={d.num} 
+                      onClick={() => isSelected ? onOpenDayDetail(dayIdx) : onSelectDay(dayIdx)}
+                      className={`p-3 border-b border-slate-200 dark:border-slate-700 min-w-[60px] cursor-pointer transition-all ${isSelected ? 'bg-orange-500/10 ring-2 ring-inset ring-orange-500/30' : d.isSunday ? 'bg-rose-50 dark:bg-rose-900/20' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-900/20' : ''}`}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-[9px] font-black text-slate-400 uppercase">{d.weekday}</span>
+                        <span className={`text-sm font-black ${d.isSunday ? 'text-rose-600' : 'text-slate-900 dark:text-slate-100'}`}>{d.num}</span>
+                        <div className="flex flex-col gap-0.5 mt-1 border-t border-slate-200 dark:border-slate-700 pt-1 w-full">
+                           <span className={`text-[8px] font-bold ${stats.opening < 4 && !d.isSunday ? 'text-rose-600' : 'text-slate-400'}`}>A:{stats.opening}</span>
+                           <span className={`text-[8px] font-bold ${stats.closing <= 3 && !d.isSunday ? 'text-rose-600' : 'text-slate-400'}`}>F:{stats.closing}</span>
+                        </div>
+                      </div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -195,7 +221,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     };
 
                     return (
-                      <td key={d.num} className={`p-2 border-b border-slate-200 dark:border-slate-700 text-center relative group ${hasAlert ? 'ring-2 ring-inset ring-rose-500' : ''}`}>
+                      <td 
+                        key={d.num} 
+                        onClick={() => selectedDayIdx === d.num - 1 ? onOpenDayDetail(d.num - 1) : onSelectDay(d.num - 1)}
+                        className={`p-1.5 border-b border-slate-50 dark:border-slate-800 text-center transition-all cursor-pointer ${selectedDayIdx === d.num - 1 ? 'bg-orange-50/40 dark:bg-orange-900/10' : ''} ${hasAlert ? 'ring-2 ring-inset ring-rose-500' : ''}`}
+                      >
                         <button
                           onClick={handleShiftClick}
                           disabled={!isEditable}
