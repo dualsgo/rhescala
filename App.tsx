@@ -120,67 +120,86 @@ const App: React.FC = () => {
   };
 
   const handleShareWhatsApp = useCallback((dayIdx: number) => {
-    const weekdaysFull = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
-    const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    const weekdaysFull = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
     const date = new Date(currentMY.year, currentMY.month, dayIdx + 1);
     const weekdayName = weekdaysFull[date.getDay()];
-    const weekdayLabel = weekdayName.charAt(0).toUpperCase() + weekdayName.slice(1);
-
+    const dateFormatted = `${String(dayIdx + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}`;
+    
     const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
     const isHoliday = buildHolidaySet(currentMY.year, customHolidays).has(dateStr);
+    const isSunday = date.getDay() === 0;
 
-    let text = `✨ *ESCADA DO DIA - ${weekdayLabel.toUpperCase()}* ✨\n`;
-    text += `📅 ${dayIdx + 1} de ${months[currentMY.month].toUpperCase()}${isHoliday ? ' (🚩 FERIADO)' : ''}\n`;
-    text += `------------------------------------------\n\n`;
+    let text = `📅 *Escala ${weekdayName} ${dateFormatted}*\n\n`;
 
-    // Posicionamento Legend (from Production)
-    text += `📍 *POSICIONAMENTO:*\n`;
-    text += `🟥 P1 - CAIXA\n`;
-    text += `🟧 P2 - PORTA\n`;
-    text += `🟩 P3 - SALÃO\n`;
-    text += `🟦 P4 - FLEXÍVEL\n\n`;
-    text += `------------------------------------------\n\n`;
+    text += `📍 *Posicionamento*\n`;
+    text += `🟥 P1 Caixa\n`;
+    text += `🟨 P2 Porta\n`;
+    text += `🟩 P3 Salão\n`;
+    text += `🟦 P4 Flexível\n\n`;
 
-    const shiftGroups = [
-      { label: '🌞 ABERTURA', range: isHoliday ? '12h às 18h' : '10h às 18h20', members: [] as any[] },
-      { label: '⛅ INTERMEDIÁRIO', range: isHoliday ? '13h às 19h' : '12h às 20h20', members: [] as any[] },
-      { label: '🌙 FECHAMENTO', range: isHoliday ? '15h às 21h' : '13h40 às 22h', members: [] as any[] },
-    ];
+    // Group members by their work hours
+    const groups: Record<string, any[]> = {};
+    const absent: string[] = [];
 
-    const absent: { name: string; code: string }[] = [];
-
-    employees.filter(e => !e.isHidden && e.status === 'active').forEach(e => {
+    const activeEmps = employees.filter(e => !e.isHidden && e.status === 'active');
+    
+    activeEmps.forEach(e => {
       const shift = e.shifts[monthKey]?.[dayIdx] || 'T';
+      if (shift !== 'T' && !shift.startsWith('FF')) {
+        const codeMap: any = { 'F': 'Folga', 'FE': 'Férias', 'C': 'Curso' };
+        absent.push(`• ${e.name.split(' ')[0]} (${codeMap[shift] || shift})`);
+        return;
+      }
+
       const hour = e.dailyHours[monthKey]?.[dayIdx] || e.workPeriod;
       const pos = e.tacticalPositions?.[monthKey]?.[dayIdx];
-      const firstName = e.name.split(' ')[0];
-
-      if (shift === 'T' || shift.startsWith('FF')) {
-        const startH = hour.split('h')[0];
-        let group;
-        if (parseInt(startH) < 11) group = shiftGroups[0];
-        else if (parseInt(startH) >= 13) group = shiftGroups[2];
-        else group = shiftGroups[1];
-        
-        group.members.push({ name: firstName, hour, pos });
-      } else {
-        const codeMap: any = { 'F': 'Folga', 'FE': 'Férias', 'C': 'Curso' };
-        absent.push({ name: firstName, code: codeMap[shift] || shift });
-      }
+      const posEmoji = pos === 'P1' ? '🟥' : pos === 'P2' ? '🟨' : pos === 'P3' ? '🟩' : pos === 'P4' ? '🟦' : pos === 'ESTOQUE' ? '📦' : '🔹';
+      
+      if (!groups[hour]) groups[hour] = [];
+      groups[hour].push({ ...e, firstName: e.name.split(' ')[0], posEmoji, pos });
     });
 
-    shiftGroups.forEach(g => {
-      if (g.members.length === 0) return;
-      text += `*${g.label}* (${g.range})\n`;
-      g.members.sort((a, b) => a.name.localeCompare(b.name)).forEach((m, idx) => {
-        // Suggested lunch slot
-        const lunchSlots = isHoliday ? ['13:30', '14:00', '14:30'] : ['12:30', '13:00', '13:30'];
-        const lunch = g.label.includes('ABERTURA') ? lunchSlots[idx % lunchSlots.length] : 
-                      g.label.includes('INTERMEDIÁRIO') ? (isHoliday ? '15:00' : '14:30') : 
-                      (isHoliday ? '17:00' : '16:00');
-        
-        const posLabel = m.pos === 'P1' ? '🟥' : m.pos === 'P2' ? '🟧' : m.pos === 'P3' ? '🟩' : m.pos === 'P4' ? '🟦' : m.pos ? `[${m.pos}]` : '';
-        text += `• ${m.name}: ${m.hour} ${posLabel} _(almoço ${lunch})_\n`;
+    // Define turn order for sorting
+    const hourOrder = isHoliday ? ['12h às 18h', '13h às 19h', '14h às 20h', '15h às 21h'] : 
+                      isSunday ? ['12h às 20h', '13h às 21h'] :
+                      ['10h às 16h15', '10h às 18h20', '12h às 20h20', '13h40 às 22h'];
+
+    Object.keys(groups).sort((a, b) => {
+      const idxA = hourOrder.indexOf(a);
+      const idxB = hourOrder.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      return a.localeCompare(b);
+    }).forEach(hour => {
+      const members = groups[hour];
+      const isApprenticeShift = hour === '10h às 16h15';
+      const isOpening = parseInt(hour.split('h')[0]) <= 11;
+      const isClosing = parseInt(hour.split('h')[0]) >= 13;
+
+      text += `⏰ *${isOpening ? 'Abertura' : isClosing ? 'Fechamento' : 'Intermediário'} ${hour}*\n`;
+      
+      // Lunch distribution logic
+      const openingLunchSlots = ['13h', '13h30', '14h'];
+      const closingLunchSlots = ['15h', '15h30', '16h', '16h30', '17h'];
+      let lunchIdx = 0;
+
+      members.forEach((m, idx) => {
+        let lunch = '';
+        if (m.isYoungApprentice) {
+          lunch = '12h45';
+        } else if (m.cargo === 'Estoquista') {
+          lunch = 'Flexível';
+        } else if (isHoliday) {
+          lunch = '15 min';
+        } else {
+          if (isOpening) {
+            lunch = openingLunchSlots[Math.floor(lunchIdx / 2) % openingLunchSlots.length];
+            lunchIdx++;
+          } else {
+            lunch = closingLunchSlots[lunchIdx % closingLunchSlots.length];
+            lunchIdx++;
+          }
+        }
+        text += `${m.posEmoji} ${m.firstName} (almoço ${lunch})\n`;
       });
       text += '\n';
     });
@@ -188,13 +207,9 @@ const App: React.FC = () => {
     if (absent.length > 0) {
       text += `------------------------------------------\n`;
       text += `*FORA DE ESCALA:*\n`;
-      absent.sort((a, b) => a.name.localeCompare(b.name)).forEach(a => {
-        text += `• ${a.name} (${a.code})\n`;
-      });
-      text += '\n';
+      absent.sort().forEach(a => text += a + '\n');
     }
 
-    text += `_Favor confirmar leitura no grupo._ 🤝`;
     setWaModal({ show: true, text });
   }, [currentMY, employees, monthKey, customHolidays]);
 
