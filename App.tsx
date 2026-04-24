@@ -8,6 +8,8 @@ import { ShiftGrid } from './components/ShiftGrid';
 import { TeamView } from './components/TeamView';
 import { AnalysisPanel } from './components/AnalysisPanel';
 import { HolidayManager } from './components/HolidayManager';
+import { DaySummaryCard } from './components/DaySummaryCard';
+import { Icon } from './components/Icon';
 import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet } from './constants';
 import { Employee, MonthYear, Holiday } from './types';
 
