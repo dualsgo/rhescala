@@ -8,7 +8,7 @@ import { ShiftGrid } from './components/ShiftGrid';
 import { TeamView } from './components/TeamView';
 import { AnalysisPanel } from './components/AnalysisPanel';
 import { HolidayManager } from './components/HolidayManager';
-import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID } from './constants';
+import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet } from './constants';
 import { Employee, MonthYear, Holiday } from './types';
 
 const App: React.FC = () => {
@@ -171,9 +171,10 @@ const App: React.FC = () => {
       return a.localeCompare(b);
     }).forEach(hour => {
       const members = groups[hour];
-      const isApprenticeShift = hour === '10h às 16h15';
-      const isOpening = parseInt(hour.split('h')[0]) <= 11;
-      const isClosing = parseInt(hour.split('h')[0]) >= 13;
+      const startHStr = (hour || '').split('h')[0];
+      const startH = startHStr ? parseInt(startHStr) : 0;
+      const isOpening = startH <= 11;
+      const isClosing = startH >= 13;
 
       text += `⏰ *${isOpening ? 'Abertura' : isClosing ? 'Fechamento' : 'Intermediário'} ${hour}*\n`;
       

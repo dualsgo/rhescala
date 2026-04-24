@@ -192,7 +192,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                       {(() => {
                         const date = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1);
                         const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
-                        const isHol = buildHolidaySet(currentMY.year, customHolidays).has(dateStr);
+                        const isHol = holidaySet.has(dateStr);
                         const isSun = date.getDay() === 0;
 
                         let options = SHIFT_HOURS.WEEKDAY;
@@ -201,7 +201,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                         
                         if (emp.isYoungApprentice) options = SHIFT_HOURS.APPRENTICE;
 
-                        return [...new Set([...options, emp.workPeriod])].map(h => (
+                        // Add current period and standard period to options if not present
+                        const currentVal = emp.dailyHours[monthKey]?.[selectedDayIdx] || emp.workPeriod;
+                        const finalOptions = [...new Set([...options, currentVal, emp.workPeriod])].filter(Boolean);
+
+                        return finalOptions.map(h => (
                           <option key={h} value={h}>{h}</option>
                         ));
                       })()}
