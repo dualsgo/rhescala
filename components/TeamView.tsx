@@ -245,6 +245,35 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                     </select>
                  </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                 <div className="space-y-1">
+                    <label className="text-[9px] font-black text-slate-400  uppercase tracking-widest pl-1">Posição Pref. 1</label>
+                    <select
+                      value={emp.preferredPosition1 || ''}
+                      onChange={(e) => onUpdateEmployee(emp.id, { preferredPosition1: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
+                    >
+                      <option value="">Nenhuma</option>
+                      {['P1', 'P2', 'P3', 'P4', 'ESTOQUE'].map(p => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
+                 </div>
+                 <div className="space-y-1">
+                    <label className="text-[9px] font-black text-slate-400  uppercase tracking-widest pl-1">Posição Pref. 2</label>
+                    <select
+                      value={emp.preferredPosition2 || ''}
+                      onChange={(e) => onUpdateEmployee(emp.id, { preferredPosition2: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
+                    >
+                      <option value="">Nenhuma</option>
+                      {['P1', 'P2', 'P3', 'P4', 'ESTOQUE'].map(p => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
+                 </div>
+              </div>
               
               <div className="flex items-center justify-between p-3 bg-slate-50  rounded-xl border border-dashed border-slate-200 ">
                 <div className="flex items-center gap-2">

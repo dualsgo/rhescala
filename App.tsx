@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
-import { generateYearSchedule, applyMonthUpdate } from './hooks/useScheduleEngine';
+import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay } from './hooks/useScheduleEngine';
 import { Header } from './components/Header';
 import { ShiftGrid } from './components/ShiftGrid';
 import { TeamView } from './components/TeamView';
@@ -10,7 +10,8 @@ import { AnalysisPanel } from './components/AnalysisPanel';
 import { HolidayManager } from './components/HolidayManager';
 import { DaySummaryCard } from './components/DaySummaryCard';
 import { Icon } from './components/Icon';
-import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet } from './constants';
+import { PrintableSchedule } from './components/PrintableSchedule';
+import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay } from './constants';
 import { Employee, MonthYear, Holiday } from './types';
 
 const App: React.FC = () => {
@@ -144,6 +145,7 @@ const App: React.FC = () => {
     const absent: string[] = [];
 
     const activeEmps = employees.filter(e => !e.isHidden && e.status === 'active');
+    const resolvedPositions = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday);
     
     activeEmps.forEach(e => {
       const shift = e.shifts[monthKey]?.[dayIdx] || 'T';
@@ -153,8 +155,11 @@ const App: React.FC = () => {
         return;
       }
 
-      const hour = e.dailyHours[monthKey]?.[dayIdx] || e.workPeriod;
-      const pos = e.tacticalPositions?.[monthKey]?.[dayIdx];
+      const hour = e.dailyHours[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
+      let pos = e.tacticalPositions?.[monthKey]?.[dayIdx];
+      if (pos === 'AUTO') {
+        pos = resolvedPositions[e.id];
+      }
       const posEmoji = pos === 'P1' ? '🟥' : pos === 'P2' ? '🟨' : pos === 'P3' ? '🟩' : pos === 'P4' ? '🟦' : pos === 'ESTOQUE' ? '📦' : '🔹';
       
       if (!groups[hour]) groups[hour] = [];
@@ -222,8 +227,9 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark bg-slate-950' : 'bg-slate-50'} transition-colors font-sans`}>
-      <Header 
+    <>
+      <div className={`min-h-screen ${isDarkMode ? 'dark bg-slate-950' : 'bg-slate-50'} transition-colors font-sans print:hidden`}>
+        <Header 
               currentView={currentView}
               currentMY={currentMY}
               filter={filter}
@@ -397,7 +403,14 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+
+      <PrintableSchedule 
+        employees={employees} 
+        currentMY={currentMY} 
+        customHolidays={customHolidays} 
+      />
+    </>
   );
 };
 

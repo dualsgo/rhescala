@@ -15,6 +15,8 @@ export interface Employee {
   tacticalPositions: Record<string, (string | null)[]>; // Keyed by "YYYY-MM", e.g. 'P1', 'P2'
   workPeriod: string;                      // Default work period
   preferredDayOff: string;                 // e.g. 'Segunda-feira'
+  preferredPosition1?: string;             // e.g. 'P1', 'ESTOQUE'
+  preferredPosition2?: string;             // e.g. 'P2'
   shiftName: string;
   vacationStart?: string; // YYYY-MM-DD
   vacationEnd?: string;   // YYYY-MM-DD

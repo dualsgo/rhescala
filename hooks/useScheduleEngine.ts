@@ -1,6 +1,6 @@
 
 import { Employee, ShiftType, Holiday } from '../types';
-import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet } from '../constants';
+import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet, getDefaultHourForDay } from '../constants';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -671,4 +671,74 @@ export function getShiftClassification(hourRange: string): 'Abertura' | 'Interme
     if (startHour < 10) return 'Abertura';
     if (startHour >= 14) return 'Fechamento';
     return 'Intermediário';
+}
+
+export function resolveTacticalDay(
+    activeEmps: Employee[],
+    monthKey: string,
+    dayIdx: number,
+    isHoliday: boolean,
+    isSunday: boolean
+): Record<string, string> {
+    const result: Record<string, string> = {};
+    const groups: Record<string, Employee[]> = {};
+    
+    activeEmps.forEach(e => {
+        const shift = e.shifts[monthKey]?.[dayIdx] || 'T';
+        if (shift !== 'T' && !shift.startsWith('FF')) return;
+        
+        const hour = e.dailyHours[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
+        if (!groups[hour]) groups[hour] = [];
+        groups[hour].push(e);
+    });
+
+    const POSITIONS = ['P1', 'P2', 'P3', 'P4', 'ESTOQUE'];
+
+    Object.keys(groups).forEach(hour => {
+        const members = groups[hour];
+        const takenPositions = new Set<string>();
+        const autoMembers: Employee[] = [];
+
+        members.forEach(m => {
+            const pos = m.tacticalPositions?.[monthKey]?.[dayIdx];
+            if (pos && pos !== 'AUTO') {
+                takenPositions.add(pos);
+                result[m.id] = pos;
+            } else if (pos === 'AUTO') {
+                autoMembers.push(m);
+            }
+        });
+
+        autoMembers.forEach(m => {
+            let assigned = false;
+            
+            if (m.preferredPosition1 && !takenPositions.has(m.preferredPosition1) && POSITIONS.includes(m.preferredPosition1)) {
+                takenPositions.add(m.preferredPosition1);
+                result[m.id] = m.preferredPosition1;
+                assigned = true;
+            }
+            else if (m.preferredPosition2 && !takenPositions.has(m.preferredPosition2) && POSITIONS.includes(m.preferredPosition2)) {
+                takenPositions.add(m.preferredPosition2);
+                result[m.id] = m.preferredPosition2;
+                assigned = true;
+            }
+            
+            if (!assigned) {
+                for (const p of POSITIONS) {
+                    if (!takenPositions.has(p)) {
+                        takenPositions.add(p);
+                        result[m.id] = p;
+                        assigned = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!assigned) {
+                result[m.id] = 'P4';
+            }
+        });
+    });
+
+    return result;
 }

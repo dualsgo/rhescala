@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { useDialog } from '../contexts/DialogContext';
 import { Employee, ShiftType, MonthYear, Holiday } from '../types';
 import { Icon } from './Icon';
-import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays } from '../constants';
+import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getDefaultHourForDay } from '../constants';
 import { getShiftClassification } from '../hooks/useScheduleEngine';
 
 interface ShiftGridProps {
@@ -109,11 +109,18 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <button onClick={onApplyFolgas} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase hover:bg-orange-500 hover:text-white transition-all">
-            Aplicar Folgas
-          </button>
-          <button onClick={onSortearDomingo} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase hover:bg-orange-500 hover:text-white transition-all">
-            Sortear Domingos
+          {isEditable && (
+            <>
+              <button onClick={onApplyFolgas} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase hover:bg-orange-500 hover:text-white transition-all">
+                Aplicar Folgas
+              </button>
+              <button onClick={onSortearDomingo} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase hover:bg-orange-500 hover:text-white transition-all">
+                Sortear Domingos
+              </button>
+            </>
+          )}
+          <button onClick={() => window.print()} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-[11px] font-black uppercase shadow-md hover:bg-indigo-700 transition-all flex items-center gap-2">
+            <Icon name="print" className="text-sm" /> PDF
           </button>
           <button onClick={onResetMonth} className="px-6 py-2 bg-orange-500 text-white rounded-xl text-[11px] font-black uppercase shadow-md hover:bg-orange-600 transition-all flex items-center gap-2">
             <Icon name="add" className="text-sm" /> Criar Mês
@@ -130,10 +137,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 <th className="sticky left-0 z-20 bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[180px] w-[180px]">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</span>
                 </th>
-                <th className="sticky left-[180px] z-20 bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[100px] w-[100px]">
+                <th className="sticky left-[180px] z-20 bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[125px] w-[125px]">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horário</span>
                 </th>
-                <th className="sticky left-[280px] z-20 bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[100px] w-[100px]">
+                <th className="sticky left-[305px] z-20 bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[100px] w-[100px]">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Posição</span>
                 </th>
                 {filteredDays.map(d => {
@@ -183,9 +190,9 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                       <span className="text-[9px] font-bold text-slate-400 uppercase">{emp.cargo || 'Auxiliar'}</span>
                     </div>
                   </td>
-                  <td className="sticky left-[180px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-2 min-w-[100px] w-[100px]">
+                  <td className="sticky left-[180px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-2 min-w-[125px] w-[125px]">
                     <select
-                      value={emp.dailyHours[monthKey]?.[selectedDayIdx] || emp.workPeriod}
+                      value={emp.dailyHours[monthKey]?.[selectedDayIdx] || getDefaultHourForDay(emp, holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`), new Date(currentMY.year, currentMY.month, selectedDayIdx + 1).getDay() === 0)}
                       onChange={(e) => onUpdateEmployeeDailyHour(emp.id, selectedDayIdx, e.target.value)}
                       className="w-full bg-transparent border-none p-0 text-[11px] font-black text-orange-600 focus:ring-0 uppercase"
                     >
@@ -194,6 +201,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                         const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
                         const isHol = holidaySet.has(dateStr);
                         const isSun = date.getDay() === 0;
+                        const defaultHour = getDefaultHourForDay(emp, isHol, isSun);
 
                         let options = SHIFT_HOURS.WEEKDAY;
                         if (isHol) options = SHIFT_HOURS.HOLIDAY;
@@ -201,23 +209,28 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                         
                         if (emp.isYoungApprentice) options = SHIFT_HOURS.APPRENTICE;
 
-                        // Add current period and standard period to options if not present
-                        const currentVal = emp.dailyHours[monthKey]?.[selectedDayIdx] || emp.workPeriod;
-                        const finalOptions = [...new Set([...options, currentVal, emp.workPeriod])].filter(Boolean);
+                        // Add current explicit override if present, else ensure defaultHour is in list
+                        const currentVal = emp.dailyHours[monthKey]?.[selectedDayIdx];
+                        const finalOptions = [...new Set([...options, currentVal || defaultHour])].filter(Boolean);
 
-                        return finalOptions.map(h => (
-                          <option key={h} value={h}>{h}</option>
-                        ));
+                        return (
+                          <>
+                            {finalOptions.map(h => (
+                              <option key={h} value={h}>{h}</option>
+                            ))}
+                          </>
+                        );
                       })()}
                     </select>
                   </td>
-                  <td className="sticky left-[280px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-2 min-w-[100px] w-[100px]">
+                  <td className="sticky left-[305px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-2 min-w-[100px] w-[100px]">
                     <select
                       value={emp.tacticalPositions?.[monthKey]?.[selectedDayIdx] || ''}
                       onChange={(e) => onUpdateTacticalPosition(emp.id, selectedDayIdx, e.target.value || null)}
                       className="w-full bg-transparent border-none p-0 text-[11px] font-black text-slate-900 dark:text-slate-100 focus:ring-0 uppercase"
                     >
                       <option value="">-</option>
+                      <option value="AUTO">AUTO 🤖</option>
                       {['P1 🟥', 'P2 🟨', 'P3 🟩', 'P4 🟦', 'ESTOQUE 📦'].map(p => (
                         <option key={p} value={p.split(' ')[0]}>{p}</option>
                       ))}

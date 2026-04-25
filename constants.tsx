@@ -29,6 +29,26 @@ export const SHIFT_HOURS = {
   APPRENTICE: ['10h às 16h15'],
 };
 
+/**
+ * Mapeia o horário padrão do colaborador para o horário equivalente de domingo ou feriado.
+ */
+export function getDefaultHourForDay(emp: Employee, isHoliday: boolean, isSunday: boolean): string {
+  if (emp.isYoungApprentice) return SHIFT_HOURS.APPRENTICE[0];
+  
+  if (isHoliday) {
+    if (emp.workPeriod.startsWith('10h')) return '12h às 18h';
+    if (emp.workPeriod.startsWith('12h')) return '13h às 19h';
+    if (emp.workPeriod.startsWith('13h')) return '15h às 21h';
+    return SHIFT_HOURS.HOLIDAY[0];
+  }
+  
+  if (isSunday) {
+    if (emp.workPeriod.startsWith('10h') || emp.workPeriod.startsWith('12h')) return '12h às 20h';
+    return '13h às 21h';
+  }
+  
+  return emp.workPeriod;
+}
 
 /**
  * Returns all fixed Brazilian national holidays for a given year.
