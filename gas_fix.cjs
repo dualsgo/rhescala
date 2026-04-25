@@ -7,7 +7,7 @@ if (fs.existsSync(filePath)) {
   let html = fs.readFileSync(filePath, 'utf8');
   
   // Remove module type from script
-  html = html.replace(/<script type="module" crossorigin/g, '<script');
+  html = html.replace(/<script type="module" crossorigin/g, '<script defer');
   
   // Remove export default from the end of the bundled code
   html = html.replace(/export default ([a-zA-Z0-9_$]+)\(\);/g, '$1();');
