@@ -14,8 +14,15 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [
         react(),
-        isGas && viteSingleFile(),
-      ].filter(Boolean),
+        viteSingleFile(),
+        {
+          name: 'strip-module-type',
+          enforce: 'post',
+          transformIndexHtml(html) {
+            return html.replace(/<script type="module" crossorigin/g, '<script type="text/javascript"');
+          }
+        }
+      ],
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
