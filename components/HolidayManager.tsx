@@ -9,6 +9,8 @@ interface HolidayManagerProps {
   customHolidays: Holiday[];
   onAdd: (h: Omit<Holiday, 'id'>) => void;
   onRemove: (id: string) => void;
+  trackingStartDate?: string;
+  onUpdateTrackingStartDate?: (date: string) => void;
   onClose: () => void;
 }
 
@@ -16,7 +18,7 @@ const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 export const HolidayManager: React.FC<HolidayManagerProps> = ({
-  year, customHolidays, onAdd, onRemove, onClose,
+  year, customHolidays, onAdd, onRemove, trackingStartDate, onUpdateTrackingStartDate, onClose,
 }) => {
   const [newDate, setNewDate] = useState('');
   const [newName, setNewName] = useState('');
@@ -26,8 +28,8 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
 
   const allHolidays = useMemo(() => {
     return [
-      ...nationals.map(h => ({ ...h, isNational: true })),
-      ...customHolidays.map(h => ({ ...h, isNational: false })),
+      ...nationals.map(h => ({ ...h, isPermanent: true })),
+      ...customHolidays.map(h => ({ ...h, isPermanent: false })),
     ].sort((a, b) => a.date.localeCompare(b.date));
   }, [nationals, customHolidays]);
 
@@ -105,6 +107,20 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
           </div>
         </div>
 
+        {/* Tracking Start Date Config */}
+        <div className="px-6 py-4 bg-amber-50/50 border-b border-slate-100 flex items-center justify-between">
+           <div className="flex items-center gap-2">
+              <Icon name="history" className="text-amber-600 text-sm" />
+              <span className="text-[10px] font-black uppercase text-amber-900 tracking-tight">Considerar Feriados a partir de:</span>
+           </div>
+           <input 
+              type="date" 
+              value={trackingStartDate || ''} 
+              onChange={(e) => onUpdateTrackingStartDate?.(e.target.value)}
+              className="bg-white border border-amber-200 rounded-lg px-3 py-1.5 text-[11px] font-black text-amber-900 outline-none focus:ring-2 focus:ring-amber-500/20"
+           />
+        </div>
+
         {/* List */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
           {grouped.length === 0 ? (
@@ -119,22 +135,22 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
                 <div className="grid grid-cols-1 gap-2">
                   {items.map((h: any) => (
                     <div key={h.id} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
-                      h.isNational 
-                        ? 'bg-rose-50/50 border-rose-100'
+                      h.isPermanent 
+                        ? (h.type === 'national' ? 'bg-rose-50/50 border-rose-100' : 'bg-orange-50/50 border-orange-100')
                         : 'bg-white border-slate-100'
                     }`}>
                       <div className="flex items-center gap-4">
-                        <div className={`text-lg font-black ${h.isNational ? 'text-rose-600' : 'text-slate-900'}`}>
+                        <div className={`text-lg font-black ${h.type === 'national' ? 'text-rose-600' : h.type === 'state' || h.type === 'municipal' ? 'text-orange-600' : 'text-slate-900'}`}>
                           {formatDate(h.date)}
                         </div>
                         <div>
                           <p className="text-xs font-black text-slate-900  uppercase tracking-tight leading-none mb-1">{h.name}</p>
-                          <p className={`text-[8px] font-black uppercase tracking-widest ${h.isNational ? 'text-rose-400' : 'text-slate-400'}`}>
-                            {h.isNational ? '🇧🇷 Feriado Nacional' : '🏙 Feriado Local'}
+                          <p className={`text-[8px] font-black uppercase tracking-widest ${h.type === 'national' ? 'text-rose-400' : h.type === 'state' || h.type === 'municipal' ? 'text-orange-400' : 'text-slate-400'}`}>
+                            {h.type === 'national' ? '🇧🇷 Feriado Nacional' : h.type === 'state' ? '🏛 Feriado Estadual' : h.type === 'municipal' ? '🏙 Feriado Municipal' : '🏙 Feriado Local'}
                           </p>
                         </div>
                       </div>
-                      {!h.isNational && (
+                      {!h.isPermanent && (
                         <button
                           onClick={() => onRemove(h.id)}
                           className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:bg-rose-50  hover:text-rose-500 transition-all"

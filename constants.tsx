@@ -91,11 +91,13 @@ export function getNationalHolidays(year: number): Holiday[] {
 
   const fixed: Array<Omit<Holiday, 'id'>> = [
     { date: `${year}-01-01`, name: 'Confraternização Universal',      type: 'national', recurring: false },
+    { date: `${year}-01-20`, name: 'São Sebastião (Rio de Janeiro)',   type: 'municipal', recurring: false },
     { date: fmt(carnival1),  name: 'Carnaval (Segunda)',              type: 'national', recurring: false },
     { date: fmt(carnival2),  name: 'Carnaval (Terça)',                type: 'national', recurring: false },
     { date: fmt(goodFriday), name: 'Sexta-feira Santa',               type: 'national', recurring: false },
     { date: fmt(easter),     name: 'Páscoa',                         type: 'national', recurring: false },
     { date: `${year}-04-21`, name: 'Tiradentes',                     type: 'national', recurring: false },
+    { date: `${year}-04-23`, name: 'São Jorge (Rio de Janeiro)',       type: 'state',     recurring: false },
     { date: `${year}-05-01`, name: 'Dia do Trabalho',                type: 'national', recurring: false },
     { date: fmt(corpusChristi), name: 'Corpus Christi',              type: 'national', recurring: false },
     { date: `${year}-09-07`, name: 'Independência do Brasil',        type: 'national', recurring: false },

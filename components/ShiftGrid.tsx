@@ -5,6 +5,7 @@ import { Employee, ShiftType, MonthYear, Holiday } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getDefaultHourForDay } from '../constants';
 import { getShiftClassification } from '../hooks/useScheduleEngine';
+import { HolidayCredit } from '../hooks/useHolidayCredits';
 
 interface ShiftGridProps {
   employees: Employee[];
@@ -12,6 +13,7 @@ interface ShiftGridProps {
   selectedDayIdx: number;
   today: Date;
   customHolidays: Holiday[];
+  holidayCredits: Record<string, HolidayCredit[]>;
   filter: 'all' | 'sunday' | 'holiday' | 'week';
   onSelectDay: (idx: number) => void;
   onUpdateShift: (empId: string, dayIdx: number, newShift: ShiftType) => void;
@@ -27,6 +29,8 @@ interface ShiftGridProps {
   onShowHolidayManager: () => void;
   onNextMonth: () => void;
   onPrevMonth: () => void;
+  monthNotes: string;
+  onUpdateMonthNotes: (text: string) => void;
 }
 
 export const ShiftGrid: React.FC<ShiftGridProps> = ({
@@ -35,6 +39,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   selectedDayIdx,
   today,
   customHolidays,
+  holidayCredits,
   filter,
   onSelectDay,
   onUpdateShift,
@@ -50,11 +55,20 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onShowHolidayManager,
   onNextMonth,
   onPrevMonth,
+  monthNotes,
+  onUpdateMonthNotes,
 }) => {
   const [isEditable, setIsEditable] = useState(false);
   const [allowRetroactive, setAllowRetroactive] = useState(false);
   const { showDialog } = useDialog();
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+
+  const allHolidays = useMemo(() => {
+    return [...getNationalHolidays(currentMY.year), ...customHolidays]
+      .filter(h => h.date.startsWith(String(currentMY.year)))
+      .filter((h, i, self) => i === self.findIndex(t => t.date === h.date))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [currentMY.year, customHolidays]);
 
   const displayedEmployees = useMemo(() => {
     return [...employees]
@@ -161,12 +175,15 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   }, { total: 0, opening: 0, closing: 0 });
 
                   const isSelected = selectedDayIdx === dayIdx;
+                  const todayStr = new Date().toISOString().split('T')[0];
+                  const isPast = d.dateStr < todayStr;
+                  const dimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale pointer-events-none select-none' : '';
 
                   return (
                     <th 
                       key={d.num} 
                       onClick={() => isSelected ? onOpenDayDetail(dayIdx) : onSelectDay(dayIdx)}
-                      className={`p-3 border-b border-slate-200 dark:border-slate-700 min-w-[60px] cursor-pointer transition-all ${isSelected ? 'bg-orange-500/10 ring-2 ring-inset ring-orange-500/30' : d.isSunday ? 'bg-rose-50 dark:bg-rose-900/20' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-900/20' : ''}`}
+                      className={`p-3 border-b border-slate-200 dark:border-slate-700 min-w-[60px] cursor-pointer transition-all ${dimClass} ${isSelected ? 'bg-orange-500/10 ring-2 ring-inset ring-orange-500/30' : d.isSunday ? 'bg-rose-50 dark:bg-rose-900/20' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-900/20' : ''}`}
                     >
                       <div className="flex flex-col items-center gap-1">
                         <span className="text-[9px] font-black text-slate-400 uppercase">{d.weekday}</span>
@@ -246,9 +263,13 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                        else break;
                     }
                     const hasAlert = streak >= 7;
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const isPast = d.dateStr < todayStr;
+                    const dimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
 
                     const handleShiftClick = () => {
                       if (!isEditable) return;
+                      if (isPast && !allowRetroactive) return;
                       const sequence: ShiftType[] = ['T', 'F', 'FF', 'FE', 'C'];
                       const currentIdx = sequence.indexOf(shift as ShiftType);
                       const nextShift = sequence[(currentIdx + 1) % sequence.length];
@@ -259,11 +280,20 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                       <td 
                         key={d.num} 
                         onClick={() => selectedDayIdx === d.num - 1 ? onOpenDayDetail(d.num - 1) : onSelectDay(d.num - 1)}
-                        className={`p-1.5 border-b border-slate-50 dark:border-slate-800 text-center transition-all cursor-pointer ${selectedDayIdx === d.num - 1 ? 'bg-orange-50/40 dark:bg-orange-900/10' : ''} ${hasAlert ? 'ring-2 ring-inset ring-rose-500' : ''}`}
+                        className={`p-1.5 border-b border-slate-50 dark:border-slate-800 text-center transition-all cursor-pointer ${dimClass} ${selectedDayIdx === d.num - 1 ? 'bg-orange-50/40 dark:bg-orange-900/10' : ''} ${hasAlert ? 'ring-2 ring-inset ring-rose-500' : ''}`}
                       >
                         <button
                           onClick={handleShiftClick}
                           disabled={!isEditable}
+                          title={(() => {
+                            if (shift === 'FF') {
+                              const dateStr = `${monthKey}-${String(d.num).padStart(2, '0')}`;
+                              const credit = (holidayCredits[emp.id] || []).find(c => c.offDate === dateStr);
+                              if (credit) return `Folga Feriado: Ref. ${credit.holidayName} (${credit.holidayDate.split('-').reverse().join('/')})`;
+                              return 'Folga Feriado';
+                            }
+                            return undefined;
+                          })()}
                           className={`w-10 h-10 mx-auto rounded-xl flex items-center justify-center text-xs font-black transition-all shadow-sm ${
                             shift === 'F' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
                             shift === 'FF' ? 'bg-amber-100 text-amber-600' :
@@ -295,6 +325,24 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Recados Box in UI */}
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm mt-2">
+        <div className="flex items-center gap-2 mb-2">
+          <Icon name="campaign" className="text-orange-500" />
+          <h3 className="text-[12px] font-black uppercase text-slate-800 dark:text-slate-100">Recados Importantes do Mês (Para Impressão)</h3>
+        </div>
+        <textarea
+          value={monthNotes}
+          onChange={(e) => onUpdateMonthNotes(e.target.value)}
+          placeholder="Digite aqui os recados que devem aparecer no rodapé do PDF... (aprox. 450 caracteres cabem no espaço)"
+          maxLength={450}
+          className="w-full h-24 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none outline-none text-slate-700 dark:text-slate-300"
+        />
+        <div className="text-right mt-1 text-[10px] font-bold text-slate-400">
+          {monthNotes.length} / 450 caracteres
         </div>
       </div>
     </div>

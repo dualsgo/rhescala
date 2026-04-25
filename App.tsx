@@ -10,24 +10,29 @@ import { AnalysisPanel } from './components/AnalysisPanel';
 import { HolidayManager } from './components/HolidayManager';
 import { DaySummaryCard } from './components/DaySummaryCard';
 import { DataManager } from './components/DataManager';
+import { WorkedHolidaysList } from './components/WorkedHolidaysList';
 import { Icon } from './components/Icon';
 import { PrintableSchedule } from './components/PrintableSchedule';
-import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay } from './constants';
+import { useHolidayCredits } from './hooks/useHolidayCredits';
+import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay, getNationalHolidays } from './constants';
 import { Employee, MonthYear, Holiday } from './types';
 
 const App: React.FC = () => {
   const [employees, setEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', [PLACEHOLDER_EMPLOYEE]);
   const [customHolidays, setCustomHolidays] = useLocalStorage<Holiday[]>('riHappyCustomHolidays', []);
+  const [monthNotes, setMonthNotes] = useLocalStorage<Record<string, string>>('riHappyMonthNotes', {});
+  const [trackingStartDate, setTrackingStartDate] = useLocalStorage<string>('riHappyTrackingStart', `${new Date().getFullYear()}-01-01`);
   const syncStatus = useSyncStatus();
   const [showHolidayManager, setShowHolidayManager] = useState(false);
   const [showDayDetail, setShowDayDetail] = useState(false);
-  const [currentView, setCurrentView] = useState<'grid' | 'analysis' | 'team' | 'jornada' | 'data'>('grid');
+  const [currentView, setCurrentView] = useState<'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays'>('grid');
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
   const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
   const [isDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
   const { showDialog } = useDialog();
   const [waModal, setWaModal] = useState<{ show: boolean, text: string }>({ show: false, text: '' });
+  const holidayCredits = useHolidayCredits(employees, customHolidays, currentMY.year, trackingStartDate);
 
   const onUpdateEmployee = useCallback((empId: string, data: Partial<Employee>) => {
     setEmployees(prev => prev.map(emp => emp.id === empId ? { ...emp, ...data } : emp));
@@ -250,6 +255,7 @@ const App: React.FC = () => {
             selectedDayIdx={selectedDayIdx}
             today={new Date()}
             customHolidays={customHolidays}
+            holidayCredits={holidayCredits}
             filter={filter}
             onSelectDay={setSelectedDayIdx}
             onUpdateShift={(empId, d, s) => {
@@ -280,9 +286,11 @@ const App: React.FC = () => {
             onApplyFolgas={handleApplyFolgas}
             onSortearDomingo={handleSortearDomingo}
             onOpenAnalysis={() => setCurrentView('analysis')}
-            onShowHolidayManager={() => setShowHolidayManager(true)}
+            onShowHolidayManager={() => setCurrentView('feriados')}
             onNextMonth={() => setCurrentMY(prev => prev.month === 11 ? { month: 0, year: prev.year + 1 } : { ...prev, month: prev.month + 1 })}
             onPrevMonth={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })}
+            monthNotes={monthNotes[monthKey] || ''}
+            onUpdateMonthNotes={(text) => setMonthNotes(prev => ({ ...prev, [monthKey]: text }))}
           />
         ) : currentView === 'analysis' ? (
           <AnalysisPanel employees={employees} currentMY={currentMY} customHolidays={customHolidays} onClose={() => setCurrentView('grid')} />
@@ -306,6 +314,32 @@ const App: React.FC = () => {
           />
         )}
 
+        {currentView === 'feriados' && (
+          <div className="max-w-xl mx-auto mt-6">
+            <HolidayManager 
+              year={currentMY.year}
+              customHolidays={customHolidays} 
+              onAdd={onAddHoliday}
+              onRemove={onRemoveHoliday}
+              trackingStartDate={trackingStartDate}
+              onUpdateTrackingStartDate={setTrackingStartDate}
+              onClose={() => setCurrentView('grid')} 
+            />
+          </div>
+        )}
+
+        {currentView === 'worked-holidays' && (
+          <WorkedHolidaysList
+            employees={employees}
+            currentMY={currentMY}
+            customHolidays={[...getNationalHolidays(currentMY.year), ...customHolidays]}
+            holidayCredits={holidayCredits}
+            trackingStartDate={trackingStartDate}
+            onUpdateTrackingStartDate={setTrackingStartDate}
+            onClose={() => setCurrentView('grid')}
+          />
+        )}
+
         {currentView === 'jornada' && (
           <div className="bg-white dark:bg-slate-900 p-12 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl text-center max-w-2xl mx-auto mt-10">
              <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -319,15 +353,7 @@ const App: React.FC = () => {
       </main>
 
 
-      {showHolidayManager && (
-        <HolidayManager 
-          year={currentMY.year}
-          customHolidays={customHolidays} 
-          onAdd={onAddHoliday}
-          onRemove={onRemoveHoliday}
-          onClose={() => setShowHolidayManager(false)} 
-        />
-      )}
+      {/* Feriados Modal removed in favor of view */}
 
       {/* Day Detail Modal */}
       {showDayDetail && (
@@ -419,6 +445,7 @@ const App: React.FC = () => {
         employees={employees} 
         currentMY={currentMY} 
         customHolidays={customHolidays} 
+        monthNotes={monthNotes[monthKey] || ''}
       />
     </>
   );

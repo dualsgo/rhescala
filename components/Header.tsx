@@ -4,7 +4,7 @@ import { Icon } from './Icon';
 import { MonthYear, SyncStatus } from '../types';
 
 interface HeaderProps {
-  currentView: 'grid' | 'analysis' | 'team' | 'jornada' | 'data';
+  currentView: 'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays';
   currentMY: MonthYear;
   filter: 'all' | 'sunday' | 'holiday' | 'week';
   onViewChange: (view: any) => void;
@@ -37,6 +37,8 @@ export const Header: React.FC<HeaderProps> = ({
   const configItems = [
     { id: 'team', label: 'Equipe', icon: 'groups' },
     { id: 'jornada', label: 'Jornada', icon: 'schedule' },
+    { id: 'feriados', label: 'Feriados', icon: 'event_busy' },
+    { id: 'worked-holidays', label: 'Feriados Trabalhados', icon: 'list_alt' },
     { id: 'data', label: 'Dados', icon: 'storage' },
   ];
 
@@ -62,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="relative">
               <button
                 onClick={() => setShowConfigMenu(!showConfigMenu)}
-                className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all flex items-center gap-1.5 ${['team','jornada','data'].includes(currentView) ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all flex items-center gap-1.5 ${['team','jornada','data','feriados','worked-holidays'].includes(currentView) ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 Configurações <Icon name={showConfigMenu ? 'expand_less' : 'expand_more'} className="text-[14px]" />
               </button>
