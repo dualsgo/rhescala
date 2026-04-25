@@ -9,6 +9,7 @@ import { TeamView } from './components/TeamView';
 import { AnalysisPanel } from './components/AnalysisPanel';
 import { HolidayManager } from './components/HolidayManager';
 import { DaySummaryCard } from './components/DaySummaryCard';
+import { DataManager } from './components/DataManager';
 import { Icon } from './components/Icon';
 import { PrintableSchedule } from './components/PrintableSchedule';
 import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay } from './constants';
@@ -296,12 +297,21 @@ const App: React.FC = () => {
           />
         )}
 
-        {['jornada', 'data'].includes(currentView) && (
+        {currentView === 'data' && (
+          <DataManager 
+            syncStatus={syncStatus} 
+            employees={employees} 
+            setEmployees={setEmployees} 
+            onClose={() => setCurrentView('grid')} 
+          />
+        )}
+
+        {currentView === 'jornada' && (
           <div className="bg-white dark:bg-slate-900 p-12 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl text-center max-w-2xl mx-auto mt-10">
              <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
                 <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
              </div>
-             <h2 className="text-2xl font-black uppercase mb-4">{currentView === 'jornada' ? 'Configuração de Jornada' : 'Gerenciamento de Dados'}</h2>
+             <h2 className="text-2xl font-black uppercase mb-4">Configuração de Jornada</h2>
              <p className="text-slate-500 dark:text-slate-400 mb-8">Esta funcionalidade está sendo simplificada e será integrada aqui em breve.</p>
              <button onClick={() => setCurrentView('grid')} className="px-8 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold uppercase text-xs tracking-widest hover:scale-105 transition-transform">Voltar para Grade</button>
           </div>

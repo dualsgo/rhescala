@@ -3,21 +3,42 @@
  * Este script deve ser copiado para o arquivo Code.gs no editor do GAS.
  */
 
-// ─── SERVIDO DA WEB APP ──────────────────────────────────────────────────────
+// ─── API REST PARA O FRONTEND (GCP/VERCEL) ───────────────────────────────────
 
-function doGet() {
-  console.log('Web App acessada');
+function doGet(e) {
+  const key = e.parameter.key;
+  if (!key) {
+    return ContentService.createTextOutput(JSON.stringify({ error: 'Key not provided' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  const data = getData(key);
+  const response = data ? JSON.parse(data) : null;
+  
+  return ContentService.createTextOutput(JSON.stringify(response))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
   try {
-    const output = HtmlService.createHtmlOutputFromFile('Index');
-    output.setTitle('Gestão de Escala - Ri Happy')
-          .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-          .addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
-    return output;
-  } catch (e) {
-    console.error('Erro ao carregar Index.html:', e);
-    return HtmlService.createHtmlOutput('<b>Erro crítico:</b> Arquivo HTML não encontrado ou malformado. Verifique os logs.');
+    const key = e.parameter.key;
+    if (!key) {
+       return ContentService.createTextOutput(JSON.stringify({ error: 'Key not provided' }))
+         .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // O payload vem no body da requisição
+    const valueStr = e.postData.contents;
+    setData(key, valueStr);
+    
+    return ContentService.createTextOutput(JSON.stringify({ success: true }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ error: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
+
 
 // ─── BANCO DE DADOS (SPREADSHEET) ───────────────────────────────────────────
 

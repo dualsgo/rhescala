@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { SyncState, SyncStatus, SyncHistoryItem } from '../types';
-import { isGasEnvironment, gasStore } from '../src/gas-api';
+import { apiStore } from '../src/gas-api';
 
 
 // Global state for sync status tracking
@@ -9,7 +9,7 @@ const GLOBAL_SYNC_STATUS: SyncStatus = {
     history: []
 };
 
-// Global lock to prevent concurrent syncs (GAS limitation)
+// Global lock to prevent concurrent syncs
 let isGlobalSyncing = false;
 const syncQueue: Array<() => Promise<void>> = [];
 
@@ -22,8 +22,8 @@ async function processSyncQueue() {
             await nextSync();
         } finally {
             isGlobalSyncing = false;
-            // Process next after a small gap to let GAS breathe
-            setTimeout(processSyncQueue, 500);
+            // Process next after a small gap
+            setTimeout(processSyncQueue, 100);
         }
     }
 }
@@ -94,13 +94,9 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
     const downloadFromCloud = async (force = false) => {
         if (syncInProgress.current) return;
 
-        updateGlobalSync('syncing', key, force ? 'Buscando Dados...' : 'Consultando Planilha...');
+        updateGlobalSync('syncing', key, force ? 'Buscando Dados...' : 'Consultando Servidor...');
         try {
-            let cloudData;
-
-            if (isGasEnvironment) {
-                cloudData = await gasStore.get(key);
-            }
+            const cloudData = await apiStore.get(key);
 
             if (cloudData) {
                 const dataStr = JSON.stringify(cloudData);
@@ -181,9 +177,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                 const dataToSync = currentValueStr;
 
                 try {
-                    if (isGasEnvironment) {
-                        await gasStore.set(key, JSON.parse(dataToSync));
-                    }
+                    await apiStore.set(key, JSON.parse(dataToSync));
 
                     lastCloudValue.current = dataToSync;
                     isDirty.current = false;
