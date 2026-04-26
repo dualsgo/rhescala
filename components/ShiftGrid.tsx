@@ -31,6 +31,10 @@ interface ShiftGridProps {
   onPrevMonth: () => void;
   monthNotes: string;
   onUpdateMonthNotes: (text: string) => void;
+  isReadOnly?: boolean;
+  isEditable: boolean;
+  allowRetroactive: boolean;
+  showNotes: boolean;
 }
 
 export const ShiftGrid: React.FC<ShiftGridProps> = ({
@@ -57,9 +61,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onPrevMonth,
   monthNotes,
   onUpdateMonthNotes,
+  isReadOnly = false,
+  isEditable,
+  allowRetroactive,
+  showNotes,
 }) => {
-  const [isEditable, setIsEditable] = useState(false);
-  const [allowRetroactive, setAllowRetroactive] = useState(false);
   const { showDialog } = useDialog();
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
 
@@ -97,64 +103,21 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   }, [days, filter]);
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Top Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsEditable(!isEditable)}
-            className={`px-6 py-2 rounded-xl text-[11px] font-black uppercase transition-all flex items-center gap-2 ${isEditable ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'}`}
-          >
-            <Icon name={isEditable ? 'save' : 'edit'} className="text-sm" />
-            {isEditable ? 'Salvar' : 'Editar Escala'}
-          </button>
-          
-          {isEditable && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-900/50">
-              <span className="text-[10px] font-bold text-indigo-600 uppercase">Retroativo</span>
-              <button
-                onClick={() => setAllowRetroactive(!allowRetroactive)}
-                className={`w-8 h-4 rounded-full relative transition-colors ${allowRetroactive ? 'bg-indigo-500' : 'bg-slate-300'}`}
-              >
-                <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${allowRetroactive ? 'left-4.5' : 'left-0.5'}`} />
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {isEditable && (
-            <>
-              <button onClick={onApplyFolgas} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase hover:bg-orange-500 hover:text-white transition-all">
-                Aplicar Folgas
-              </button>
-              <button onClick={onSortearDomingo} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase hover:bg-orange-500 hover:text-white transition-all">
-                Sortear Domingos
-              </button>
-            </>
-          )}
-          <button onClick={() => window.print()} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-[11px] font-black uppercase shadow-md hover:bg-indigo-700 transition-all flex items-center gap-2">
-            <Icon name="print" className="text-sm" /> PDF
-          </button>
-          <button onClick={onResetMonth} className="px-6 py-2 bg-orange-500 text-white rounded-xl text-[11px] font-black uppercase shadow-md hover:bg-orange-600 transition-all flex items-center gap-2">
-            <Icon name="add" className="text-sm" /> Criar Mês
-          </button>
-        </div>
-      </div>
+    <div className="flex flex-col gap-4 relative">
 
       {/* Grid Container */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
-        <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full border-collapse">
-            <thead>
+        <div className="overflow-x-auto custom-scrollbar max-h-[calc(100vh-250px)]">
+          <table className="w-full border-separate border-spacing-0">
+            <thead className="sticky top-0 z-40 bg-slate-50 dark:bg-slate-800">
               <tr className="bg-slate-50 dark:bg-slate-800/50">
-                <th className="sticky left-0 z-20 bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[180px] w-[180px]">
+                <th className="sticky left-0 z-[50] bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[180px] w-[180px]">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</span>
                 </th>
-                <th className="sticky left-[180px] z-20 bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[125px] w-[125px]">
+                <th className="sticky left-[180px] z-[50] bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[125px] w-[125px]">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horário</span>
                 </th>
-                <th className="sticky left-[305px] z-20 bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[100px] w-[100px]">
+                <th className="sticky left-[305px] z-[50] bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[100px] w-[100px]">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Posição</span>
                 </th>
                 {filteredDays.map(d => {
@@ -267,57 +230,56 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     const isPast = d.dateStr < todayStr;
                     const dimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
 
-                    const handleShiftClick = () => {
-                      if (!isEditable) return;
-                      if (isPast && !allowRetroactive) return;
-                      const sequence: ShiftType[] = ['T', 'F', 'FF', 'FE', 'C'];
-                      const currentIdx = sequence.indexOf(shift as ShiftType);
-                      const nextShift = sequence[(currentIdx + 1) % sequence.length];
-                      onUpdateShift(emp.id, d.num - 1, nextShift);
-                    };
-
                     return (
                       <td 
                         key={d.num} 
-                        onClick={() => selectedDayIdx === d.num - 1 ? onOpenDayDetail(d.num - 1) : onSelectDay(d.num - 1)}
-                        className={`p-1.5 border-b border-slate-50 dark:border-slate-800 text-center transition-all cursor-pointer ${dimClass} ${selectedDayIdx === d.num - 1 ? 'bg-orange-50/40 dark:bg-orange-900/10' : ''} ${hasAlert ? 'ring-2 ring-inset ring-rose-500' : ''}`}
+                        className={`p-1.5 border-b border-slate-50 dark:border-slate-800 text-center transition-all ${dimClass} ${selectedDayIdx === d.num - 1 ? 'bg-orange-50/40 dark:bg-orange-900/10' : ''} ${hasAlert ? 'ring-2 ring-inset ring-rose-500' : ''}`}
                       >
-                        <button
-                          onClick={handleShiftClick}
-                          disabled={!isEditable}
-                          title={(() => {
-                            if (shift === 'FF') {
-                              const dateStr = `${monthKey}-${String(d.num).padStart(2, '0')}`;
-                              const credit = (holidayCredits[emp.id] || []).find(c => c.offDate === dateStr);
-                              if (credit) return `Folga Feriado: Ref. ${credit.holidayName} (${credit.holidayDate.split('-').reverse().join('/')})`;
-                              return 'Folga Feriado';
-                            }
-                            return undefined;
-                          })()}
-                          className={`w-10 h-10 mx-auto rounded-xl flex items-center justify-center text-xs font-black transition-all shadow-sm ${
-                            shift === 'F' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
-                            shift === 'FF' ? 'bg-amber-100 text-amber-600' :
-                            shift === 'FE' ? 'bg-blue-100 text-blue-600' :
-                            shift === 'C' ? 'bg-indigo-100 text-indigo-600' :
-                            'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20'
-                          } ${isEditable ? 'hover:scale-110 hover:shadow-md cursor-pointer' : 'cursor-default'}`}
-                        >
-                          {shift}
-                        </button>
-                        
-                        {isEditable && (
-                           <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onOpenDayDetail(d.num - 1);
-                                }}
-                                className="w-5 h-5 bg-white dark:bg-slate-800 rounded-full shadow-md border border-slate-200 dark:border-slate-700 flex items-center justify-center text-indigo-500"
+                        <div className="relative group flex flex-col items-center gap-1">
+                          <button
+                            onClick={() => onSelectDay(d.num - 1)}
+                            onDoubleClick={() => onOpenDayDetail(d.num - 1)}
+                            title={(() => {
+                              if (shift === 'FF') {
+                                const dateStr = `${monthKey}-${String(d.num).padStart(2, '0')}`;
+                                const credit = (holidayCredits[emp.id] || []).find(c => c.offDate === dateStr);
+                                if (credit) return `Folga Feriado: Ref. ${credit.holidayName} (${credit.holidayDate.split('-').reverse().join('/')})`;
+                                return 'Folga Feriado';
+                              }
+                              return undefined;
+                            })()}
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black transition-all shadow-sm ${
+                              shift === 'F' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
+                              shift === 'FF' ? 'bg-amber-100 text-amber-600' :
+                              shift === 'FE' ? 'bg-blue-100 text-blue-600' :
+                              shift === 'C' ? 'bg-indigo-100 text-indigo-600' :
+                              'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20'
+                            } ${isEditable && !isReadOnly ? 'hover:scale-105 cursor-pointer' : 'cursor-pointer hover:bg-slate-100'}`}
+                          >
+                            {shift === 'FF' ? (() => {
+                              const pending = (holidayCredits[emp.id] || []).filter(c => c.status === 'pending').length;
+                              const used = (holidayCredits[emp.id] || []).filter(c => c.offDate && c.offDate <= `${monthKey}-${String(d.num).padStart(2, '0')}`).length;
+                              return `FF(${pending})`;
+                            })() : shift}
+                          </button>
+
+                          {isEditable && !isReadOnly && (() => {
+                            const pendingCount = (holidayCredits[emp.id] || []).filter(c => c.status === 'pending').length;
+                            return (
+                              <select
+                                value={shift}
+                                onChange={(e) => onUpdateShift(emp.id, d.num - 1, e.target.value as ShiftType)}
+                                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                               >
-                                <Icon name="settings" className="text-[10px]" />
-                              </button>
-                           </div>
-                        )}
+                                <option value="T">Trabalha (T)</option>
+                                <option value="F">Folga (F)</option>
+                                <option value="FF" disabled={pendingCount === 0 && shift !== 'FF'}>Folga Feriado (FF) {pendingCount > 0 ? `(${pendingCount})` : ''}</option>
+                                <option value="FE">Férias (FE)</option>
+                                <option value="C">Curso (C)</option>
+                              </select>
+                            );
+                          })()}
+                        </div>
                       </td>
                     );
                   })}
@@ -329,22 +291,24 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       </div>
 
       {/* Recados Box in UI */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm mt-2">
-        <div className="flex items-center gap-2 mb-2">
-          <Icon name="campaign" className="text-orange-500" />
-          <h3 className="text-[12px] font-black uppercase text-slate-800 dark:text-slate-100">Recados Importantes do Mês (Para Impressão)</h3>
+      {showNotes && (
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm mt-2">
+          <div className="flex items-center gap-2 mb-2">
+            <Icon name="campaign" className="text-orange-500" />
+            <h3 className="text-[12px] font-black uppercase text-slate-800 dark:text-slate-100">Recados Importantes do Mês (Para Impressão)</h3>
+          </div>
+          <textarea
+            value={monthNotes}
+            onChange={(e) => onUpdateMonthNotes(e.target.value)}
+            placeholder="Digite aqui os recados que devem aparecer no rodapé do PDF... (aprox. 450 caracteres cabem no espaço)"
+            maxLength={450}
+            className="w-full h-24 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none outline-none text-slate-700 dark:text-slate-300"
+          />
+          <div className="text-right mt-1 text-[10px] font-bold text-slate-400">
+            {monthNotes.length} / 450 caracteres
+          </div>
         </div>
-        <textarea
-          value={monthNotes}
-          onChange={(e) => onUpdateMonthNotes(e.target.value)}
-          placeholder="Digite aqui os recados que devem aparecer no rodapé do PDF... (aprox. 450 caracteres cabem no espaço)"
-          maxLength={450}
-          className="w-full h-24 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none outline-none text-slate-700 dark:text-slate-300"
-        />
-        <div className="text-right mt-1 text-[10px] font-bold text-slate-400">
-          {monthNotes.length} / 450 caracteres
-        </div>
-      </div>
+      )}
     </div>
   );
 };

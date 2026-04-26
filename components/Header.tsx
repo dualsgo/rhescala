@@ -13,6 +13,18 @@ interface HeaderProps {
   onShareWhatsApp: () => void;
   syncStatus: SyncStatus;
   selectedDayIdx: number;
+  // New Action Props
+  isReadOnly: boolean;
+  isEditable: boolean;
+  onToggleEdit: () => void;
+  allowRetroactive: boolean;
+  onToggleRetroactive: () => void;
+  onPrint: () => void;
+  onCreateMonth: () => void;
+  onApplyFolgas: () => void;
+  onSortearDomingo: () => void;
+  showNotes: boolean;
+  onToggleNotes: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -25,8 +37,20 @@ export const Header: React.FC<HeaderProps> = ({
   onShareWhatsApp,
   syncStatus,
   selectedDayIdx,
+  isReadOnly,
+  isEditable,
+  onToggleEdit,
+  allowRetroactive,
+  onToggleRetroactive,
+  onPrint,
+  onCreateMonth,
+  onApplyFolgas,
+  onSortearDomingo,
+  showNotes,
+  onToggleNotes,
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);
+  const [showPrintMenu, setShowPrintMenu] = useState(false);
   const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
   const navItems = [
@@ -119,15 +143,82 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Right: Actions & Status */}
+        <div className="flex items-center gap-3">
+          {/* Edit Group */}
+          {currentView === 'grid' && !isReadOnly && (
+            <div className="relative">
+              <button
+                onClick={onToggleEdit}
+                className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase transition-all flex items-center gap-2 ${isEditable ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'}`}
+              >
+                <Icon name={isEditable ? 'save' : 'edit'} className="text-sm" />
+                {isEditable ? 'Salvar Edição' : 'Editar'}
+              </button>
+              
+              {isEditable && (
+                <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-1 flex flex-col gap-1">
+                  <button onClick={onCreateMonth} className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-orange-600 hover:bg-orange-50 transition-all">
+                    <Icon name="add_circle" className="text-lg" /> Criar Mês (Gerar)
+                  </button>
+                  <div className="h-px bg-slate-100 dark:bg-slate-800 mx-2" />
+                  <button onClick={onApplyFolgas} className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-slate-600 hover:bg-slate-50 transition-all">
+                    <Icon name="event_available" className="text-lg" /> Aplicar Folgas
+                  </button>
+                  <button onClick={onSortearDomingo} className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-slate-600 hover:bg-slate-50 transition-all">
+                    <Icon name="casino" className="text-lg" /> Sortear Domingos
+                  </button>
+                  <div className="h-px bg-slate-100 dark:bg-slate-800 mx-2" />
+                  <div className="flex items-center justify-between p-2.5">
+                    <span className="text-[9px] font-black text-slate-400 uppercase">Modo Retroativo</span>
+                    <button
+                      onClick={onToggleRetroactive}
+                      className={`w-8 h-4 rounded-full relative transition-colors ${allowRetroactive ? 'bg-indigo-500' : 'bg-slate-300'}`}
+                    >
+                      <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${allowRetroactive ? 'left-4.5' : 'left-0.5'}`} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Print Group */}
+          <div className="relative">
+            <button
+              onClick={() => setShowPrintMenu(!showPrintMenu)}
+              className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase transition-all flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 ${showPrintMenu ? 'ring-2 ring-indigo-500' : ''}`}
+            >
+              <Icon name="print" className="text-sm" /> Imprimir
+            </button>
+            {showPrintMenu && (
+              <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-1 flex flex-col gap-1">
+                <button 
+                  onClick={() => { onPrint(); setShowPrintMenu(false); }}
+                  className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-slate-600 hover:bg-slate-50 transition-all"
+                >
+                  <Icon name="picture_as_pdf" className="text-lg text-rose-500" /> Gerar PDF Escala
+                </button>
+                <button 
+                  onClick={() => { onToggleNotes(); setShowPrintMenu(false); }}
+                  className={`w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase transition-all ${showNotes ? 'text-indigo-600 bg-indigo-50' : 'text-slate-600 hover:bg-slate-50'}`}
+                >
+                  <Icon name="edit_note" className="text-lg" /> {showNotes ? 'Esconder Recados' : 'Editar Recados'}
+                </button>
+              </div>
+            )}
+          </div>
 
           <button
             onClick={onShareWhatsApp}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase flex items-center gap-2 hover:bg-green-700 transition-all shadow-sm"
+            className="bg-green-600 text-white px-4 py-1.5 rounded-lg text-[11px] font-black uppercase flex items-center gap-2 hover:bg-green-700 transition-all shadow-sm"
           >
-            <Icon name="send" className="text-sm" /> WhatsApp (Dia {selectedDayIdx + 1})
+            <Icon name="send" className="text-sm" /> WhatsApp
           </button>
           
-          <div className={`w-2 h-2 rounded-full ${syncStatus.state === 'synced' ? 'bg-green-500' : syncStatus.state === 'syncing' ? 'bg-blue-500 animate-pulse' : 'bg-red-500'}`} title={syncStatus.state} />
+          <div className={`w-2 h-2 rounded-full shrink-0 ${syncStatus.state === 'synced' ? 'bg-green-500' : syncStatus.state === 'syncing' ? 'bg-blue-500 animate-pulse' : 'bg-red-500'}`} title={syncStatus.state} />
         </div>
       </div>
     </header>

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Employee, MonthYear, Holiday } from '../types';
-import { buildHolidaySet } from '../constants';
+import { buildHolidaySet, getNationalHolidays } from '../constants';
 
 interface PrintableScheduleProps {
   employees: Employee[];
@@ -50,11 +50,14 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
     return parseInt(a.birthday.split('-')[2], 10) - parseInt(b.birthday.split('-')[2], 10);
   });
 
-  // Feriados do mês
-  const holidaysInMonth = customHolidays.filter(h => {
-    const d = new Date(h.date + 'T00:00:00');
-    return d.getFullYear() === currentMY.year && d.getMonth() === currentMY.month;
-  }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  // Feriados do mês (Nacionais + Customizados)
+  const holidaysInMonth = useMemo(() => {
+    const allHolidays = [...getNationalHolidays(currentMY.year), ...customHolidays];
+    return allHolidays.filter(h => {
+      const d = new Date(h.date + 'T00:00:00');
+      return d.getFullYear() === currentMY.year && d.getMonth() === currentMY.month;
+    }).sort((a, b) => a.date.localeCompare(b.date));
+  }, [currentMY, customHolidays]);
 
   return (
     <div id="printable-team-calendar" className="hidden print:block w-full bg-white text-black font-sans" style={{ minHeight: '100vh', pageBreakInside: 'avoid' }}>

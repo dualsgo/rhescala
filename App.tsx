@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
-import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay } from './hooks/useScheduleEngine';
+import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches } from './hooks/useScheduleEngine';
 import { Header } from './components/Header';
 import { ShiftGrid } from './components/ShiftGrid';
 import { TeamView } from './components/TeamView';
@@ -12,6 +12,7 @@ import { DaySummaryCard } from './components/DaySummaryCard';
 import { DataManager } from './components/DataManager';
 import { WorkedHolidaysList } from './components/WorkedHolidaysList';
 import { Icon } from './components/Icon';
+import { Login } from './components/Login';
 import { PrintableSchedule } from './components/PrintableSchedule';
 import { useHolidayCredits } from './hooks/useHolidayCredits';
 import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay, getNationalHolidays } from './constants';
@@ -32,6 +33,7 @@ const App: React.FC = () => {
   const [isDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
   const { showDialog } = useDialog();
   const [waModal, setWaModal] = useState<{ show: boolean, text: string }>({ show: false, text: '' });
+  const [auth, setAuth] = useState<{ isAuthenticated: boolean, role: 'admin' | 'viewer' }>({ isAuthenticated: false, role: 'viewer' });
   const holidayCredits = useHolidayCredits(employees, customHolidays, currentMY.year, trackingStartDate);
 
   const onUpdateEmployee = useCallback((empId: string, data: Partial<Employee>) => {
@@ -69,6 +71,9 @@ const App: React.FC = () => {
   }, [setCustomHolidays]);
 
   const monthKey = useMemo(() => `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`, [currentMY]);
+  const [isEditable, setIsEditable] = useState(false);
+  const [allowRetroactive, setAllowRetroactive] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
 
   // Dark mode effect
   React.useEffect(() => {
@@ -146,20 +151,21 @@ const App: React.FC = () => {
     text += `🟩 P3 Salão\n`;
     text += `🟦 P4 Flexível\n\n`;
 
-    // Group members by their work hours
     const groups: Record<string, any[]> = {};
-    const absent: string[] = [];
+    const folgas: string[] = [];
 
     const activeEmps = employees.filter(e => !e.isHidden && e.status === 'active');
     const resolvedPositions = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday);
     
     activeEmps.forEach(e => {
       const shift = e.shifts[monthKey]?.[dayIdx] || 'T';
-      if (shift !== 'T' && !shift.startsWith('FF')) {
-        const codeMap: any = { 'F': 'Folga', 'FE': 'Férias', 'C': 'Curso' };
-        absent.push(`• ${e.name.split(' ')[0]} (${codeMap[shift] || shift})`);
+      
+      if (shift === 'F' || shift.startsWith('FF')) {
+        folgas.push(`${e.name.split(' ')[0]} (${shift})`);
         return;
       }
+      
+      if (shift !== 'T') return; // Ignore FE, C, etc.
 
       const hour = e.dailyHours[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
       let pos = e.tacticalPositions?.[monthKey]?.[dayIdx];
@@ -172,7 +178,6 @@ const App: React.FC = () => {
       groups[hour].push({ ...e, firstName: e.name.split(' ')[0], posEmoji, pos });
     });
 
-    // Define turn order for sorting
     const hourOrder = isHoliday ? ['12h às 18h', '13h às 19h', '14h às 20h', '15h às 21h'] : 
                       isSunday ? ['12h às 20h', '13h às 21h'] :
                       ['10h às 16h15', '10h às 18h20', '12h às 20h20', '13h40 às 22h'];
@@ -188,40 +193,19 @@ const App: React.FC = () => {
       const startH = startHStr ? parseInt(startHStr) : 0;
       const isOpening = startH <= 11;
       const isClosing = startH >= 13;
+      const shiftName = isOpening ? 'Abertura' : isClosing ? 'Fechamento' : 'Intermediário';
 
-      text += `⏰ *${isOpening ? 'Abertura' : isClosing ? 'Fechamento' : 'Intermediário'} ${hour}*\n`;
-      
-      // Lunch distribution logic
-      const openingLunchSlots = ['13h', '13h30', '14h'];
-      const closingLunchSlots = ['15h', '15h30', '16h', '16h30', '17h'];
-      let lunchIdx = 0;
+      text += `⏰ *${shiftName} ${hour}*\n`;
+      const lunches = calculateLunches(members, isHoliday, isSunday, isOpening);
 
       members.forEach((m, idx) => {
-        let lunch = '';
-        if (m.isYoungApprentice) {
-          lunch = '12h45';
-        } else if (m.cargo === 'Estoquista') {
-          lunch = 'Flexível';
-        } else if (isHoliday) {
-          lunch = '15 min';
-        } else {
-          if (isOpening) {
-            lunch = openingLunchSlots[Math.floor(lunchIdx / 2) % openingLunchSlots.length];
-            lunchIdx++;
-          } else {
-            lunch = closingLunchSlots[lunchIdx % closingLunchSlots.length];
-            lunchIdx++;
-          }
-        }
-        text += `${m.posEmoji} ${m.firstName} (almoço ${lunch})\n`;
+        text += `${m.posEmoji} ${m.firstName} (almoço ${lunches[idx]})\n`;
       });
       text += '\n';
     });
 
-    if (absent.length > 0) {
-      text += `------------------------------------------\n`;
-      text += `*FORA DE ESCALA:*\n`;
-      absent.sort().forEach(a => text += a + '\n');
+    if (folgas.length > 0) {
+      text += `Folgas: ${folgas.join(', ')}\n`;
     }
 
     setWaModal({ show: true, text });
@@ -231,6 +215,10 @@ const App: React.FC = () => {
     handleApplyFolgas();
     setTimeout(handleSortearDomingo, 500);
   };
+
+  if (!auth.isAuthenticated) {
+    return <Login onLogin={(role) => setAuth({ isAuthenticated: true, role })} />;
+  }
 
   return (
     <>
@@ -245,6 +233,17 @@ const App: React.FC = () => {
               onShareWhatsApp={() => handleShareWhatsApp(selectedDayIdx)}
               syncStatus={syncStatus}
               selectedDayIdx={selectedDayIdx}
+              isReadOnly={auth.role === 'viewer'}
+              isEditable={isEditable}
+              onToggleEdit={() => setIsEditable(!isEditable)}
+              allowRetroactive={allowRetroactive}
+              onToggleRetroactive={() => setAllowRetroactive(!allowRetroactive)}
+              onPrint={() => window.print()}
+              onCreateMonth={handleCreateMonth}
+              onApplyFolgas={handleApplyFolgas}
+              onSortearDomingo={handleSortearDomingo}
+              showNotes={showNotes}
+              onToggleNotes={() => setShowNotes(!showNotes)}
             />
 
       <main className="max-w-[1600px] mx-auto p-4 animate-fade-in">
@@ -257,8 +256,13 @@ const App: React.FC = () => {
             customHolidays={customHolidays}
             holidayCredits={holidayCredits}
             filter={filter}
+            isReadOnly={auth.role === 'viewer'}
+            isEditable={isEditable}
+            allowRetroactive={allowRetroactive}
+            showNotes={showNotes}
             onSelectDay={setSelectedDayIdx}
             onUpdateShift={(empId, d, s) => {
+              if (auth.role === 'viewer') return;
               setEmployees(prev => prev.map(emp => {
                 if (emp.id !== empId) return emp;
                 const sfs = [...(emp.shifts[monthKey] || [])];
@@ -267,6 +271,7 @@ const App: React.FC = () => {
               }));
             }}
             onUpdateShifts={(updates) => {
+              if (auth.role === 'viewer') return;
               setEmployees(prev => prev.map(emp => {
                 const empU = updates.filter(u => u.empId === emp.id);
                 if (empU.length === 0) return emp;
@@ -275,8 +280,14 @@ const App: React.FC = () => {
                 return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
               }));
             }}
-            onUpdateEmployeeDailyHour={onUpdateEmployeeDailyHour}
-            onUpdateTacticalPosition={onUpdateTacticalPosition}
+            onUpdateEmployeeDailyHour={(empId, dayIdx, newHour) => {
+              if (auth.role === 'viewer') return;
+              onUpdateEmployeeDailyHour(empId, dayIdx, newHour);
+            }}
+            onUpdateTacticalPosition={(empId, dayIdx, newPos) => {
+              if (auth.role === 'viewer') return;
+              onUpdateTacticalPosition(empId, dayIdx, newPos);
+            }}
             onShareWhatsApp={handleShareWhatsApp}
             onOpenDayDetail={(idx) => {
               setSelectedDayIdx(idx);
@@ -290,7 +301,10 @@ const App: React.FC = () => {
             onNextMonth={() => setCurrentMY(prev => prev.month === 11 ? { month: 0, year: prev.year + 1 } : { ...prev, month: prev.month + 1 })}
             onPrevMonth={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })}
             monthNotes={monthNotes[monthKey] || ''}
-            onUpdateMonthNotes={(text) => setMonthNotes(prev => ({ ...prev, [monthKey]: text }))}
+            onUpdateMonthNotes={(text) => {
+              if (auth.role === 'viewer') return;
+              setMonthNotes(prev => ({ ...prev, [monthKey]: text }));
+            }}
           />
         ) : currentView === 'analysis' ? (
           <AnalysisPanel employees={employees} currentMY={currentMY} customHolidays={customHolidays} onClose={() => setCurrentView('grid')} />
@@ -299,9 +313,19 @@ const App: React.FC = () => {
         {currentView === 'team' && (
           <TeamView 
             employees={employees} 
-            onUpdateEmployee={onUpdateEmployee}
-            onDeleteEmployee={onDeleteEmployee}
-            onAddEmployee={onAddEmployee}
+            isReadOnly={auth.role === 'viewer'}
+            onUpdateEmployee={(empId, data) => {
+              if (auth.role === 'viewer') return;
+              onUpdateEmployee(empId, data);
+            }}
+            onDeleteEmployee={(empId) => {
+              if (auth.role === 'viewer') return;
+              onDeleteEmployee(empId);
+            }}
+            onAddEmployee={(name, isYoung, courseDay, cargo, birthday) => {
+              if (auth.role === 'viewer') return;
+              onAddEmployee(name, isYoung, courseDay, cargo, birthday);
+            }}
           />
         )}
 
@@ -309,7 +333,10 @@ const App: React.FC = () => {
           <DataManager 
             syncStatus={syncStatus} 
             employees={employees} 
-            setEmployees={setEmployees} 
+            setEmployees={(emps) => {
+              if (auth.role === 'viewer') return;
+              setEmployees(emps);
+            }} 
             onClose={() => setCurrentView('grid')} 
           />
         )}
@@ -319,10 +346,20 @@ const App: React.FC = () => {
             <HolidayManager 
               year={currentMY.year}
               customHolidays={customHolidays} 
-              onAdd={onAddHoliday}
-              onRemove={onRemoveHoliday}
+              isReadOnly={auth.role === 'viewer'}
+              onAdd={(h) => {
+                if (auth.role === 'viewer') return;
+                onAddHoliday(h);
+              }}
+              onRemove={(id) => {
+                if (auth.role === 'viewer') return;
+                onRemoveHoliday(id);
+              }}
               trackingStartDate={trackingStartDate}
-              onUpdateTrackingStartDate={setTrackingStartDate}
+              onUpdateTrackingStartDate={(d) => {
+                if (auth.role === 'viewer') return;
+                setTrackingStartDate(d);
+              }}
               onClose={() => setCurrentView('grid')} 
             />
           </div>

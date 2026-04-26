@@ -85,7 +85,9 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
   }, [employees, monthKey, daysInMonth, currentMY, holidaySet]);
 
   const employeeStats = useMemo(() => {
-    const theoreticalMax = daysInMonth - Math.floor(daysInMonth / 7);
+    // Standard workable days = Days in month - 1 mandatory leave per week (approx Sundays)
+    const sundaysCount = dailyCoverage.filter(d => d.isSunday).length;
+    const baseWorkableDays = daysInMonth - sundaysCount;
     
     return employees.filter(e => !e.isHidden && e.status === 'active').map(emp => {
       let worked = 0;
@@ -95,6 +97,9 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
       let fullCycles = 0;
       let sundaysWorked = 0;
       let holidaysWorked = 0;
+      let vacationDays = 0;
+      let ffDays = 0;
+      let courseDays = 0;
 
       for (let d = 0; d < daysInMonth; d++) {
         const s = getEffectiveShift(emp, d);
@@ -102,45 +107,46 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
         const isSun = dayType === 0;
         const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`);
 
-        if (s === 'T' || s === 'C') {
+        if (s === 'T') {
           worked++;
           currentStreak++;
           if (currentStreak > maxStreak) maxStreak = currentStreak;
           if (currentStreak === 6) fullCycles++;
-          
           if (isSun) sundaysWorked++;
           if (isHol) holidaysWorked++;
-
-          // Hours calculation
-          const hStr = (emp.dailyHours[monthKey] || [])[d] || emp.workPeriod || '';
-          // Simple extraction: "08:00 às 16:20 (1h)" -> roughly 7.33h (standard)
-          // If it mentions hours differently, we might need a better parser.
-          // For now, let's assume 7.33 if 'T' or 'C'
           totalHours += 7.33; 
         } else {
           currentStreak = 0;
+          if (s === 'FE') vacationDays++;
+          else if (s?.startsWith('FF')) ffDays++;
+          else if (s === 'C') courseDays++;
         }
       }
 
-      const extraOffs = Math.max(0, theoreticalMax - worked);
+      // Adherence logic: Workable days for THIS employee
+      // Base - Vacations - FF - Course
+      const workableForEmp = Math.max(0, baseWorkableDays - vacationDays - ffDays - courseDays);
+      const extraOffs = Math.max(0, workableForEmp - worked);
+      const adherence = workableForEmp > 0 ? (worked / workableForEmp) * 100 : 0;
 
       return {
         id: emp.id,
         name: emp.name,
         worked,
         totalHours: Math.round(totalHours),
-        theoreticalMax,
+        theoreticalMax: workableForEmp,
         extraOffs,
+        adherence,
         fullCycles,
         maxStreak,
         sundaysWorked,
         holidaysWorked,
         overlooked: maxStreak > 6,
-        isHeavy: worked > 22,
+        isHeavy: adherence > 100, // Worked more than scheduled
         emp
       };
-    }).sort((a, b) => b.worked - a.worked);
-  }, [employees, daysInMonth, getEffectiveShift, monthKey, holidaySet]);
+    }).sort((a, b) => b.adherence - a.adherence);
+  }, [employees, daysInMonth, getEffectiveShift, monthKey, holidaySet, dailyCoverage, currentMY]);
 
   const bottlenecks = useMemo(() => {
     return dailyCoverage.filter(c => c.total < 6);
@@ -301,9 +307,9 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                             <p className="text-[9px] font-bold text-amber-500 ">Presença em dias premium</p>
                         </div>
                         <div className="bg-rose-50  p-4 rounded-2xl border border-rose-100 ">
-                            <p className="text-[10px] font-black text-rose-400  uppercase">Folgas Extras</p>
-                            <p className="text-2xl font-black text-rose-600 ">+{selectedEmployee?.extraOffs}d</p>
-                            <p className="text-[9px] font-bold text-rose-400 ">Além do mínimo legal</p>
+                            <p className="text-[10px] font-black text-rose-400  uppercase">Aderência</p>
+                            <p className="text-2xl font-black text-rose-600 ">{selectedEmployee?.adherence.toFixed(0)}%</p>
+                            <p className="text-[9px] font-bold text-rose-400 ">Frente aos dias trabalháveis ({selectedEmployee?.theoreticalMax}d)</p>
                         </div>
                         <div className="bg-slate-50  p-4 rounded-2xl border border-slate-200 ">
                             <p className="text-[10px] font-black text-slate-400  uppercase">Maior Sequência</p>
@@ -356,7 +362,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                                                 <div className={`h-full rounded-full ${s.isHeavy ? 'bg-rose-400' : 'bg-indigo-400'}`} style={{ width: `${(s.worked / daysInMonth) * 100}%` }}></div>
                                             </div>
                                             <span className={`text-[9px] font-black shrink-0 ${selectedEmpId === s.id ? 'text-white/80' : 'text-slate-500'}`}>
-                                                {s.worked}d • {s.sundaysWorked}D
+                                                {s.adherence.toFixed(0)}% • {s.worked}/{s.theoreticalMax}d
                                             </span>
                                         </div>
                                     </div>
@@ -535,11 +541,7 @@ const IndividualWeeklyCalendar: React.FC<{
                             <span className={`text-[11px] font-black mt-1 ${cell.isOff && !cell.isVacation ? 'opacity-30' : ''}`}>
                                 {cell.shift === 'T' ? shiftLabel : cell.isCourse ? 'C' : cell.isVacation ? 'FE' : 'F'}
                             </span>
-                            {!cell.isOff && (
-                              <span className="text-[7px] font-bold opacity-80 mt-0.5 tracking-tighter">
-                                {cell.hours.split(' ')[0]}
-                              </span>
-                            )}
+                             {/* Horários ocultos na análise */}
                         </div>
                     );
                 })}
@@ -612,8 +614,8 @@ const TeamMonthlyCalendar: React.FC<{
                   {cell.dayData.map((d, i) => (
                     <div key={i} className={`flex items-center justify-between gap-1 p-2 print:p-1 rounded-xl print:rounded-md border ${d.isCourse ? 'bg-teal-50 border-teal-100 text-teal-700' : 'bg-slate-50 border-slate-100/50 text-slate-800'}`}>
                        <span className="text-[9px] print:text-[8px] font-black uppercase truncate">{d.name}</span>
-                       <span className={`text-[8px] font-bold shrink-0 ${d.isCourse ? 'mt-[-2px]' : 'text-slate-400'}`}>
-                          {d.isCourse ? <Icon name="school" className="text-[10px]" /> : d.hours.split(' ')[0]}
+                       <span className={`text-[8px] font-bold shrink-0 ${d.isCourse ? 'mt-[-2px]' : 'hidden'}`}>
+                          {d.isCourse && <Icon name="school" className="text-[10px]" />}
                        </span>
                     </div>
                   ))}

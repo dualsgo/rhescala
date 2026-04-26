@@ -455,6 +455,31 @@ export function generateYearSchedule(
     return result;
 }
 
+export function calculateLunches(
+    members: any[],
+    isHoliday: boolean,
+    isSunday: boolean,
+    isOpening: boolean
+): string[] {
+    const openingSlots = ['13h', '13h30', '14h'];
+    const closingSlots = ['15h', '15h30', '16h', '16h30', '17h'];
+    const holidaySlots = ['15 min'];
+    
+    let lunchIdx = 0;
+    return members.map(m => {
+        if (m.isYoungApprentice) return '12h45';
+        if (m.cargo === 'Estoquista') return 'Flexível';
+        if (isHoliday) return '15 min';
+        
+        const slots = isOpening ? openingSlots : closingSlots;
+        const perSlotLimit = (isOpening || isSunday) ? 1 : 2;
+        
+        const lunch = slots[Math.floor(lunchIdx / perSlotLimit) % slots.length];
+        lunchIdx++;
+        return lunch;
+    });
+}
+
 // ─── Smart month update (Atualizar Mês) ──────────────────────────────────────
 
 /**
@@ -638,14 +663,14 @@ export function applyMonthUpdate(
                 newShifts[dayIdx] = 'F'; continue;
             }
 
-            if (dow === 0 || dow === 6) {
-                if (existingShifts[dayIdx] !== 'FE' && !existingShifts[dayIdx]?.startsWith('FF')) {
+            if (isHoliday) {
+                if (!existingShifts[dayIdx] || (!['FE', 'FF', 'T'].includes(existingShifts[dayIdx]))) {
                     newShifts[dayIdx] = 'F';
                 }
                 continue;
             }
-            if (isHoliday) {
-                if (existingShifts[dayIdx] !== 'FE' && !existingShifts[dayIdx]?.startsWith('FF')) {
+            if (dow === 0 || dow === 6) {
+                if (!existingShifts[dayIdx] || (!['FE', 'FF', 'T'].includes(existingShifts[dayIdx]))) {
                     newShifts[dayIdx] = 'F';
                 }
                 continue;
