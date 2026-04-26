@@ -3,6 +3,7 @@ import { Employee, MonthYear, Holiday } from '../types';
 import { buildHolidaySet, getNationalHolidays } from '../constants';
 import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { Icon } from './Icon';
+import { useDialog } from '../contexts/DialogContext';
 
 interface WorkedHolidaysListProps {
   employees: Employee[];
@@ -23,6 +24,7 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
   onUpdateTrackingStartDate,
   onClose,
 }) => {
+  const { showDialog } = useDialog();
   const relevantHolidays = useMemo(() => {
     const todayStr = new Date().toLocaleDateString('en-CA');
     const allHolidays = [...getNationalHolidays(currentMY.year), ...customHolidays];
@@ -45,6 +47,34 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
     });
   };
 
+  const handleCopyPending = () => {
+    let text = "*📋 COLABORADORES COM FOLGAS PENDENTES*\n\n";
+    let found = false;
+    
+    const sortedEmployees = [...employees].sort((a, b) => a.name.localeCompare(b.name));
+    
+    sortedEmployees.forEach(worker => {
+      const pendingCredits = (holidayCredits[worker.id] || []).filter(c => c.status === 'pending');
+      if (pendingCredits.length > 0) {
+        found = true;
+        text += `👤 *${worker.name.toUpperCase()}*\n`;
+        pendingCredits.forEach(c => {
+          const holiday = [...getNationalHolidays(currentMY.year), ...customHolidays].find(h => h.date === c.holidayDate);
+          const dateFormatted = c.holidayDate.split('-').reverse().join('/');
+          text += `   • ${dateFormatted} - ${holiday?.name || 'Feriado'}\n`;
+        });
+        text += '\n';
+      }
+    });
+
+    if (!found) {
+      text = "Nenhuma folga pendente encontrada.";
+    }
+
+    navigator.clipboard.writeText(text);
+    showDialog({ title: 'Copiado', message: 'A lista de pendentes foi copiada para a área de transferência!', type: 'info' });
+  };
+
   return (
     <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-4xl mx-auto mt-6 animate-fade-in">
       <div className="flex justify-between items-center mb-8 pb-6 border-b border-slate-100 dark:border-slate-800">
@@ -57,9 +87,17 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
             <p className="text-sm font-bold text-slate-400 mt-1">Gestão de feriados trabalhados e folgas compensatórias</p>
           </div>
         </div>
-        <button onClick={onClose} className="px-6 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl font-bold uppercase text-xs tracking-widest transition-colors">
-          Voltar
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={handleCopyPending}
+            className="flex items-center gap-2 px-5 py-2 bg-rose-600 text-white hover:bg-rose-700 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all shadow-md active:scale-95"
+          >
+            <Icon name="content_copy" className="text-sm" /> Copiar Pendentes
+          </button>
+          <button onClick={onClose} className="px-6 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl font-bold uppercase text-xs tracking-widest transition-colors">
+            Voltar
+          </button>
+        </div>
       </div>
 
       {/* Configuration Section */}

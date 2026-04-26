@@ -95,7 +95,6 @@ export function getNationalHolidays(year: number): Holiday[] {
     { date: fmt(carnival1),  name: 'Carnaval (Segunda)',              type: 'national', recurring: false },
     { date: fmt(carnival2),  name: 'Carnaval (Terça)',                type: 'national', recurring: false },
     { date: fmt(goodFriday), name: 'Sexta-feira Santa',               type: 'national', recurring: false },
-    { date: fmt(easter),     name: 'Páscoa',                         type: 'national', recurring: false },
     { date: `${year}-04-21`, name: 'Tiradentes',                     type: 'national', recurring: false },
     { date: `${year}-04-23`, name: 'São Jorge (Rio de Janeiro)',       type: 'state',     recurring: false },
     { date: `${year}-05-01`, name: 'Dia do Trabalho',                type: 'national', recurring: false },

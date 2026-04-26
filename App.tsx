@@ -462,7 +462,7 @@ const App: React.FC = () => {
                   onClick={() => handleShareWhatsApp(selectedDayIdx)}
                   className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md active:scale-95"
                 >
-                  <Icon name="chat" className="text-sm" /> WhatsApp
+                  <Icon name="content_copy" className="text-sm" /> Copiar Texto
                 </button>
                 <button onClick={() => setShowDayDetail(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400">
                   <Icon name="close" />
@@ -502,12 +502,12 @@ const App: React.FC = () => {
               <button
                 onClick={async () => { 
                   navigator.clipboard.writeText(waModal.text); 
-                  await showDialog({ message: 'Copiado!' }); 
-                  window.open(`https://wa.me/?text=${encodeURIComponent(waModal.text)}`, '_blank');
+                  await showDialog({ message: 'Texto da escala copiado!' }); 
+                  setWaModal({ show: false, text: '' });
                 }}
                 className="flex-1 bg-green-600 dark:bg-green-700 text-white font-extrabold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:bg-green-700 dark:hover:bg-green-600 transition-all active:scale-95"
               >
-                <Icon name="content_copy" /> Copiar e Abrir WhatsApp
+                <Icon name="content_copy" /> Copiar Escala
               </button>
             </div>
           </div>

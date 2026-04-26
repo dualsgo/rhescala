@@ -53,6 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);
   const [showPrintMenu, setShowPrintMenu] = useState(false);
+  const [showEditMenu, setShowEditMenu] = useState(false);
   const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
   const navItems = [
@@ -91,17 +92,22 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="relative">
                 <button
                   onClick={() => setShowConfigMenu(!showConfigMenu)}
+                  onBlur={() => setTimeout(() => setShowConfigMenu(false), 200)}
                   className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all flex items-center gap-1.5 ${['team','jornada','data','feriados','worked-holidays'].includes(currentView) ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                   Configurações <Icon name={showConfigMenu ? 'expand_less' : 'expand_more'} className="text-[14px]" />
                 </button>
                 {showConfigMenu && (
-                  <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-1">
+                  <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-1 animate-in fade-in slide-in-from-top-1 duration-200">
                     {configItems.map(item => (
                       <button
                         key={item.id}
-                        onClick={() => { onViewChange(item.id as any); setShowConfigMenu(false); }}
-                        className="w-full flex items-center gap-3 p-3 rounded-lg text-[11px] font-bold uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                        onMouseDown={(e) => {
+                          e.preventDefault(); // Prevent onBlur from firing before click
+                          onViewChange(item.id as any); 
+                          setShowConfigMenu(false); 
+                        }}
+                        className="w-full flex items-center gap-3 p-3 rounded-lg text-[11px] font-bold uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left"
                       >
                         <Icon name={item.icon} className="text-base" /> {item.label}
                       </button>
@@ -160,24 +166,52 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Edit Group */}
           {currentView === 'grid' && !isReadOnly && (
             <div className="relative">
-              <button
-                onClick={onToggleEdit}
-                className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase transition-all flex items-center gap-2 ${isEditable ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'}`}
-              >
-                <Icon name={isEditable ? 'save' : 'edit'} className="text-sm" />
-                {isEditable ? 'Salvar Edição' : 'Editar'}
-              </button>
+              <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
+                <button
+                  onClick={() => {
+                    if (!isEditable) {
+                      onToggleEdit();
+                      setShowEditMenu(true);
+                    } else {
+                      onToggleEdit();
+                      setShowEditMenu(false);
+                    }
+                  }}
+                  className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all flex items-center gap-2 ${isEditable ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  <Icon name={isEditable ? 'save' : 'edit'} className="text-sm" />
+                  {isEditable ? 'Salvar' : 'Editar'}
+                </button>
+                
+                {isEditable && (
+                  <button 
+                    onClick={() => setShowEditMenu(!showEditMenu)}
+                    className={`px-2 py-1.5 rounded-md transition-all ${showEditMenu ? 'text-indigo-600' : 'text-slate-400'}`}
+                  >
+                    <Icon name={showEditMenu ? 'expand_less' : 'expand_more'} />
+                  </button>
+                )}
+              </div>
               
-              {isEditable && (
-                <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-1 flex flex-col gap-1">
-                  <button onClick={onCreateMonth} className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-orange-600 hover:bg-orange-50 transition-all">
+              {isEditable && showEditMenu && (
+                <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-1 flex flex-col gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <button 
+                    onClick={() => { onCreateMonth(); setShowEditMenu(false); }} 
+                    className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all text-left"
+                  >
                     <Icon name="add_circle" className="text-lg" /> Criar Mês (Gerar)
                   </button>
                   <div className="h-px bg-slate-100 dark:bg-slate-800 mx-2" />
-                  <button onClick={onApplyFolgas} className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-slate-600 hover:bg-slate-50 transition-all">
+                  <button 
+                    onClick={() => { onApplyFolgas(); setShowEditMenu(false); }} 
+                    className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left"
+                  >
                     <Icon name="event_available" className="text-lg" /> Aplicar Folgas
                   </button>
-                  <button onClick={onSortearDomingo} className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-slate-600 hover:bg-slate-50 transition-all">
+                  <button 
+                    onClick={() => { onSortearDomingo(); setShowEditMenu(false); }} 
+                    className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left"
+                  >
                     <Icon name="casino" className="text-lg" /> Sortear Domingos
                   </button>
                   <div className="h-px bg-slate-100 dark:bg-slate-800 mx-2" />
@@ -190,6 +224,13 @@ export const Header: React.FC<HeaderProps> = ({
                       <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${allowRetroactive ? 'left-4.5' : 'left-0.5'}`} />
                     </button>
                   </div>
+                  <div className="h-px bg-slate-100 dark:bg-slate-800 mx-2" />
+                  <button 
+                    onClick={() => setShowEditMenu(false)}
+                    className="w-full flex items-center justify-center p-2 rounded-lg text-[9px] font-black uppercase text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                  >
+                    Fechar Menu
+                  </button>
                 </div>
               )}
             </div>
@@ -225,7 +266,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={onShareWhatsApp}
             className="bg-green-600 text-white px-4 py-1.5 rounded-lg text-[11px] font-black uppercase flex items-center gap-2 hover:bg-green-700 transition-all shadow-sm"
           >
-            <Icon name="send" className="text-sm" /> WhatsApp
+            <Icon name="content_copy" className="text-sm" /> Copiar Texto
           </button>
           
           <div className={`w-2 h-2 rounded-full shrink-0 ${syncStatus.state === 'synced' ? 'bg-green-500' : syncStatus.state === 'syncing' ? 'bg-blue-500 animate-pulse' : 'bg-red-500'}`} title={syncStatus.state} />
