@@ -103,7 +103,7 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
               </td>
               {days.map(d => {
                 const shift = emp.shifts[monthKey]?.[d.num - 1] || 'T';
-                const display = (shift === 'T' || shift === 'N/A') ? '' : shift;
+                const display = (shift === 'T' || shift === 'N/A') ? '' : (shift.startsWith('FF') ? 'FF' : shift);
                 return (
                   <td key={d.num} className="border border-black p-1 text-center font-black">
                     {display}

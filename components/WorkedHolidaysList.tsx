@@ -75,6 +75,36 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
     showDialog({ title: 'Copiado', message: 'A lista de pendentes foi copiada para a área de transferência!', type: 'info' });
   };
 
+  const handleCopyScheduled = () => {
+    let text = "*📅 FOLGAS DE FERIADO AGENDADAS*\n\n";
+    let found = false;
+    
+    const sortedEmployees = [...employees].sort((a, b) => a.name.localeCompare(b.name));
+    
+    sortedEmployees.forEach(worker => {
+      const scheduledCredits = (holidayCredits[worker.id] || []).filter(c => c.status === 'scheduled');
+      if (scheduledCredits.length > 0) {
+        found = true;
+        text += `👤 *${worker.name.toUpperCase()}*\n`;
+        scheduledCredits.forEach(c => {
+          const holiday = [...getNationalHolidays(currentMY.year), ...customHolidays].find(h => h.date === c.holidayDate);
+          const workedDate = c.holidayDate.split('-').reverse().join('/');
+          const offDate = c.offDate?.split('-').reverse().join('/') || 'Não informada';
+          text += `   • Trabalhou: ${workedDate} (${holiday?.name || 'Feriado'})\n`;
+          text += `     ✅ Agendada para: *${offDate}*\n`;
+        });
+        text += '\n';
+      }
+    });
+
+    if (!found) {
+      text = "Nenhuma folga agendada encontrada.";
+    }
+
+    navigator.clipboard.writeText(text);
+    showDialog({ title: 'Copiado', message: 'A lista de agendadas foi copiada para a área de transferência!', type: 'info' });
+  };
+
   return (
     <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-4xl mx-auto mt-6 animate-fade-in">
       <div className="flex justify-between items-center mb-8 pb-6 border-b border-slate-100 dark:border-slate-800">
@@ -90,9 +120,15 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
         <div className="flex items-center gap-3">
           <button 
             onClick={handleCopyPending}
-            className="flex items-center gap-2 px-5 py-2 bg-rose-600 text-white hover:bg-rose-700 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all shadow-md active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white hover:bg-rose-700 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all shadow-md active:scale-95"
           >
-            <Icon name="content_copy" className="text-sm" /> Copiar Pendentes
+            <Icon name="content_copy" className="text-sm" /> Pendentes
+          </button>
+          <button 
+            onClick={handleCopyScheduled}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white hover:bg-amber-700 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all shadow-md active:scale-95"
+          >
+            <Icon name="event_available" className="text-sm" /> Agendadas
           </button>
           <button onClick={onClose} className="px-6 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl font-bold uppercase text-xs tracking-widest transition-colors">
             Voltar

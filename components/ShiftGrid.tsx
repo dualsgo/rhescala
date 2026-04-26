@@ -170,7 +170,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 employees.forEach(emp => {
                   if (emp.isHidden || emp.status !== 'active') return;
                   const shift = (emp.shifts[monthKey] || [])[selectedDayIdx] || 'T';
-                  const isOff = shift === 'F' || shift === 'FE' || shift === 'C' || shift === 'FF';
+                  const isOff = shift === 'F' || shift === 'FE' || shift === 'C' || shift.startsWith('FF');
                   
                   if (isOff) {
                     groups['Folgas/Outros'].push(emp);
@@ -285,14 +285,14 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                       onClick={() => onSelectDay(d.num - 1)}
                                       className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black transition-all shadow-sm ${
                                         shift === 'F' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
-                                        shift === 'FF' ? 'bg-amber-100 text-amber-600' :
+                                        shift.startsWith('FF') ? 'bg-amber-100 text-amber-600' :
                                         shift === 'C' ? 'bg-indigo-100 text-indigo-600' :
                                         shift === 'FE' ? 'bg-emerald-100 text-emerald-600' :
                                         shift === 'DO' ? 'bg-fuchsia-600 text-white shadow-md' :
                                         'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700'
                                       }`}
                                     >
-                                      {shift === 'T' ? (d.isSunday ? 'DOM' : 'T') : shift}
+                                      {shift === 'T' ? (d.isSunday ? 'DOM' : 'T') : (shift.startsWith('FF') ? 'FF' : shift)}
                                     </button>
                                     
                                     {isEditable && !isReadOnly && (() => {
@@ -305,10 +305,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                         >
                                           <option value="T">Trabalha (T)</option>
                                           <option value="F">Folga (F)</option>
-                                          {/* Generic FF Option */}
-                                          <option value="FF" disabled={pendingCount === 0 && !shift?.startsWith('FF')}>
-                                            Folga Feriado (FF) {pendingCount > 0 ? `(${pendingCount})` : ''}
-                                          </option>
                                           
                                           {/* Specific Pending Holidays */}
                                           {(holidayCredits[emp.id] || [])

@@ -541,7 +541,7 @@ const IndividualWeeklyCalendar: React.FC<{
                         >
                             <span className={`text-[8px] font-black absolute top-1 left-1 ${cell.shift === 'T' || cell.isCourse ? 'text-white/80' : 'text-slate-400'}`}>{cell.day}</span>
                             <span className={`text-[11px] font-black mt-1 ${cell.isOff && !cell.isVacation && !cell.isBirthday ? 'opacity-40' : ''}`}>
-                                {cell.shift === 'T' ? shiftLabel : cell.isCourse ? 'C' : cell.isVacation ? 'FE' : cell.isBirthday ? 'DO' : 'F'}
+                                {cell.shift === 'T' ? shiftLabel : cell.isCourse ? 'C' : cell.isVacation ? 'FE' : cell.isBirthday ? 'DO' : (cell.shift?.startsWith('FF') ? 'FF' : 'F')}
                             </span>
 
                             {canEdit && (
