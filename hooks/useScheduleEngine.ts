@@ -345,7 +345,7 @@ export function generateMonthForEmployee(
             shifts.push('FE'); hours.push(getTargetHours(emp, dow, isHoliday)); continue;
         }
         if (isBirthday(emp, dateStr)) {
-            shifts.push('F'); hours.push(getTargetHours(emp, dow, isHoliday)); continue;
+            shifts.push('DO'); hours.push(getTargetHours(emp, dow, isHoliday)); continue;
         }
         if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) {
             shifts.push('F'); hours.push(getTargetHours(emp, dow, isHoliday)); continue;
@@ -461,23 +461,106 @@ export function calculateLunches(
     isSunday: boolean,
     isOpening: boolean
 ): string[] {
-    const openingSlots = ['13h', '13h30', '14h'];
-    const closingSlots = ['15h', '15h30', '16h', '16h30', '17h'];
-    const holidaySlots = ['15 min'];
-    
-    let lunchIdx = 0;
-    return members.map(m => {
-        if (m.isYoungApprentice) return '12h45';
-        if (m.cargo === 'Estoquista') return 'Flexível';
-        if (isHoliday) return '15 min';
-        
-        const slots = isOpening ? openingSlots : closingSlots;
-        const perSlotLimit = (isOpening || isSunday) ? 1 : 2;
-        
-        const lunch = slots[Math.floor(lunchIdx / perSlotLimit) % slots.length];
-        lunchIdx++;
-        return lunch;
+    // 1. Fixed Rules
+    if (isHoliday) return members.map(() => '15 min');
+
+    // Filter people who need slot allocation (CLT regular employees)
+    const allocatableIndices: number[] = [];
+    const results: string[] = Array(members.length).fill('');
+
+    members.forEach((m, idx) => {
+        if (m.isYoungApprentice) {
+            results[idx] = '12h45';
+        } else if (m.cargo === 'Estoquista') {
+            results[idx] = 'Flexível';
+        } else {
+            allocatableIndices.push(idx);
+        }
     });
+
+    const N = allocatableIndices.length;
+    if (N === 0) return results;
+
+    if (isSunday) {
+        // 4. Sunday Specific Logic
+        // Turno 1 (Abertura 12h-20h) -> All at 13h
+        // Turno 2 (13h-21h) -> Distributed in 14h, 15h, 16h, 17h
+        if (isOpening) {
+            allocatableIndices.forEach(originalIdx => {
+                results[originalIdx] = '13h';
+            });
+        } else {
+            const sundayClosingSlots = ['14h', '15h', '16h', '17h'];
+            for (let i = 0; i < N; i++) {
+                results[allocatableIndices[i]] = sundayClosingSlots[i % 4];
+            }
+            // Optional: Sort for consistency if N > 4
+            if (N > 4) {
+               // The loop already handles i % 4, so it's distributed.
+            }
+        }
+        return results;
+    }
+
+    if (isOpening) {
+        // 2. Opening Logic (Abertura/Domingo)
+        // Slots: 13h, 13h30, 14h
+        // Priority: Preservation of presence before 13h40. 14h is favored as closing team arrives.
+        
+        const openingPlan: string[] = [];
+        if (N === 1) {
+            openingPlan.push('14h');
+        } else if (N === 2) {
+            openingPlan.push('13h', '14h');
+        } else if (N === 3) {
+            openingPlan.push('13h', '14h', '14h');
+        } else if (N === 4) {
+            openingPlan.push('13h', '13h30', '14h', '14h');
+        } else {
+            // N > 4: Fill 14h and 13h30 first
+            for (let i = 0; i < N; i++) {
+                if (i % 3 === 0) openingPlan.push('14h');
+                else if (i % 3 === 1) openingPlan.push('13h30');
+                else openingPlan.push('13h');
+            }
+        }
+        
+        allocatableIndices.forEach((originalIdx, i) => {
+            results[originalIdx] = openingPlan[i] || '14h';
+        });
+
+    } else {
+        // 3. Closing Logic (Fechamento)
+        // Slots: 15h, 16h, 16h30, 17h
+        // Priority: Spread as much as possible before doubling up. 
+        
+        const closingSlots = ['15h', '16h', '16h30', '17h'];
+        const closingPlan: string[] = [];
+
+        if (N <= 4) {
+            // Max spread logic
+            if (N === 1) closingPlan.push('15h');
+            else if (N === 2) closingPlan.push('15h', '17h');
+            else if (N === 3) closingPlan.push('15h', '16h', '17h');
+            else if (N === 4) closingPlan.push('15h', '16h', '16h30', '17h');
+        } else {
+            // N > 4: Fill all 4 slots first, then double up starting from 15h
+            for (let i = 0; i < N; i++) {
+                closingPlan.push(closingSlots[i % 4]);
+            }
+            // Sort plan to keep doubles together or ordered (optional, but consistent)
+            closingPlan.sort((a, b) => {
+                const order = { '15h': 0, '16h': 1, '16h30': 2, '17h': 3 };
+                return order[a as keyof typeof order] - order[b as keyof typeof order];
+            });
+        }
+
+        allocatableIndices.forEach((originalIdx, i) => {
+            results[originalIdx] = closingPlan[i] || '15h';
+        });
+    }
+
+    return results;
 }
 
 // ─── Smart month update (Atualizar Mês) ──────────────────────────────────────
@@ -576,7 +659,7 @@ export function applyMonthUpdate(
                 newShifts[dayIdx] = 'FE'; continue;
             }
             if (isBirthday(emp, dateStr)) {
-                newShifts[dayIdx] = 'F'; continue;
+                newShifts[dayIdx] = 'DO'; continue;
             }
             if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) {
                 newShifts[dayIdx] = 'F'; continue;
@@ -660,7 +743,7 @@ export function applyMonthUpdate(
             }
 
             if (isBirthday(emp, dateStr)) {
-                newShifts[dayIdx] = 'F'; continue;
+                newShifts[dayIdx] = 'DO'; continue;
             }
 
             if (isHoliday) {
@@ -688,13 +771,24 @@ export function applyMonthUpdate(
 
     return result;
 }
-export function getShiftClassification(hourRange: string): 'Abertura' | 'Intermediário' | 'Fechamento' | 'N/A' {
+export function getShiftClassification(hourRange: string, isSunday?: boolean): 'Abertura' | 'Intermediário' | 'Fechamento' | 'N/A' {
     if (!hourRange || hourRange === 'OFF' || hourRange === 'FOLGA') return 'N/A';
     const match = hourRange.match(/^(\d{1,2})[h:]/);
     if (!match) return 'Intermediário';
     const startHour = parseInt(match[1]);
-    if (startHour < 10) return 'Abertura';
-    if (startHour >= 14) return 'Fechamento';
+    
+    if (isSunday) {
+        if (startHour <= 12) return 'Abertura';
+        return 'Fechamento';
+    }
+    
+    // Novas regras baseadas na solicitação:
+    // 10h as 18h20 abertura
+    // 12h as 20h20 intermediario
+    // 13h40 as 22h fechamento
+    
+    if (startHour <= 10) return 'Abertura';
+    if (startHour >= 13) return 'Fechamento'; // Captura 13h40 e 14h
     return 'Intermediário';
 }
 
@@ -721,6 +815,9 @@ export function resolveTacticalDay(
 
     Object.keys(groups).forEach(hour => {
         const members = groups[hour];
+        const isSun = isSunday;
+        const shiftClass = getShiftClassification(hour, isSun);
+        
         const takenPositions = new Set<string>();
         const autoMembers: Employee[] = [];
 
@@ -729,38 +826,54 @@ export function resolveTacticalDay(
             if (pos && pos !== 'AUTO') {
                 takenPositions.add(pos);
                 result[m.id] = pos;
-            } else if (pos === 'AUTO') {
+            } else {
                 autoMembers.push(m);
             }
         });
 
-        autoMembers.forEach(m => {
+        // 2. Mandatory Fill: P1 (Caixa)
+        if (!takenPositions.has('P1')) {
+            // Try to find someone who prefers P1
+            const prefersP1 = autoMembers.find(m => !result[m.id] && (m.preferredPosition1 === 'P1' || m.preferredPosition2 === 'P1'));
+            const candidate = prefersP1 || autoMembers.find(m => !result[m.id]);
+            if (candidate) {
+                result[candidate.id] = 'P1';
+                takenPositions.add('P1');
+            }
+        }
+
+        // 3. Mandatory Fill: P2 (Porta)
+        if (!takenPositions.has('P2')) {
+            // Try to find someone who prefers P2
+            const prefersP2 = autoMembers.find(m => !result[m.id] && (m.preferredPosition1 === 'P2' || m.preferredPosition2 === 'P2'));
+            const candidate = prefersP2 || autoMembers.find(m => !result[m.id]);
+            if (candidate) {
+                result[candidate.id] = 'P2';
+                takenPositions.add('P2');
+            }
+        }
+
+        // 4. Preferences for the rest
+        autoMembers.filter(m => !result[m.id]).forEach(m => {
             let assigned = false;
-            
-            if (m.preferredPosition1 && !takenPositions.has(m.preferredPosition1) && POSITIONS.includes(m.preferredPosition1)) {
-                takenPositions.add(m.preferredPosition1);
+            if (m.preferredPosition1 && !takenPositions.has(m.preferredPosition1)) {
+                // For P3/P4 we allow multiples, so we don't strictly "block" the position in takenPositions
+                // unless it's P1 or P2 (which are already handled)
                 result[m.id] = m.preferredPosition1;
                 assigned = true;
-            }
-            else if (m.preferredPosition2 && !takenPositions.has(m.preferredPosition2) && POSITIONS.includes(m.preferredPosition2)) {
-                takenPositions.add(m.preferredPosition2);
+            } else if (m.preferredPosition2 && !takenPositions.has(m.preferredPosition2)) {
                 result[m.id] = m.preferredPosition2;
                 assigned = true;
             }
-            
+
             if (!assigned) {
-                for (const p of POSITIONS) {
-                    if (!takenPositions.has(p)) {
-                        takenPositions.add(p);
-                        result[m.id] = p;
-                        assigned = true;
-                        break;
-                    }
+                // 5. Final Auto-Fill (P3, P3, P4...)
+                const p3Count = Object.values(result).filter(v => v === 'P3').length;
+                if (p3Count < 2) {
+                    result[m.id] = 'P3';
+                } else {
+                    result[m.id] = 'P4';
                 }
-            }
-            
-            if (!assigned) {
-                result[m.id] = 'P4';
             }
         });
     });

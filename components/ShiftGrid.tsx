@@ -126,13 +126,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     if (emp.isHidden || emp.status !== 'active') return acc;
                     const shift = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
                     const hour = (emp.dailyHours[monthKey] || [])[dayIdx] || emp.workPeriod;
+                    const shiftClass = getShiftClassification(hour, d.isSunday);
                     if (shift === 'T' || shift.startsWith('FF')) {
                       acc.total++;
-                      const startH = parseInt(hour.split('h')[0]);
-                      if (!isNaN(startH)) {
-                        if (startH < 11) acc.opening++;
-                        else if (startH >= 13) acc.closing++;
-                      }
+                      if (shiftClass === 'Abertura') acc.opening++;
+                      else if (shiftClass === 'Fechamento') acc.closing++;
                     }
                     return acc;
                   }, { total: 0, opening: 0, closing: 0 });
@@ -151,9 +149,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                       <div className="flex flex-col items-center gap-1">
                         <span className="text-[9px] font-black text-slate-400 uppercase">{d.weekday}</span>
                         <span className={`text-sm font-black ${d.isSunday ? 'text-rose-600' : 'text-slate-900 dark:text-slate-100'}`}>{d.num}</span>
-                        <div className="flex flex-col gap-0.5 mt-1 border-t border-slate-200 dark:border-slate-700 pt-1 w-full">
-                           <span className={`text-[8px] font-bold ${stats.opening < 4 && !d.isSunday ? 'text-rose-600' : 'text-slate-400'}`}>A:{stats.opening}</span>
-                           <span className={`text-[8px] font-bold ${stats.closing <= 3 && !d.isSunday ? 'text-rose-600' : 'text-slate-400'}`}>F:{stats.closing}</span>
+                        <div className="mt-1 text-[8px] font-bold text-slate-400">
+                           T:{stats.total}
                         </div>
                       </div>
                     </th>
@@ -161,130 +158,188 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 })}
               </tr>
             </thead>
-            <tbody>
-              {displayedEmployees.map(emp => (
-                <tr key={emp.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                  <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-4 min-w-[180px] w-[180px]">
-                    <div className="flex flex-col">
-                      <span className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase truncate">{emp.name}</span>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase">{emp.cargo || 'Auxiliar'}</span>
-                    </div>
-                  </td>
-                  <td className="sticky left-[180px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-2 min-w-[125px] w-[125px]">
-                    <select
-                      value={emp.dailyHours[monthKey]?.[selectedDayIdx] || getDefaultHourForDay(emp, holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`), new Date(currentMY.year, currentMY.month, selectedDayIdx + 1).getDay() === 0)}
-                      onChange={(e) => onUpdateEmployeeDailyHour(emp.id, selectedDayIdx, e.target.value)}
-                      className="w-full bg-transparent border-none p-0 text-[11px] font-black text-orange-600 focus:ring-0 uppercase"
-                    >
-                      {(() => {
-                        const date = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1);
-                        const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
-                        const isHol = holidaySet.has(dateStr);
-                        const isSun = date.getDay() === 0;
-                        const defaultHour = getDefaultHourForDay(emp, isHol, isSun);
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {(() => {
+                const groups: Record<string, Employee[]> = {
+                  'Abertura': [],
+                  'Intermediário': [],
+                  'Fechamento': [],
+                  'Folgas/Outros': []
+                };
 
-                        let options = SHIFT_HOURS.WEEKDAY;
-                        if (isHol) options = SHIFT_HOURS.HOLIDAY;
-                        else if (isSun) options = SHIFT_HOURS.SUNDAY;
-                        
-                        if (emp.isYoungApprentice) options = SHIFT_HOURS.APPRENTICE;
+                employees.forEach(emp => {
+                  if (emp.isHidden || emp.status !== 'active') return;
+                  const shift = (emp.shifts[monthKey] || [])[selectedDayIdx] || 'T';
+                  const isOff = shift === 'F' || shift === 'FE' || shift === 'C' || shift === 'FF';
+                  
+                  if (isOff) {
+                    groups['Folgas/Outros'].push(emp);
+                    return;
+                  }
 
-                        // Add current explicit override if present, else ensure defaultHour is in list
-                        const currentVal = emp.dailyHours[monthKey]?.[selectedDayIdx];
-                        const finalOptions = [...new Set([...options, currentVal || defaultHour])].filter(Boolean);
+                  const hour = (emp.dailyHours[monthKey] || [])[selectedDayIdx] || emp.workPeriod;
+                  const isSun = filteredDays[selectedDayIdx]?.isSunday;
+                  const classification = getShiftClassification(hour, isSun);
+                  
+                  if (groups[classification]) groups[classification].push(emp);
+                  else groups['Folgas/Outros'].push(emp);
+                });
 
+                return ['Abertura', 'Intermediário', 'Fechamento', 'Folgas/Outros'].map(groupName => {
+                  const emps = groups[groupName];
+                  if (emps.length === 0) return null;
+
+                  return (
+                    <React.Fragment key={groupName}>
+                      {/* Group Header Row */}
+                      <tr className="bg-slate-100/90 dark:bg-slate-800/90 backdrop-blur-md sticky z-20">
+                        <td className="sticky left-0 p-2 font-black text-[11px] uppercase text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]">
+                          {groupName}
+                        </td>
+                        <td className="sticky left-[180px] border-r border-slate-200 dark:border-slate-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]" />
+                        <td className="sticky left-[305px] border-r border-slate-200 dark:border-slate-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]" />
+                        <td colSpan={filteredDays.length} className="bg-inherit h-9" />
+                      </tr>
+
+                      {/* Employee Rows */}
+                      {emps.map(emp => {
                         return (
-                          <>
-                            {finalOptions.map(h => (
-                              <option key={h} value={h}>{h}</option>
-                            ))}
-                          </>
-                        );
-                      })()}
-                    </select>
-                  </td>
-                  <td className="sticky left-[305px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-2 min-w-[100px] w-[100px]">
-                    <select
-                      value={emp.tacticalPositions?.[monthKey]?.[selectedDayIdx] || ''}
-                      onChange={(e) => onUpdateTacticalPosition(emp.id, selectedDayIdx, e.target.value || null)}
-                      className="w-full bg-transparent border-none p-0 text-[11px] font-black text-slate-900 dark:text-slate-100 focus:ring-0 uppercase"
-                    >
-                      <option value="">-</option>
-                      <option value="AUTO">AUTO 🤖</option>
-                      {['P1 🟥', 'P2 🟨', 'P3 🟩', 'P4 🟦', 'ESTOQUE 📦'].map(p => (
-                        <option key={p} value={p.split(' ')[0]}>{p}</option>
-                      ))}
-                    </select>
-                  </td>
-                  {filteredDays.map(d => {
-                    const shift = emp.shifts[monthKey]?.[d.num - 1] || 'T';
-                    const isSunday = d.isSunday;
-                    // Detect 7-day streak
-                    let streak = 0;
-                    for(let i=d.num-1; i>=0; i--) {
-                       if(emp.shifts[monthKey]?.[i] === 'T') streak++;
-                       else break;
-                    }
-                    const hasAlert = streak >= 7;
-                    const todayStr = new Date().toISOString().split('T')[0];
-                    const isPast = d.dateStr < todayStr;
-                    const dimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
-
-                    return (
-                      <td 
-                        key={d.num} 
-                        className={`p-1.5 border-b border-slate-50 dark:border-slate-800 text-center transition-all ${dimClass} ${selectedDayIdx === d.num - 1 ? 'bg-orange-50/40 dark:bg-orange-900/10' : ''} ${hasAlert ? 'ring-2 ring-inset ring-rose-500' : ''}`}
-                      >
-                        <div className="relative group flex flex-col items-center gap-1">
-                          <button
-                            onClick={() => onSelectDay(d.num - 1)}
-                            onDoubleClick={() => onOpenDayDetail(d.num - 1)}
-                            title={(() => {
-                              if (shift === 'FF') {
-                                const dateStr = `${monthKey}-${String(d.num).padStart(2, '0')}`;
-                                const credit = (holidayCredits[emp.id] || []).find(c => c.offDate === dateStr);
-                                if (credit) return `Folga Feriado: Ref. ${credit.holidayName} (${credit.holidayDate.split('-').reverse().join('/')})`;
-                                return 'Folga Feriado';
-                              }
-                              return undefined;
-                            })()}
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black transition-all shadow-sm ${
-                              shift === 'F' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
-                              shift === 'FF' ? 'bg-amber-100 text-amber-600' :
-                              shift === 'FE' ? 'bg-blue-100 text-blue-600' :
-                              shift === 'C' ? 'bg-indigo-100 text-indigo-600' :
-                              'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20'
-                            } ${isEditable && !isReadOnly ? 'hover:scale-105 cursor-pointer' : 'cursor-pointer hover:bg-slate-100'}`}
-                          >
-                            {shift === 'FF' ? (() => {
-                              const pending = (holidayCredits[emp.id] || []).filter(c => c.status === 'pending').length;
-                              const used = (holidayCredits[emp.id] || []).filter(c => c.offDate && c.offDate <= `${monthKey}-${String(d.num).padStart(2, '0')}`).length;
-                              return `FF(${pending})`;
-                            })() : shift}
-                          </button>
-
-                          {isEditable && !isReadOnly && (() => {
-                            const pendingCount = (holidayCredits[emp.id] || []).filter(c => c.status === 'pending').length;
-                            return (
+                          <tr key={emp.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group/row">
+                            {/* Name & Position */}
+                            <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-2 min-w-[180px] w-[180px]">
+                              <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                  {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-[11px] font-black text-slate-900 dark:text-slate-100 truncate w-32">{emp.name}</span>
+                                  <span className="text-[9px] text-slate-400 font-bold uppercase">{emp.cargo || 'Vendedor'}</span>
+                                </div>
+                              </div>
+                            </td>
+                            {/* Hours Select */}
+                            <td className="sticky left-[180px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-2 min-w-[125px] w-[125px]">
                               <select
-                                value={shift}
-                                onChange={(e) => onUpdateShift(emp.id, d.num - 1, e.target.value as ShiftType)}
-                                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                                value={emp.dailyHours[monthKey]?.[selectedDayIdx] || ''}
+                                onChange={(e) => onUpdateEmployeeDailyHour(emp.id, selectedDayIdx, e.target.value)}
+                                className="w-full bg-transparent border-none p-0 text-[11px] font-black text-orange-600 focus:ring-0 uppercase"
                               >
-                                <option value="T">Trabalha (T)</option>
-                                <option value="F">Folga (F)</option>
-                                <option value="FF" disabled={pendingCount === 0 && shift !== 'FF'}>Folga Feriado (FF) {pendingCount > 0 ? `(${pendingCount})` : ''}</option>
-                                <option value="FE">Férias (FE)</option>
-                                <option value="C">Curso (C)</option>
+                                {(() => {
+                                  const date = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1);
+                                  const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`);
+                                  const isSun = date.getDay() === 0;
+
+                                  let options = SHIFT_HOURS.WEEKDAY;
+                                  if (isHol) options = SHIFT_HOURS.HOLIDAY;
+                                  else if (isSun) options = SHIFT_HOURS.SUNDAY;
+                                  if (emp.isYoungApprentice) options = SHIFT_HOURS.APPRENTICE;
+
+                                  const currentVal = emp.dailyHours[monthKey]?.[selectedDayIdx];
+                                  const finalOptions = [...new Set([...options])].filter(Boolean);
+
+                                  return (
+                                    <>
+                                      <option value="">AUTO 🤖</option>
+                                      {finalOptions.map(h => (
+                                        <option key={h} value={h}>{h}</option>
+                                      ))}
+                                      {currentVal && !finalOptions.includes(currentVal) && (
+                                        <option value={currentVal}>{currentVal}</option>
+                                      )}
+                                    </>
+                                  );
+                                })()}
                               </select>
-                            );
-                          })()}
-                        </div>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+                            </td>
+                            {/* Tactical Select */}
+                            <td className="sticky left-[305px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-2 min-w-[100px] w-[100px]">
+                              <select
+                                value={emp.tacticalPositions?.[monthKey]?.[selectedDayIdx] || 'AUTO'}
+                                onChange={(e) => onUpdateTacticalPosition(emp.id, selectedDayIdx, e.target.value)}
+                                className="w-full bg-transparent border-none p-0 text-[11px] font-black text-slate-900 dark:text-slate-100 focus:ring-0 uppercase"
+                              >
+                                <option value="AUTO">AUTO 🤖</option>
+                                {['P1 🟥', 'P2 🟨', 'P3 🟩', 'P4 🟦', 'ESTOQUE 📦'].map(p => (
+                                  <option key={p} value={p.split(' ')[0]}>{p}</option>
+                                ))}
+                              </select>
+                            </td>
+
+                            {/* Shift Cells */}
+                            {filteredDays.map(d => {
+                              const shift = emp.shifts[monthKey]?.[d.num - 1] || 'T';
+                              let streak = 0;
+                              for (let i = d.num - 1; i >= 0; i--) {
+                                if (emp.shifts[monthKey]?.[i] === 'T') streak++;
+                                else break;
+                              }
+                              const hasAlert = streak >= 7;
+                              const todayStr = new Date().toISOString().split('T')[0];
+                              const isPast = d.dateStr < todayStr;
+                              const dimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
+
+                              return (
+                                <td key={d.num} className={`p-1.5 border-b border-slate-50 dark:border-slate-800 text-center transition-all ${dimClass} ${selectedDayIdx === d.num - 1 ? 'ring-2 ring-inset ring-orange-400/50' : ''} ${hasAlert ? 'ring-2 ring-inset ring-rose-500' : ''}`}>
+                                  <div className="relative group flex flex-col items-center gap-1">
+                                    <button
+                                      onClick={() => onSelectDay(d.num - 1)}
+                                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black transition-all shadow-sm ${
+                                        shift === 'F' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
+                                        shift === 'FF' ? 'bg-amber-100 text-amber-600' :
+                                        shift === 'C' ? 'bg-indigo-100 text-indigo-600' :
+                                        shift === 'FE' ? 'bg-emerald-100 text-emerald-600' :
+                                        shift === 'DO' ? 'bg-fuchsia-600 text-white shadow-md' :
+                                        'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700'
+                                      }`}
+                                    >
+                                      {shift === 'T' ? (d.isSunday ? 'DOM' : 'T') : shift}
+                                    </button>
+                                    
+                                    {isEditable && !isReadOnly && (() => {
+                                      const pendingCount = (holidayCredits[emp.id] || []).filter(c => c.status === 'pending').length;
+                                      return (
+                                        <select
+                                          value={shift}
+                                          onChange={(e) => onUpdateShift(emp.id, d.num - 1, e.target.value as ShiftType)}
+                                          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                                        >
+                                          <option value="T">Trabalha (T)</option>
+                                          <option value="F">Folga (F)</option>
+                                          {/* Generic FF Option */}
+                                          <option value="FF" disabled={pendingCount === 0 && !shift?.startsWith('FF')}>
+                                            Folga Feriado (FF) {pendingCount > 0 ? `(${pendingCount})` : ''}
+                                          </option>
+                                          
+                                          {/* Specific Pending Holidays */}
+                                          {(holidayCredits[emp.id] || [])
+                                            .filter(c => c.status === 'pending')
+                                            .map(c => (
+                                              <option key={c.holidayDate} value={`FF ${c.holidayDate}`}>
+                                                FF — {c.holidayName}
+                                              </option>
+                                            ))
+                                          }
+                                          
+                                          {/* Current value if it's a specific FF already matched but not in pending anymore */}
+                                          {shift?.startsWith('FF ') && !(holidayCredits[emp.id] || []).some(c => c.status === 'pending' && `FF ${c.holidayDate}` === shift) && (
+                                            <option value={shift}>{shift.replace('FF ', 'FF — ')}</option>
+                                          )}
+                                          <option value="FE">Férias (FE)</option>
+                                          <option value="C">Curso (C)</option>
+                                        </select>
+                                      );
+                                    })()}
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                    </React.Fragment>
+                  );
+                });
+              })()}
             </tbody>
           </table>
         </div>

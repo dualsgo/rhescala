@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Employee, MonthYear, Holiday } from '../types';
-import { buildHolidaySet } from '../constants';
+import { buildHolidaySet, getNationalHolidays } from '../constants';
 import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { Icon } from './Icon';
 
@@ -23,22 +23,24 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
   onUpdateTrackingStartDate,
   onClose,
 }) => {
-  const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
-  
-  const holidaysInMonth = useMemo(() => {
-    const prefix = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
-    return [
-      ...customHolidays,
-    ].filter(h => h.date && h.date.startsWith(prefix) && (!trackingStartDate || h.date >= trackingStartDate))
-     .sort((a, b) => a.date.localeCompare(b.date));
-  }, [customHolidays, currentMY, trackingStartDate]);
+  const relevantHolidays = useMemo(() => {
+    const todayStr = new Date().toLocaleDateString('en-CA');
+    const allHolidays = [...getNationalHolidays(currentMY.year), ...customHolidays];
+    return allHolidays
+      .filter(h => h.date && (!trackingStartDate || h.date >= trackingStartDate) && h.date < todayStr)
+      .filter((h, i, self) => i === self.findIndex(t => t.date === h.date)) // Deduplicate
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [customHolidays, currentMY.year, trackingStartDate]);
 
   const getWorkersForHoliday = (dateStr: string) => {
-    const dayIdx = parseInt(dateStr.split('-')[2], 10) - 1;
+    const [year, month, day] = dateStr.split('-');
+    const targetMonthKey = `${year}-${month}`;
+    const dayIdx = parseInt(day, 10) - 1;
+    
     return employees.filter(emp => {
-      const shift = (emp.shifts[monthKey] || [])[dayIdx];
+      const shift = (emp.shifts[targetMonthKey] || [])[dayIdx];
       // Only count as worked if explicitly 'T' or a non-off shift that exists
-      const hasWorked = shift !== undefined && shift !== null && shift !== '' && !['F', 'FF', 'FE', 'C', 'N/A'].includes(shift);
+      const hasWorked = shift !== undefined && shift !== null && shift !== '' && !['F', 'FF', 'FE', 'C', 'N/A', 'DO'].includes(shift) && !shift.startsWith('FF');
       return hasWorked && !emp.isHidden && emp.status === 'active';
     });
   };
@@ -51,8 +53,8 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
             <Icon name="list_alt" className="text-2xl" />
           </div>
           <div>
-            <h2 className="text-2xl font-black uppercase text-slate-800 dark:text-slate-100">Feriados Trabalhados</h2>
-            <p className="text-sm font-bold text-slate-400 mt-1">Colaboradores que atuaram em feriados no mês</p>
+            <h2 className="text-2xl font-black uppercase text-slate-800 dark:text-slate-100">Controle de Créditos</h2>
+            <p className="text-sm font-bold text-slate-400 mt-1">Gestão de feriados trabalhados e folgas compensatórias</p>
           </div>
         </div>
         <button onClick={onClose} className="px-6 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl font-bold uppercase text-xs tracking-widest transition-colors">
@@ -82,14 +84,14 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
          </div>
       </div>
 
-      {holidaysInMonth.length === 0 ? (
+      {relevantHolidays.length === 0 ? (
         <div className="text-center py-20 opacity-30">
           <Icon name="event_available" className="text-6xl text-slate-300 dark:text-slate-700 mb-4" />
-          <p className="text-lg font-black uppercase tracking-widest text-slate-400">Nenhum feriado neste mês</p>
+          <p className="text-lg font-black uppercase tracking-widest text-slate-400">Nenhum feriado após o marco zero</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {holidaysInMonth.map(holiday => {
+          {relevantHolidays.map(holiday => {
             const workers = getWorkersForHoliday(holiday.date);
             return (
               <div key={holiday.date} className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 overflow-hidden">

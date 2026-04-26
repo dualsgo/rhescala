@@ -42,7 +42,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
     if (emp.birthday) {
       const empMD = emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday;
       const dateMD = dateStr.substring(5);
-      if (empMD === dateMD) return 'F';
+      if (empMD === dateMD) return 'DO';
     }
 
     const monthShifts = emp.shifts[monthKey] || [];
@@ -286,6 +286,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                                 currentMY={currentMY} 
                                 customHolidays={customHolidays}
                                 getEffectiveShift={getEffectiveShift}
+                                onUpdateShift={onUpdateShift}
                             />
                         )}
                         {!selectedEmployee && (
@@ -480,31 +481,42 @@ const IndividualWeeklyCalendar: React.FC<{
     employee: Employee, 
     currentMY: MonthYear, 
     customHolidays: Holiday[],
-    getEffectiveShift: (emp: Employee, dayIdx: number) => ShiftType
-}> = ({ employee, currentMY, customHolidays, getEffectiveShift }) => {
+    getEffectiveShift: (emp: Employee, dayIdx: number) => ShiftType,
+    onUpdateShift?: (empId: string, dayIdx: number, newShift: ShiftType) => void
+}> = ({ employee, currentMY, customHolidays, getEffectiveShift, onUpdateShift }) => {
     const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
     const firstDayOfMonth = new Date(currentMY.year, currentMY.month, 1).getDay(); // 0 is Sunday
     const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
-    const shifts = employee.shifts[monthKey] || [];
     const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
+    const canEdit = !!onUpdateShift;
 
     // Create a flat list of days including leading empty spaces for the first week
-    const calendarDays = [];
+    const calendarDays: any[] = [];
     for (let i = 0; i < firstDayOfMonth; i++) {
         calendarDays.push({ type: 'empty' });
     }
     for (let i = 1; i <= daysInMonth; i++) {
-        const shift = getEffectiveShift(employee, i - 1);
+        const dayIdx = i - 1;
+        const shift = getEffectiveShift(employee, dayIdx);
         const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-        // Ausência é qualquer coisa que não seja T. 
-        // Mas para visualização de "Folga" no calendário individual, ignoramos o Curso (que é externo)
         const isOff = shift !== 'T' && shift !== 'C'; 
         const isCourse = shift === 'C';
         const isVacation = shift === 'FE';
+        const isBirthday = shift === 'DO';
         const isHoliday = holidaySet.has(dateStr);
-        const hours = (employee.dailyHours[monthKey] || [])[i - 1] || employee.workPeriod;
-        calendarDays.push({ type: 'day', day: i, shift, isOff, isCourse, isVacation, isHoliday, hours });
+        const hours = (employee.dailyHours[monthKey] || [])[dayIdx] || employee.workPeriod;
+        calendarDays.push({ type: 'day', day: i, dayIdx, shift, isOff, isCourse, isVacation, isBirthday, isHoliday, hours });
     }
+
+    const shiftBg = (s: ShiftType) => {
+        if (s==='T') return 'bg-indigo-600 border-indigo-700 text-white shadow-sm';
+        if (s==='F') return 'bg-orange-50 border-orange-100 text-orange-600';
+        if (s?.startsWith('FF')) return 'bg-red-50 border-red-100 text-red-600';
+        if (s==='C') return 'bg-teal-500 border-teal-600 text-white shadow-sm';
+        if (s==='FE') return 'bg-indigo-50 border-indigo-200 text-indigo-600';
+        if (s==='DO') return 'bg-fuchsia-600 border-fuchsia-700 text-white shadow-sm';
+        return 'bg-slate-50 border-slate-100 text-slate-400';
+    };
 
     return (
         <div className="w-full">
@@ -519,33 +531,40 @@ const IndividualWeeklyCalendar: React.FC<{
                 {calendarDays.map((cell, idx) => {
                     if (cell.type === 'empty') return <div key={idx} className="aspect-square"></div>;
                     
-                    const isWork = !cell.isOff;
                     const shiftLabel = (cell.shift as string)?.split(' ')[0] || '-';
                     
                     return (
                         <div 
                             key={idx}
                             title={cell.isVacation ? 'Férias' : (cell.shift as string)}
-                            className={`aspect-square rounded-xl border flex flex-col items-center justify-center transition-all relative ${
-                                cell.shift === 'T' 
-                                ? 'bg-indigo-600  border-indigo-700  text-white shadow-sm' 
-                                : cell.isCourse
-                                ? 'bg-teal-500  border-teal-600  text-white shadow-sm'
-                                : cell.isVacation
-                                ? 'bg-indigo-100 border-indigo-200 text-indigo-600'
-                                : cell.isHoliday ? 'bg-amber-50 border-amber-200 text-amber-600'
-                                : 'bg-slate-50 border-slate-100 text-slate-400'
-                            }`}
+                            className={`aspect-square rounded-xl border flex flex-col items-center justify-center transition-all relative ${shiftBg(cell.shift)} ${canEdit ? 'hover:scale-105 hover:shadow-md cursor-pointer' : ''}`}
                         >
-                            <span className={`text-[8px] font-black absolute top-1 left-1 ${cell.shift === 'T' || cell.isCourse ? 'text-white/80' : 'text-slate-500'}`}>{cell.day}</span>
-                            <span className={`text-[11px] font-black mt-1 ${cell.isOff && !cell.isVacation ? 'opacity-30' : ''}`}>
-                                {cell.shift === 'T' ? shiftLabel : cell.isCourse ? 'C' : cell.isVacation ? 'FE' : 'F'}
+                            <span className={`text-[8px] font-black absolute top-1 left-1 ${cell.shift === 'T' || cell.isCourse ? 'text-white/80' : 'text-slate-400'}`}>{cell.day}</span>
+                            <span className={`text-[11px] font-black mt-1 ${cell.isOff && !cell.isVacation && !cell.isBirthday ? 'opacity-40' : ''}`}>
+                                {cell.shift === 'T' ? shiftLabel : cell.isCourse ? 'C' : cell.isVacation ? 'FE' : cell.isBirthday ? 'DO' : 'F'}
                             </span>
-                             {/* Horários ocultos na análise */}
+
+                            {canEdit && (
+                                <select
+                                    value={cell.shift}
+                                    onChange={(e) => onUpdateShift(employee.id, cell.dayIdx, e.target.value as ShiftType)}
+                                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                                >
+                                    <option value="T">Trabalha (T)</option>
+                                    <option value="F">Folga (F)</option>
+                                    <option value="C">Curso (C)</option>
+                                    <option value="FE">Férias (FE)</option>
+                                </select>
+                            )}
                         </div>
                     );
                 })}
             </div>
+            {canEdit && (
+                <p className="text-[9px] font-bold text-slate-400 mt-4 text-center animate-pulse">
+                    <Icon name="touch_app" className="text-xs" /> Clique nos dias para mudar o status
+                </p>
+            )}
         </div>
     );
 }
@@ -690,6 +709,7 @@ const IndividualEditModal: React.FC<IndividualEditModalProps> = ({
     if (s?.startsWith('FF')) return 'bg-red-500';
     if (s==='C') return 'bg-teal-500';
     if (s==='FE') return 'bg-indigo-600';
+    if (s==='DO') return 'bg-fuchsia-600';
     return 'bg-slate-300';
   };
 

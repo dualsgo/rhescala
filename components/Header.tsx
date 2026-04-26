@@ -25,6 +25,7 @@ interface HeaderProps {
   onSortearDomingo: () => void;
   showNotes: boolean;
   onToggleNotes: () => void;
+  canGoNext: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -48,6 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSortearDomingo,
   showNotes,
   onToggleNotes,
+  canGoNext,
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);
   const [showPrintMenu, setShowPrintMenu] = useState(false);
@@ -75,38 +77,40 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Logo removed as requested */}
           </div>
 
-          <nav className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
-            {navItems.map(item => (
-              <button
-                key={item.id}
-                onClick={() => onViewChange(item.id as any)}
-                className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all ${currentView === item.id ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                {item.label}
-              </button>
-            ))}
-            <div className="relative">
-              <button
-                onClick={() => setShowConfigMenu(!showConfigMenu)}
-                className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all flex items-center gap-1.5 ${['team','jornada','data','feriados','worked-holidays'].includes(currentView) ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                Configurações <Icon name={showConfigMenu ? 'expand_less' : 'expand_more'} className="text-[14px]" />
-              </button>
-              {showConfigMenu && (
-                <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-1">
-                  {configItems.map(item => (
-                    <button
-                      key={item.id}
-                      onClick={() => { onViewChange(item.id as any); setShowConfigMenu(false); }}
-                      className="w-full flex items-center gap-3 p-3 rounded-lg text-[11px] font-bold uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
-                    >
-                      <Icon name={item.icon} className="text-base" /> {item.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </nav>
+          {!isReadOnly && (
+            <nav className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+              {navItems.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => onViewChange(item.id as any)}
+                  className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all ${currentView === item.id ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  {item.label}
+                </button>
+              ))}
+              <div className="relative">
+                <button
+                  onClick={() => setShowConfigMenu(!showConfigMenu)}
+                  className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all flex items-center gap-1.5 ${['team','jornada','data','feriados','worked-holidays'].includes(currentView) ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Configurações <Icon name={showConfigMenu ? 'expand_less' : 'expand_more'} className="text-[14px]" />
+                </button>
+                {showConfigMenu && (
+                  <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-1">
+                    {configItems.map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => { onViewChange(item.id as any); setShowConfigMenu(false); }}
+                        className="w-full flex items-center gap-3 p-3 rounded-lg text-[11px] font-bold uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                      >
+                        <Icon name={item.icon} className="text-base" /> {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </nav>
+          )}
         </div>
 
         {/* Center/Right: Month & Filters */}
@@ -120,10 +124,16 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="px-3 text-[11px] font-black uppercase min-w-[120px] text-center text-slate-700 dark:text-slate-300">
               {months[currentMY.month]} {currentMY.year}
             </span>
-            <button onClick={() => {
-              const next = new Date(currentMY.year, currentMY.month + 1);
-              onMonthChange({ month: next.getMonth(), year: next.getFullYear() });
-            }} className="p-1 hover:text-orange-500 transition-colors"><Icon name="chevron_right" /></button>
+            <button 
+              onClick={() => {
+                const next = new Date(currentMY.year, currentMY.month + 1);
+                onMonthChange({ month: next.getMonth(), year: next.getFullYear() });
+              }} 
+              disabled={!canGoNext}
+              className={`p-1 transition-colors ${!canGoNext ? 'opacity-20 cursor-not-allowed' : 'hover:text-orange-500'}`}
+            >
+              <Icon name="chevron_right" />
+            </button>
           </div>
 
           {/* Period Filters */}

@@ -1,5 +1,5 @@
 
-export type ShiftType = 'T' | 'F' | 'FF' | 'FE' | 'C' | 'N/A' | string; // Trabalho, Folga, Feriado/Folga Especial, Férias, Curso, Not Available, or dynamic Holiday Offs like 'FF 01/05'
+export type ShiftType = 'T' | 'F' | 'FF' | 'FE' | 'C' | 'DO' | 'N/A' | string; // Trabalho, Folga, Feriado/Folga Especial, Férias, Curso, Day Off (Birthday), Not Available
 export type EmployeeCargo = 'Auxiliar de Loja' | 'Estoquista';
 
 export interface Employee {

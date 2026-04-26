@@ -13,9 +13,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Simple authentication logic
-    if (password === 'rihappy123') {
+    if (password === 'BrBOg975mf2(') {
       onLogin('admin');
-    } else if (password === 'consulta') {
+    } else if (password === '1187') {
       onLogin('viewer');
     } else {
       setError(true);

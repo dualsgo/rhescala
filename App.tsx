@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
-import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches } from './hooks/useScheduleEngine';
+import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification } from './hooks/useScheduleEngine';
 import { Header } from './components/Header';
 import { ShiftGrid } from './components/ShiftGrid';
 import { TeamView } from './components/TeamView';
@@ -34,6 +34,7 @@ const App: React.FC = () => {
   const { showDialog } = useDialog();
   const [waModal, setWaModal] = useState<{ show: boolean, text: string }>({ show: false, text: '' });
   const [auth, setAuth] = useState<{ isAuthenticated: boolean, role: 'admin' | 'viewer' }>({ isAuthenticated: false, role: 'viewer' });
+  const isReadOnly = auth.role === 'viewer';
   const holidayCredits = useHolidayCredits(employees, customHolidays, currentMY.year, trackingStartDate);
 
   const onUpdateEmployee = useCallback((empId: string, data: Partial<Employee>) => {
@@ -74,6 +75,13 @@ const App: React.FC = () => {
   const [isEditable, setIsEditable] = useState(false);
   const [allowRetroactive, setAllowRetroactive] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  
+  const canGoNext = useMemo(() => {
+    const today = new Date();
+    const limitDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    const targetDate = new Date(currentMY.year, currentMY.month, 1);
+    return targetDate < limitDate;
+  }, [currentMY]);
 
   // Dark mode effect
   React.useEffect(() => {
@@ -98,39 +106,44 @@ const App: React.FC = () => {
     }));
   }, [monthKey, setEmployees]);
 
-  const handleApplyFolgas = () => {
+  const handleApplyFolgas = (targetMY = currentMY, targetKey = monthKey) => {
     setEmployees(prev => prev.map(emp => {
       if (emp.status !== 'active') return emp;
-      const shifts = [...(emp.shifts[monthKey] || [])];
-      const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
+      const shifts = [...(emp.shifts[targetKey] || [])];
+      const daysInMonth = new Date(targetMY.year, targetMY.month + 1, 0).getDate();
       for (let d = 0; d < daysInMonth; d++) {
-        const date = new Date(currentMY.year, currentMY.month, d + 1);
+        const date = new Date(targetMY.year, targetMY.month, d + 1);
         const dow = date.toLocaleDateString('pt-BR', { weekday: 'long' });
         if (dow.toLowerCase() === emp.preferredDayOff?.toLowerCase()) {
            shifts[d] = 'F';
         }
       }
-      return { ...emp, shifts: { ...emp.shifts, [monthKey]: shifts } };
+      return { ...emp, shifts: { ...emp.shifts, [targetKey]: shifts } };
     }));
   };
 
-  const handleSortearDomingo = () => {
-    // Trigger Sunday Rotation logic
-    showDialog({ title: 'Sortear Domingos', message: 'Deseja realizar o sorteio dos domingos para este mês?', type: 'confirm' }).then(ok => {
-      if (ok) {
-        const updatedData = applyMonthUpdate(employees, currentMY.year, currentMY.month, customHolidays);
-        setEmployees(prev => prev.map(emp => {
-          if (updatedData[emp.id]) {
-            return {
-              ...emp,
-              shifts: { ...emp.shifts, [monthKey]: updatedData[emp.id].shifts },
-              dailyHours: { ...emp.dailyHours, [monthKey]: updatedData[emp.id].hours }
-            };
-          }
-          return emp;
-        }));
-      }
-    });
+  const handleSortearDomingo = (targetMY = currentMY, targetKey = monthKey, skipConfirm = false) => {
+    const perform = () => {
+      const updatedData = applyMonthUpdate(employees, targetMY.year, targetMY.month, customHolidays);
+      setEmployees(prev => prev.map(emp => {
+        if (updatedData[emp.id]) {
+          return {
+            ...emp,
+            shifts: { ...emp.shifts, [targetKey]: updatedData[emp.id].shifts },
+            dailyHours: { ...emp.dailyHours, [targetKey]: updatedData[emp.id].hours }
+          };
+        }
+        return emp;
+      }));
+    };
+
+    if (skipConfirm) {
+      perform();
+    } else {
+      showDialog({ title: 'Sortear Domingos', message: 'Deseja realizar o sorteio dos domingos para este mês?', type: 'confirm' }).then(ok => {
+        if (ok) perform();
+      });
+    }
   };
 
   const handleShareWhatsApp = useCallback((dayIdx: number) => {
@@ -143,9 +156,11 @@ const App: React.FC = () => {
     const isHoliday = buildHolidaySet(currentMY.year, customHolidays).has(dateStr);
     const isSunday = date.getDay() === 0;
 
-    let text = `📅 *Escala ${weekdayName} ${dateFormatted}*\n\n`;
-
-    text += `📍 *Posicionamento*\n`;
+    let text = `📅 *Escala ${weekdayName} ${dateFormatted}*\n`;
+    if (isHoliday) {
+      text += `⏱️ Jornada 5h45 + 15 min. pausa\n`;
+    }
+    text += `\n📍 *Posicionamento*\n`;
     text += `🟥 P1 Caixa\n`;
     text += `🟨 P2 Porta\n`;
     text += `🟩 P3 Salão\n`;
@@ -169,7 +184,7 @@ const App: React.FC = () => {
 
       const hour = e.dailyHours[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
       let pos = e.tacticalPositions?.[monthKey]?.[dayIdx];
-      if (pos === 'AUTO') {
+      if (!pos || pos === 'AUTO') {
         pos = resolvedPositions[e.id];
       }
       const posEmoji = pos === 'P1' ? '🟥' : pos === 'P2' ? '🟨' : pos === 'P3' ? '🟩' : pos === 'P4' ? '🟦' : pos === 'ESTOQUE' ? '📦' : '🔹';
@@ -189,11 +204,8 @@ const App: React.FC = () => {
       return a.localeCompare(b);
     }).forEach(hour => {
       const members = groups[hour];
-      const startHStr = (hour || '').split('h')[0];
-      const startH = startHStr ? parseInt(startHStr) : 0;
-      const isOpening = startH <= 11;
-      const isClosing = startH >= 13;
-      const shiftName = isOpening ? 'Abertura' : isClosing ? 'Fechamento' : 'Intermediário';
+      const shiftName = getShiftClassification(hour, isSunday);
+      const isOpening = shiftName === 'Abertura';
 
       text += `⏰ *${shiftName} ${hour}*\n`;
       const lunches = calculateLunches(members, isHoliday, isSunday, isOpening);
@@ -208,12 +220,25 @@ const App: React.FC = () => {
       text += `Folgas: ${folgas.join(', ')}\n`;
     }
 
+    if (isHoliday) {
+      text += `\n⚠️ *Aviso:* Pausa para almoço 1 colaborador por vez. Saída permitida somente após o retorno do outro. Primeira saída 14h30\n`;
+    }
+
     setWaModal({ show: true, text });
   }, [currentMY, employees, monthKey, customHolidays]);
 
   const handleCreateMonth = () => {
-    handleApplyFolgas();
-    setTimeout(handleSortearDomingo, 500);
+    const nextDate = new Date(currentMY.year, currentMY.month + 1, 1);
+    const nextMY = { month: nextDate.getMonth(), year: nextDate.getFullYear() };
+    const nextKey = `${nextMY.year}-${String(nextMY.month + 1).padStart(2, '0')}`;
+    
+    setCurrentMY(nextMY);
+    
+    // Apply logic directly to next month parameters
+    handleApplyFolgas(nextMY, nextKey);
+    setTimeout(() => {
+      handleSortearDomingo(nextMY, nextKey, true); // Skip confirm for "Create Month" flow
+    }, 200);
   };
 
   if (!auth.isAuthenticated) {
@@ -244,149 +269,161 @@ const App: React.FC = () => {
               onSortearDomingo={handleSortearDomingo}
               showNotes={showNotes}
               onToggleNotes={() => setShowNotes(!showNotes)}
+              canGoNext={canGoNext}
             />
 
       <main className="max-w-[1600px] mx-auto p-4 animate-fade-in">
-        {currentView === 'grid' ? (
-          <ShiftGrid
-            employees={employees}
-            currentMY={currentMY}
-            selectedDayIdx={selectedDayIdx}
-            today={new Date()}
-            customHolidays={customHolidays}
-            holidayCredits={holidayCredits}
-            filter={filter}
-            isReadOnly={auth.role === 'viewer'}
-            isEditable={isEditable}
-            allowRetroactive={allowRetroactive}
-            showNotes={showNotes}
-            onSelectDay={setSelectedDayIdx}
-            onUpdateShift={(empId, d, s) => {
-              if (auth.role === 'viewer') return;
-              setEmployees(prev => prev.map(emp => {
-                if (emp.id !== empId) return emp;
-                const sfs = [...(emp.shifts[monthKey] || [])];
-                sfs[d] = s;
-                return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
-              }));
-            }}
-            onUpdateShifts={(updates) => {
-              if (auth.role === 'viewer') return;
-              setEmployees(prev => prev.map(emp => {
-                const empU = updates.filter(u => u.empId === emp.id);
-                if (empU.length === 0) return emp;
-                const sfs = [...(emp.shifts[monthKey] || [])];
-                empU.forEach(u => { sfs[u.dayIdx] = u.newShift; });
-                return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
-              }));
-            }}
-            onUpdateEmployeeDailyHour={(empId, dayIdx, newHour) => {
-              if (auth.role === 'viewer') return;
-              onUpdateEmployeeDailyHour(empId, dayIdx, newHour);
-            }}
-            onUpdateTacticalPosition={(empId, dayIdx, newPos) => {
-              if (auth.role === 'viewer') return;
-              onUpdateTacticalPosition(empId, dayIdx, newPos);
-            }}
-            onShareWhatsApp={handleShareWhatsApp}
-            onOpenDayDetail={(idx) => {
-              setSelectedDayIdx(idx);
-              setShowDayDetail(true);
-            }}
-            onResetMonth={handleCreateMonth}
-            onApplyFolgas={handleApplyFolgas}
-            onSortearDomingo={handleSortearDomingo}
-            onOpenAnalysis={() => setCurrentView('analysis')}
-            onShowHolidayManager={() => setCurrentView('feriados')}
-            onNextMonth={() => setCurrentMY(prev => prev.month === 11 ? { month: 0, year: prev.year + 1 } : { ...prev, month: prev.month + 1 })}
-            onPrevMonth={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })}
-            monthNotes={monthNotes[monthKey] || ''}
-            onUpdateMonthNotes={(text) => {
-              if (auth.role === 'viewer') return;
-              setMonthNotes(prev => ({ ...prev, [monthKey]: text }));
-            }}
-          />
-        ) : currentView === 'analysis' ? (
-          <AnalysisPanel employees={employees} currentMY={currentMY} customHolidays={customHolidays} onClose={() => setCurrentView('grid')} />
-        ) : null}
-
-        {currentView === 'team' && (
-          <TeamView 
-            employees={employees} 
-            isReadOnly={auth.role === 'viewer'}
-            onUpdateEmployee={(empId, data) => {
-              if (auth.role === 'viewer') return;
-              onUpdateEmployee(empId, data);
-            }}
-            onDeleteEmployee={(empId) => {
-              if (auth.role === 'viewer') return;
-              onDeleteEmployee(empId);
-            }}
-            onAddEmployee={(name, isYoung, courseDay, cargo, birthday) => {
-              if (auth.role === 'viewer') return;
-              onAddEmployee(name, isYoung, courseDay, cargo, birthday);
-            }}
-          />
-        )}
-
-        {currentView === 'data' && (
-          <DataManager 
-            syncStatus={syncStatus} 
-            employees={employees} 
-            setEmployees={(emps) => {
-              if (auth.role === 'viewer') return;
-              setEmployees(emps);
-            }} 
-            onClose={() => setCurrentView('grid')} 
-          />
-        )}
-
-        {currentView === 'feriados' && (
-          <div className="max-w-xl mx-auto mt-6">
-            <HolidayManager 
-              year={currentMY.year}
-              customHolidays={customHolidays} 
-              isReadOnly={auth.role === 'viewer'}
-              onAdd={(h) => {
-                if (auth.role === 'viewer') return;
-                onAddHoliday(h);
-              }}
-              onRemove={(id) => {
-                if (auth.role === 'viewer') return;
-                onRemoveHoliday(id);
-              }}
-              trackingStartDate={trackingStartDate}
-              onUpdateTrackingStartDate={(d) => {
-                if (auth.role === 'viewer') return;
-                setTrackingStartDate(d);
-              }}
-              onClose={() => setCurrentView('grid')} 
-            />
-          </div>
-        )}
-
-        {currentView === 'worked-holidays' && (
-          <WorkedHolidaysList
-            employees={employees}
-            currentMY={currentMY}
-            customHolidays={[...getNationalHolidays(currentMY.year), ...customHolidays]}
-            holidayCredits={holidayCredits}
-            trackingStartDate={trackingStartDate}
-            onUpdateTrackingStartDate={setTrackingStartDate}
-            onClose={() => setCurrentView('grid')}
-          />
-        )}
-
-        {currentView === 'jornada' && (
-          <div className="bg-white dark:bg-slate-900 p-12 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl text-center max-w-2xl mx-auto mt-10">
-             <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
-             </div>
-             <h2 className="text-2xl font-black uppercase mb-4">Configuração de Jornada</h2>
-             <p className="text-slate-500 dark:text-slate-400 mb-8">Esta funcionalidade está sendo simplificada e será integrada aqui em breve.</p>
-             <button onClick={() => setCurrentView('grid')} className="px-8 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold uppercase text-xs tracking-widest hover:scale-105 transition-transform">Voltar para Grade</button>
-          </div>
-        )}
+        {(() => {
+          switch (currentView) {
+            case 'grid':
+              return (
+                <ShiftGrid
+                  employees={employees}
+                  currentMY={currentMY}
+                  selectedDayIdx={selectedDayIdx}
+                  today={new Date()}
+                  customHolidays={customHolidays}
+                  holidayCredits={holidayCredits}
+                  filter={filter}
+                  isReadOnly={isReadOnly}
+                  isEditable={isEditable}
+                  allowRetroactive={allowRetroactive}
+                  showNotes={showNotes}
+                  onSelectDay={setSelectedDayIdx}
+                  onUpdateShift={(empId, d, s) => {
+                    if (isReadOnly) return;
+                    setEmployees(prev => prev.map(emp => {
+                      if (emp.id !== empId) return emp;
+                      const sfs = [...(emp.shifts[monthKey] || [])];
+                      sfs[d] = s;
+                      return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
+                    }));
+                  }}
+                  onUpdateShifts={(updates) => {
+                    if (isReadOnly) return;
+                    setEmployees(prev => prev.map(emp => {
+                      const empU = updates.filter(u => u.empId === emp.id);
+                      if (empU.length === 0) return emp;
+                      const sfs = [...(emp.shifts[monthKey] || [])];
+                      empU.forEach(u => { sfs[u.dayIdx] = u.newShift; });
+                      return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
+                    }));
+                  }}
+                  onUpdateEmployeeDailyHour={(empId, dayIdx, newHour) => {
+                    if (isReadOnly) return;
+                    onUpdateEmployeeDailyHour(empId, dayIdx, newHour);
+                  }}
+                  onUpdateTacticalPosition={(empId, dayIdx, newPos) => {
+                    if (isReadOnly) return;
+                    onUpdateTacticalPosition(empId, dayIdx, newPos);
+                  }}
+                  onShareWhatsApp={handleShareWhatsApp}
+                  onOpenDayDetail={(idx) => {
+                    setSelectedDayIdx(idx);
+                    setShowDayDetail(true);
+                  }}
+                  onResetMonth={handleCreateMonth}
+                  onApplyFolgas={handleApplyFolgas}
+                  onSortearDomingo={handleSortearDomingo}
+                  onOpenAnalysis={() => setCurrentView('analysis')}
+                  onShowHolidayManager={() => setCurrentView('feriados')}
+                  onNextMonth={() => setCurrentMY(prev => prev.month === 11 ? { month: 0, year: prev.year + 1 } : { ...prev, month: prev.month + 1 })}
+                  onPrevMonth={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })}
+                  monthNotes={monthNotes[monthKey] || ''}
+                  onUpdateMonthNotes={(text) => {
+                    if (isReadOnly) return;
+                    setMonthNotes(prev => ({ ...prev, [monthKey]: text }));
+                  }}
+                />
+              );
+            case 'analysis':
+              return (
+                <AnalysisPanel 
+                  employees={employees} 
+                  currentMY={currentMY} 
+                  customHolidays={customHolidays} 
+                  onClose={() => setCurrentView('grid')} 
+                  onUpdateShift={(empId, dayIdx, shift) => {
+                    if (isReadOnly) return;
+                    setEmployees(prev => prev.map(emp => {
+                      if (emp.id !== empId) return emp;
+                      const sfs = [...(emp.shifts[monthKey] || [])];
+                      sfs[dayIdx] = shift;
+                      return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
+                    }));
+                  }}
+                  onUpdateHour={(empId, dayIdx, hour) => {
+                    if (isReadOnly) return;
+                    setEmployees(prev => prev.map(emp => {
+                      if (emp.id !== empId) return emp;
+                      const hrs = [...(emp.dailyHours[monthKey] || [])];
+                      hrs[dayIdx] = hour;
+                      return { ...emp, dailyHours: { ...emp.dailyHours, [monthKey]: hrs } };
+                    }));
+                  }}
+                />
+              );
+            case 'team':
+              return (
+                <TeamView 
+                  employees={employees} 
+                  isReadOnly={isReadOnly}
+                  onUpdateEmployee={onUpdateEmployee}
+                  onDeleteEmployee={onDeleteEmployee}
+                  onAddEmployee={onAddEmployee}
+                />
+              );
+            case 'data':
+              return (
+                <DataManager 
+                  syncStatus={syncStatus} 
+                  employees={employees} 
+                  setEmployees={setEmployees} 
+                  onClose={() => setCurrentView('grid')} 
+                />
+              );
+            case 'feriados':
+              return (
+                <div className="max-w-xl mx-auto mt-6">
+                  <HolidayManager 
+                    year={currentMY.year}
+                    customHolidays={customHolidays} 
+                    isReadOnly={isReadOnly}
+                    onAdd={onAddHoliday}
+                    onRemove={onRemoveHoliday}
+                    trackingStartDate={trackingStartDate}
+                    onUpdateTrackingStartDate={setTrackingStartDate}
+                    onClose={() => setCurrentView('grid')} 
+                  />
+                </div>
+              );
+            case 'worked-holidays':
+              return (
+                <WorkedHolidaysList
+                  employees={employees}
+                  currentMY={currentMY}
+                  customHolidays={customHolidays}
+                  holidayCredits={holidayCredits}
+                  trackingStartDate={trackingStartDate}
+                  onUpdateTrackingStartDate={setTrackingStartDate}
+                  onClose={() => setCurrentView('grid')}
+                />
+              );
+            case 'jornada':
+              return (
+                <div className="bg-white dark:bg-slate-900 p-12 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl text-center max-w-2xl mx-auto mt-10">
+                   <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Icon name="schedule" className="text-4xl" />
+                   </div>
+                   <h2 className="text-2xl font-black uppercase mb-4">Configuração de Jornada</h2>
+                   <p className="text-slate-500 dark:text-slate-400 mb-8">Esta funcionalidade está sendo simplificada e será integrada aqui em breve.</p>
+                   <button onClick={() => setCurrentView('grid')} className="px-8 py-3 bg-slate-950 text-white rounded-xl font-bold uppercase text-xs tracking-widest hover:scale-105 transition-transform">Voltar para Grade</button>
+                </div>
+              );
+            default:
+              return null;
+          }
+        })()}
       </main>
 
 
