@@ -891,3 +891,62 @@ export function resolveTacticalDay(
 
     return result;
 }
+
+export function findSundayViolations(employees: Employee[], currentMY: { month: number, year: number }): { empName: string, date: string }[] {
+    const violations: { empName: string, date: string }[] = [];
+    const allSundays: { dateStr: string, monthKey: string, dayIdx: number }[] = [];
+    
+    const currentMonthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+    const nextDate = new Date(currentMY.year, currentMY.month + 1, 1);
+    const nextMonthKey = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
+    
+    const targetMonthKeys = [currentMonthKey, nextMonthKey];
+    
+    // Find all Sundays in these specific months
+    targetMonthKeys.forEach(monthKey => {
+        const [year, month] = monthKey.split('-').map(Number);
+        const daysInMonth = new Date(year, month, 0).getDate();
+        for (let d = 0; d < daysInMonth; d++) {
+            const date = new Date(year, month - 1, d + 1);
+            if (date.getDay() === 0) {
+                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`;
+                allSundays.push({ dateStr, monthKey, dayIdx: d });
+            }
+        }
+    });
+
+    // For each employee, check streak in allSundays
+    employees.forEach(emp => {
+        let streak = 0;
+        let lastSunDate: Date | null = null;
+
+        allSundays.forEach(sun => {
+            const shift = emp.shifts[sun.monthKey]?.[sun.dayIdx];
+            const currentSunDate = new Date(sun.dateStr + 'T12:00:00');
+
+            if (shift === 'T') {
+                if (lastSunDate) {
+                    const diffDays = Math.round((currentSunDate.getTime() - lastSunDate.getTime()) / (1000 * 3600 * 24));
+                    if (diffDays > 7) { 
+                        streak = 0; 
+                    }
+                }
+                streak++;
+                lastSunDate = currentSunDate;
+                if (streak >= 3) {
+                    violations.push({ empName: emp.name, date: sun.dateStr });
+                }
+            } else if (shift && shift !== 'N/A') {
+                streak = 0;
+                lastSunDate = currentSunDate;
+            } else if (!shift) {
+                // No data for this Sunday (e.g. month not generated yet)
+                // We should probably reset streak to avoid false positives across gaps
+                streak = 0;
+                lastSunDate = null;
+            }
+        });
+    });
+
+    return violations;
+}

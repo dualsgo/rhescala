@@ -26,6 +26,7 @@ interface HeaderProps {
   showNotes: boolean;
   onToggleNotes: () => void;
   canGoNext: boolean;
+  sundayViolations: { empName: string, date: string }[];
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -50,6 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
   showNotes,
   onToggleNotes,
   canGoNext,
+  sundayViolations,
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);
   const [showPrintMenu, setShowPrintMenu] = useState(false);
@@ -261,6 +263,44 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
           </div>
+
+          {/* Sunday Violations Alert */}
+          {sundayViolations.length > 0 && (
+            <div className="relative group">
+              <div className="flex items-center justify-center w-8 h-8 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-full cursor-help animate-pulse transition-transform hover:scale-110">
+                <Icon name="error" className="text-xl" />
+              </div>
+              <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800 rounded-2xl shadow-2xl z-50 p-4 hidden group-hover:block animate-in fade-in slide-in-from-top-1">
+                <div className="flex items-center gap-2 mb-3 border-b border-rose-100 dark:border-rose-900 pb-2">
+                  <Icon name="warning" className="text-rose-500 text-lg" />
+                  <h5 className="text-[10px] font-black uppercase text-rose-600 tracking-wider">Atenção: 3 Domingos Seguidos</h5>
+                </div>
+                <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-2">
+                  {(() => {
+                    // Group by employee for better visualization
+                    const grouped = sundayViolations.reduce((acc, v) => {
+                      if (!acc[v.empName]) acc[v.empName] = [];
+                      acc[v.empName].push(v.date);
+                      return acc;
+                    }, {} as Record<string, string[]>);
+                    
+                    return Object.entries(grouped).map(([name, dates]) => (
+                      <div key={name} className="flex flex-col gap-0.5">
+                        <span className="text-[10px] font-black text-slate-800 dark:text-slate-100 uppercase">{name}</span>
+                        <div className="flex flex-wrap gap-1">
+                          {dates.map(d => (
+                            <span key={d} className="text-[8px] font-bold bg-rose-50 dark:bg-rose-900/20 text-rose-500 px-1.5 py-0.5 rounded">
+                              {d.split('-').reverse().join('/')}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
 
           <button
             onClick={onShareWhatsApp}

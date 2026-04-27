@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
-import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification } from './hooks/useScheduleEngine';
+import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification, findSundayViolations } from './hooks/useScheduleEngine';
 import { Header } from './components/Header';
 import { ShiftGrid } from './components/ShiftGrid';
 import { TeamView } from './components/TeamView';
@@ -40,6 +40,8 @@ const App: React.FC = () => {
   const onUpdateEmployee = useCallback((empId: string, data: Partial<Employee>) => {
     setEmployees(prev => prev.map(emp => emp.id === empId ? { ...emp, ...data } : emp));
   }, [setEmployees]);
+
+  const sundayViolations = useMemo(() => findSundayViolations(employees, currentMY), [employees, currentMY]);
 
   const onDeleteEmployee = useCallback((empId: string) => {
     setEmployees(prev => prev.filter(emp => emp.id !== empId));
@@ -267,9 +269,9 @@ const App: React.FC = () => {
               onCreateMonth={handleCreateMonth}
               onApplyFolgas={handleApplyFolgas}
               onSortearDomingo={handleSortearDomingo}
-              showNotes={showNotes}
               onToggleNotes={() => setShowNotes(!showNotes)}
               canGoNext={canGoNext}
+              sundayViolations={sundayViolations}
             />
 
       <main className="max-w-[1600px] mx-auto p-4 animate-fade-in">
