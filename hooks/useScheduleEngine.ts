@@ -773,6 +773,10 @@ export function applyMonthUpdate(
 }
 export function getShiftClassification(hourRange: string, isSunday?: boolean): 'Abertura' | 'Intermediário' | 'Fechamento' | 'N/A' {
     if (!hourRange || hourRange === 'OFF' || hourRange === 'FOLGA') return 'N/A';
+    
+    // Apprentice is always considered 'Abertura' for positioning purposes
+    if (hourRange === APPRENTICE_WORK_PERIOD) return 'Abertura';
+
     const match = hourRange.match(/^(\d{1,2})[h:]/);
     if (!match) return 'Intermediário';
     const startHour = parseInt(match[1]);
@@ -807,17 +811,24 @@ export function resolveTacticalDay(
         if (shift !== 'T' && !shift.startsWith('FF')) return;
         
         const hour = e.dailyHours[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
-        if (!groups[hour]) groups[hour] = [];
-        groups[hour].push(e);
+        const classification = getShiftClassification(hour, isSunday);
+        if (classification === 'N/A') return;
+
+        if (!groups[classification]) groups[classification] = [];
+        groups[classification].push(e);
     });
 
     const POSITIONS = ['P1', 'P2', 'P3', 'P4', 'ESTOQUE'];
 
-    Object.keys(groups).forEach(hour => {
-        const members = groups[hour];
-        const isSun = isSunday;
-        const shiftClass = getShiftClassification(hour, isSun);
-        
+    // Process each classification group (Abertura, Intermediário, Fechamento)
+    // Sorting groups ensures Abertura is processed first if needed
+    const groupNames = Object.keys(groups).sort((a, b) => {
+        const order = { 'Abertura': 0, 'Intermediário': 1, 'Fechamento': 2 };
+        return (order[a as keyof typeof order] ?? 99) - (order[b as keyof typeof order] ?? 99);
+    });
+
+    groupNames.forEach(groupName => {
+        const members = groups[groupName];
         const takenPositions = new Set<string>();
         const autoMembers: Employee[] = [];
 
