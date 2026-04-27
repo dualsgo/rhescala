@@ -4,6 +4,8 @@ import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
 import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification, findSundayViolations } from './hooks/useScheduleEngine';
 import { Header } from './components/Header';
+import { toPng } from 'html-to-image';
+
 import { ShiftGrid } from './components/ShiftGrid';
 import { TeamView } from './components/TeamView';
 import { AnalysisPanel } from './components/AnalysisPanel';
@@ -461,6 +463,32 @@ const App: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <button 
+                  onClick={async () => {
+                    const el = document.getElementById('day-detail-screenshot');
+                    if (el) {
+                      const dataUrl = await toPng(el, { 
+                        backgroundColor: '#ffffff', 
+                        pixelRatio: 2,
+                        style: { 
+                          padding: '30px', 
+                          borderRadius: '32px',
+                          transform: 'scale(0.9)',
+                          transformOrigin: 'center'
+                        } 
+                      });
+                      const link = document.createElement('a');
+                      const date = `${String(selectedDayIdx + 1).padStart(2, '0')}-${String(currentMY.month + 1).padStart(2, '0')}`;
+                      link.download = `escala-dia-${date}.png`;
+                      link.href = dataUrl;
+                      link.click();
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md active:scale-95"
+                  title="Baixar Imagem"
+                >
+                  <Icon name="download" className="text-sm" /> Baixar Imagem
+                </button>
+                <button 
                   onClick={() => handleShareWhatsApp(selectedDayIdx)}
                   className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md active:scale-95"
                 >
@@ -471,13 +499,15 @@ const App: React.FC = () => {
                 </button>
               </div>
             </div>
-            <div id="day-detail-screenshot" className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-white dark:bg-slate-900">
-              <DaySummaryCard 
-                selectedDayIdx={selectedDayIdx} 
-                employees={employees} 
-                currentMY={currentMY} 
-                customHolidays={customHolidays} 
-              />
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-white dark:bg-slate-900">
+              <div id="day-detail-screenshot" className="bg-white dark:bg-slate-900">
+                <DaySummaryCard 
+                  selectedDayIdx={selectedDayIdx} 
+                  employees={employees} 
+                  currentMY={currentMY} 
+                  customHolidays={customHolidays} 
+                />
+              </div>
             </div>
           </div>
         </div>

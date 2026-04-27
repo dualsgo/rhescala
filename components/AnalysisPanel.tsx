@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Employee, MonthYear, Holiday, ShiftType } from '../types';
 import { Icon } from './Icon';
 import { buildHolidaySet, SHIFT_HOURS } from '../constants';
+import { toPng } from 'html-to-image';
+
 
 interface AnalysisPanelProps {
   employees: Employee[];
@@ -277,9 +279,38 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                                 ALERTA 6x1
                             </div>
                         )}
+                        {selectedEmployee && (
+                          <button
+                            onClick={async () => {
+                              const el = document.getElementById('individual-calendar-capture');
+                              if (el) {
+                                // Add some padding/background for the screenshot
+                                const dataUrl = await toPng(el, { 
+                                  backgroundColor: '#ffffff',
+                                  pixelRatio: 2,
+                                  style: { 
+                                    padding: '20px', 
+                                    borderRadius: '32px',
+                                    transform: 'scale(0.9)',
+                                    transformOrigin: 'center'
+                                  }
+                                });
+                                const link = document.createElement('a');
+                                link.download = `escala-${selectedEmployee.name.toLowerCase().replace(/\s+/g, '-')}.png`;
+                                link.href = dataUrl;
+                                link.click();
+                              }
+                            }}
+                            className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center ml-2"
+                            title="Baixar Calendário"
+                          >
+                            <Icon name="download" className="text-sm" />
+                          </button>
+                        )}
                     </div>
 
                     <div className="flex-1">
+                        <div id="individual-calendar-capture" className="bg-white p-4 rounded-3xl">
                         {selectedEmployee && (
                             <IndividualWeeklyCalendar 
                                 employee={selectedEmployee.emp} 
@@ -289,6 +320,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                                 onUpdateShift={onUpdateShift}
                             />
                         )}
+                        </div>
                         {!selectedEmployee && (
                           <div className="flex items-center justify-center h-40 text-slate-300">
                             <p className="text-sm font-bold">Selecione um colaborador no ranking →</p>
@@ -729,12 +761,40 @@ const IndividualEditModal: React.FC<IndividualEditModalProps> = ({
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100  rounded-full transition-colors">
-            <Icon name="close" className="text-slate-400 " />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                const el = document.getElementById('modal-calendar-capture');
+                if (el) {
+                  const dataUrl = await toPng(el, { 
+                    backgroundColor: '#ffffff', 
+                    pixelRatio: 2,
+                    style: { 
+                      padding: '30px', 
+                      borderRadius: '32px',
+                      transform: 'scale(0.9)',
+                      transformOrigin: 'center'
+                    } 
+                  });
+                  const link = document.createElement('a');
+                  link.download = `escala-${employee.name.toLowerCase().replace(/\s+/g, '-')}.png`;
+                  link.href = dataUrl;
+                  link.click();
+                }
+              }}
+              className="p-2 hover:bg-indigo-50 text-indigo-600 rounded-full transition-colors"
+              title="Baixar Calendário"
+            >
+              <Icon name="download" />
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-slate-100  rounded-full transition-colors">
+              <Icon name="close" className="text-slate-400 " />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 bg-slate-50/40  custom-scrollbar">
+          <div id="modal-calendar-capture" className="bg-white p-6 rounded-3xl">
           <div className="grid grid-cols-7 gap-1.5 mb-2">
             {WEEKDAY_NAMES.map(wd => (
               <div key={wd} className="text-center text-[9px] font-black text-slate-400  uppercase">{wd.substring(0,3)}</div>
@@ -790,6 +850,7 @@ const IndividualEditModal: React.FC<IndividualEditModalProps> = ({
                 </div>
               );
             })}
+          </div>
           </div>
           {canEdit && (
             <div className="mt-4 p-3 bg-indigo-50  rounded-2xl border border-indigo-100  flex flex-wrap gap-3 items-center justify-center">
