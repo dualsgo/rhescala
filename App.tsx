@@ -18,6 +18,7 @@ import { WorkedHolidaysList } from './components/WorkedHolidaysList';
 import { CleaningSchedule } from './components/CleaningSchedule';
 import { EssentialActivities } from './components/EssentialActivities';
 import { DailyRoutine } from './components/DailyRoutine';
+import { OperationalNotices } from './components/OperationalNotices';
 import { Icon } from './components/Icon';
 import { Login } from './components/Login';
 import { PrintableSchedule } from './components/PrintableSchedule';
@@ -33,7 +34,7 @@ const App: React.FC = () => {
   const syncStatus = useSyncStatus();
   const [showHolidayManager, setShowHolidayManager] = useState(false);
   const [showDayDetail, setShowDayDetail] = useState(false);
-  const [currentView, setCurrentView] = useState<'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays' | 'cleaning' | 'activities' | 'routine'>('grid');
+  const [currentView, setCurrentView] = useState<'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays' | 'cleaning' | 'activities' | 'routine' | 'notices'>('grid');
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
   const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
@@ -566,6 +567,12 @@ const App: React.FC = () => {
                 <DailyRoutine
                   currentMY={currentMY}
                   customHolidays={customHolidays}
+                  onClose={() => setCurrentView('grid')}
+                />
+              );
+            case 'notices':
+              return (
+                <OperationalNotices
                   onClose={() => setCurrentView('grid')}
                 />
               );
