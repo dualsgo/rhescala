@@ -546,7 +546,7 @@ const IndividualWeeklyCalendar: React.FC<{
 
     const shiftBg = (s: ShiftType) => {
         if (s==='T') return 'bg-indigo-600 border-indigo-700 text-white shadow-sm';
-        if (['P1', 'P2', 'P3', 'P4', 'ESTOQUE'].includes(s as string)) return 'bg-emerald-600 border-emerald-700 text-white shadow-sm';
+        if (['P1', 'P2', 'P3', 'P4', 'ESTQ'].includes(s as string)) return 'bg-emerald-600 border-emerald-700 text-white shadow-sm';
         if (s==='F') return 'bg-orange-50 border-orange-100 text-orange-600';
         if (s?.startsWith('FF')) return 'bg-red-50 border-red-100 text-red-600';
         if (s==='C') return 'bg-teal-500 border-teal-600 text-white shadow-sm';
@@ -745,7 +745,7 @@ const IndividualEditModal: React.FC<IndividualEditModalProps> = ({
 
   const shiftBg = (s: ShiftType) => {
     if (s==='T') return 'bg-sky-600';
-    if (['P1', 'P2', 'P3', 'P4', 'ESTOQUE'].includes(s as string)) return 'bg-emerald-600';
+    if (['P1', 'P2', 'P3', 'P4', 'ESTQ'].includes(s as string)) return 'bg-emerald-600';
     if (s==='F') return 'bg-orange-500';
     if (s?.startsWith('FF')) return 'bg-red-500';
     if (s==='C') return 'bg-teal-500';

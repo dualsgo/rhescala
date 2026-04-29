@@ -262,7 +262,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                 className="w-full bg-transparent border-none p-0 text-[11px] font-black text-slate-900 dark:text-slate-100 focus:ring-0 uppercase"
                               >
                                 <option value="AUTO">AUTO 🤖</option>
-                                {['P1 🟥', 'P2 🟨', 'P3 🟩', 'P4 🟦', 'ESTOQUE 📦'].map(p => (
+                                {['P1 🟥', 'P2 🟨', 'P3 🟩', 'P4 🟦', 'ESTQ 📦'].map(p => (
                                   <option key={p} value={p.split(' ')[0]}>{p}</option>
                                 ))}
                               </select>
@@ -297,7 +297,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                         shift === 'P2' ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300' :
                                         shift === 'P3' ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400' :
                                         shift === 'P4' ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400' :
-                                        shift === 'ESTOQUE' ? 'bg-slate-700 text-white shadow-md ring-2 ring-slate-500' :
+                                        shift === 'ESTQ' ? 'bg-slate-700 text-white shadow-md ring-2 ring-slate-500' :
                                         'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700'
                                       }`}
                                     >

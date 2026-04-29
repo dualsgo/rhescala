@@ -1,5 +1,5 @@
 
-export type ShiftType = 'T' | 'P1' | 'P2' | 'P3' | 'P4' | 'ESTOQUE' | 'F' | 'FF' | 'FE' | 'C' | 'DO' | 'N/A' | string; // Trabalho (ou Posição), Folga, Feriado/Folga Especial, Férias, Curso, Day Off (Birthday), Not Available
+export type ShiftType = 'T' | 'P1' | 'P2' | 'P3' | 'P4' | 'ESTQ' | 'F' | 'FF' | 'FE' | 'C' | 'DO' | 'N/A' | string; // Trabalho (ou Posição), Folga, Feriado/Folga Especial, Férias, Curso, Day Off (Birthday), Not Available
 
 export type EmployeeCargo = 'Auxiliar de Loja' | 'Estoquista';
 
@@ -16,7 +16,7 @@ export interface Employee {
   tacticalPositions: Record<string, (string | null)[]>; // Keyed by "YYYY-MM", e.g. 'P1', 'P2'
   workPeriod: string;                      // Default work period
   preferredDayOff: string;                 // e.g. 'Segunda-feira'
-  preferredPosition1?: string;             // e.g. 'P1', 'ESTOQUE'
+  preferredPosition1?: string;             // e.g. 'P1', 'ESTQ'
   preferredPosition2?: string;             // e.g. 'P2'
   shiftName: string;
   vacationStart?: string; // YYYY-MM-DD

@@ -201,7 +201,7 @@ const App: React.FC = () => {
           pos = resolvedPositions[e.id];
         }
       }
-      const posEmoji = pos === 'P1' ? '🟥' : pos === 'P2' ? '🟨' : pos === 'P3' ? '🟩' : pos === 'P4' ? '🟦' : pos === 'ESTOQUE' ? '📦' : '🔹';
+      const posEmoji = pos === 'P1' ? '🟥' : pos === 'P2' ? '🟨' : pos === 'P3' ? '🟩' : pos === 'P4' ? '🟦' : pos === 'ESTQ' ? '📦' : '🔹';
 
       
       if (!groups[hour]) groups[hour] = [];

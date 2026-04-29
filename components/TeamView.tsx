@@ -255,7 +255,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                       className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
                     >
                       <option value="">Nenhuma</option>
-                      {['P1', 'P2', 'P3', 'P4', 'ESTOQUE'].map(p => (
+                      {['P1', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
                         <option key={p} value={p}>{p}</option>
                       ))}
                     </select>
@@ -268,7 +268,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                       className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
                     >
                       <option value="">Nenhuma</option>
-                      {['P1', 'P2', 'P3', 'P4', 'ESTOQUE'].map(p => (
+                      {['P1', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
                         <option key={p} value={p}>{p}</option>
                       ))}
                     </select>

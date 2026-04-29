@@ -21,7 +21,7 @@ const WEEKDAY_NAMES = [
 export function isWorkingShift(s: string | undefined): boolean {
     if (!s) return false;
     if (s === 'T') return true;
-    if (['P1', 'P2', 'P3', 'P4', 'ESTOQUE'].includes(s)) return true;
+    if (['P1', 'P2', 'P3', 'P4', 'ESTQ'].includes(s)) return true;
     return false;
 }
 
@@ -926,7 +926,7 @@ export function resolveTacticalDay(
         groups[classification].push(e);
     });
 
-    const POSITIONS = ['P1', 'P2', 'P3', 'P4', 'ESTOQUE'];
+    const POSITIONS = ['P1', 'P2', 'P3', 'P4', 'ESTQ'];
 
     // Process each classification group (Abertura, Intermediário, Fechamento)
     // Sorting groups ensures Abertura is processed first if needed
