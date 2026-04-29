@@ -94,6 +94,47 @@ const App: React.FC = () => {
     document.documentElement.classList.toggle('dark', isDarkMode);
   }, [isDarkMode]);
 
+  // Migration: Abbreviate ESTOQUE to ESTQ in existing data
+  React.useEffect(() => {
+    let changed = false;
+    const newEmps = employees.map(emp => {
+      let empChanged = false;
+      const newTactical = { ...emp.tacticalPositions };
+      Object.keys(newTactical).forEach(key => {
+        const row = newTactical[key];
+        if (row && row.includes('ESTOQUE')) {
+          newTactical[key] = row.map(v => v === 'ESTOQUE' ? 'ESTQ' : v);
+          empChanged = true;
+        }
+      });
+
+      const newShifts = { ...emp.shifts };
+      Object.keys(newShifts).forEach(key => {
+        const row = newShifts[key];
+        if (row && row.includes('ESTOQUE')) {
+          newShifts[key] = row.map(v => v === 'ESTOQUE' ? 'ESTQ' : v);
+          empChanged = true;
+        }
+      });
+
+      let pref1 = emp.preferredPosition1;
+      if (pref1 === 'ESTOQUE') { pref1 = 'ESTQ'; empChanged = true; }
+      
+      let pref2 = emp.preferredPosition2;
+      if (pref2 === 'ESTOQUE') { pref2 = 'ESTQ'; empChanged = true; }
+
+      if (empChanged) {
+        changed = true;
+        return { ...emp, tacticalPositions: newTactical, shifts: newShifts, preferredPosition1: pref1, preferredPosition2: pref2 };
+      }
+      return emp;
+    });
+
+    if (changed) {
+      setEmployees(newEmps);
+    }
+  }, [employees, setEmployees]);
+
   const onUpdateEmployeeDailyHour = useCallback((empId: string, dayIdx: number, newHour: string) => {
     setEmployees(prev => prev.map(emp => {
       if (emp.id !== empId) return emp;

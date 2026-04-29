@@ -186,6 +186,7 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-amber-400 border border-black"></div><span>P2 (Porta/Entrada)</span></div>
                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-green-400 border border-black"></div><span>P3 (Salão)</span></div>
                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-blue-400 border border-black"></div><span>P4 (Flexível)</span></div>
+                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-slate-400 border border-black"></div><span>ESTQ (Estoque)</span></div>
                  </div>
                </div>
                <div className="text-[7.5px] font-black italic border border-black p-1 bg-gray-100 flex-1 flex items-center justify-center text-center leading-tight">
