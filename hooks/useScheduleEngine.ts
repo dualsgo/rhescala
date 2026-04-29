@@ -952,9 +952,7 @@ export function resolveTacticalDay(
 
         // 2. Mandatory Fill: P1 (Caixa)
         if (!takenPositions.has('P1')) {
-            // Try to find someone who prefers P1
-            const prefersP1 = autoMembers.find(m => !result[m.id] && (m.preferredPosition1 === 'P1' || m.preferredPosition2 === 'P1'));
-            const candidate = prefersP1 || autoMembers.find(m => !result[m.id]);
+            const candidate = autoMembers.find(m => !result[m.id] && (m.preferredPosition1 === 'P1' || m.preferredPosition2 === 'P1')) || autoMembers.find(m => !result[m.id]);
             if (candidate) {
                 result[candidate.id] = 'P1';
                 takenPositions.add('P1');
@@ -963,36 +961,56 @@ export function resolveTacticalDay(
 
         // 3. Mandatory Fill: P2 (Porta)
         if (!takenPositions.has('P2')) {
-            // Try to find someone who prefers P2
-            const prefersP2 = autoMembers.find(m => !result[m.id] && (m.preferredPosition1 === 'P2' || m.preferredPosition2 === 'P2'));
-            const candidate = prefersP2 || autoMembers.find(m => !result[m.id]);
+            const candidate = autoMembers.find(m => !result[m.id] && (m.preferredPosition1 === 'P2' || m.preferredPosition2 === 'P2')) || autoMembers.find(m => !result[m.id]);
             if (candidate) {
                 result[candidate.id] = 'P2';
                 takenPositions.add('P2');
             }
         }
 
-        // 4. Preferences for the rest
+        // 4. Preferences for the rest (P3, P4, ESTQ)
         autoMembers.filter(m => !result[m.id]).forEach(m => {
             let assigned = false;
-            if (m.preferredPosition1 && !takenPositions.has(m.preferredPosition1)) {
-                // For P3/P4 we allow multiples, so we don't strictly "block" the position in takenPositions
-                // unless it's P1 or P2 (which are already handled)
-                result[m.id] = m.preferredPosition1;
-                assigned = true;
-            } else if (m.preferredPosition2 && !takenPositions.has(m.preferredPosition2)) {
-                result[m.id] = m.preferredPosition2;
-                assigned = true;
+            // Check Preferred 1
+            if (m.preferredPosition1 && POSITIONS.includes(m.preferredPosition1)) {
+                // If it's P1 or P2, only assign if not taken. If P3, P4, ESTQ, assign anyway (multiples allowed)
+                if (['P1', 'P2'].includes(m.preferredPosition1)) {
+                    if (!takenPositions.has(m.preferredPosition1)) {
+                        result[m.id] = m.preferredPosition1;
+                        takenPositions.add(m.preferredPosition1);
+                        assigned = true;
+                    }
+                } else {
+                    result[m.id] = m.preferredPosition1;
+                    assigned = true;
+                }
+            }
+            
+            // Check Preferred 2
+            if (!assigned && m.preferredPosition2 && POSITIONS.includes(m.preferredPosition2)) {
+                if (['P1', 'P2'].includes(m.preferredPosition2)) {
+                    if (!takenPositions.has(m.preferredPosition2)) {
+                        result[m.id] = m.preferredPosition2;
+                        takenPositions.add(m.preferredPosition2);
+                        assigned = true;
+                    }
+                } else {
+                    result[m.id] = m.preferredPosition2;
+                    assigned = true;
+                }
             }
 
             if (!assigned) {
-                // 5. Final Auto-Fill (P3, P3, P4...)
+                // 5. Final Auto-Fill fallback
+                // Order: P3 (max 2), P4 (max 2), ESTQ (max 1), then P3 again...
                 const p3Count = Object.values(result).filter(v => v === 'P3').length;
-                if (p3Count < 2) {
-                    result[m.id] = 'P3';
-                } else {
-                    result[m.id] = 'P4';
-                }
+                const p4Count = Object.values(result).filter(v => v === 'P4').length;
+                const estqCount = Object.values(result).filter(v => v === 'ESTQ').length;
+
+                if (p3Count < 2) result[m.id] = 'P3';
+                else if (p4Count < 2) result[m.id] = 'P4';
+                else if (estqCount < 1) result[m.id] = 'ESTQ';
+                else result[m.id] = 'P3'; // Loop back to P3
             }
         });
     });

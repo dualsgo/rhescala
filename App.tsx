@@ -145,13 +145,51 @@ const App: React.FC = () => {
   }, [monthKey, setEmployees]);
 
   const onUpdateTacticalPosition = useCallback((empId: string, dayIdx: number, newPos: string | null) => {
-    setEmployees(prev => prev.map(emp => {
-      if (emp.id !== empId) return emp;
-      const positions = [...(emp.tacticalPositions?.[monthKey] || [])];
-      positions[dayIdx] = newPos;
-      return { ...emp, tacticalPositions: { ...emp.tacticalPositions, [monthKey]: positions } };
-    }));
-  }, [monthKey, setEmployees]);
+    setEmployees(prev => {
+      const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+      const activeEmps = prev.filter(e => !e.isHidden && e.status === 'active');
+      
+      // 1. Identify target employee and their group
+      const targetEmp = prev.find(e => e.id === empId);
+      if (!targetEmp) return prev;
+      
+      const targetHour = targetEmp.dailyHours[monthKey]?.[dayIdx] || targetEmp.workPeriod;
+      const date = new Date(currentMY.year, currentMY.month, dayIdx + 1);
+      const isSunday = date.getDay() === 0;
+      const targetGroup = getShiftClassification(targetHour, isSunday);
+
+      // 2. Get current resolved positions for this group
+      const isHoliday = buildHolidaySet(currentMY.year, customHolidays).has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`);
+      const resolved = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday);
+      
+      const oldPos = targetEmp.tacticalPositions?.[monthKey]?.[dayIdx] || resolved[empId];
+
+      return prev.map(emp => {
+        // If it's the employee we are editing
+        if (emp.id === empId) {
+          const positions = [...(emp.tacticalPositions?.[monthKey] || [])];
+          positions[dayIdx] = newPos;
+          return { ...emp, tacticalPositions: { ...emp.tacticalPositions, [monthKey]: positions } };
+        }
+
+        // If it's another employee, check if they are in the same group and had the 'newPos'
+        const empHour = emp.dailyHours[monthKey]?.[dayIdx] || emp.workPeriod;
+        const empGroup = getShiftClassification(empHour, isSunday);
+        
+        if (empGroup === targetGroup && newPos !== 'AUTO') {
+          const empCurrentPos = emp.tacticalPositions?.[monthKey]?.[dayIdx] || resolved[emp.id];
+          if (empCurrentPos === newPos) {
+            // Swap: Give them the old position of the target employee
+            const positions = [...(emp.tacticalPositions?.[monthKey] || [])];
+            positions[dayIdx] = oldPos;
+            return { ...emp, tacticalPositions: { ...emp.tacticalPositions, [monthKey]: positions } };
+          }
+        }
+
+        return emp;
+      });
+    });
+  }, [currentMY, customHolidays]);
 
   const handleApplyFolgas = (targetMY = currentMY, targetKey = monthKey) => {
     setEmployees(prev => prev.map(emp => {
@@ -356,6 +394,17 @@ const App: React.FC = () => {
 
       <main className="max-w-[1600px] mx-auto p-4 animate-fade-in">
         {(() => {
+          const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
+          const isHoliday = buildHolidaySet(currentMY.year, customHolidays).has(dateStr);
+          const isSunday = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1).getDay() === 0;
+          const selectedDayResolvedPositions = resolveTacticalDay(
+            employees.filter(e => !e.isHidden && e.status === 'active'),
+            monthKey,
+            selectedDayIdx,
+            isHoliday,
+            isSunday
+          );
+
           switch (currentView) {
             case 'grid':
               return (
@@ -371,6 +420,7 @@ const App: React.FC = () => {
                   isEditable={isEditable}
                   allowRetroactive={allowRetroactive}
                   showNotes={showNotes}
+                  resolvedPositions={selectedDayResolvedPositions}
                   onSelectDay={setSelectedDayIdx}
                   onUpdateShift={(empId, d, s) => {
                     if (isReadOnly) return;

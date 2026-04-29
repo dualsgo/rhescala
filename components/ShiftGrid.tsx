@@ -36,6 +36,7 @@ interface ShiftGridProps {
   isEditable: boolean;
   allowRetroactive: boolean;
   showNotes: boolean;
+  resolvedPositions: Record<string, string>;
 }
 
 export const ShiftGrid: React.FC<ShiftGridProps> = ({
@@ -66,6 +67,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   isEditable,
   allowRetroactive,
   showNotes,
+  resolvedPositions,
 }) => {
   const { showDialog } = useDialog();
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
@@ -262,9 +264,31 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                 className="w-full bg-transparent border-none p-0 text-[11px] font-black text-slate-900 dark:text-slate-100 focus:ring-0 uppercase"
                               >
                                 <option value="AUTO">AUTO 🤖</option>
-                                {['P1 🟥', 'P2 🟨', 'P3 🟩', 'P4 🟦', 'ESTQ 📦'].map(p => (
-                                  <option key={p} value={p.split(' ')[0]}>{p}</option>
-                                ))}
+                                {(() => {
+                                  const empHour = emp.dailyHours[monthKey]?.[selectedDayIdx] || emp.workPeriod;
+                                  const isSun = days[selectedDayIdx]?.isSunday;
+                                  const group = getShiftClassification(empHour, isSun);
+
+                                  // Find all positions assigned to this group
+                                  const groupPositions = employees
+                                    .filter(e => !e.isHidden && e.status === 'active')
+                                    .filter(e => {
+                                      const eHour = e.dailyHours[monthKey]?.[selectedDayIdx] || e.workPeriod;
+                                      return getShiftClassification(eHour, isSun) === group;
+                                    })
+                                    .map(e => e.tacticalPositions?.[monthKey]?.[selectedDayIdx] || resolvedPositions[e.id])
+                                    .filter(Boolean);
+
+                                  const uniquePositions = [...new Set(groupPositions)].sort();
+                                  const labels: Record<string, string> = { 'P1': 'P1 🟥', 'P2': 'P2 🟨', 'P3': 'P3 🟩', 'P4': 'P4 🟦', 'ESTQ': 'ESTQ 📦' };
+                                  
+                                  // Fallback: if no positions resolved yet or just AUTO, show all
+                                  const finalPositions = uniquePositions.length > 0 ? uniquePositions : ['P1', 'P2', 'P3', 'P4', 'ESTQ'];
+
+                                  return finalPositions.map(p => (
+                                    <option key={p} value={p}>{labels[p] || p}</option>
+                                  ));
+                                })()}
                               </select>
                             </td>
 
