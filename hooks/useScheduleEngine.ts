@@ -940,6 +940,7 @@ export function resolveTacticalDay(
         const takenPositions = new Set<string>();
         const autoMembers: Employee[] = [];
 
+        // 1. Manual Assignments (Tactical overrides)
         members.forEach(m => {
             const pos = m.tacticalPositions?.[monthKey]?.[dayIdx];
             if (pos && pos !== 'AUTO') {
@@ -950,37 +951,53 @@ export function resolveTacticalDay(
             }
         });
 
-        // 2. Mandatory Fill: P1 (Caixa)
-        if (!takenPositions.has('P1')) {
-            const candidate = autoMembers.find(m => !result[m.id] && (m.preferredPosition1 === 'P1' || m.preferredPosition2 === 'P1')) || autoMembers.find(m => !result[m.id]);
-            if (candidate) {
-                result[candidate.id] = 'P1';
-                takenPositions.add('P1');
-            }
+        // Randomize the pool for "aleatorio" fallback behavior
+        for (let i = autoMembers.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [autoMembers[i], autoMembers[j]] = [autoMembers[j], autoMembers[i]];
         }
 
-        // 3. Mandatory Fill: P2 (Porta)
-        if (!takenPositions.has('P2')) {
-            const candidate = autoMembers.find(m => !result[m.id] && (m.preferredPosition1 === 'P2' || m.preferredPosition2 === 'P2')) || autoMembers.find(m => !result[m.id]);
-            if (candidate) {
-                result[candidate.id] = 'P2';
-                takenPositions.add('P2');
-            }
-        }
+        // 2. Define Hierarchy for Mandatory Positions (P1 and P2)
+        const mandatoryToFill = ['P1', 'P2'];
+        
+        mandatoryToFill.forEach(pos => {
+            if (!takenPositions.has(pos)) {
+                // Priority A: People with Primary Preference for this position
+                let candidate = autoMembers.find(m => !result[m.id] && m.preferredPosition1 === pos);
+                
+                // Priority B: People with Secondary Preference for this position
+                if (!candidate) {
+                    candidate = autoMembers.find(m => !result[m.id] && m.preferredPosition2 === pos);
+                }
+                
+                // Priority C: Necessity (pick someone who doesn't have a preference for other mandatory positions first)
+                if (!candidate) {
+                    // Try to avoid picking someone who prefers another mandatory position that isn't filled yet
+                    const otherMandatory = mandatoryToFill.filter(p => p !== pos && !takenPositions.has(p));
+                    candidate = autoMembers.find(m => 
+                        !result[m.id] && 
+                        !otherMandatory.includes(m.preferredPosition1 || '') && 
+                        !otherMandatory.includes(m.preferredPosition2 || '')
+                    ) || autoMembers.find(m => !result[m.id]);
+                }
 
-        // 4. Preferences for the rest (P3, P4, ESTQ)
+                if (candidate) {
+                    result[candidate.id] = pos;
+                    takenPositions.add(pos);
+                }
+            }
+        });
+
+        // 3. Preferences for the rest (P3, P4, ESTQ)
+        // For remaining staff, try to satisfy preferences, else auto-fill
         autoMembers.filter(m => !result[m.id]).forEach(m => {
             let assigned = false;
+            
             // Check Preferred 1
             if (m.preferredPosition1 && POSITIONS.includes(m.preferredPosition1)) {
-                // If it's P1 or P2, only assign if not taken. If P3, P4, ESTQ, assign anyway (multiples allowed)
-                if (['P1', 'P2'].includes(m.preferredPosition1)) {
-                    if (!takenPositions.has(m.preferredPosition1)) {
-                        result[m.id] = m.preferredPosition1;
-                        takenPositions.add(m.preferredPosition1);
-                        assigned = true;
-                    }
-                } else {
+                // P1 and P2 are already filled or couldn't be filled by this person in step 2
+                // If they prefer P3, P4 or ESTQ, let them have it (multiples allowed)
+                if (!['P1', 'P2'].includes(m.preferredPosition1)) {
                     result[m.id] = m.preferredPosition1;
                     assigned = true;
                 }
@@ -988,20 +1005,14 @@ export function resolveTacticalDay(
             
             // Check Preferred 2
             if (!assigned && m.preferredPosition2 && POSITIONS.includes(m.preferredPosition2)) {
-                if (['P1', 'P2'].includes(m.preferredPosition2)) {
-                    if (!takenPositions.has(m.preferredPosition2)) {
-                        result[m.id] = m.preferredPosition2;
-                        takenPositions.add(m.preferredPosition2);
-                        assigned = true;
-                    }
-                } else {
+                if (!['P1', 'P2'].includes(m.preferredPosition2)) {
                     result[m.id] = m.preferredPosition2;
                     assigned = true;
                 }
             }
 
+            // 4. Final Auto-Fill fallback (Random/Balanced)
             if (!assigned) {
-                // 5. Final Auto-Fill fallback
                 // Order: P3 (max 2), P4 (max 2), ESTQ (max 1), then P3 again...
                 const p3Count = Object.values(result).filter(v => v === 'P3').length;
                 const p4Count = Object.values(result).filter(v => v === 'P4').length;
@@ -1010,7 +1021,7 @@ export function resolveTacticalDay(
                 if (p3Count < 2) result[m.id] = 'P3';
                 else if (p4Count < 2) result[m.id] = 'P4';
                 else if (estqCount < 1) result[m.id] = 'ESTQ';
-                else result[m.id] = 'P3'; // Loop back to P3
+                else result[m.id] = 'P3'; 
             }
         });
     });
