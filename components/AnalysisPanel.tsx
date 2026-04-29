@@ -315,6 +315,11 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
 
                     <div className="flex-1">
                         <div id="individual-calendar-capture" className="bg-white p-4 rounded-3xl">
+                          <div className="mb-4 text-center border-b border-slate-100 pb-4">
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Escala Individual</p>
+                              <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">{selectedEmployee?.name}</h3>
+                              <p className="text-[9px] font-bold text-slate-400 uppercase">{(currentMY.month + 1).toString().padStart(2, '0')}/{currentMY.year}</p>
+                          </div>
                         {selectedEmployee && (
                             <IndividualWeeklyCalendar 
                                 employee={selectedEmployee.emp} 
@@ -805,6 +810,11 @@ const IndividualEditModal: React.FC<IndividualEditModalProps> = ({
 
         <div className="flex-1 overflow-y-auto p-6 bg-slate-50/40  custom-scrollbar">
           <div id="modal-calendar-capture" className="bg-white p-6 rounded-3xl">
+            <div className="mb-6 text-center border-b border-slate-100 pb-4">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Escala Individual</p>
+                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">{employee.name}</h3>
+                <p className="text-[9px] font-bold text-slate-400 uppercase">{MONTH_NAMES[currentMY.month]} {currentMY.year}</p>
+            </div>
           <div className="grid grid-cols-7 gap-1.5 mb-2">
             {WEEKDAY_NAMES.map(wd => (
               <div key={wd} className="text-center text-[9px] font-black text-slate-400  uppercase">{wd.substring(0,3)}</div>
