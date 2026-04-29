@@ -23,7 +23,9 @@ interface HeaderProps {
   onCreateMonth: () => void;
   onApplyFolgas: () => void;
   onSortearDomingo: () => void;
+  onDistributePositions: () => void;
   showNotes: boolean;
+
   onToggleNotes: () => void;
   canGoNext: boolean;
   sundayViolations: { empName: string, date: string }[];
@@ -48,7 +50,9 @@ export const Header: React.FC<HeaderProps> = ({
   onCreateMonth,
   onApplyFolgas,
   onSortearDomingo,
+  onDistributePositions,
   showNotes,
+
   onToggleNotes,
   canGoNext,
   sundayViolations,
@@ -216,6 +220,13 @@ export const Header: React.FC<HeaderProps> = ({
                   >
                     <Icon name="casino" className="text-lg" /> Sortear Domingos
                   </button>
+                  <button 
+                    onClick={() => { onDistributePositions(); setShowEditMenu(false); }} 
+                    className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all text-left"
+                  >
+                    <Icon name="strategy" className="text-lg" /> Distribuir Posições
+                  </button>
+
                   <div className="h-px bg-slate-100 dark:bg-slate-800 mx-2" />
                   <div className="flex items-center justify-between p-2.5">
                     <span className="text-[9px] font-black text-slate-400 uppercase">Modo Retroativo</span>

@@ -2,7 +2,8 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
-import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification, findSundayViolations, isWorkingShift } from './hooks/useScheduleEngine';
+import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification, findSundayViolations, isWorkingShift, distributeTacticalPositions } from './hooks/useScheduleEngine';
+
 
 import { Header } from './components/Header';
 import { toPng } from 'html-to-image';
@@ -255,6 +256,29 @@ const App: React.FC = () => {
     }, 200);
   };
 
+  const handleDistributePositions = () => {
+    showDialog({
+      title: 'Distribuir Posições',
+      message: 'Deseja substituir turnos "T" por posições táticas (P1-P4) para este mês? Suas folgas não serão alteradas.',
+      type: 'confirm'
+    }).then(ok => {
+      if (ok) {
+        const updatedShifts = distributeTacticalPositions(employees, currentMY, customHolidays);
+        setEmployees(prev => prev.map(emp => {
+          if (updatedShifts[emp.id]) {
+            return {
+              ...emp,
+              shifts: { ...emp.shifts, [monthKey]: updatedShifts[emp.id].shifts }
+            };
+          }
+          return emp;
+        }));
+        showDialog({ title: 'Sucesso', message: 'Posições distribuídas com sucesso!', type: 'info' });
+      }
+    });
+  };
+
+
   if (!auth.isAuthenticated) {
     return <Login onLogin={(role) => setAuth({ isAuthenticated: true, role })} />;
   }
@@ -281,9 +305,12 @@ const App: React.FC = () => {
               onCreateMonth={handleCreateMonth}
               onApplyFolgas={handleApplyFolgas}
               onSortearDomingo={handleSortearDomingo}
+              onDistributePositions={handleDistributePositions}
+              showNotes={showNotes}
               onToggleNotes={() => setShowNotes(!showNotes)}
               canGoNext={canGoNext}
               sundayViolations={sundayViolations}
+
             />
 
       <main className="max-w-[1600px] mx-auto p-4 animate-fade-in">

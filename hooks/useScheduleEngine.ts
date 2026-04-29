@@ -839,7 +839,46 @@ export function applyMonthUpdate(
     return result;
 }
 
+export function distributeTacticalPositions(
+    employees: Employee[],
+    currentMY: MonthYear,
+    customHolidays: Holiday[]
+): Record<string, { shifts: ShiftType[] }> {
+    const { year, month } = currentMY;
+    const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const holidaySet = buildHolidaySet(year, customHolidays);
+
+    const activeRegular = employees.filter(e => e.status === 'active' && !e.isHidden);
+    const result: Record<string, { shifts: ShiftType[] }> = {};
+    
+    // Initialize with current shifts
+    activeRegular.forEach(emp => {
+        result[emp.id] = { 
+            shifts: [...(emp.shifts[monthKey] || Array(daysInMonth).fill('T'))]
+        };
+    });
+
+    for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+        const isHoliday = holidaySet.has(dateStr);
+        const isSunday = new Date(year, month, dayIdx + 1).getDay() === 0;
+
+        const positions = resolveTacticalDay(activeRegular, monthKey, dayIdx, isHoliday, isSunday);
+        
+        activeRegular.forEach(emp => {
+            // ONLY replace 'T'. If it's already a position or a leave, don't touch it.
+            if (result[emp.id].shifts[dayIdx] === 'T' && positions[emp.id]) {
+                result[emp.id].shifts[dayIdx] = positions[emp.id] as ShiftType;
+            }
+        });
+    }
+
+    return result;
+}
+
 export function getShiftClassification(hourRange: string, isSunday?: boolean): 'Abertura' | 'Intermediário' | 'Fechamento' | 'N/A' {
+
     if (!hourRange || hourRange === 'OFF' || hourRange === 'FOLGA') return 'N/A';
     
     // Apprentice is always considered 'Abertura' for positioning purposes
