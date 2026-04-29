@@ -867,8 +867,10 @@ export function distributeTacticalPositions(
         const positions = resolveTacticalDay(activeRegular, monthKey, dayIdx, isHoliday, isSunday);
         
         activeRegular.forEach(emp => {
-            // ONLY replace 'T'. If it's already a position or a leave, don't touch it.
-            if (result[emp.id].shifts[dayIdx] === 'T' && positions[emp.id]) {
+            const currentShift = result[emp.id].shifts[dayIdx];
+            // Now allows replacing any working shift (T, P1, P2, P3, P4, ESTQ) 
+            // to ensure changes in cargo/preferences are fully applied.
+            if (isWorkingShift(currentShift) && positions[emp.id]) {
                 result[emp.id].shifts[dayIdx] = positions[emp.id] as ShiftType;
             }
         });
