@@ -364,7 +364,7 @@ const App: React.FC = () => {
 
   return (
     <>
-      <div className={`min-h-screen ${isDarkMode ? 'dark bg-slate-950' : 'bg-slate-50'} transition-colors font-sans print:hidden`}>
+      <div className={`h-screen flex flex-col overflow-hidden ${isDarkMode ? 'dark bg-slate-950' : 'bg-slate-50'} transition-colors font-sans print:hidden`}>
         <Header 
               currentView={currentView}
               currentMY={currentMY}
@@ -392,7 +392,7 @@ const App: React.FC = () => {
 
             />
 
-      <main className="max-w-[1600px] mx-auto p-4 animate-fade-in">
+      <main className="flex-1 overflow-hidden p-4">
         {(() => {
           const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
           const isHoliday = buildHolidaySet(currentMY.year, customHolidays).has(dateStr);

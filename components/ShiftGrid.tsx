@@ -106,21 +106,21 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   }, [days, filter]);
 
   return (
-    <div className="flex flex-col gap-4 relative">
+    <div className="flex flex-col gap-4 relative h-full">
 
       {/* Grid Container */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
-        <div className="overflow-x-auto custom-scrollbar max-h-[calc(100vh-250px)]">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden flex-1 flex flex-col">
+        <div className="overflow-auto custom-scrollbar flex-1">
           <table className="w-full border-separate border-spacing-0">
             <thead className="sticky top-0 z-40 bg-slate-50 dark:bg-slate-800">
               <tr className="bg-slate-50 dark:bg-slate-800/50">
-                <th className="sticky left-0 z-[50] bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[180px] w-[180px]">
+                <th className="sticky left-0 z-[50] bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 py-2 px-4 text-left min-w-[180px] w-[180px]">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</span>
                 </th>
-                <th className="sticky left-[180px] z-[50] bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[125px] w-[125px]">
+                <th className="sticky left-[180px] z-[50] bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 py-2 px-4 text-left min-w-[125px] w-[125px]">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horário</span>
                 </th>
-                <th className="sticky left-[305px] z-[50] bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 p-4 text-left min-w-[100px] w-[100px]">
+                <th className="sticky left-[305px] z-[50] bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 py-2 px-4 text-left min-w-[100px] w-[100px]">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Posição</span>
                 </th>
                 {filteredDays.map(d => {
@@ -198,12 +198,12 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     <React.Fragment key={groupName}>
                       {/* Group Header Row */}
                       <tr className="bg-slate-100/90 dark:bg-slate-800/90 backdrop-blur-md sticky z-20">
-                        <td className="sticky left-0 p-2 font-black text-[11px] uppercase text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]">
+                        <td className="sticky left-0 py-1.5 px-2 font-black text-[10px] uppercase text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]">
                           {groupName}
                         </td>
                         <td className="sticky left-[180px] border-r border-slate-200 dark:border-slate-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]" />
                         <td className="sticky left-[305px] border-r border-slate-200 dark:border-slate-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]" />
-                        <td colSpan={filteredDays.length} className="bg-inherit h-9" />
+                        <td colSpan={filteredDays.length} className="bg-inherit h-7" />
                       </tr>
 
                       {/* Employee Rows */}
@@ -211,7 +211,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                         return (
                           <tr key={emp.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group/row">
                             {/* Name & Position */}
-                            <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-2 min-w-[180px] w-[180px]">
+                            <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 py-1.5 px-2 min-w-[180px] w-[180px]">
                               <div className="flex items-center gap-2">
                                 <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
                                   {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
@@ -222,8 +222,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                 </div>
                               </div>
                             </td>
-                            {/* Hours Select */}
-                            <td className="sticky left-[180px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-2 min-w-[125px] w-[125px]">
+                             {/* Hours Select */}
+                            <td className="sticky left-[180px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 py-1 px-2 min-w-[125px] w-[125px]">
                               <select
                                 value={emp.dailyHours[monthKey]?.[selectedDayIdx] || ''}
                                 onChange={(e) => onUpdateEmployeeDailyHour(emp.id, selectedDayIdx, e.target.value)}
@@ -257,7 +257,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               </select>
                             </td>
                             {/* Tactical Select */}
-                            <td className="sticky left-[305px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 p-2 min-w-[100px] w-[100px]">
+                            <td className="sticky left-[305px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 py-1 px-2 min-w-[100px] w-[100px]">
                               <select
                                 value={emp.tacticalPositions?.[monthKey]?.[selectedDayIdx] || 'AUTO'}
                                 onChange={(e) => onUpdateTacticalPosition(emp.id, selectedDayIdx, e.target.value)}
@@ -307,7 +307,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const dimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
 
                               return (
-                                <td key={d.num} className={`p-1.5 border-b border-slate-50 dark:border-slate-800 text-center transition-all ${dimClass} ${selectedDayIdx === d.num - 1 ? 'ring-2 ring-inset ring-orange-400/50' : ''} ${hasAlert ? 'ring-2 ring-inset ring-rose-500' : ''}`}>
+                                <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all ${dimClass} ${selectedDayIdx === d.num - 1 ? 'ring-2 ring-inset ring-orange-400/50' : ''} ${hasAlert ? 'ring-2 ring-inset ring-rose-500' : ''}`}>
                                   <div className="relative group flex flex-col items-center gap-1">
                                     <button
                                       onClick={() => onSelectDay(d.num - 1)}
