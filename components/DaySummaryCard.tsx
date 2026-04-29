@@ -3,6 +3,8 @@ import React, { useMemo } from 'react';
 import { Icon } from './Icon';
 import { Employee, MonthYear, Holiday } from '../types';
 import { buildHolidaySet } from '../constants';
+import { isWorkingShift } from '../hooks/useScheduleEngine';
+
 
 interface DaySummaryCardProps {
   employees: Employee[];
@@ -115,7 +117,8 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
 
       const hForDay = (e.dailyHours[monthKey] || [])[selectedDayIdx] || e.workPeriod;
 
-      if (shift === 'T') {
+      if (isWorkingShift(shift)) {
+
         if (e.isYoungApprentice) {
           counts.aprendiz++;
           counts.total++;

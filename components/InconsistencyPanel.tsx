@@ -2,7 +2,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Employee, MonthYear, ShiftType } from '../types';
 import { Icon } from './Icon';
-import { getPrevMonthConsecutive } from '../hooks/useScheduleEngine';
+import { getPrevMonthConsecutive, isWorkingShift } from '../hooks/useScheduleEngine';
+
 
 interface InconsistencyPanelProps {
   employees:      Employee[];
@@ -35,10 +36,11 @@ interface Inconsistency {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// 'T' e 'C' (Curso) contam como atividade que impede a folga (regra 6x1).
-// Mas apenas 'T' conta como presença física na loja para cobertura.
-const isActivityShift = (s: ShiftType | undefined): boolean => s === 'T' || s === 'C';
-const isStorePresence = (s: ShiftType | undefined): boolean => s === 'T';
+// 'T', Posições (P1-P4) e 'C' (Curso) contam como atividade que impede a folga (regra 6x1).
+// Mas apenas 'T' e Posições contam como presença física na loja para cobertura.
+const isActivityShift = (s: ShiftType | undefined): boolean => isWorkingShift(s) || s === 'C';
+const isStorePresence = (s: ShiftType | undefined): boolean => isWorkingShift(s);
+
 
 function getEffectiveShift(emp: Employee, year: number, month: number, dayIdx: number): ShiftType {
     const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
@@ -261,8 +263,9 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
       // Count CLTs working TODAY (using the static employees prop as baseline)
       const currentWorkers = employees.filter(e => {
         if (e.isYoungApprentice || e.status !== 'active') return false;
-        return (e.shifts[mKey]?.[dayIdx]) === 'T';
+        return isWorkingShift(e.shifts[mKey]?.[dayIdx]);
       }).length;
+
 
       const alreadyScheduledOff = fixesAppliedPerDay.get(dayIdx) ?? 0;
       

@@ -18,6 +18,14 @@ const WEEKDAY_NAMES = [
     'Quinta-feira', 'Sexta-feira', 'Sábado',
 ];
 
+export function isWorkingShift(s: string | undefined): boolean {
+    if (!s) return false;
+    if (s === 'T') return true;
+    if (['P1', 'P2', 'P3', 'P4', 'ESTOQUE'].includes(s)) return true;
+    return false;
+}
+
+
 // ─── Centralized Sunday unavailability check ──────────────────────────────────
 
 /**
@@ -56,9 +64,10 @@ function isSundayUnavailable(
     if (emp.firedAt && dateStr > emp.firedAt) return true;
     // 5. Existing shift already FE (manually set vacation) or F or FF
     const existing = (emp.shifts[monthKey] ?? [])[dayIdx] as string | undefined;
-    if (existing === 'FE' || existing === 'F' || existing?.startsWith('FF') || existing === 'C') return true;
+    if (existing === 'FE' || existing === 'F' || existing?.startsWith('FF') || existing === 'C' || existing === 'DO') return true;
     return false;
 }
+
 
 // ─── Sunday rotation engine ───────────────────────────────────────────────────
 
@@ -95,9 +104,10 @@ export function getPrevMonthWorkStreak(
             for (let d = daysInPrevMonth - 1; d >= 0; d--) {
                 const s = shifts[d];
                 // Férias (FE) quebras a sequência de trabalho
-                if (s === 'T' || s === 'C') {
+                if (isWorkingShift(s) || s === 'C') {
                     streak++;
                 } else {
+
                     break;
                 }
             }
@@ -136,9 +146,10 @@ export function getPrevMonthConsecutive(
         const prevShifts = emp.shifts[prevMonthKey];
         if (!prevShifts) { result.set(emp.id, 0); continue; }
 
-        const workedLast = prevShifts[prevSundays[0]] === 'T' || prevShifts[prevSundays[0]] === 'FF';
+        const workedLast = isWorkingShift(prevShifts[prevSundays[0]]) || prevShifts[prevSundays[0]] === 'FF';
         const workedSecond = prevSundays.length > 1 &&
-            (prevShifts[prevSundays[1]] === 'T' || prevShifts[prevSundays[1]] === 'FF');
+            (isWorkingShift(prevShifts[prevSundays[1]]) || prevShifts[prevSundays[1]] === 'FF');
+
 
         if (workedLast && workedSecond) {
             result.set(emp.id, 2);
@@ -439,6 +450,33 @@ export function generateYearSchedule(
                     customHolidays
                 );
             });
+
+            // Pass: Tactical Positioning for the whole month
+            for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+                const isHoliday = holidaySet.has(dateStr);
+                const isSunday = new Date(year, month, dayIdx + 1).getDay() === 0;
+
+                const empsForDay = activeRegular.map(emp => ({
+                    ...emp,
+                    shifts: {
+                        ...emp.shifts,
+                        [monthKey]: result[emp.id][monthKey].shifts
+                    },
+                    dailyHours: {
+                        ...emp.dailyHours,
+                        [monthKey]: result[emp.id][monthKey].hours
+                    }
+                }));
+
+                const positions = resolveTacticalDay(empsForDay, monthKey, dayIdx, isHoliday, isSunday);
+                
+                activeRegular.forEach(emp => {
+                    if (result[emp.id][monthKey].shifts[dayIdx] === 'T' && positions[emp.id]) {
+                        result[emp.id][monthKey].shifts[dayIdx] = positions[emp.id] as ShiftType;
+                    }
+                });
+            }
 
             // Generate each apprentice
             activeApprentices.forEach(emp => {
@@ -769,8 +807,38 @@ export function applyMonthUpdate(
         result[emp.id] = { shifts: newShifts, hours: newHours };
     });
 
+    // 3. Pass: Tactical Positioning (New Feature)
+    for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+        const isHoliday = holidaySet.has(dateStr);
+        const isSunday = new Date(year, month, dayIdx + 1).getDay() === 0;
+
+        // Create virtual "active employees" with current pending shifts to resolve positions
+        const empsForDay = activeRegular.map(emp => ({
+            ...emp,
+            shifts: {
+                ...emp.shifts,
+                [monthKey]: result[emp.id].shifts
+            },
+            dailyHours: {
+                ...emp.dailyHours,
+                [monthKey]: result[emp.id].hours
+            }
+        }));
+
+        const positions = resolveTacticalDay(empsForDay, monthKey, dayIdx, isHoliday, isSunday);
+        
+        // Update the shifts in result
+        activeRegular.forEach(emp => {
+            if (result[emp.id].shifts[dayIdx] === 'T' && positions[emp.id]) {
+                result[emp.id].shifts[dayIdx] = positions[emp.id] as ShiftType;
+            }
+        });
+    }
+
     return result;
 }
+
 export function getShiftClassification(hourRange: string, isSunday?: boolean): 'Abertura' | 'Intermediário' | 'Fechamento' | 'N/A' {
     if (!hourRange || hourRange === 'OFF' || hourRange === 'FOLGA') return 'N/A';
     
@@ -808,7 +876,8 @@ export function resolveTacticalDay(
     
     activeEmps.forEach(e => {
         const shift = e.shifts[monthKey]?.[dayIdx] || 'T';
-        if (shift !== 'T' && !shift.startsWith('FF')) return;
+        if (!isWorkingShift(shift) && !shift.startsWith('FF')) return;
+
         
         const hour = e.dailyHours[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
         const classification = getShiftClassification(hour, isSunday);
@@ -924,8 +993,10 @@ export function findSundayViolations(employees: Employee[], currentMY: { month: 
             const shift = emp.shifts[sun.monthKey]?.[sun.dayIdx];
             const currentSunDate = new Date(sun.dateStr + 'T12:00:00');
 
-            if (shift === 'T') {
+            if (isWorkingShift(shift)) {
+
                 if (lastSunDate) {
+
                     const diffDays = Math.round((currentSunDate.getTime() - lastSunDate.getTime()) / (1000 * 3600 * 24));
                     if (diffDays > 7) { 
                         streak = 0; 

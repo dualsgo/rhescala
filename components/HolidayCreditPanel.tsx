@@ -3,6 +3,8 @@ import React, { useMemo, useState } from 'react';
 import { Employee, MonthYear, ShiftType, Holiday } from '../types';
 import { Icon } from './Icon';
 import { buildHolidaySet } from '../constants';
+import { isWorkingShift } from '../hooks/useScheduleEngine';
+
 
 interface HolidayCreditPanelProps {
   employees: Employee[];
@@ -69,8 +71,9 @@ export const HolidayCreditPanel: React.FC<HolidayCreditPanelProps> = ({
             currentShift = 'FE';
         }
 
-        // T e C contam como atividade (ganha crédito se trabalhar no feriado)
-        if (currentShift === 'T' || currentShift === 'C') {
+        // T, Posições e C contam como atividade (ganha crédito se trabalhar no feriado)
+        if (isWorkingShift(currentShift) || currentShift === 'C') {
+
           // Suggest a day off
           let bestDayIdx = -1;
           let maxCoverage = -1;
@@ -105,9 +108,10 @@ export const HolidayCreditPanel: React.FC<HolidayCreditPanelProps> = ({
                 const dateMD = dDateStr.substring(5);
                 if (empMD === dateMD) s = 'F';
               }
-              // Apenas T conta como presença na loja
-              return s === 'T';
+              // T e Posições contam como presença na loja
+              return isWorkingShift(s);
             }).length;
+
 
             if (coverage > maxCoverage) {
               maxCoverage = coverage;

@@ -4,6 +4,8 @@ import { buildHolidaySet, getNationalHolidays } from '../constants';
 import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { Icon } from './Icon';
 import { useDialog } from '../contexts/DialogContext';
+import { isWorkingShift } from '../hooks/useScheduleEngine';
+
 
 interface WorkedHolidaysListProps {
   employees: Employee[];
@@ -41,10 +43,11 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
     
     return employees.filter(emp => {
       const shift = (emp.shifts[targetMonthKey] || [])[dayIdx];
-      // Only count as worked if explicitly 'T' or a non-off shift that exists
-      const hasWorked = shift !== undefined && shift !== null && shift !== '' && !['F', 'FF', 'FE', 'C', 'N/A', 'DO'].includes(shift) && !shift.startsWith('FF');
+      // Only count as worked if it's a working shift (T or P1-P4)
+      const hasWorked = isWorkingShift(shift);
       return hasWorked && !emp.isHidden && emp.status === 'active';
     });
+
   };
 
   const handleCopyPending = () => {

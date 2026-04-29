@@ -2,7 +2,8 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
-import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification, findSundayViolations } from './hooks/useScheduleEngine';
+import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification, findSundayViolations, isWorkingShift } from './hooks/useScheduleEngine';
+
 import { Header } from './components/Header';
 import { toPng } from 'html-to-image';
 
@@ -178,20 +179,29 @@ const App: React.FC = () => {
     
     activeEmps.forEach(e => {
       const shift = e.shifts[monthKey]?.[dayIdx] || 'T';
+
       
       if (shift === 'F' || shift.startsWith('FF')) {
         folgas.push(`${e.name.split(' ')[0]} (${shift})`);
         return;
       }
       
-      if (shift !== 'T') return; // Ignore FE, C, etc.
+      if (!isWorkingShift(shift)) return; // Ignore FE, C, etc.
+
+
 
       const hour = e.dailyHours[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
       let pos = e.tacticalPositions?.[monthKey]?.[dayIdx];
       if (!pos || pos === 'AUTO') {
-        pos = resolvedPositions[e.id];
+        // If the shift itself is a position, use it
+        if (shift !== 'T') {
+          pos = shift;
+        } else {
+          pos = resolvedPositions[e.id];
+        }
       }
       const posEmoji = pos === 'P1' ? '🟥' : pos === 'P2' ? '🟨' : pos === 'P3' ? '🟩' : pos === 'P4' ? '🟦' : pos === 'ESTOQUE' ? '📦' : '🔹';
+
       
       if (!groups[hour]) groups[hour] = [];
       groups[hour].push({ ...e, firstName: e.name.split(' ')[0], posEmoji, pos });

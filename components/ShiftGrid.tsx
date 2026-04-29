@@ -4,7 +4,8 @@ import { useDialog } from '../contexts/DialogContext';
 import { Employee, ShiftType, MonthYear, Holiday } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getDefaultHourForDay } from '../constants';
-import { getShiftClassification } from '../hooks/useScheduleEngine';
+import { getShiftClassification, isWorkingShift } from '../hooks/useScheduleEngine';
+
 import { HolidayCredit } from '../hooks/useHolidayCredits';
 
 interface ShiftGridProps {
@@ -127,13 +128,14 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     const shift = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
                     const hour = (emp.dailyHours[monthKey] || [])[dayIdx] || emp.workPeriod;
                     const shiftClass = getShiftClassification(hour, d.isSunday);
-                    if (shift === 'T' || shift.startsWith('FF')) {
+                    if (isWorkingShift(shift) || shift.startsWith('FF')) {
                       acc.total++;
                       if (shiftClass === 'Abertura') acc.opening++;
                       else if (shiftClass === 'Fechamento') acc.closing++;
                     }
                     return acc;
                   }, { total: 0, opening: 0, closing: 0 });
+
 
                   const isSelected = selectedDayIdx === dayIdx;
                   const todayStr = new Date().toISOString().split('T')[0];
@@ -170,12 +172,13 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 employees.forEach(emp => {
                   if (emp.isHidden || emp.status !== 'active') return;
                   const shift = (emp.shifts[monthKey] || [])[selectedDayIdx] || 'T';
-                  const isOff = shift === 'F' || shift === 'FE' || shift === 'C' || shift.startsWith('FF');
+                  const isOff = !isWorkingShift(shift) && shift !== 'C' && !shift.startsWith('FF');
                   
                   if (isOff) {
                     groups['Folgas/Outros'].push(emp);
                     return;
                   }
+
 
                   const hour = (emp.dailyHours[monthKey] || [])[selectedDayIdx] || emp.workPeriod;
                   const isSun = filteredDays[selectedDayIdx]?.isSunday;
@@ -270,9 +273,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const shift = emp.shifts[monthKey]?.[d.num - 1] || 'T';
                               let streak = 0;
                               for (let i = d.num - 1; i >= 0; i--) {
-                                if (emp.shifts[monthKey]?.[i] === 'T') streak++;
+                                if (isWorkingShift(emp.shifts[monthKey]?.[i])) streak++;
                                 else break;
                               }
+
                               const hasAlert = streak >= 7;
                               const todayStr = new Date().toISOString().split('T')[0];
                               const isPast = d.dateStr < todayStr;
@@ -289,11 +293,17 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                         shift === 'C' ? 'bg-indigo-100 text-indigo-600' :
                                         shift === 'FE' ? 'bg-emerald-100 text-emerald-600' :
                                         shift === 'DO' ? 'bg-fuchsia-600 text-white shadow-md' :
+                                        shift === 'P1' ? 'bg-red-600 text-white shadow-md ring-2 ring-red-400' :
+                                        shift === 'P2' ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300' :
+                                        shift === 'P3' ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400' :
+                                        shift === 'P4' ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400' :
+                                        shift === 'ESTOQUE' ? 'bg-slate-700 text-white shadow-md ring-2 ring-slate-500' :
                                         'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700'
                                       }`}
                                     >
                                       {shift === 'T' ? (d.isSunday ? 'DOM' : 'T') : (shift.startsWith('FF') ? 'FF' : shift)}
                                     </button>
+
                                     
                                     {isEditable && !isReadOnly && (() => {
                                       const pendingCount = (holidayCredits[emp.id] || []).filter(c => c.status === 'pending').length;

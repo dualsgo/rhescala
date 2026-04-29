@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Employee, MonthYear, Holiday, ShiftType } from '../types';
+import { getShiftClassification, isWorkingShift } from '../hooks/useScheduleEngine';
+
 import { Icon } from './Icon';
 import { buildHolidaySet, SHIFT_HOURS } from '../constants';
 import { toPng } from 'html-to-image';
@@ -66,8 +68,9 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
       const activeEmps = employees.filter(e => !e.isHidden && e.status === 'active');
       const working = activeEmps.filter(e => {
         const s = getEffectiveShift(e, d);
-        return s === 'T'; // Somente T conta como presença na LOJA
+        return isWorkingShift(s); // Conta como presença na LOJA
       });
+
 
       const shiftsCount = {
         abertura: working.filter(e => e.shiftName === 'Abertura').length,
@@ -109,8 +112,9 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
         const isSun = dayType === 0;
         const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`);
 
-        if (s === 'T') {
+        if (isWorkingShift(s)) {
           worked++;
+
           currentStreak++;
           if (currentStreak > maxStreak) maxStreak = currentStreak;
           if (currentStreak === 6) fullCycles++;
@@ -531,7 +535,7 @@ const IndividualWeeklyCalendar: React.FC<{
         const dayIdx = i - 1;
         const shift = getEffectiveShift(employee, dayIdx);
         const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-        const isOff = shift !== 'T' && shift !== 'C'; 
+        const isOff = !isWorkingShift(shift) && shift !== 'C'; 
         const isCourse = shift === 'C';
         const isVacation = shift === 'FE';
         const isBirthday = shift === 'DO';
@@ -542,12 +546,14 @@ const IndividualWeeklyCalendar: React.FC<{
 
     const shiftBg = (s: ShiftType) => {
         if (s==='T') return 'bg-indigo-600 border-indigo-700 text-white shadow-sm';
+        if (['P1', 'P2', 'P3', 'P4', 'ESTOQUE'].includes(s as string)) return 'bg-emerald-600 border-emerald-700 text-white shadow-sm';
         if (s==='F') return 'bg-orange-50 border-orange-100 text-orange-600';
         if (s?.startsWith('FF')) return 'bg-red-50 border-red-100 text-red-600';
         if (s==='C') return 'bg-teal-500 border-teal-600 text-white shadow-sm';
         if (s==='FE') return 'bg-indigo-50 border-indigo-200 text-indigo-600';
         if (s==='DO') return 'bg-fuchsia-600 border-fuchsia-700 text-white shadow-sm';
         return 'bg-slate-50 border-slate-100 text-slate-400';
+
     };
 
     return (
@@ -573,8 +579,9 @@ const IndividualWeeklyCalendar: React.FC<{
                         >
                             <span className={`text-[8px] font-black absolute top-1 left-1 ${cell.shift === 'T' || cell.isCourse ? 'text-white/80' : 'text-slate-400'}`}>{cell.day}</span>
                             <span className={`text-[11px] font-black mt-1 ${cell.isOff && !cell.isVacation && !cell.isBirthday ? 'opacity-40' : ''}`}>
-                                {cell.shift === 'T' ? shiftLabel : cell.isCourse ? 'C' : cell.isVacation ? 'FE' : cell.isBirthday ? 'DO' : (cell.shift?.startsWith('FF') ? 'FF' : 'F')}
+                                {isWorkingShift(cell.shift) ? shiftLabel : cell.isCourse ? 'C' : cell.isVacation ? 'FE' : cell.isBirthday ? 'DO' : (cell.shift?.startsWith('FF') ? 'FF' : 'F')}
                             </span>
+
 
                             {canEdit && (
                                 <select
@@ -630,7 +637,8 @@ const TeamMonthlyCalendar: React.FC<{
     const workingDayData = sortedEmployees.map(emp => {
       const shift = getEffectiveShift(emp, i - 1);
       const hours = (emp.dailyHours[monthKey] || [])[i - 1] || emp.workPeriod;
-      const isOff = shift !== 'T' && shift !== 'C';
+      const isOff = !isWorkingShift(shift) && shift !== 'C';
+
       return { 
         name: emp.name.split(' ')[0], 
         shift, 
@@ -737,6 +745,7 @@ const IndividualEditModal: React.FC<IndividualEditModalProps> = ({
 
   const shiftBg = (s: ShiftType) => {
     if (s==='T') return 'bg-sky-600';
+    if (['P1', 'P2', 'P3', 'P4', 'ESTOQUE'].includes(s as string)) return 'bg-emerald-600';
     if (s==='F') return 'bg-orange-500';
     if (s?.startsWith('FF')) return 'bg-red-500';
     if (s==='C') return 'bg-teal-500';
@@ -744,6 +753,7 @@ const IndividualEditModal: React.FC<IndividualEditModalProps> = ({
     if (s==='DO') return 'bg-fuchsia-600';
     return 'bg-slate-300';
   };
+
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
