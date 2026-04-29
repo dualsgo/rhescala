@@ -174,7 +174,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 employees.forEach(emp => {
                   if (emp.isHidden || emp.status !== 'active') return;
                   const shift = (emp.shifts[monthKey] || [])[selectedDayIdx] || 'T';
-                  const isOff = !isWorkingShift(shift) && shift !== 'C' && !shift.startsWith('FF');
+                  const isOff = !isWorkingShift(shift) && shift !== 'C';
                   
                   if (isOff) {
                     groups['Folgas/Outros'].push(emp);
@@ -356,6 +356,12 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                           )}
                                           <option value="FE">Férias (FE)</option>
                                           <option value="C">Curso (C)</option>
+                                          <option disabled>──────</option>
+                                          <option value="P1">Posição P1 🟥</option>
+                                          <option value="P2">Posição P2 🟨</option>
+                                          <option value="P3">Posição P3 🟩</option>
+                                          <option value="P4">Posição P4 🟦</option>
+                                          <option value="ESTQ">Posição ESTQ 📦</option>
                                         </select>
                                       );
                                     })()}
