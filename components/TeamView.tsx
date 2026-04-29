@@ -12,7 +12,7 @@ interface TeamViewProps {
   onAddEmployee: (name: string, isYoung: boolean, courseDay: string, cargo: EmployeeCargo, birthday: string) => void;
 }
 
-const CARGO_OPTIONS: EmployeeCargo[] = ['Auxiliar de Loja', 'Estoquista'];
+const CARGO_OPTIONS: EmployeeCargo[] = ['Atendente', 'Estoquista', 'Aprendiz', 'Fiscal'];
 
 /** Adds `days` calendar days to a YYYY-MM-DD string and returns YYYY-MM-DD */
 function addDays(dateStr: string, days: number): string {
@@ -36,7 +36,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
   const [newName, setNewName] = useState('');
   const [isYoung, setIsYoung] = useState(false);
   const [courseDay, setCourseDay] = useState('Segunda-feira');
-  const [newCargo, setNewCargo] = useState<EmployeeCargo>('Auxiliar de Loja');
+  const [newCargo, setNewCargo] = useState<EmployeeCargo>('Atendente');
   const [newBirthday, setNewBirthday] = useState('');
 
   const { showDialog } = useDialog();
@@ -52,7 +52,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
         onAddEmployee(newName, isYoung, courseDay, newCargo, newBirthday);
         setNewName('');
         setIsYoung(false);
-        setNewCargo('Auxiliar de Loja');
+        setNewCargo('Atendente');
         setNewBirthday('');
         setShowAddModal(false);
       }
@@ -152,7 +152,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                   className="w-full text-base font-black text-slate-900  bg-transparent border-none p-0 focus:ring-0 placeholder-slate-300  uppercase"
                 />
                 <div className="flex items-center gap-2">
-                   <span className="text-[10px] font-bold text-slate-400  uppercase tracking-wider">{emp.cargo || 'Auxiliar de Loja'}</span>
+                   <span className="text-[10px] font-bold text-slate-400  uppercase tracking-wider">{emp.cargo || 'Atendente'}</span>
                    <div className={`w-1.5 h-1.5 rounded-full ${emp.status === 'active' ? 'bg-green-500' : 'bg-slate-400'}`}></div>
                 </div>
               </div>
@@ -233,15 +233,15 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                  </div>
                  <div className="space-y-1">
                     <label className="text-[9px] font-black text-slate-400  uppercase tracking-widest pl-1">Cargo</label>
-                    <select
+                   <select
                       value={emp.cargo}
                       onChange={(e) => onUpdateEmployee(emp.id, { cargo: e.target.value as any })}
                       className="w-full bg-slate-50  border border-slate-100  rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700  focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
                     >
-                      <option value="Auxiliar de Loja">Auxiliar</option>
+                      <option value="Atendente">Atendente</option>
                       <option value="Estoquista">Estoquista</option>
-                      <option value="Operador de Caixa">Operador</option>
-                      <option value="Vendedor">Vendedor</option>
+                      <option value="Aprendiz">Aprendiz</option>
+                      <option value="Fiscal">Fiscal</option>
                     </select>
                  </div>
               </div>

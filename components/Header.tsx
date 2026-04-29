@@ -4,7 +4,7 @@ import { Icon } from './Icon';
 import { MonthYear, SyncStatus } from '../types';
 
 interface HeaderProps {
-  currentView: 'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays';
+  currentView: 'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays' | 'cleaning' | 'activities' | 'routine';
   currentMY: MonthYear;
   filter: 'all' | 'sunday' | 'holiday' | 'week';
   onViewChange: (view: any) => void;
@@ -72,6 +72,9 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'jornada', label: 'Jornada', icon: 'schedule' },
     { id: 'feriados', label: 'Feriados', icon: 'event_busy' },
     { id: 'worked-holidays', label: 'Feriados Trabalhados', icon: 'list_alt' },
+    { id: 'cleaning', label: 'Limpeza Copa', icon: 'cleaning_services' },
+    { id: 'activities', label: 'Atividades', icon: 'assignment_turned_in' },
+    { id: 'routine', label: 'Rotina Diária', icon: 'event_repeat' },
     { id: 'data', label: 'Dados', icon: 'storage' },
   ];
 

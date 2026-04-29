@@ -15,6 +15,9 @@ import { HolidayManager } from './components/HolidayManager';
 import { DaySummaryCard } from './components/DaySummaryCard';
 import { DataManager } from './components/DataManager';
 import { WorkedHolidaysList } from './components/WorkedHolidaysList';
+import { CleaningSchedule } from './components/CleaningSchedule';
+import { EssentialActivities } from './components/EssentialActivities';
+import { DailyRoutine } from './components/DailyRoutine';
 import { Icon } from './components/Icon';
 import { Login } from './components/Login';
 import { PrintableSchedule } from './components/PrintableSchedule';
@@ -30,7 +33,7 @@ const App: React.FC = () => {
   const syncStatus = useSyncStatus();
   const [showHolidayManager, setShowHolidayManager] = useState(false);
   const [showDayDetail, setShowDayDetail] = useState(false);
-  const [currentView, setCurrentView] = useState<'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays'>('grid');
+  const [currentView, setCurrentView] = useState<'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays' | 'cleaning' | 'activities' | 'routine'>('grid');
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
   const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
@@ -538,6 +541,31 @@ const App: React.FC = () => {
                   holidayCredits={holidayCredits}
                   trackingStartDate={trackingStartDate}
                   onUpdateTrackingStartDate={setTrackingStartDate}
+                  onClose={() => setCurrentView('grid')}
+                />
+              );
+            case 'cleaning':
+              return (
+                <CleaningSchedule
+                  employees={employees}
+                  currentMY={currentMY}
+                  customHolidays={customHolidays}
+                  onClose={() => setCurrentView('grid')}
+                />
+              );
+            case 'activities':
+              return (
+                <EssentialActivities
+                  currentMY={currentMY}
+                  customHolidays={customHolidays}
+                  onClose={() => setCurrentView('grid')}
+                />
+              );
+            case 'routine':
+              return (
+                <DailyRoutine
+                  currentMY={currentMY}
+                  customHolidays={customHolidays}
                   onClose={() => setCurrentView('grid')}
                 />
               );

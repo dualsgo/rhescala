@@ -1,13 +1,13 @@
 
 export type ShiftType = 'T' | 'P1' | 'P2' | 'P3' | 'P4' | 'ESTQ' | 'F' | 'FF' | 'FE' | 'C' | 'DO' | 'N/A' | string; // Trabalho (ou Posição), Folga, Feriado/Folga Especial, Férias, Curso, Day Off (Birthday), Not Available
 
-export type EmployeeCargo = 'Auxiliar de Loja' | 'Estoquista';
+export type EmployeeCargo = 'Estoquista' | 'Aprendiz' | 'Fiscal' | 'Atendente';
 
 export interface Employee {
   id: string;
   name: string;
   isYoungApprentice: boolean;
-  cargo?: EmployeeCargo;           // 'Auxiliar de Loja' (padrão) | 'Estoquista'
+  cargo?: EmployeeCargo;           // 'Atendente' (padrão) | 'Estoquista' | 'Aprendiz' | 'Fiscal'
   courseDay?: string; // e.g. 'Segunda-feira'
   status: 'active' | 'inactive';
   statusColor: string;

@@ -951,6 +951,20 @@ export function resolveTacticalDay(
             }
         });
 
+        // 1.5 Default Role Assignments (Estoquista -> ESTQ, Fiscal -> P2)
+        // Only if not already manually assigned and position is available
+        autoMembers.forEach(m => {
+            if (result[m.id]) return;
+
+            if (m.cargo === 'Estoquista' && !takenPositions.has('ESTQ')) {
+                result[m.id] = 'ESTQ';
+                takenPositions.add('ESTQ');
+            } else if (m.cargo === 'Fiscal' && !takenPositions.has('P2')) {
+                result[m.id] = 'P2';
+                takenPositions.add('P2');
+            }
+        });
+
         // Randomize the pool for "aleatorio" fallback behavior
         for (let i = autoMembers.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
