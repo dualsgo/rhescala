@@ -99,7 +99,7 @@ export const EssentialActivities: React.FC<EssentialActivitiesProps> = ({ curren
                 return (
                   <div 
                     key={dayIdx} 
-                    className={`min-h-[400px] rounded-[2.5rem] border-2 p-6 flex flex-col gap-4 transition-all ${
+                    className={`min-h-[400px] rounded-[2.5rem] border-2 p-6 flex flex-col gap-4 transition-all ${}`}
                       isSunday 
                       ? 'bg-rose-50/30 border-rose-100 dark:bg-rose-900/5 dark:border-rose-900/20' 
                       : isSaturday
@@ -109,7 +109,7 @@ export const EssentialActivities: React.FC<EssentialActivitiesProps> = ({ curren
                   >
                     <div className="pb-4 border-b border-slate-100 dark:border-slate-700/50">
                       <p className={`text-xs font-black uppercase tracking-widest ${isSunday ? 'text-rose-500' : 'text-slate-400 dark:text-slate-500'}`}>
-                        {WEEKDAY_NAMES[dayIdx]}
+                        {WEEKDAY_NAMES[dayIdx]`}
                       </p>
                     </div>
 
@@ -118,7 +118,7 @@ export const EssentialActivities: React.FC<EssentialActivitiesProps> = ({ curren
                         <div key={i} className="flex items-start gap-2.5 group">
                           <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${isSunday ? 'bg-rose-400' : 'bg-indigo-400'}`} />
                           <p className="text-[10px] font-black uppercase leading-tight text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 transition-colors">
-                            {act}
+                            {act`}
                           </p>
                         </div>
                       ))}

@@ -300,7 +300,7 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
       {/* Toggle button */}
       <button
         onClick={() => setOpen(o => !o)}
-        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-extrabold transition-all border ${
+        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-extrabold transition-all border ${}`}
           errors.length > 0
             ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100'
             : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
@@ -388,7 +388,7 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
                   >
                     <div className="flex items-start gap-3">
                       {/* Severity icon */}
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${}`}
                         issue.severity === 'error' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
                       }`}>
                         <Icon

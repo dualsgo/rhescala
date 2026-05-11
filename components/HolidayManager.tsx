@@ -134,19 +134,19 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
                 <h5 className="text-[10px] font-black text-slate-400  uppercase tracking-[0.2em]">{monthName}</h5>
                 <div className="grid grid-cols-1 gap-2">
                   {items.map((h: any) => (
-                    <div key={h.id} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                    <div key={h.id} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${}`}
                       h.isPermanent 
                         ? (h.type === 'national' ? 'bg-rose-50/50 border-rose-100' : 'bg-orange-50/50 border-orange-100')
                         : 'bg-white border-slate-100'
                     }`}>
                       <div className="flex items-center gap-4">
                         <div className={`text-lg font-black ${h.type === 'national' ? 'text-rose-600' : h.type === 'state' || h.type === 'municipal' ? 'text-orange-600' : 'text-slate-900'}`}>
-                          {formatDate(h.date)}
+                          {formatDate(h.date)`}
                         </div>
                         <div>
                           <p className="text-xs font-black text-slate-900  uppercase tracking-tight leading-none mb-1">{h.name}</p>
                           <p className={`text-[8px] font-black uppercase tracking-widest ${h.type === 'national' ? 'text-rose-400' : h.type === 'state' || h.type === 'municipal' ? 'text-orange-400' : 'text-slate-400'}`}>
-                            {h.type === 'national' ? '🇧🇷 Feriado Nacional' : h.type === 'state' ? '🏛 Feriado Estadual' : h.type === 'municipal' ? '🏙 Feriado Municipal' : '🏙 Feriado Local'}
+                            {h.type === 'national' ? '🇧🇷 Feriado Nacional' : h.type === 'state' ? '🏛 Feriado Estadual' : h.type === 'municipal' ? '🏙 Feriado Municipal' : '🏙 Feriado Local'`}
                           </p>
                         </div>
                       </div>

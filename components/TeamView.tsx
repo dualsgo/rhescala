@@ -98,7 +98,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                       key={c}
                       type="button"
                       onClick={() => setNewCargo(c)}
-                      className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold border transition-all ${
+                      className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold border transition-all ${}`}
                         newCargo === c
                           ? 'bg-orange-500 text-white border-orange-500 shadow'
                           : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-orange-300'
@@ -137,7 +137,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
         {employees.map(emp => (
           <div key={emp.id} className="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
             {/* Status indicator */}
-            <div className={`absolute top-0 right-0 w-16 h-16 -mr-8 -mt-8 rotate-45 ${emp.status === 'active' ? 'bg-green-500' : 'bg-slate-200'} opacity-10`}></div>
+            <div className={`absolute top-0 right-0 w-16 h-16 -mr-8 -mt-8 rotate-45 ${emp.status === 'active' ? 'bg-green-500' : 'bg-slate-200'} opacity-10`}`}></div>
             
             <div className="flex items-center gap-3 mb-4">
               <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-black text-sm shadow-sm uppercase group-hover:scale-110 transition-transform">
@@ -160,8 +160,8 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
 
             <div className="flex justify-end gap-2 mb-4">
                 <button 
-                  onClick={() => onUpdateEmployee(emp.id, { isHidden: !emp.isHidden })}
-                  className={`w-7 h-7 rounded-lg transition-all flex items-center justify-center border ${
+                  onClick={() => onUpdateEmployee(emp.id, { isHidden: !emp.isHidden `})}
+                  className={`w-7 h-7 rounded-lg transition-all flex items-center justify-center border ${}`}
                     emp.isHidden 
                       ? 'bg-slate-900 text-white border-slate-900' 
                       : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'
@@ -277,7 +277,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
               
               <div className="flex items-center justify-between p-3 bg-slate-50  rounded-xl border border-dashed border-slate-200 ">
                 <div className="flex items-center gap-2">
-                   <div className={`p-1.5 rounded-lg ${emp.isYoungApprentice ? 'bg-sky-100 text-sky-600' : 'bg-slate-200 text-slate-400'}`}>
+                   <div className={`p-1.5 rounded-lg ${emp.isYoungApprentice ? 'bg-sky-100 text-sky-600' : 'bg-slate-200 text-slate-400'`}`}>
                       <Icon name="child_care" className="text-sm" />
                    </div>
                    <div className="flex flex-col">
@@ -298,7 +298,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                   </div>
                   <button
                     onClick={() => onUpdateEmployee(emp.id, { isYoungApprentice: !emp.isYoungApprentice })}
-                    className={`w-8 h-4 rounded-full transition-all relative ${emp.isYoungApprentice ? 'bg-sky-500' : 'bg-slate-300'}`}
+                    className={`w-8 h-4 rounded-full transition-all relative ${emp.isYoungApprentice ? 'bg-sky-500' : 'bg-slate-300'`}`}}
                   >
                     <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${emp.isYoungApprentice ? 'left-4.5' : 'left-0.5'}`}></div>
                   </button>
@@ -309,7 +309,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Férias (Início)</label>
                     <input
                       type="date"
-                      value={emp.vacationStart || ''}
+                      value={emp.vacationStart || ''`}
                       onChange={(e) => handleVacationStart(emp.id, e.target.value, onUpdateEmployee)}
                       className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[11px] font-bold text-slate-700 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
                     />

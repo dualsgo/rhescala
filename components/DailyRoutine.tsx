@@ -101,7 +101,7 @@ export const DailyRoutine: React.FC<DailyRoutineProps> = ({ currentMY, customHol
                 return (
                   <div 
                     key={dayIdx} 
-                    className={`min-h-[450px] rounded-[2.5rem] border-2 p-6 flex flex-col gap-4 transition-all ${
+                    className={`min-h-[450px] rounded-[2.5rem] border-2 p-6 flex flex-col gap-4 transition-all ${}`}
                       isSunday 
                       ? 'bg-rose-50/30 border-rose-100 dark:bg-rose-900/5 dark:border-rose-900/20' 
                       : isMonday
@@ -111,7 +111,7 @@ export const DailyRoutine: React.FC<DailyRoutineProps> = ({ currentMY, customHol
                   >
                     <div className="pb-4 border-b border-slate-100 dark:border-slate-700/50">
                       <p className={`text-xs font-black uppercase tracking-widest ${isSunday ? 'text-rose-500' : 'text-slate-400 dark:text-slate-500'}`}>
-                        {WEEKDAY_NAMES[dayIdx]}
+                        {WEEKDAY_NAMES[dayIdx]`}
                       </p>
                     </div>
 
@@ -122,7 +122,7 @@ export const DailyRoutine: React.FC<DailyRoutineProps> = ({ currentMY, customHol
                           <div key={i} className="flex items-start gap-2 group">
                             <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${isSpecial ? 'bg-amber-500' : 'bg-indigo-400'}`} />
                             <p className={`text-[9.5px] font-black uppercase leading-[1.2] ${isSpecial ? 'text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-300'}`}>
-                              {act}
+                              {act`}
                             </p>
                           </div>
                         );

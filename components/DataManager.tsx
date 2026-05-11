@@ -114,7 +114,7 @@ export const DataManager: React.FC<DataManagerProps> = ({ syncStatus, employees,
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Status do Banco de Dados</h3>
             <div className="flex items-center gap-4">
               <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${getStatusColor(syncStatus.state)}`}>
-                <Icon name={syncStatus.state === 'synced' ? 'cloud_done' : syncStatus.state === 'syncing' ? 'cloud_sync' : syncStatus.state === 'error' ? 'cloud_off' : 'cloud'} className="text-3xl" />
+                <Icon name={syncStatus.state === 'synced' ? 'cloud_done' : syncStatus.state === 'syncing' ? 'cloud_sync' : syncStatus.state === 'error' ? 'cloud_off' : 'cloud'`} className="text-3xl" />
               </div>
               <div>
                 <p className="text-lg font-black text-slate-800 dark:text-slate-100 capitalize">
@@ -140,7 +140,7 @@ export const DataManager: React.FC<DataManagerProps> = ({ syncStatus, employees,
                     Admin
                   </button>
                   <button 
-                    onClick={() => setPassForm({...passForm, role: 'viewer'})}
+                    onClick={() => setPassForm({...passForm, role: 'viewer'`})}
                     className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${passForm.role === 'viewer' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
                   >
                     Viewer
@@ -151,7 +151,7 @@ export const DataManager: React.FC<DataManagerProps> = ({ syncStatus, employees,
                   <input 
                     type="text" 
                     placeholder="Nova Senha"
-                    value={passForm.password}
+                    value={passForm.password`}
                     onChange={(e) => setPassForm({...passForm, password: e.target.value})}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white text-sm font-bold outline-none focus:border-orange-500 transition-colors"
                   />
@@ -198,7 +198,7 @@ export const DataManager: React.FC<DataManagerProps> = ({ syncStatus, employees,
                 syncStatus.history.map((log, idx) => (
                   <div key={idx} className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-start gap-3 shadow-sm">
                     <div className={`mt-0.5 p-1 rounded-lg ${getStatusColor(log.state)}`}>
-                      <Icon name={log.state === 'synced' ? 'check_circle' : log.state === 'error' ? 'error' : 'sync'} className="text-sm" />
+                      <Icon name={log.state === 'synced' ? 'check_circle' : log.state === 'error' ? 'error' : 'sync'`} className="text-sm" />
                     </div>
                     <div>
                       <p className="text-[11px] font-black text-slate-700 dark:text-slate-200">{log.message || 'Sincronização'}</p>

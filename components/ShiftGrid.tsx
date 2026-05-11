@@ -148,11 +148,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     <th 
                       key={d.num} 
                       onClick={() => isSelected ? onOpenDayDetail(dayIdx) : onSelectDay(dayIdx)}
-                      className={`p-3 border-b border-slate-200 dark:border-slate-700 min-w-[60px] cursor-pointer transition-all ${dimClass} ${isSelected ? 'bg-orange-500/10 ring-2 ring-inset ring-orange-500/30' : d.isSunday ? 'bg-rose-50 dark:bg-rose-900/20' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-900/20' : ''}`}
+                      className={`p-3 border-b border-slate-200 dark:border-slate-700 min-w-[60px] cursor-pointer transition-all ${dimClass} ${isSelected ? 'bg-orange-500/10 ring-2 ring-inset ring-orange-500/30' : d.isSunday ? 'bg-rose-50 dark:bg-rose-900/20' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-900/20' : ''`}`}
                     >
                       <div className="flex flex-col items-center gap-1">
                         <span className="text-[9px] font-black text-slate-400 uppercase">{d.weekday}</span>
-                        <span className={`text-sm font-black ${d.isSunday ? 'text-rose-600' : 'text-slate-900 dark:text-slate-100'}`}>{d.num}</span>
+                        <span className={`text-sm font-black ${d.isSunday ? 'text-rose-600' : 'text-slate-900 dark:text-slate-100'}`}>{d.num`}</span>
                         <div className="mt-1 text-[8px] font-bold text-slate-400">
                            T:{stats.total}
                         </div>
@@ -307,11 +307,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const dimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
 
                               return (
-                                <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all ${dimClass} ${selectedDayIdx === d.num - 1 ? 'ring-2 ring-inset ring-orange-400/50' : ''} ${hasAlert ? 'ring-2 ring-inset ring-rose-500' : ''}`}>
+                                <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all ${dimClass} ${selectedDayIdx === d.num - 1 ? 'ring-2 ring-inset ring-orange-400/50' : ''`} ${hasAlert ? 'ring-2 ring-inset ring-rose-500' : ''}`}>
                                   <div className="relative group flex flex-col items-center gap-1">
                                     <button
                                       onClick={() => onSelectDay(d.num - 1)}
-                                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black transition-all shadow-sm ${
+                                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black transition-all shadow-sm ${}`}
                                         shift === 'F' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
                                         shift.startsWith('FF') ? 'bg-amber-100 text-amber-600' :
                                         shift === 'C' ? 'bg-indigo-100 text-indigo-600' :
