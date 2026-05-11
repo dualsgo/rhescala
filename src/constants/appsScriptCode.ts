@@ -181,4 +181,3 @@ function logDebug(type, details, payload) {
   } catch (e) {}
 }
 `;
-`;
