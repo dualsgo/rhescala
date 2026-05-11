@@ -80,7 +80,8 @@ const App: React.FC = () => {
     
     const filtered: Record<string, any[]> = {};
     Object.keys(allHolidayCredits).forEach(empId => {
-      filtered[empId] = allHolidayCredits[empId].filter(credit => {
+      const credits = allHolidayCredits[empId] || [];
+      filtered[empId] = credits.filter(credit => {
         if (!credit.holidayDate) return false;
         const [y, m] = credit.holidayDate.split('-');
         const key = `${y}-${m}`;
@@ -572,7 +573,7 @@ const App: React.FC = () => {
                         setAuthenticatedEmployeeId(emp.id);
                         setSelectedEmployeeForCard(emp);
                       } else if (password !== null) {
-                        showDialog({ title: 'Erro', message: 'Senha individual incorreta.', type: 'info' });
+                        showDialog({ title: 'Erro', message: 'Senha individual incorreta.', type: 'alert' });
                       }
                     }
                   }}

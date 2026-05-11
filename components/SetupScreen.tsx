@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { setConfiguredApiUrl } from '../src/gas-api';
+import { setConfiguredApiUrl, apiStore } from '../src/gas-api';
 import { APPS_SCRIPT_CODE } from '../src/constants/appsScriptCode';
 import { Icon } from './Icon';
 
@@ -34,10 +34,8 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
         setError('');
 
         try {
-            const api = (await import('../src/gas-api')).apiStore;
-            
             // 1. Verificar se a planilha já está configurada
-            const { initialized } = await api.checkSetup(trimmed);
+            const { initialized } = await apiStore.checkSetup(trimmed);
             
             if (initialized) {
                 // Se já existe uma senha, apenas salvamos a URL e finalizamos
@@ -157,8 +155,7 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
                                         onBlur={async () => {
                                             const trimmed = url.trim();
                                             if (trimmed.startsWith('https://script.google.com')) {
-                                                const api = (await import('../src/gas-api')).apiStore;
-                                                const { initialized } = await api.checkSetup(trimmed);
+                                                const { initialized } = await apiStore.checkSetup(trimmed);
                                                 setIsInitialized(initialized);
                                             }
                                         }}
