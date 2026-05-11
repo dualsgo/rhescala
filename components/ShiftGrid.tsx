@@ -269,8 +269,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                 <div className="flex flex-col min-w-0 flex-1">
                                   <div className="flex items-center gap-1.5">
                                     <span className="text-[11px] font-black text-slate-900 dark:text-slate-100 truncate group-hover/name:text-orange-600 transition-colors">{emp.name}</span>
-                                    {(emp.requests || []).some(r => r.month === monthKey) && (
-                                      <div className="w-3.5 h-3.5 bg-orange-500 rounded-full flex items-center justify-center animate-bounce-subtle" title="Tem recado para este mês">
+                                    {(emp.requests || []).some(r => r.date.startsWith(monthKey)) && (
+                                      <div className="w-3.5 h-3.5 bg-orange-500 rounded-full flex items-center justify-center animate-bounce-subtle" title="Tem pedidos para este mês">
                                         <Icon name="chat_bubble" className="text-[8px] text-white" />
                                       </div>
                                     )}
@@ -367,10 +367,23 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const todayStr = new Date().toISOString().split('T')[0];
                               const isPast = d.dateStr < todayStr;
                               const dimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
+                              
+                              const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d.num).padStart(2, '0')}`;
+                              const dayRequest = (emp.requests || []).find(r => r.date === fullDate);
 
                               return (
-                                <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all ${dimClass} ${selectedDayIdx === d.num - 1 ? 'ring-2 ring-inset ring-orange-400/50' : ''} ${hasAlert ? 'ring-2 ring-inset ring-rose-500' : ''}`}>
+                                <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all relative ${dimClass} ${selectedDayIdx === d.num - 1 ? 'ring-2 ring-inset ring-orange-400/50' : ''} ${hasAlert ? 'ring-2 ring-inset ring-rose-500' : ''}`}>
                                   <div className="relative group flex flex-col items-center gap-1">
+                                    {dayRequest && (
+                                      <div 
+                                        className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full z-10 border-2 border-white dark:border-slate-900 ${
+                                          dayRequest.status === 'granted' ? 'bg-emerald-500' : 
+                                          dayRequest.status === 'seen' ? 'bg-blue-500' : 
+                                          'bg-orange-500 animate-pulse'
+                                        }`}
+                                        title={`Pedido: ${dayRequest.text}`}
+                                      />
+                                    )}
                                     <button
                                       onClick={() => onSelectDay(d.num - 1)}
                                       className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black transition-all shadow-sm ${

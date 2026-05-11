@@ -12,6 +12,7 @@ interface EmployeeScheduleCardProps {
   customHolidays: Holiday[];
   holidayCredits: HolidayCredit[];
   onUpdateEmployee?: (empId: string, data: Partial<Employee>) => void;
+  isAdmin?: boolean;
   onClose: () => void;
 }
 
@@ -21,6 +22,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   customHolidays,
   holidayCredits,
   onUpdateEmployee,
+  isAdmin,
   onClose
 }) => {
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
@@ -31,7 +33,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   const hours = (employee.dailyHours || {})[monthKey] || [];
 
   const [newRequest, setNewRequest] = React.useState('');
-  const [requestMonth, setRequestMonth] = React.useState(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`);
+  const [selectedDate, setSelectedDate] = React.useState<string | null>(null);
 
   const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -216,11 +218,23 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                 const dow = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][date.getDay()];
                 const isSun = date.getDay() === 0;
                 const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
-                
+                const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const hasReq = (employee.requests || []).find(r => r.date === fullDate);
+                const isSelected = selectedDate === fullDate;
+
                 if (shift === 'N/A') return null;
 
                 return (
-                  <div key={d} className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${isSun ? 'bg-rose-50/30 border-rose-100' : isHol ? 'bg-amber-50/30 border-amber-100' : 'bg-slate-50/30 border-slate-100'}`}>
+                  <div 
+                    key={d} 
+                    onClick={() => setSelectedDate(isSelected ? null : fullDate)}
+                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer group ${
+                      isSelected ? 'ring-2 ring-orange-500 border-orange-200 bg-orange-50/50' : 
+                      isSun ? 'bg-rose-50/30 border-rose-100 hover:border-rose-300' : 
+                      isHol ? 'bg-amber-50/30 border-amber-100 hover:border-amber-300' : 
+                      'bg-slate-50/30 border-slate-100 hover:border-slate-300'
+                    }`}
+                  >
                     <div className="flex items-center gap-3">
                       <div className="flex flex-col items-center justify-center w-10 h-10 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
                         <span className="text-[8px] font-black text-slate-300 uppercase leading-none">{dow.substring(0, 3)}</span>
@@ -230,77 +244,72 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         <p className={`text-[11px] font-black uppercase ${shift === 'F' ? 'text-rose-600' : (typeof shift === 'string' && shift.startsWith('FF')) ? 'text-amber-600' : 'text-slate-800 dark:text-slate-100'}`}>
                           {shift === 'T' ? 'Trabalha' : shift === 'F' ? 'Folga' : (typeof shift === 'string' && shift.startsWith('FF')) ? 'Folga Feriado' : shift === 'FE' ? 'Férias' : shift === 'C' ? 'Curso' : shift === 'DO' ? 'Aniversário' : shift}
                         </p>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase">{isWorkingShift(shift) ? hour : '---'}</p>
+                        <div className="flex items-center gap-2">
+                           <p className="text-[9px] font-bold text-slate-400 uppercase">{isWorkingShift(shift) ? hour : '---'}</p>
+                           {hasReq && (
+                             <span className={`w-1.5 h-1.5 rounded-full ${hasReq.status === 'granted' ? 'bg-emerald-500' : hasReq.status === 'seen' ? 'bg-blue-500' : 'bg-orange-500 animate-pulse'}`} />
+                           )}
+                        </div>
                       </div>
                     </div>
-                    {isWorkingShift(shift) && (
+                    {isSelected ? (
+                      <Icon name="check_circle" className="text-orange-500" />
+                    ) : isWorkingShift(shift) ? (
                       <div className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/40 rounded-full">
                         <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Presente</span>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 );
               })}
             </div>
-          </div>
-
-          {/* Mural de Pedidos / Recados */}
+                 {/* Mural de Pedidos / Recados */}
           <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800 space-y-6">
             <div className="flex items-center justify-between">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                <Icon name="chat_bubble_outline" className="text-orange-500" /> Mural de Pedidos / Recados
+                <Icon name="chat_bubble_outline" className="text-orange-500" /> Sistema de Solicitações
               </h4>
-              {onUpdateEmployee && (
-                <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1">
-                  {(() => {
-                    const today = new Date();
-                    const next = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-                    const currKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-                    const nextKey = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
-                    return [
-                      { id: currKey, label: 'Mês Atual' },
-                      { id: nextKey, label: 'Mês Seguinte' }
-                    ].map(m => (
-                      <button
-                        key={m.id}
-                        onClick={() => setRequestMonth(m.id)}
-                        className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all ${requestMonth === m.id ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500'}`}
-                      >
-                        {m.label}
-                      </button>
-                    ));
-                  })()}
-                </div>
-              )}
             </div>
 
             {onUpdateEmployee ? (
               <div className="space-y-4">
-                <div className="relative group">
-                  <textarea
-                    value={newRequest}
-                    onChange={(e) => setNewRequest(e.target.value)}
-                    placeholder="Ex: Preciso de folga dia 15 (médico) ou gostaria de trocar domingo..."
-                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all min-h-[100px] resize-none"
-                  />
-                  <button
-                    onClick={() => {
-                      if (!newRequest.trim()) return;
-                      const existing = [...(employee.requests || [])].filter(r => r.month !== requestMonth);
-                      const updated = [
-                        ...existing,
-                        { month: requestMonth, text: newRequest, createdAt: new Date().toISOString() }
-                      ];
-                      onUpdateEmployee(employee.id, { requests: updated });
-                      setNewRequest('');
-                    }}
-                    disabled={!newRequest.trim()}
-                    className="absolute bottom-4 right-4 bg-orange-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-orange-600 transition-all disabled:opacity-50"
-                  >
-                    Enviar Pedido
-                  </button>
+                <div className={`p-4 rounded-2xl border transition-all ${selectedDate ? 'bg-orange-50 border-orange-200' : 'bg-slate-50 border-slate-100 opacity-50'}`}>
+                  <p className="text-[10px] font-black text-slate-500 uppercase mb-2">
+                    {selectedDate ? `Pedido para o dia ${selectedDate.split('-').reverse().join('/')}` : 'Selecione um dia no calendário acima'}
+                  </p>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text"
+                      className="flex-1 bg-white border-none rounded-xl px-4 py-3 text-xs font-bold outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-orange-500 transition-all disabled:cursor-not-allowed"
+                      placeholder={selectedDate ? "Ex: Preciso folgar para ir ao médico..." : "Clique em um dia primeiro"}
+                      value={newRequest}
+                      disabled={!selectedDate}
+                      onChange={(e) => setNewRequest(e.target.value)}
+                    />
+                    <button 
+                      disabled={!newRequest.trim() || !selectedDate}
+                      onClick={() => {
+                        if (!selectedDate) return;
+                        const existing = [...(employee.requests || [])].filter(r => r.date !== selectedDate);
+                        const updated = [
+                          ...existing,
+                          { 
+                            date: selectedDate, 
+                            text: newRequest.trim(), 
+                            status: 'pending',
+                            createdAt: new Date().toISOString() 
+                          }
+                        ];
+                        onUpdateEmployee(employee.id, { requests: updated });
+                        setNewRequest('');
+                        setSelectedDate(null);
+                      }}
+                      className="px-6 py-3 bg-orange-500 text-white rounded-xl text-[10px] font-black uppercase hover:bg-orange-600 transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:grayscale"
+                    >
+                      Enviar
+                    </button>
+                  </div>
                 </div>
-                <p className="text-[9px] text-slate-400 font-bold italic px-2">Nota: O gerente visualizará este pedido ao montar a escala do mês selecionado.</p>
               </div>
             ) : (
               <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center">
@@ -311,11 +320,24 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
             {/* List existing requests */}
             <div className="space-y-3">
               {(employee.requests || []).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).map((req, i) => (
-                <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm relative group">
+                <div key={i} className={`p-4 rounded-2xl border shadow-sm relative group transition-all ${
+                  req.status === 'granted' ? 'bg-emerald-50 border-emerald-100' :
+                  req.status === 'seen' ? 'bg-blue-50 border-blue-100' :
+                  'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800'
+                }`}>
                   <div className="flex justify-between items-start mb-2">
-                    <span className="text-[9px] font-black bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-lg uppercase tracking-widest">
-                      Para: {(req.month || '').split('-').reverse().join('/')}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest ${
+                        req.status === 'granted' ? 'bg-emerald-100 text-emerald-700' :
+                        req.status === 'seen' ? 'bg-blue-100 text-blue-700' :
+                        'bg-orange-100 text-orange-700'
+                      }`}>
+                        {req.date.split('-').reverse().join('/')}
+                      </span>
+                      <span className="text-[8px] font-black text-slate-400 uppercase">
+                        {req.status === 'granted' ? 'Atendido' : req.status === 'seen' ? 'Visto' : 'Pendente'}
+                      </span>
+                    </div>
                     <span className="text-[8px] font-bold text-slate-400 uppercase">
                       {(() => {
                         try {
@@ -327,20 +349,48 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                     </span>
                   </div>
                   <p className="text-xs font-bold text-slate-700 dark:text-slate-200 leading-relaxed pr-8">{req.text}</p>
-                  {onUpdateEmployee && (
+                  
+                  <div className="absolute top-4 right-4 flex items-center gap-2">
+                    {/* Admin Actions - Only show if current user is admin/manager */}
+                    {isAdmin && onUpdateEmployee && (
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <button 
+                          title="Marcar como Visto"
+                          onClick={() => {
+                            const updated = (employee.requests || []).map(r => r.createdAt === req.createdAt ? { ...r, status: 'seen' as const } : r);
+                            onUpdateEmployee(employee.id, { requests: updated });
+                          }}
+                          className="p-1.5 text-blue-400 hover:text-blue-600 transition-colors"
+                        >
+                          <Icon name="visibility" className="text-sm" />
+                        </button>
+                        <button 
+                          title="Atender Pedido"
+                          onClick={() => {
+                            const updated = (employee.requests || []).map(r => r.createdAt === req.createdAt ? { ...r, status: 'granted' as const } : r);
+                            onUpdateEmployee(employee.id, { requests: updated });
+                          }}
+                          className="p-1.5 text-emerald-400 hover:text-emerald-600 transition-colors"
+                        >
+                          <Icon name="check_circle" className="text-sm" />
+                        </button>
+                      </div>
+                    )}
+                    
                     <button 
                       onClick={() => {
                         const updated = (employee.requests || []).filter(r => r.createdAt !== req.createdAt);
-                        onUpdateEmployee(employee.id, { requests: updated });
+                        onUpdateEmployee?.(employee.id, { requests: updated });
                       }}
-                      className="absolute top-4 right-4 text-slate-300 hover:text-rose-500 transition-colors"
+                      className="p-1.5 text-slate-300 hover:text-rose-500 transition-colors"
                     >
                       <Icon name="delete" className="text-sm" />
                     </button>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>
+          </div>
           </div>
 
         </div>

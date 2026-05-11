@@ -733,6 +733,7 @@ const App: React.FC = () => {
           customHolidays={customHolidays}
           holidayCredits={holidayCredits[selectedEmployeeForCard.id] || []}
           onUpdateEmployee={onUpdateEmployee}
+          isAdmin={auth.role === 'admin'}
           onClose={() => setSelectedEmployeeForCard(null)}
         />
       )}

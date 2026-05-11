@@ -26,11 +26,14 @@ export interface Employee {
   birthday?: string;       // YYYY-MM-DD or MM-DD
   isHidden?: boolean;      // To hide collaborator from the grid
   password?: string;       // Personal password for individual access
-  requests?: {             // Monthly requests/notes
-    month: string;         // YYYY-MM
+  requests?: EmployeeRequest[];
+}
+
+export interface EmployeeRequest {
+    date: string; // YYYY-MM-DD
     text: string;
+    status: 'pending' | 'seen' | 'granted';
     createdAt: string;
-  }[];
 }
 
 export interface Holiday {
