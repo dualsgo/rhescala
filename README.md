@@ -5,11 +5,13 @@ A smart, responsive web application built with React and Vite to manage and auto
 ## Features
 
 - **Automated Schedule Generation:** Intelligently auto-generates monthly schedules following strict labor rules (e.g., maximum 2 consecutive Sundays, minimum CLT staff on Sundays, apprentices off on weekends and course days).
-- **Interactive Shift Grid:** A visual dashboard to view, and edit employee shifts, schedule hours, and absences day by day.
+- **Interactive Shift Grid:** A visual dashboard to view and edit employee shifts, schedule hours, and absences day by day.
+- **Simplified Viewer Mode:** In "Viewer" mode (team access), the interface automatically hides complexity (hours and positions) to provide a clean, mobile-friendly schedule view.
+- **Multi-Store Security:** Intelligent setup process that prevents accidental password overwrites when connecting new devices to an existing store database.
 - **Team Management:** Add, edit, or remove employees, managing their details like role, preferred days off, and work periods.
 - **Holiday Manager:** Manage both national and custom state/municipal holidays effortlessly to adjust automatic scheduling logic.
-- **WhatsApp Integration:** Easily copy and share the daily schedule grouped by shift (Abertura, Intermediário, Fechamento) and list absent employees directly to WhatsApp.
-- **Local Storage & Backup:** All data is persisted securely via `localStorage`. Easily export (backup) and import your store's schedule data as JSON.
+- **WhatsApp Integration:** Easily copy and share the daily schedule grouped by shift (Abertura, Intermediário, Fechamento) directly to WhatsApp.
+- **Google Sheets Persistence:** Data is stored securely in a Google Sheet, acting as a real-time decentralized database with automatic history/backups.
 
 ## Prerequisites
 

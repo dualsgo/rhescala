@@ -31,6 +31,15 @@ function doGet(e) {
       return buildCorsResponse(JSON.stringify(response));
     }
 
+    // Verificar se a planilha já está configurada
+    if (action === 'check_setup') {
+      var adminSet = !!getConfig('admin_password');
+      var viewerSet = !!getConfig('viewer_password');
+      return buildCorsResponse(JSON.stringify({ 
+        initialized: adminSet && viewerSet 
+      }));
+    }
+
     // Ping de teste de conexão
     return buildCorsResponse(JSON.stringify({ status: 'ok', message: 'Escala API ativa!' }));
   } catch (err) {
