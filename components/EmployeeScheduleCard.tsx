@@ -27,8 +27,8 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
   const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
 
-  const shifts = employee.shifts[monthKey] || [];
-  const hours = employee.dailyHours[monthKey] || [];
+  const shifts = (employee.shifts || {})[monthKey] || [];
+  const hours = (employee.dailyHours || {})[monthKey] || [];
 
   const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -307,13 +307,13 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
 
             {/* List existing requests */}
             <div className="space-y-3">
-              {(employee.requests || []).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((req, i) => (
+              {(employee.requests || []).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).map((req, i) => (
                 <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm relative group">
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-[9px] font-black bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-lg uppercase tracking-widest">
-                      Para: {req.month.split('-').reverse().join('/')}
+                      Para: {(req.month || '').split('-').reverse().join('/')}
                     </span>
-                    <span className="text-[8px] font-bold text-slate-400 uppercase">{new Date(req.createdAt).toLocaleDateString('pt-BR')}</span>
+                    <span className="text-[8px] font-bold text-slate-400 uppercase">{req.createdAt ? new Date(req.createdAt).toLocaleDateString('pt-BR') : '---'}</span>
                   </div>
                   <p className="text-xs font-bold text-slate-700 dark:text-slate-200 leading-relaxed pr-8">{req.text}</p>
                   {onUpdateEmployee && (
