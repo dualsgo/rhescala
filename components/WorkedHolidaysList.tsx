@@ -109,7 +109,7 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-4xl mx-auto mt-6 animate-fade-in">
+    <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-7xl mx-auto mt-6 animate-fade-in max-h-[85vh] overflow-y-auto custom-scrollbar">
       <div className="flex justify-between items-center mb-8 pb-6 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center">
@@ -167,7 +167,7 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
           <p className="text-lg font-black uppercase tracking-widest text-slate-400">Nenhum feriado após o marco zero</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {relevantHolidays.map(holiday => {
             const workers = getWorkersForHoliday(holiday.date);
             return (
