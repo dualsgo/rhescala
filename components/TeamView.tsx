@@ -32,13 +32,48 @@ function handleVacationStart(empId: string, startDate: string, onUpdate: (id: st
 }
 
 /** When user sets atestado start and duration, compute end = start + days - 1 */
-function handleAtestadoChange(empId: string, startDate: string, duration: number, onUpdate: (id: string, data: Partial<Employee>) => void) {
+function handleAtestadoChange(emp: Employee, startDate: string, duration: number, onUpdate: (id: string, data: Partial<Employee>) => void) {
   if (!startDate || duration <= 0) {
-    onUpdate(empId, { atestadoStart: '', atestadoEnd: '' });
+    onUpdate(emp.id, { atestadoStart: '', atestadoEnd: '' });
     return;
   }
+  
   const endDate = addDays(startDate, duration - 1);
-  onUpdate(empId, { atestadoStart: startDate, atestadoEnd: endDate });
+  const updates: Partial<Employee> = { atestadoStart: startDate, atestadoEnd: endDate };
+
+  // Automatic sync: Update shifts in affected months
+  const startObj = new Date(startDate + 'T00:00:00');
+  const endObj = new Date(endDate + 'T00:00:00');
+  
+  const newShifts = { ...emp.shifts };
+  
+  // Iterate through affected months
+  let current = new Date(startObj.getFullYear(), startObj.getMonth(), 1);
+  while (current <= endObj) {
+    const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+    const shifts = [...(newShifts[monthKey] || [])];
+    const daysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+    
+    // Ensure array is initialized
+    if (shifts.length === 0) {
+      for (let i = 0; i < daysInMonth; i++) shifts[i] = 'T';
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      if (dStr >= startDate && dStr <= endDate) {
+        shifts[d - 1] = 'AT';
+      } else if (shifts[d - 1] === 'AT') {
+        // Clear old AT if they are now outside the range
+        shifts[d - 1] = 'T';
+      }
+    }
+    newShifts[monthKey] = shifts;
+    current.setMonth(current.getMonth() + 1);
+  }
+  
+  updates.shifts = newShifts;
+  onUpdate(emp.id, updates);
 }
 
 export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee, onDeleteEmployee, onAddEmployee }) => {
@@ -363,7 +398,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                         value={emp.atestadoStart || ''}
                         onChange={(e) => {
                           const duration = emp.atestadoStart && emp.atestadoEnd ? (Math.round((new Date(emp.atestadoEnd + 'T00:00:00').getTime() - new Date(e.target.value + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24)) + 1) : 1;
-                          handleAtestadoChange(emp.id, e.target.value, Math.max(1, duration), onUpdateEmployee);
+                          handleAtestadoChange(emp, e.target.value, Math.max(1, duration), onUpdateEmployee);
                         }}
                         className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-[10px] font-bold text-slate-700 outline-none focus:ring-2 focus:ring-rose-500/20 transition-all"
                       />
@@ -374,7 +409,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                         type="number"
                         min="0"
                         value={emp.atestadoStart && emp.atestadoEnd ? (Math.round((new Date(emp.atestadoEnd + 'T00:00:00').getTime() - new Date(emp.atestadoStart + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24)) + 1) : 0}
-                        onChange={(e) => handleAtestadoChange(emp.id, emp.atestadoStart || '', parseInt(e.target.value) || 0, onUpdateEmployee)}
+                        onChange={(e) => handleAtestadoChange(emp, emp.atestadoStart || '', parseInt(e.target.value) || 0, onUpdateEmployee)}
                         className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-[10px] font-bold text-slate-700 outline-none focus:ring-2 focus:ring-rose-500/20 transition-all"
                         placeholder="Ex: 3"
                       />
