@@ -10,8 +10,9 @@ function doGet(e) {
   // Login/Verificação de Senha
   if (action === 'login') {
     var password = e.parameter.password;
-    var adminPass = getConfig('admin_password', 'BrBOg975mf2(');
-    var viewerPass = getConfig('viewer_password', '1187');
+    var adminPass = getConfig('admin_password', 'admin');
+    var viewerPass = getConfig('viewer_password', '1234');
+
 
     if (password === adminPass) {
       return buildCorsResponse(JSON.stringify({ success: true, role: 'admin' }));
