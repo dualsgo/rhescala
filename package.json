@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "gas-build": "vite build && node gas_fix.cjs",
     "preview": "vite preview"
   },
   "dependencies": {

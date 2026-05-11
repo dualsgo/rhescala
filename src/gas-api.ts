@@ -1,57 +1,68 @@
-export const isGasEnvironment = false;
+declare const google: any;
 
-// COLOQUE AQUI A URL DO SEU WEB APP DO APPS SCRIPT
-// Ex: 'https://script.google.com/macros/s/SUA_CHAVE_AQUI/exec'
-const GAS_WEB_APP_URL = import.meta.env.VITE_GAS_URL || '';
+const STORAGE_KEY_API_URL = 'escala_gas_api_url';
 
 /**
- * Adapter para chamadas ao servidor Google Apps Script atuando como API REST.
+ * Retorna a URL do GAS configurada pelo usuário (salva no localStorage).
+ */
+export function getConfiguredApiUrl(): string {
+    return localStorage.getItem(STORAGE_KEY_API_URL) || '';
+}
+
+/**
+ * Salva a URL do GAS no localStorage.
+ */
+export function setConfiguredApiUrl(url: string): void {
+    localStorage.setItem(STORAGE_KEY_API_URL, url.trim());
+}
+
+/**
+ * Remove a configuração (para trocar de loja/planilha).
+ */
+export function clearConfiguredApiUrl(): void {
+    localStorage.removeItem(STORAGE_KEY_API_URL);
+}
+
+/**
+ * Adapter para chamadas ao servidor Google Apps Script via fetch.
+ * A URL do Web App é configurada pelo usuário na tela de setup.
  */
 export const apiStore = {
     async get(key: string): Promise<any> {
-        if (!GAS_WEB_APP_URL) {
-            console.warn('VITE_GAS_URL não está configurada no .env');
+        const url = getConfiguredApiUrl();
+        if (!url) {
+            console.warn('URL do GAS não configurada.');
             return null;
-        }
-        
-        try {
-            const response = await fetch(`${GAS_WEB_APP_URL}?key=${encodeURIComponent(key)}`, {
-                method: 'GET',
-                redirect: 'follow'
-            });
-            if (!response.ok) {
-                throw new Error(`Erro na API: ${response.statusText}`);
-            }
-            const data = await response.json();
-            return data;
-        } catch (e) {
-            console.error(`Erro ao buscar ${key} do GAS API:`, e);
-            return null;
-        }
-    },
-    async set(key: string, value: any): Promise<void> {
-        if (!GAS_WEB_APP_URL) {
-            console.warn('VITE_GAS_URL não está configurada no .env');
-            return;
         }
 
         try {
-            // Utilizamos text/plain para evitar o erro de CORS Preflight (OPTIONS)
-            // que o Google Apps Script não suporta por padrão.
-            const response = await fetch(`${GAS_WEB_APP_URL}?key=${encodeURIComponent(key)}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8'
-                },
-                body: JSON.stringify(value),
-                redirect: 'follow'
+            const response = await fetch(`${url}?key=${encodeURIComponent(key)}`, {
+                method: 'GET',
+                redirect: 'follow',
             });
-            if (!response.ok) {
-                throw new Error(`Erro na API: ${response.statusText}`);
-            }
+            if (!response.ok) throw new Error(`Erro na API: ${response.statusText}`);
+            return await response.json();
         } catch (e) {
-            console.error(`Erro ao salvar ${key} no GAS API:`, e);
+            console.error(`Erro ao buscar ${key}:`, e);
+            return null;
+        }
+    },
+
+    async set(key: string, value: any): Promise<void> {
+        const url = getConfiguredApiUrl();
+        if (!url) return;
+
+        try {
+            const response = await fetch(`${url}?key=${encodeURIComponent(key)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(value),
+                redirect: 'follow',
+            });
+            if (!response.ok) throw new Error(`Erro na API: ${response.statusText}`);
+        } catch (e) {
+            console.error(`Erro ao salvar ${key}:`, e);
             throw e;
         }
-    }
+    },
 };

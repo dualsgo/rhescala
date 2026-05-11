@@ -1,111 +1,95 @@
 /**
- * Backend do Google Apps Script para Gestão de Escala - Ri Happy
- * Este script deve ser copiado para o arquivo Code.gs no editor do GAS.
+ * Backend do Google Apps Script para Gestão de Escala
+ * Versão: Multi-Loja (GitHub Pages)
+ * 
+ * INSTRUÇÕES DE DEPLOY:
+ * 1. Abra sua Planilha Google
+ * 2. Vá em Extensões → Apps Script
+ * 3. Cole este código e salve (Ctrl+S)
+ * 4. Clique em Implantar → Nova Implantação
+ * 5. Tipo: Aplicativo Web
+ * 6. Executar como: Eu mesmo
+ * 7. Quem tem acesso: Qualquer pessoa
+ * 8. Copie o link gerado e cole no app
  */
 
-// ─── API REST PARA O FRONTEND (GCP/VERCEL) ───────────────────────────────────
-
 function doGet(e) {
-  const key = e.parameter.key;
-  if (!key) {
-    return ContentService.createTextOutput(JSON.stringify({ error: 'Key not provided' }))
-      .setMimeType(ContentService.MimeType.JSON);
+  // Requisição de dados (API)
+  var key = e.parameter.key;
+  if (key) {
+    var data = getData(key);
+    var response = data ? JSON.parse(data) : null;
+    return buildCorsResponse(JSON.stringify(response));
   }
-  
-  const data = getData(key);
-  const response = data ? JSON.parse(data) : null;
-  
-  return ContentService.createTextOutput(JSON.stringify(response))
-    .setMimeType(ContentService.MimeType.JSON);
+
+  // Ping de teste de conexão
+  return buildCorsResponse(JSON.stringify({ status: 'ok', message: 'Escala API ativa!' }));
 }
 
 function doPost(e) {
   try {
-    const key = e.parameter.key;
+    var key = e.parameter.key;
     if (!key) {
-       return ContentService.createTextOutput(JSON.stringify({ error: 'Key not provided' }))
-         .setMimeType(ContentService.MimeType.JSON);
+      return buildCorsResponse(JSON.stringify({ error: 'Key not provided' }));
     }
-    
-    // O payload vem no body da requisição
-    const valueStr = e.postData.contents;
+
+    var valueStr = e.postData.contents;
     setData(key, valueStr);
-    
-    return ContentService.createTextOutput(JSON.stringify({ success: true }))
-      .setMimeType(ContentService.MimeType.JSON);
+
+    return buildCorsResponse(JSON.stringify({ success: true }));
   } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ error: err.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return buildCorsResponse(JSON.stringify({ error: err.toString() }));
   }
 }
 
+/**
+ * Cria uma resposta JSON com headers CORS para aceitar requisições do GitHub Pages.
+ */
+function buildCorsResponse(jsonString) {
+  return ContentService
+    .createTextOutput(jsonString)
+    .setMimeType(ContentService.MimeType.JSON);
+}
 
 // ─── BANCO DE DADOS (SPREADSHEET) ───────────────────────────────────────────
 
-/**
- * Busca dados da Planilha por chave.
- * Os dados são armazenados na aba 'Database' em formato chave-valor.
- */
 function getData(key) {
-  console.log(`Buscando dados para chave: ${key}`);
   try {
-    const sheet = getOrCreateSheet('Database');
-    const values = sheet.getDataRange().getValues();
-    
-    // Procura do fim para o início para pegar a versão mais recente
-    for (let i = values.length - 1; i >= 0; i--) {
+    var sheet = getOrCreateSheet('Database');
+    var values = sheet.getDataRange().getValues();
+
+    // Percorre do fim para o início (pega a versão mais recente)
+    for (var i = values.length - 1; i >= 0; i--) {
       if (values[i][0] === key) {
         return values[i][1];
       }
     }
     return null;
   } catch (e) {
-    console.error(`Erro ao buscar ${key}:`, e);
+    console.error('Erro ao buscar ' + key + ':', e);
     return null;
   }
 }
 
-function setData(key, valueStr) {
-  console.log(`Salvando dados para chave: ${key} (Tamanho: ${valueStr.length})`);
+function setData(key, value) {
+  var valueStr = typeof value === 'string' ? value : JSON.stringify(value);
   try {
-    const sheet = getOrCreateSheet('Database');
-    // Sempre adiciona uma nova linha para manter histórico e evitar limite de caracteres da célula
+    var sheet = getOrCreateSheet('Database');
     sheet.appendRow([key, valueStr, new Date()]);
     return true;
   } catch (e) {
-    console.error(`Erro ao salvar ${key}:`, e);
+    console.error('Erro ao salvar ' + key + ':', e);
     throw e;
   }
 }
 
-/**
- * Helper para pegar ou criar a aba do banco de dados
- */
 function getOrCreateSheet(sheetName) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(sheetName);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(sheetName);
   if (!sheet) {
     sheet = ss.insertSheet(sheetName);
     sheet.appendRow(['Chave', 'Valor (JSON)', 'Última Atualização']);
     sheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#f3f3f3');
-    // Esconder a aba do usuário casual para evitar edições manuais
-    // sheet.hideSheet(); 
   }
   return sheet;
-}
-
-/**
- * Funções auxiliares para incluir arquivos HTML (CSS/JS) se não estiverem inlined
- * (Embora estejamos usando o vite-plugin-singlefile, mantemos por segurança)
- */
-function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
-}
-
-/**
- * LOGS (Opcional)
- */
-function logToSheet(message) {
-  const sheet = getOrCreateSheet('Logs');
-  sheet.appendRow([new Date(), message]);
 }
