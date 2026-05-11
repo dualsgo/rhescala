@@ -135,7 +135,6 @@ const App: React.FC = () => {
     setCustomHolidays(prev => prev.filter(h => h.id !== id));
   }, [setCustomHolidays]);
 
-  const monthKey = useMemo(() => `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`, [currentMY]);
   const [isEditable, setIsEditable] = useState(false);
   const [allowRetroactive, setAllowRetroactive] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
