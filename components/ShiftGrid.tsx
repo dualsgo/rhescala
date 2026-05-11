@@ -400,7 +400,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                         'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700'
                                       }`}
                                     >
-                                      {shift === 'C' ? 'CURSO' : (shift === 'T' ? (d.isSunday ? 'DOM' : 'T') : (shift.startsWith('FF') ? 'FF' : shift))}
+                                      {shift === 'C' ? <span className="text-[7px]">CURSO</span> : (shift === 'T' ? (d.isSunday ? 'DOM' : 'T') : (shift.startsWith('FF') ? 'FF' : shift))}
                                     </button>
 
                                     
