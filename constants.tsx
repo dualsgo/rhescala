@@ -1,5 +1,5 @@
 
-import { Employee, Holiday } from './types';
+import { Employee, Holiday, JornadaSettings } from './types';
 
 /** ID sentinel do colaborador placeholder (nunca deve ser exibido como real) */
 export const PLACEHOLDER_EMPLOYEE_ID = '__placeholder__';
@@ -28,6 +28,27 @@ export const SHIFT_HOURS = {
   HOLIDAY: ['12h às 18h', '13h às 19h', '14h às 20h', '15h às 21h'],
   APPRENTICE: ['10h às 16h15'],
 };
+
+
+
+export const DEFAULT_JORNADA_SETTINGS: JornadaSettings = {
+  minSundayWorkers: 5,
+  shiftHours: {
+    weekday: SHIFT_HOURS.WEEKDAY,
+    sunday: SHIFT_HOURS.SUNDAY,
+    holiday: SHIFT_HOURS.HOLIDAY,
+    apprentice: SHIFT_HOURS.APPRENTICE,
+  },
+  lunchRules: {
+    holiday: '15 min',
+    sundayOpening: '13h',
+    sundayClosing: ['14h', '15h', '16h', '17h'],
+    weekdayOpening: ['13h', '13h30', '14h'],
+    weekdayClosing: ['15h', '16h', '16h30', '17h'],
+    apprentice: '12h45',
+  }
+};
+
 
 /**
  * Mapeia o horário padrão do colaborador para o horário equivalente de domingo ou feriado.

@@ -70,3 +70,20 @@ export interface SyncStatus {
   lastSync?: string;
   history: SyncHistoryItem[];
 }
+export interface JornadaSettings {
+  minSundayWorkers: number;
+  shiftHours: {
+    weekday: string[];
+    sunday: string[];
+    holiday: string[];
+    apprentice: string[];
+  };
+  lunchRules: {
+    holiday: string;
+    sundayOpening: string;
+    sundayClosing: string[];
+    weekdayOpening: string[];
+    weekdayClosing: string[];
+    apprentice: string;
+  };
+}

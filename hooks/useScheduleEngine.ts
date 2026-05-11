@@ -1,15 +1,7 @@
 
-import { Employee, ShiftType, Holiday } from '../types';
-import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet, getDefaultHourForDay } from '../constants';
+import { Employee, ShiftType, Holiday, JornadaSettings } from '../types';
+import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS } from '../constants';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-/**
- * Minimum CLT employees that must be WORKING on any Sunday.
- * Rotation (giving rest) only activates when available > this threshold.
- * Hard constraint verified by isSundayUnavailable + safety cap in buildSundayAssignments.
- */
-const MIN_SUNDAY_WORKERS = 5;
 
 // ─── Shared weekday names ─────────────────────────────────────────────────────
 
@@ -200,7 +192,8 @@ export function buildSundayAssignments(
     year: number,
     month: number,
     sundaysInMonth: number[],
-    initialConsecutive?: Map<string, number>
+    initialConsecutive?: Map<string, number>,
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
 ): { assignments: Map<string, Set<number>>, nextConsecutive: Map<string, number> } {
     const assignments = new Map<string, Set<number>>();
     const consecutive = new Map<string, number>();
@@ -229,7 +222,7 @@ export function buildSundayAssignments(
         );
 
         // How many can rest while keeping ≥ MIN_SUNDAY_WORKERS and ≥ 1
-        const maxRestIdeal = Math.max(0, available.length - MIN_SUNDAY_WORKERS);
+        const maxRestIdeal = Math.max(0, available.length - settings.minSundayWorkers);
         const maxRestSafe = available.length > 0
             ? Math.min(maxRestIdeal, available.length - 1)
             : 0;
@@ -295,20 +288,20 @@ export function buildSundayAssignments(
 /**
  * Helper to select the best shift hours based on the day type and employee role.
  */
-function getTargetHours(emp: Employee, dow: number, isHoliday: boolean): string {
-    if (emp.isYoungApprentice) return APPRENTICE_WORK_PERIOD;
+function getTargetHours(emp: Employee, dow: number, isHoliday: boolean, settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS): string {
+    if (emp.isYoungApprentice) return settings.shiftHours.apprentice[0];
 
-    // Feriados (Padronizado conforme pedido: será ajustado manualmente)
+    // Feriados
     if (isHoliday && dow !== 0) {
-        return SHIFT_HOURS.HOLIDAY[0]; // 12h às 18h
+        return settings.shiftHours.holiday[0]; 
     }
 
-    // Domingos (Padronizado conforme pedido: será ajustado manualmente)
+    // Domingos
     if (dow === 0) {
-        return SHIFT_HOURS.SUNDAY[0]; // 12h às 20h
+        return settings.shiftHours.sunday[0];
     }
 
-    // Dias de semana (Segue o horário pré-cadastrado do colaborador)
+    // Dias de semana
     return emp.workPeriod;
 }
 
@@ -329,7 +322,8 @@ export function generateMonthForEmployee(
     year: number,
     month: number,
     sundayRestDays: Set<number>,
-    customHolidays: Holiday[] = []
+    customHolidays: Holiday[] = [],
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
 ): { shifts: ShiftType[]; hours: string[] } {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const holidaySet = buildHolidaySet(year, customHolidays);
@@ -348,18 +342,18 @@ export function generateMonthForEmployee(
         const isHoliday = holidaySet.has(dateStr);
 
         if (isPastMonth) {
-            shifts.push('N/A'); hours.push(getTargetHours(emp, dow, isHoliday)); continue;
+            shifts.push('N/A'); hours.push(getTargetHours(emp, dow, isHoliday, settings)); continue;
         }
 
         // ── Overrides ──────────────────────────────────────────────────────
         if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
-            shifts.push('FE'); hours.push(getTargetHours(emp, dow, isHoliday)); continue;
+            shifts.push('FE'); hours.push(getTargetHours(emp, dow, isHoliday, settings)); continue;
         }
         if (isBirthday(emp, dateStr)) {
-            shifts.push('DO'); hours.push(getTargetHours(emp, dow, isHoliday)); continue;
+            shifts.push('DO'); hours.push(getTargetHours(emp, dow, isHoliday, settings)); continue;
         }
         if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) {
-            shifts.push('F'); hours.push(getTargetHours(emp, dow, isHoliday)); continue;
+            shifts.push('F'); hours.push(getTargetHours(emp, dow, isHoliday, settings)); continue;
         }
 
         // ── Jovem Aprendiz ────────────────────────────────────────────────
@@ -376,7 +370,7 @@ export function generateMonthForEmployee(
 
         // ── Regular ───────────────────────────────────────────────────────
         if (WEEKDAY_NAMES[dow] === emp.preferredDayOff) {
-            shifts.push('F'); hours.push(getTargetHours(emp, dow, isHoliday)); continue;
+            shifts.push('F'); hours.push(getTargetHours(emp, dow, isHoliday, settings)); continue;
         }
 
         if (dow === 0) {
@@ -385,12 +379,12 @@ export function generateMonthForEmployee(
             } else {
                 shifts.push('T');
             }
-            hours.push(getTargetHours(emp, dow, isHoliday));
+            hours.push(getTargetHours(emp, dow, isHoliday, settings));
             continue;
         }
 
         if (isHoliday) {
-            shifts.push('T'); hours.push(getTargetHours(emp, dow, isHoliday)); continue;
+            shifts.push('T'); hours.push(getTargetHours(emp, dow, isHoliday, settings)); continue;
         }
 
         shifts.push('T'); hours.push(emp.workPeriod);
@@ -413,7 +407,8 @@ export function generateYearSchedule(
     fromYear: number,
     fromMonth: number,       // 0-indexed, inclusive
     currentYear: number,
-    customHolidays: Holiday[] = []
+    customHolidays: Holiday[] = [],
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
 ): Record<string, Record<string, { shifts: ShiftType[]; hours: string[] }>> {
     const result: Record<string, Record<string, { shifts: ShiftType[]; hours: string[] }>> = {};
 
@@ -437,7 +432,7 @@ export function generateYearSchedule(
 
             // Build Sunday assignments — with cross-month carry
             const { assignments, nextConsecutive } = buildSundayAssignments(
-                activeRegular, year, month, sundaysInMonth, rollingConsecutive
+                activeRegular, year, month, sundaysInMonth, rollingConsecutive, settings
             );
             rollingConsecutive = nextConsecutive;
 
@@ -469,7 +464,7 @@ export function generateYearSchedule(
                     }
                 }));
 
-                const positions = resolveTacticalDay(empsForDay, monthKey, dayIdx, isHoliday, isSunday);
+                const positions = resolveTacticalDay(empsForDay, monthKey, dayIdx, isHoliday, isSunday, settings);
                 
                 activeRegular.forEach(emp => {
                     if (result[emp.id][monthKey].shifts[dayIdx] === 'T' && positions[emp.id]) {
@@ -497,10 +492,11 @@ export function calculateLunches(
     members: any[],
     isHoliday: boolean,
     isSunday: boolean,
-    isOpening: boolean
+    isOpening: boolean,
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
 ): string[] {
     // 1. Fixed Rules
-    if (isHoliday) return members.map(() => '15 min');
+    if (isHoliday) return members.map(() => settings.lunchRules.holiday);
 
     // Filter people who need slot allocation (CLT regular employees)
     const allocatableIndices: number[] = [];
@@ -508,7 +504,7 @@ export function calculateLunches(
 
     members.forEach((m, idx) => {
         if (m.isYoungApprentice) {
-            results[idx] = '12h45';
+            results[idx] = settings.lunchRules.apprentice;
         } else if (m.cargo === 'Estoquista') {
             results[idx] = 'Flexível';
         } else {
@@ -525,10 +521,10 @@ export function calculateLunches(
         // Turno 2 (13h-21h) -> Distributed in 14h, 15h, 16h, 17h
         if (isOpening) {
             allocatableIndices.forEach(originalIdx => {
-                results[originalIdx] = '13h';
+                results[originalIdx] = settings.lunchRules.sundayOpening;
             });
         } else {
-            const sundayClosingSlots = ['14h', '15h', '16h', '17h'];
+            const sundayClosingSlots = settings.lunchRules.sundayClosing;
             for (let i = 0; i < N; i++) {
                 results[allocatableIndices[i]] = sundayClosingSlots[i % 4];
             }
@@ -546,20 +542,17 @@ export function calculateLunches(
         // Priority: Preservation of presence before 13h40. 14h is favored as closing team arrives.
         
         const openingPlan: string[] = [];
-        if (N === 1) {
-            openingPlan.push('14h');
-        } else if (N === 2) {
-            openingPlan.push('13h', '14h');
-        } else if (N === 3) {
-            openingPlan.push('13h', '14h', '14h');
-        } else if (N === 4) {
-            openingPlan.push('13h', '13h30', '14h', '14h');
+        const openingSlots = settings.lunchRules.weekdayOpening;
+        const OS = openingSlots.length;
+
+        if (N <= OS) {
+             // Fill from the end (later slots first)
+             for (let i = 0; i < N; i++) {
+                 openingPlan.push(openingSlots[OS - 1 - i]);
+             }
         } else {
-            // N > 4: Fill 14h and 13h30 first
             for (let i = 0; i < N; i++) {
-                if (i % 3 === 0) openingPlan.push('14h');
-                else if (i % 3 === 1) openingPlan.push('13h30');
-                else openingPlan.push('13h');
+                openingPlan.push(openingSlots[i % OS]);
             }
         }
         
@@ -572,19 +565,18 @@ export function calculateLunches(
         // Slots: 15h, 16h, 16h30, 17h
         // Priority: Spread as much as possible before doubling up. 
         
-        const closingSlots = ['15h', '16h', '16h30', '17h'];
+        const closingSlots = settings.lunchRules.weekdayClosing;
         const closingPlan: string[] = [];
+        const CS = closingSlots.length;
 
-        if (N <= 4) {
-            // Max spread logic
-            if (N === 1) closingPlan.push('15h');
-            else if (N === 2) closingPlan.push('15h', '17h');
-            else if (N === 3) closingPlan.push('15h', '16h', '17h');
-            else if (N === 4) closingPlan.push('15h', '16h', '16h30', '17h');
+        if (N <= CS) {
+             for (let i = 0; i < N; i++) {
+                 closingPlan.push(closingSlots[i % CS]);
+             }
         } else {
-            // N > 4: Fill all 4 slots first, then double up starting from 15h
+            // N > CS: Fill all slots first, then double up
             for (let i = 0; i < N; i++) {
-                closingPlan.push(closingSlots[i % 4]);
+                closingPlan.push(closingSlots[i % CS]);
             }
             // Sort plan to keep doubles together or ordered (optional, but consistent)
             closingPlan.sort((a, b) => {
@@ -622,7 +614,8 @@ export function applyMonthUpdate(
     employees: Employee[],
     year: number,
     month: number,
-    customHolidays: Holiday[] = []
+    customHolidays: Holiday[] = [],
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
 ): Record<string, { shifts: ShiftType[]; hours: string[] }> {
     const result: Record<string, { shifts: ShiftType[]; hours: string[] }> = {};
 
@@ -642,7 +635,7 @@ export function applyMonthUpdate(
     // Compute Sunday assignments — with cross-month carry (retro-analysis)
     const prevConsecutive = getPrevMonthConsecutive(activeRegular, year, month);
     const { assignments: sundayAssignments } = buildSundayAssignments(
-        activeRegular, year, month, sundaysInMonth, prevConsecutive
+        activeRegular, year, month, sundaysInMonth, prevConsecutive, settings
     );
 
     const today = new Date();
@@ -653,7 +646,7 @@ export function applyMonthUpdate(
             const defaultHours = Array.from({ length: daysInMonth }, (_, i) => {
                 const date = new Date(year, month, i + 1);
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
-                return getTargetHours(emp, date.getDay(), holidaySet.has(dateStr));
+                return getTargetHours(emp, date.getDay(), holidaySet.has(dateStr), settings);
             });
             result[emp.id] = {
                 shifts: Array(daysInMonth).fill('N/A' as ShiftType),
@@ -679,7 +672,7 @@ export function applyMonthUpdate(
             const exH = existingHours[i];
             // Preserve explicit customization, otherwise recompute from workPeriod
             if (exH && exH !== emp.workPeriod) return exH;
-            return getTargetHours(emp, date.getDay(), holidaySet.has(dateStr));
+            return getTargetHours(emp, date.getDay(), holidaySet.has(dateStr), settings);
         });
 
         // 1. Pass: Apply absolute constraints and preferred day-off for ALL weekdays
@@ -826,7 +819,7 @@ export function applyMonthUpdate(
             }
         }));
 
-        const positions = resolveTacticalDay(empsForDay, monthKey, dayIdx, isHoliday, isSunday);
+        const positions = resolveTacticalDay(empsForDay, monthKey, dayIdx, isHoliday, isSunday, settings);
         
         // Update the shifts in result
         activeRegular.forEach(emp => {
@@ -842,7 +835,8 @@ export function applyMonthUpdate(
 export function distributeTacticalPositions(
     employees: Employee[],
     currentMY: MonthYear,
-    customHolidays: Holiday[]
+    customHolidays: Holiday[],
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
 ): Record<string, { shifts: ShiftType[] }> {
     const { year, month } = currentMY;
     const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
@@ -864,7 +858,7 @@ export function distributeTacticalPositions(
         const isHoliday = holidaySet.has(dateStr);
         const isSunday = new Date(year, month, dayIdx + 1).getDay() === 0;
 
-        const positions = resolveTacticalDay(activeRegular, monthKey, dayIdx, isHoliday, isSunday);
+        const positions = resolveTacticalDay(activeRegular, monthKey, dayIdx, isHoliday, isSunday, settings);
         
         activeRegular.forEach(emp => {
             const currentShift = result[emp.id].shifts[dayIdx];
@@ -879,12 +873,12 @@ export function distributeTacticalPositions(
     return result;
 }
 
-export function getShiftClassification(hourRange: string, isSunday?: boolean): 'Abertura' | 'Intermediário' | 'Fechamento' | 'N/A' {
+export function getShiftClassification(hourRange: string, isSunday?: boolean, settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS): 'Abertura' | 'Intermediário' | 'Fechamento' | 'N/A' {
 
     if (!hourRange || hourRange === 'OFF' || hourRange === 'FOLGA') return 'N/A';
     
     // Apprentice is always considered 'Abertura' for positioning purposes
-    if (hourRange === APPRENTICE_WORK_PERIOD) return 'Abertura';
+    if (settings.shiftHours.apprentice.includes(hourRange)) return 'Abertura';
 
     const match = hourRange.match(/^(\d{1,2})[h:]/);
     if (!match) return 'Intermediário';
@@ -910,7 +904,8 @@ export function resolveTacticalDay(
     monthKey: string,
     dayIdx: number,
     isHoliday: boolean,
-    isSunday: boolean
+    isSunday: boolean,
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
 ): Record<string, string> {
     const result: Record<string, string> = {};
     const groups: Record<string, Employee[]> = {};
@@ -921,7 +916,7 @@ export function resolveTacticalDay(
 
         
         const hour = e.dailyHours[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
-        const classification = getShiftClassification(hour, isSunday);
+        const classification = getShiftClassification(hour, isSunday, settings);
         if (classification === 'N/A') return;
 
         if (!groups[classification]) groups[classification] = [];

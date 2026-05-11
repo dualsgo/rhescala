@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { Employee, MonthYear, Holiday, ShiftType } from '../types';
+import { Employee, MonthYear, Holiday, ShiftType, JornadaSettings } from '../types';
 import { getShiftClassification, isWorkingShift } from '../hooks/useScheduleEngine';
 
 import { Icon } from './Icon';
-import { buildHolidaySet, SHIFT_HOURS } from '../constants';
+import { buildHolidaySet, SHIFT_HOURS, DEFAULT_JORNADA_SETTINGS } from '../constants';
 import { toPng } from 'html-to-image';
 
 
@@ -14,6 +14,7 @@ interface AnalysisPanelProps {
   onClose: () => void;
   onUpdateShift?: (empId: string, dayIdx: number, newShift: ShiftType) => void;
   onUpdateHour?: (empId: string, dayIdx: number, newHour: string) => void;
+  jornadaSettings?: JornadaSettings;
 }
 
 const WEEKDAY_NAMES = [
@@ -21,7 +22,7 @@ const WEEKDAY_NAMES = [
   'Quinta-feira', 'Sexta-feira', 'Sábado',
 ];
 
-export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, currentMY, customHolidays, onClose, onUpdateShift, onUpdateHour }) => {
+export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, currentMY, customHolidays, onClose, onUpdateShift, onUpdateHour, jornadaSettings }) => {
   const [viewMode, setViewMode] = useState<'insights' | 'team-calendar'>('insights');
   const [selectedEmpId, setSelectedEmpId] = useState<string | null>(employees.filter(e => !e.isHidden && e.status === 'active')[0]?.id || null);
   const [showIndividualModal, setShowIndividualModal] = useState(false);
@@ -111,6 +112,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
         const dayType = new Date(currentMY.year, currentMY.month, d + 1).getDay();
         const isSun = dayType === 0;
         const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`);
+        const settings = jornadaSettings || DEFAULT_JORNADA_SETTINGS;
 
         if (isWorkingShift(s)) {
           worked++;
@@ -727,9 +729,10 @@ const IndividualEditModal: React.FC<IndividualEditModalProps> = ({
   const getAvailHours = (dayIdx: number): string[] => {
     const date = new Date(currentMY.year, currentMY.month, dayIdx + 1);
     const ds = `${currentMY.year}-${String(currentMY.month+1).padStart(2,'0')}-${String(dayIdx+1).padStart(2,'0')}`;
-    if (holidaySet.has(ds)) return SHIFT_HOURS.HOLIDAY;
-    if (date.getDay() === 0) return SHIFT_HOURS.SUNDAY;
-    return SHIFT_HOURS.WEEKDAY;
+    const settings = jornadaSettings || DEFAULT_JORNADA_SETTINGS;
+    if (holidaySet.has(ds)) return settings.shiftHours.holiday;
+    if (date.getDay() === 0) return settings.shiftHours.sunday;
+    return settings.shiftHours.weekday;
   };
 
   type CellDay = { type: 'day'; day: number; dayIdx: number; shift: ShiftType; isHoliday: boolean; isSunday: boolean; isSaturday: boolean; hour: string };

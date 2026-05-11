@@ -37,6 +37,7 @@ interface ShiftGridProps {
   allowRetroactive: boolean;
   showNotes: boolean;
   resolvedPositions: Record<string, string>;
+  jornadaSettings: JornadaSettings;
 }
 
 export const ShiftGrid: React.FC<ShiftGridProps> = ({
@@ -68,6 +69,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   allowRetroactive,
   showNotes,
   resolvedPositions,
+  jornadaSettings,
 }) => {
   const { showDialog } = useDialog();
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
@@ -129,7 +131,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     if (emp.isHidden || emp.status !== 'active') return acc;
                     const shift = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
                     const hour = (emp.dailyHours[monthKey] || [])[dayIdx] || emp.workPeriod;
-                    const shiftClass = getShiftClassification(hour, d.isSunday);
+                    const shiftClass = getShiftClassification(hour, d.isSunday, jornadaSettings);
                     if (isWorkingShift(shift) || shift.startsWith('FF')) {
                       acc.total++;
                       if (shiftClass === 'Abertura') acc.opening++;
@@ -184,7 +186,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
                   const hour = (emp.dailyHours[monthKey] || [])[selectedDayIdx] || emp.workPeriod;
                   const isSun = filteredDays[selectedDayIdx]?.isSunday;
-                  const classification = getShiftClassification(hour, isSun);
+                  const classification = getShiftClassification(hour, isSun, jornadaSettings);
                   
                   if (groups[classification]) groups[classification].push(emp);
                   else groups['Folgas/Outros'].push(emp);
@@ -234,10 +236,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                   const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`);
                                   const isSun = date.getDay() === 0;
 
-                                  let options = SHIFT_HOURS.WEEKDAY;
-                                  if (isHol) options = SHIFT_HOURS.HOLIDAY;
-                                  else if (isSun) options = SHIFT_HOURS.SUNDAY;
-                                  if (emp.isYoungApprentice) options = SHIFT_HOURS.APPRENTICE;
+                                  let options = jornadaSettings.shiftHours.weekday;
+                                  if (isHol) options = jornadaSettings.shiftHours.holiday;
+                                  else if (isSun) options = jornadaSettings.shiftHours.sunday;
+                                  if (emp.isYoungApprentice) options = jornadaSettings.shiftHours.apprentice;
 
                                   const currentVal = emp.dailyHours[monthKey]?.[selectedDayIdx];
                                   const finalOptions = [...new Set([...options])].filter(Boolean);
@@ -267,14 +269,14 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                 {(() => {
                                   const empHour = emp.dailyHours[monthKey]?.[selectedDayIdx] || emp.workPeriod;
                                   const isSun = days[selectedDayIdx]?.isSunday;
-                                  const group = getShiftClassification(empHour, isSun);
+                                  const group = getShiftClassification(empHour, isSun, jornadaSettings);
 
                                   // Find all positions assigned to this group
                                   const groupPositions = employees
                                     .filter(e => !e.isHidden && e.status === 'active')
                                     .filter(e => {
                                       const eHour = e.dailyHours[monthKey]?.[selectedDayIdx] || e.workPeriod;
-                                      return getShiftClassification(eHour, isSun) === group;
+                                      return getShiftClassification(eHour, isSun, jornadaSettings) === group;
                                     })
                                     .map(e => e.tacticalPositions?.[monthKey]?.[selectedDayIdx] || resolvedPositions[e.id])
                                     .filter(Boolean);

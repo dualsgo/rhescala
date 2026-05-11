@@ -1,16 +1,16 @@
 
 import React, { useMemo } from 'react';
 import { Icon } from './Icon';
-import { Employee, MonthYear, Holiday } from '../types';
-import { buildHolidaySet } from '../constants';
-import { isWorkingShift } from '../hooks/useScheduleEngine';
+import { Employee, MonthYear, Holiday, JornadaSettings } from '../types';
+import { buildHolidaySet, DEFAULT_JORNADA_SETTINGS } from '../constants';
+import { isWorkingShift, calculateLunches } from '../hooks/useScheduleEngine';
 
 
 interface DaySummaryCardProps {
   employees: Employee[];
   selectedDayIdx: number;
-  currentMY: MonthYear;
   customHolidays: Holiday[];
+  jornadaSettings: JornadaSettings;
 }
 
 // ─── Lunch interval definitions ───────────────────────────────────────────────
@@ -75,7 +75,7 @@ function buildLunchSlots(
     }));
 }
 
-export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selectedDayIdx, currentMY, customHolidays }) => {
+export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selectedDayIdx, currentMY, customHolidays, jornadaSettings }) => {
   const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
   const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
   const isHoliday = buildHolidaySet(currentMY.year, customHolidays).has(dateStr);
@@ -150,11 +150,38 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
 
   const { counts, names } = data;
 
-  const lunchAberta = buildLunchSlots(names.abertura, isHoliday ? HOLIDAY_LUNCH_CONFIG.abertura : LUNCH_CONFIG.abertura);
-  const lunchInter  = isHoliday ? [] : buildLunchSlots(names.intermediario, LUNCH_CONFIG.intermediario);
-  const lunchInter1 = isHoliday ? buildLunchSlots(names.interm1, HOLIDAY_LUNCH_CONFIG.interm1) : [];
-  const lunchInter2 = isHoliday ? buildLunchSlots(names.interm2, HOLIDAY_LUNCH_CONFIG.interm2) : [];
-  const lunchFecha  = buildLunchSlots(names.fechamento, isHoliday ? HOLIDAY_LUNCH_CONFIG.fechamento : LUNCH_CONFIG.fechamento);
+  const lunchAberta = buildLunchSlots(names.abertura, isHoliday ? { windowStart: 13.5 * 60, windowEnd: 15.5 * 60, slotDuration: 30 } : { windowStart: 12.5 * 60, windowEnd: 14.5 * 60, slotDuration: 30 });
+  const lunchInter  = isHoliday ? [] : buildLunchSlots(names.intermediario, { windowStart: 14 * 60, windowEnd: 16 * 60, slotDuration: 30 });
+  const lunchFecha  = buildLunchSlots(names.fechamento, isHoliday ? { windowStart: 16.5 * 60, windowEnd: 18.5 * 60, slotDuration: 30 } : { windowStart: 15 * 60, windowEnd: 18 * 60, slotDuration: 30 });
+
+  // Simplified lunch distribution for summary card using the settings
+  const getLunchList = (catNames: string[], category: 'abertura' | 'fechamento' | 'intermediario') => {
+      if (catNames.length === 0) return [];
+      const isSun = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1).getDay() === 0;
+      const isOp = category === 'abertura';
+      
+      const members = employees.filter(e => catNames.includes(e.name.split(' ')[0]));
+      // Note: calculateLunches expects members with some extra fields but we just need it to run
+      const times = calculateLunches(members, isHoliday, isSun, isOp, jornadaSettings);
+      
+      const groups: Record<string, string[]> = {};
+      times.forEach((t, i) => {
+          if (!groups[t]) groups[t] = [];
+          groups[t].push(catNames[i]);
+      });
+      
+      return Object.entries(groups).map(([time, names]) => ({
+          time,
+          names,
+          isDouble: names.length > 1
+      }));
+  };
+
+  const lAberta = getLunchList(names.abertura, 'abertura');
+  const lInter = getLunchList(names.intermediario, 'intermediario');
+  const lFecha = getLunchList(names.fechamento, 'fechamento');
+  const lInter1 = getLunchList(names.interm1, 'intermediario');
+  const lInter2 = getLunchList(names.interm2, 'intermediario');
 
   const hasLunchData = counts.abertura > 0 || counts.intermediario > 0 || counts.fechamento > 0 || counts.interm1 > 0 || counts.interm2 > 0;
 
@@ -255,11 +282,11 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
           </div>
 
           <div className={`grid grid-cols-1 ${isHoliday ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-2.5`}>
-            <LunchSection label={isHoliday ? "Ab. (H)" : "Abertura"} slots={getAvailableSlots(isHoliday ? HOLIDAY_LUNCH_CONFIG.abertura : LUNCH_CONFIG.abertura)} lunchData={lunchAberta} count={counts.abertura} color="orange" icon="wb_twilight" />
-            {!isHoliday && <LunchSection label="Intermed." slots={getAvailableSlots(LUNCH_CONFIG.intermediario)} lunchData={lunchInter} count={counts.intermediario} color="sky" icon="sunny" />}
-            {isHoliday && <LunchSection label="Int 1 (H)" slots={getAvailableSlots(HOLIDAY_LUNCH_CONFIG.interm1)} lunchData={lunchInter1} count={counts.interm1} color="emerald" icon="sunny" />}
-            {isHoliday && <LunchSection label="Int 2 (H)" slots={getAvailableSlots(HOLIDAY_LUNCH_CONFIG.interm2)} lunchData={lunchInter2} count={counts.interm2} color="pink" icon="sunny" />}
-            <LunchSection label={isHoliday ? "Fech (H)" : "Fechamento"} slots={getAvailableSlots(isHoliday ? HOLIDAY_LUNCH_CONFIG.fechamento : LUNCH_CONFIG.fechamento)} lunchData={lunchFecha} count={counts.fechamento} color={isHoliday ? "rose" : "indigo"} icon="nightlight" />
+            <LunchSection label={isHoliday ? "Ab. (H)" : "Abertura"} slots={[]} lunchData={lAberta} count={counts.abertura} color="orange" icon="wb_twilight" />
+            {!isHoliday && <LunchSection label="Intermed." slots={[]} lunchData={lInter} count={counts.intermediario} color="sky" icon="sunny" />}
+            {isHoliday && <LunchSection label="Int 1 (H)" slots={[]} lunchData={lInter1} count={counts.interm1} color="emerald" icon="sunny" />}
+            {isHoliday && <LunchSection label="Int 2 (H)" slots={[]} lunchData={lInter2} count={counts.interm2} color="pink" icon="sunny" />}
+            <LunchSection label={isHoliday ? "Fech (H)" : "Fechamento"} slots={[]} lunchData={lFecha} count={counts.fechamento} color={isHoliday ? "rose" : "indigo"} icon="nightlight" />
           </div>
         </div>
       )}

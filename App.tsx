@@ -23,11 +23,14 @@ import { Icon } from './components/Icon';
 import { Login } from './components/Login';
 import { PrintableSchedule } from './components/PrintableSchedule';
 import { useHolidayCredits } from './hooks/useHolidayCredits';
-import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay, getNationalHolidays } from './constants';
-import { Employee, MonthYear, Holiday } from './types';
+import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay, getNationalHolidays, DEFAULT_JORNADA_SETTINGS } from './constants';
+import { Employee, MonthYear, Holiday, JornadaSettings } from './types';
+import { JornadaManager } from './components/JornadaManager';
 
 const App: React.FC = () => {
   const [employees, setEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', [PLACEHOLDER_EMPLOYEE]);
+  const [jornadaSettings, setJornadaSettings] = useLocalStorage<JornadaSettings>('riHappyJornadaSettings', DEFAULT_JORNADA_SETTINGS);
+
   const [customHolidays, setCustomHolidays] = useLocalStorage<Holiday[]>('riHappyCustomHolidays', []);
   const [monthNotes, setMonthNotes] = useLocalStorage<Record<string, string>>('riHappyMonthNotes', {});
   const [trackingStartDate, setTrackingStartDate] = useLocalStorage<string>('riHappyTrackingStart', `${new Date().getFullYear()}-01-01`);
@@ -164,7 +167,7 @@ const App: React.FC = () => {
 
       // 2. Get current resolved positions for this group
       const isHoliday = buildHolidaySet(currentMY.year, customHolidays).has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`);
-      const resolved = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday);
+      const resolved = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, jornadaSettings);
       
       const oldPos = targetEmp.tacticalPositions?.[monthKey]?.[dayIdx] || resolved[empId];
 
@@ -213,7 +216,7 @@ const App: React.FC = () => {
 
   const handleSortearDomingo = (targetMY = currentMY, targetKey = monthKey, skipConfirm = false) => {
     const perform = () => {
-      const updatedData = applyMonthUpdate(employees, targetMY.year, targetMY.month, customHolidays);
+      const updatedData = applyMonthUpdate(employees, targetMY.year, targetMY.month, customHolidays, jornadaSettings);
       setEmployees(prev => prev.map(emp => {
         if (updatedData[emp.id]) {
           return {
@@ -259,7 +262,7 @@ const App: React.FC = () => {
     const folgas: string[] = [];
 
     const activeEmps = employees.filter(e => !e.isHidden && e.status === 'active');
-    const resolvedPositions = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday);
+    const resolvedPositions = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, jornadaSettings);
     
     activeEmps.forEach(e => {
       const shift = e.shifts[monthKey]?.[dayIdx] || 'T';
@@ -306,7 +309,7 @@ const App: React.FC = () => {
       const isOpening = shiftName === 'Abertura';
 
       text += `⏰ *${shiftName} ${hour}*\n`;
-      const lunches = calculateLunches(members, isHoliday, isSunday, isOpening);
+      const lunches = calculateLunches(members, isHoliday, isSunday, isOpening, jornadaSettings);
 
       members.forEach((m, idx) => {
         text += `${m.posEmoji} ${m.firstName} (almoço ${lunches[idx]})\n`;
@@ -346,7 +349,7 @@ const App: React.FC = () => {
       type: 'confirm'
     }).then(ok => {
       if (ok) {
-        const updatedShifts = distributeTacticalPositions(employees, currentMY, customHolidays);
+        const updatedShifts = distributeTacticalPositions(employees, currentMY, customHolidays, jornadaSettings);
         setEmployees(prev => prev.map(emp => {
           if (updatedShifts[emp.id]) {
             return {
@@ -401,13 +404,14 @@ const App: React.FC = () => {
           const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
           const isHoliday = buildHolidaySet(currentMY.year, customHolidays).has(dateStr);
           const isSunday = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1).getDay() === 0;
-          const selectedDayResolvedPositions = resolveTacticalDay(
-            employees.filter(e => !e.isHidden && e.status === 'active'),
-            monthKey,
-            selectedDayIdx,
-            isHoliday,
-            isSunday
-          );
+            const selectedDayResolvedPositions = resolveTacticalDay(
+              employees.filter(e => !e.isHidden && e.status === 'active'),
+              monthKey,
+              selectedDayIdx,
+              isHoliday,
+              isSunday,
+              jornadaSettings
+            );
 
           switch (currentView) {
             case 'grid':
@@ -470,6 +474,7 @@ const App: React.FC = () => {
                     if (isReadOnly) return;
                     setMonthNotes(prev => ({ ...prev, [monthKey]: text }));
                   }}
+                  jornadaSettings={jornadaSettings}
                 />
               );
             case 'analysis':
@@ -478,6 +483,7 @@ const App: React.FC = () => {
                   employees={employees} 
                   currentMY={currentMY} 
                   customHolidays={customHolidays} 
+                  jornadaSettings={jornadaSettings}
                   onClose={() => setCurrentView('grid')} 
                   onUpdateShift={(empId, dayIdx, shift) => {
                     if (isReadOnly) return;
@@ -580,13 +586,13 @@ const App: React.FC = () => {
               );
             case 'jornada':
               return (
-                <div className="bg-white dark:bg-slate-900 p-12 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl text-center max-w-2xl mx-auto mt-10">
-                   <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <Icon name="schedule" className="text-4xl" />
-                   </div>
-                   <h2 className="text-2xl font-black uppercase mb-4">Configuração de Jornada</h2>
-                   <p className="text-slate-500 dark:text-slate-400 mb-8">Esta funcionalidade está sendo simplificada e será integrada aqui em breve.</p>
-                   <button onClick={() => setCurrentView('grid')} className="px-8 py-3 bg-slate-950 text-white rounded-xl font-bold uppercase text-xs tracking-widest hover:scale-105 transition-transform">Voltar para Grade</button>
+                <div className="max-w-4xl mx-auto mt-6">
+                  <JornadaManager 
+                    settings={jornadaSettings}
+                    onUpdate={setJornadaSettings}
+                    onClose={() => setCurrentView('grid')}
+                    isReadOnly={isReadOnly}
+                  />
                 </div>
               );
             default:
@@ -671,6 +677,7 @@ const App: React.FC = () => {
                   employees={employees} 
                   currentMY={currentMY} 
                   customHolidays={customHolidays} 
+                  jornadaSettings={jornadaSettings}
                 />
               </div>
             </div>
