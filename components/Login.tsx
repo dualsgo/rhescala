@@ -80,20 +80,38 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </form>
 
         <div className="mt-12 pt-8 border-t border-slate-100 dark:border-slate-800">
-          <div className="flex justify-center gap-8">
-            <div className="flex flex-col items-center">
-              <span className="text-[9px] font-black text-slate-400 uppercase mb-1">Versão</span>
-              <span className="text-[11px] font-bold text-slate-900 dark:text-slate-100">2.1.0</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-[9px] font-black text-slate-400 uppercase mb-1">Segurança</span>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                <span className="text-[11px] font-bold text-slate-900 dark:text-slate-100">Nuvem</span>
+          <div className="flex flex-col items-center gap-6">
+            <div className="flex justify-center gap-8 w-full">
+              <div className="flex flex-col items-center">
+                <span className="text-[9px] font-black text-slate-400 uppercase mb-1">Versão</span>
+                <span className="text-[11px] font-bold text-slate-900 dark:text-slate-100">2.1.0</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-[9px] font-black text-slate-400 uppercase mb-1">Segurança</span>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                  <span className="text-[11px] font-bold text-slate-900 dark:text-slate-100">Nuvem</span>
+                </div>
               </div>
             </div>
+
+            <button 
+              onClick={() => {
+                if (window.confirm('Deseja realmente trocar o link da planilha? Você voltará para a tela de configuração inicial.')) {
+                  import('../src/gas-api').then(m => {
+                    m.clearConfiguredApiUrl();
+                    window.location.reload();
+                  });
+                }
+              }}
+              className="text-[10px] font-black text-slate-400 hover:text-orange-500 uppercase tracking-widest transition-colors flex items-center gap-2"
+            >
+              <Icon name="settings_backup_restore" className="text-sm" />
+              Configurar outra loja / Trocar Link
+            </button>
           </div>
         </div>
+
       </div>
     </div>
   );
