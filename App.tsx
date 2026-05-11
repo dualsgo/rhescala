@@ -98,6 +98,7 @@ const App: React.FC = () => {
   const [allowRetroactive, setAllowRetroactive] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   
+  const canGoNext = useMemo(() => {
     const today = new Date();
     const isCurrentOrPast = new Date(currentMY.year, currentMY.month, 1) < new Date(today.getFullYear(), today.getMonth(), 1);
     
