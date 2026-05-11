@@ -30,6 +30,9 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   const shifts = (employee.shifts || {})[monthKey] || [];
   const hours = (employee.dailyHours || {})[monthKey] || [];
 
+  const [newRequest, setNewRequest] = React.useState('');
+  const [requestMonth, setRequestMonth] = React.useState(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`);
+
   const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
   const pendingCredits = holidayCredits.filter(c => c.status === 'pending');
