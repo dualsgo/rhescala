@@ -262,7 +262,9 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                 );
               })}
             </div>
-                 {/* Mural de Pedidos / Recados */}
+          </div>
+
+          {/* Mural de Pedidos / Recados */}
           <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800 space-y-6">
             <div className="flex items-center justify-between">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
@@ -410,9 +412,8 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
               ))}
             </div>
           </div>
-          </div>
-
         </div>
+      </div>
 
         {/* Footer Actions */}
         <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex gap-3">
