@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { Icon } from './Icon';
+import { apiStore } from '../src/gas-api';
 
 interface LoginProps {
   onLogin: (role: 'admin' | 'viewer') => void;
@@ -8,18 +9,29 @@ interface LoginProps {
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simple authentication logic
-    if (password === 'BrBOg975mf2(') {
-      onLogin('admin');
-    } else if (password === '1187') {
-      onLogin('viewer');
-    } else {
-      setError(true);
-      setTimeout(() => setError(false), 2000);
+    if (!password) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const result = await apiStore.login(password);
+      if (result.success && result.role) {
+        onLogin(result.role);
+      } else {
+        setError(result.error || 'Senha Incorreta');
+        setTimeout(() => setError(null), 3000);
+      }
+    } catch (err) {
+      setError('Erro de conexão com o servidor');
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -43,20 +55,27 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className={`w-full bg-slate-50 dark:bg-slate-800/50 border ${error ? 'border-rose-500 ring-2 ring-rose-500/20' : 'border-slate-200 dark:border-slate-700'} rounded-2xl p-4 text-center text-lg font-bold focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all dark:text-white`}
+                disabled={isLoading}
+                className={`w-full bg-slate-50 dark:bg-slate-800/50 border ${error ? 'border-rose-500 ring-2 ring-rose-500/20' : 'border-slate-200 dark:border-slate-700'} rounded-2xl p-4 text-center text-lg font-bold focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all dark:text-white disabled:opacity-50`}
                 autoFocus
               />
               {error && (
-                <p className="absolute -bottom-6 left-0 right-0 text-center text-[10px] font-black text-rose-500 uppercase tracking-widest animate-shake">Senha Incorreta</p>
+                <p className="absolute -bottom-6 left-0 right-0 text-center text-[10px] font-black text-rose-500 uppercase tracking-widest animate-shake">{error}</p>
               )}
             </div>
           </div>
 
           <button
             type="submit"
-            className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black py-4 rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest text-xs"
+            disabled={isLoading}
+            className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black py-4 rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-70"
           >
-            Entrar no Sistema
+            {isLoading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-slate-400 border-t-white dark:border-t-slate-900 rounded-full animate-spin" />
+                Autenticando...
+              </>
+            ) : 'Entrar no Sistema'}
           </button>
         </form>
 
@@ -64,13 +83,13 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <div className="flex justify-center gap-8">
             <div className="flex flex-col items-center">
               <span className="text-[9px] font-black text-slate-400 uppercase mb-1">Versão</span>
-              <span className="text-[11px] font-bold text-slate-900 dark:text-slate-100">2.0.0</span>
+              <span className="text-[11px] font-bold text-slate-900 dark:text-slate-100">2.1.0</span>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-[9px] font-black text-slate-400 uppercase mb-1">Status</span>
+              <span className="text-[9px] font-black text-slate-400 uppercase mb-1">Segurança</span>
               <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                <span className="text-[11px] font-bold text-slate-900 dark:text-slate-100">Online</span>
+                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                <span className="text-[11px] font-bold text-slate-900 dark:text-slate-100">Nuvem</span>
               </div>
             </div>
           </div>
@@ -79,3 +98,4 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     </div>
   );
 };
+

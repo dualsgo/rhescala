@@ -516,8 +516,10 @@ const App: React.FC = () => {
                   employees={employees} 
                   setEmployees={setEmployees} 
                   onClose={() => setCurrentView('grid')} 
+                  role={auth.role}
                 />
               );
+
             case 'feriados':
               return (
                 <div className="max-w-xl mx-auto mt-6">

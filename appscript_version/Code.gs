@@ -1,21 +1,28 @@
 /**
  * Backend do Google Apps Script para Gestão de Escala
- * Versão: Multi-Loja (GitHub Pages)
- * 
- * INSTRUÇÕES DE DEPLOY:
- * 1. Abra sua Planilha Google
- * 2. Vá em Extensões → Apps Script
- * 3. Cole este código e salve (Ctrl+S)
- * 4. Clique em Implantar → Nova Implantação
- * 5. Tipo: Aplicativo Web
- * 6. Executar como: Eu mesmo
- * 7. Quem tem acesso: Qualquer pessoa
- * 8. Copie o link gerado e cole no app
+ * Versão: Multi-Loja (GitHub Pages) com Autenticação Dinâmica
  */
 
 function doGet(e) {
-  // Requisição de dados (API)
+  var action = e.parameter.action;
   var key = e.parameter.key;
+
+  // Login/Verificação de Senha
+  if (action === 'login') {
+    var password = e.parameter.password;
+    var adminPass = getConfig('admin_password', 'BrBOg975mf2(');
+    var viewerPass = getConfig('viewer_password', '1187');
+
+    if (password === adminPass) {
+      return buildCorsResponse(JSON.stringify({ success: true, role: 'admin' }));
+    } else if (password === viewerPass) {
+      return buildCorsResponse(JSON.stringify({ success: true, role: 'viewer' }));
+    } else {
+      return buildCorsResponse(JSON.stringify({ success: false, error: 'Senha incorreta' }));
+    }
+  }
+
+  // Requisição de dados normal (API)
   if (key) {
     var data = getData(key);
     var response = data ? JSON.parse(data) : null;
@@ -28,7 +35,22 @@ function doGet(e) {
 
 function doPost(e) {
   try {
+    var action = e.parameter.action;
     var key = e.parameter.key;
+
+    // Atualização de Senha
+    if (action === 'update_password') {
+      var body = JSON.parse(e.postData.contents);
+      var role = body.role; // 'admin' ou 'viewer'
+      var newPassword = body.newPassword;
+      
+      if (role === 'admin' || role === 'viewer') {
+        setConfig(role + '_password', newPassword);
+        return buildCorsResponse(JSON.stringify({ success: true }));
+      }
+      return buildCorsResponse(JSON.stringify({ success: false, error: 'Role inválido' }));
+    }
+
     if (!key) {
       return buildCorsResponse(JSON.stringify({ error: 'Key not provided' }));
     }
@@ -43,12 +65,50 @@ function doPost(e) {
 }
 
 /**
- * Cria uma resposta JSON com headers CORS para aceitar requisições do GitHub Pages.
+ * Cria uma resposta JSON com headers CORS.
  */
 function buildCorsResponse(jsonString) {
   return ContentService
     .createTextOutput(jsonString)
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ─── CONFIGURAÇÕES (ABA CONFIG) ─────────────────────────────────────────────
+
+function getConfig(key, defaultValue) {
+  try {
+    var sheet = getOrCreateSheet('Config');
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === key) return data[i][1].toString();
+    }
+    // Se não existir, cria com o valor padrão
+    if (defaultValue !== undefined) {
+      setConfig(key, defaultValue);
+      return defaultValue;
+    }
+    return null;
+  } catch (e) {
+    return defaultValue;
+  }
+}
+
+function setConfig(key, value) {
+  var sheet = getOrCreateSheet('Config');
+  var data = sheet.getDataRange().getValues();
+  var found = false;
+  
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === key) {
+      sheet.getRange(i + 1, 2).setValue(value);
+      found = true;
+      break;
+    }
+  }
+  
+  if (!found) {
+    sheet.appendRow([key, value, new Date()]);
+  }
 }
 
 // ─── BANCO DE DADOS (SPREADSHEET) ───────────────────────────────────────────
@@ -57,16 +117,11 @@ function getData(key) {
   try {
     var sheet = getOrCreateSheet('Database');
     var values = sheet.getDataRange().getValues();
-
-    // Percorre do fim para o início (pega a versão mais recente)
     for (var i = values.length - 1; i >= 0; i--) {
-      if (values[i][0] === key) {
-        return values[i][1];
-      }
+      if (values[i][0] === key) return values[i][1];
     }
     return null;
   } catch (e) {
-    console.error('Erro ao buscar ' + key + ':', e);
     return null;
   }
 }
@@ -78,7 +133,6 @@ function setData(key, value) {
     sheet.appendRow([key, valueStr, new Date()]);
     return true;
   } catch (e) {
-    console.error('Erro ao salvar ' + key + ':', e);
     throw e;
   }
 }
@@ -88,8 +142,13 @@ function getOrCreateSheet(sheetName) {
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet) {
     sheet = ss.insertSheet(sheetName);
-    sheet.appendRow(['Chave', 'Valor (JSON)', 'Última Atualização']);
+    if (sheetName === 'Config') {
+      sheet.appendRow(['Parâmetro', 'Valor', 'Última Alteração']);
+    } else {
+      sheet.appendRow(['Chave', 'Valor (JSON)', 'Última Atualização']);
+    }
     sheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#f3f3f3');
   }
   return sheet;
 }
+

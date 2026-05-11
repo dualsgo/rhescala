@@ -65,4 +65,41 @@ export const apiStore = {
             throw e;
         }
     },
+
+    async login(password: string): Promise<{ success: boolean, role?: 'admin' | 'viewer', error?: string }> {
+        const url = getConfiguredApiUrl();
+        if (!url) return { success: false, error: 'URL da Planilha não configurada.' };
+
+        try {
+            const response = await fetch(`${url}?action=login&password=${encodeURIComponent(password)}`, {
+                method: 'GET',
+                redirect: 'follow',
+            });
+            if (!response.ok) throw new Error('Erro na conexão com o servidor.');
+            return await response.json();
+        } catch (e) {
+            console.error('Erro no login:', e);
+            return { success: false, error: 'Falha na autenticação. Verifique a conexão.' };
+        }
+    },
+
+    async updatePassword(role: 'admin' | 'viewer', newPassword: string): Promise<{ success: boolean, error?: string }> {
+        const url = getConfiguredApiUrl();
+        if (!url) return { success: false, error: 'URL da Planilha não configurada.' };
+
+        try {
+            const response = await fetch(`${url}?action=update_password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ role, newPassword }),
+                redirect: 'follow',
+            });
+            if (!response.ok) throw new Error('Erro ao atualizar senha.');
+            return await response.json();
+        } catch (e) {
+            console.error('Erro ao atualizar senha:', e);
+            return { success: false, error: 'Falha ao atualizar senha.' };
+        }
+    }
 };
+
