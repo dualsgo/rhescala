@@ -332,7 +332,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         req.status === 'seen' ? 'bg-blue-100 text-blue-700' :
                         'bg-orange-100 text-orange-700'
                       }`}>
-                        {req.date.split('-').reverse().join('/')}
+                        {(req.date || '').split('-').reverse().join('/')}
                       </span>
                       <span className="text-[8px] font-black text-slate-400 uppercase">
                         {req.status === 'granted' ? 'Atendido' : req.status === 'seen' ? 'Visto' : 'Pendente'}

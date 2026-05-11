@@ -269,7 +269,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                 <div className="flex flex-col min-w-0 flex-1">
                                   <div className="flex items-center gap-1.5">
                                     <span className="text-[11px] font-black text-slate-900 dark:text-slate-100 truncate group-hover/name:text-orange-600 transition-colors">{emp.name}</span>
-                                    {(emp.requests || []).some(r => r.date.startsWith(monthKey)) && (
+                                    {(emp.requests || []).some(r => r.date && r.date.startsWith(monthKey)) && (
                                       <div className="w-3.5 h-3.5 bg-orange-500 rounded-full flex items-center justify-center animate-bounce-subtle" title="Tem pedidos para este mês">
                                         <Icon name="chat_bubble" className="text-[8px] text-white" />
                                       </div>
