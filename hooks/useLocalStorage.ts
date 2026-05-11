@@ -98,13 +98,17 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
         try {
             const cloudData = await apiStore.get(key);
 
+            // Mesmo que não venham dados (null), consideramos que a carga inicial "aconteceu"
+            // com sucesso (o servidor respondeu que não tem nada ainda).
+            // Isso permite que o app comece a salvar dados em uma planilha nova/vazia.
+            initialLoadSuccess.current = true;
             if (cloudData) {
                 const dataStr = JSON.stringify(cloudData);
                 const localStr = JSON.stringify(storedValueRef.current);
 
                 if (dataStr !== lastCloudValue.current || force) {
                     if (isDirty.current && !force && dataStr !== localStr) {
-                        // CONFLITO: Usuário editou localmente, mas a nuvem tem uma versão diferente
+                        // CONFLITO
                         updateGlobalSync('error', key, 'Conflito de Versão');
                         window.dispatchEvent(new CustomEvent('sync-conflict', {
                             detail: {
@@ -117,17 +121,15 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                                         updateGlobalSync('synced', key, 'Nuvem Restaurada');
                                         try { new BroadcastChannel(`sync_${key}`).postMessage(cloudData); } catch (e) { }
                                     } else {
-                                        // Vence o local: enganamos o lastCloudValue para forçar o próximo upload
                                         lastCloudValue.current = dataStr; 
                                         isDirty.current = true;
-                                        // Forçar um trigger invisível para o useEffect de upload rodar na próxima passada
                                         setStoredValue(prev => (Array.isArray(prev) ? [...prev] : {...prev}) as any); 
                                         updateGlobalSync('syncing', key, 'Salvando Alterações...');
                                     }
                                 }
                             }
                         }));
-                        return; // Aborta para esperar decisão
+                        return;
                     }
 
                     setStoredValue(cloudData);
@@ -138,7 +140,10 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                 } else {
                     updateGlobalSync('synced', key, 'Salvo na Planilha');
                 }
-                initialLoadSuccess.current = true;
+            } else {
+                // Caso cloudData seja null (planilha nova)
+                updateGlobalSync('synced', key, 'Salvo na Planilha');
+                lastCloudValue.current = null;
             }
         } catch (err) {
             console.error('Download error:', err);

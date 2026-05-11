@@ -44,7 +44,7 @@ export const apiStore = {
             return await response.json();
         } catch (e) {
             console.error(`Erro ao buscar ${key}:`, e);
-            return null;
+            throw e;
         }
     },
 

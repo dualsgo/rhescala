@@ -45,10 +45,23 @@ A smart, responsive web application built with React and Vite to manage and auto
 - **Tailwind CSS** for responsive, modern styling
 - **TypeScript** for strict type-checking and stable architecture
 
-## Usage Workflow
+## Multi-Store Setup (Google Sheets Backend)
 
-1. Start by navigating to the **Team (Equipe)** view to add your current staff.
-2. Ensure you mark "Jovem Aprendiz" appropriately and set their weekly course days.
-3. Once the team is configured, navigate to the **Dashboard (Escala)**. The system will auto-generate the current month's shifts based on preferred days off and Sunday rotation logic.
-4. Manually click on shifts and daily hours in the grid to make specific adjustments or log absences.
-5. Use the WhatsApp Share button to quickly communicate daily schedules to the team.
+Este projeto utiliza um backend baseado em Google Apps Script (GAS) para permitir que cada loja tenha seu próprio banco de dados em uma planilha Google.
+
+### Passos para configurar uma nova loja:
+
+1. **Criar Planilha:** Crie uma nova Planilha Google em branco. Não se preocupe com o nome das abas (como "Página1"), o script as criará automaticamente.
+2. **Abrir Editor de Script:** Vá em `Extensões` > `Apps Script`.
+3. **Copiar Código:** Copie o código disponível no arquivo `src/constants/appsScriptCode.ts` (ou o código fornecido pelo administrador) e cole no editor do Google.
+4. **Implantar (Deploy):**
+   - Clique em `Implantar` > `Nova Implantação`.
+   - Tipo: `App da Web`.
+   - Descrição: `API Escala`.
+   - Executar como: `Eu` (seu e-mail).
+   - Quem tem acesso: `Qualquer pessoa`.
+5. **Autorizar:** Clique em `Implantar` e siga as janelas de autorização do Google.
+6. **Configurar na App:** Copie a **URL do App da Web** gerada e cole-a na tela de configuração inicial do sistema.
+
+---
+© 2024 Ri Happy - Gestão de Escalas
