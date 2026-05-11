@@ -61,7 +61,15 @@ export function useSyncStatus() {
 }
 
 export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void, () => Promise<void>] {
-    const [storedValue, setStoredValue] = useState<T>(initialValue);
+    const [storedValue, setStoredValue] = useState<T>(() => {
+        // Tenta carregar do localStorage primeiro (cache local)
+        try {
+            const localItem = window.localStorage.getItem(key);
+            return localItem ? JSON.parse(localItem) : initialValue;
+        } catch (e) {
+            return initialValue;
+        }
+    });
     const storedValueRef = useRef(storedValue);
     const [isLoaded, setIsLoaded] = useState(false);
 
@@ -135,7 +143,11 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                     setStoredValue(cloudData);
                     lastCloudValue.current = dataStr;
                     isDirty.current = false;
-                    try { new BroadcastChannel(`sync_${key}`).postMessage(cloudData); } catch (e) { }
+                    // Atualiza o cache local
+                    try {
+                        window.localStorage.setItem(key, dataStr);
+                        new BroadcastChannel(`sync_${key}`).postMessage(cloudData);
+                    } catch (e) { }
                     updateGlobalSync('synced', key, force ? 'Dados Atualizados' : 'Salvo na Planilha');
                 } else {
                     updateGlobalSync('synced', key, 'Salvo na Planilha');
@@ -225,6 +237,10 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
             const next = value instanceof Function ? value(prev) : value;
             if (JSON.stringify(next) !== JSON.stringify(prev)) {
                 isDirty.current = true;
+                // Salva no localStorage imediatamente para evitar perda de dados
+                try {
+                    window.localStorage.setItem(key, JSON.stringify(next));
+                } catch (e) {}
             }
             return next;
         });

@@ -4,38 +4,44 @@ export const APPS_SCRIPT_CODE = `/**
  */
 
 function doGet(e) {
-  var action = e.parameter.action;
-  var key = e.parameter.key;
+  try {
+    logDebug('GET', JSON.stringify(e.parameter));
+    var action = e.parameter.action;
+    var key = e.parameter.key;
 
-  // Login/Verificação de Senha
-  if (action === 'login') {
-    var password = e.parameter.password;
-    var adminPass = getConfig('admin_password', 'admin');
-    var viewerPass = getConfig('viewer_password', '1234');
+    // Login/Verificação de Senha
+    if (action === 'login') {
+      var password = e.parameter.password;
+      var adminPass = getConfig('admin_password', 'admin');
+      var viewerPass = getConfig('viewer_password', '1234');
 
-
-    if (password === adminPass) {
-      return buildCorsResponse(JSON.stringify({ success: true, role: 'admin' }));
-    } else if (password === viewerPass) {
-      return buildCorsResponse(JSON.stringify({ success: true, role: 'viewer' }));
-    } else {
-      return buildCorsResponse(JSON.stringify({ success: false, error: 'Senha incorreta' }));
+      if (password === adminPass) {
+        return buildCorsResponse(JSON.stringify({ success: true, role: 'admin' }));
+      } else if (password === viewerPass) {
+        return buildCorsResponse(JSON.stringify({ success: true, role: 'viewer' }));
+      } else {
+        return buildCorsResponse(JSON.stringify({ success: false, error: 'Senha incorreta' }));
+      }
     }
-  }
 
-  // Requisição de dados normal (API)
-  if (key) {
-    var data = getData(key);
-    var response = data ? JSON.parse(data) : null;
-    return buildCorsResponse(JSON.stringify(response));
-  }
+    // Requisição de dados normal (API)
+    if (key) {
+      var data = getData(key);
+      var response = data ? JSON.parse(data) : null;
+      return buildCorsResponse(JSON.stringify(response));
+    }
 
-  // Ping de teste de conexão
-  return buildCorsResponse(JSON.stringify({ status: 'ok', message: 'Escala API ativa!' }));
+    // Ping de teste de conexão
+    return buildCorsResponse(JSON.stringify({ status: 'ok', message: 'Escala API ativa!' }));
+  } catch (err) {
+    logDebug('GET_ERROR', err.toString());
+    return buildCorsResponse(JSON.stringify({ error: err.toString() }));
+  }
 }
 
 function doPost(e) {
   try {
+    logDebug('POST', JSON.stringify(e.parameter), e.postData ? e.postData.contents : 'sem body');
     var action = e.parameter.action;
     var key = e.parameter.key;
 
@@ -61,6 +67,7 @@ function doPost(e) {
 
     return buildCorsResponse(JSON.stringify({ success: true }));
   } catch (err) {
+    logDebug('POST_ERROR', err.toString());
     return buildCorsResponse(JSON.stringify({ error: err.toString() }));
   }
 }
@@ -145,11 +152,33 @@ function getOrCreateSheet(sheetName) {
     sheet = ss.insertSheet(sheetName);
     if (sheetName === 'Config') {
       sheet.appendRow(['Parâmetro', 'Valor', 'Última Alteração']);
+    } else if (sheetName === 'DebugLog') {
+      sheet.appendRow(['Data/Hora', 'Tipo', 'Detalhes', 'Payload']);
     } else {
       sheet.appendRow(['Chave', 'Valor (JSON)', 'Última Atualização']);
     }
     sheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#f3f3f3');
+    
+    var defaultSheets = ['Página1', 'Sheet1'];
+    defaultSheets.forEach(function(name) {
+      var defaultSheet = ss.getSheetByName(name);
+      if (defaultSheet && ss.getSheets().length > 1 && defaultSheet.getLastRow() === 0) {
+        try { ss.deleteSheet(defaultSheet); } catch (e) { }
+      }
+    });
   }
   return sheet;
 }
+
+function logDebug(type, details, payload) {
+  try {
+    var sheet = getOrCreateSheet('DebugLog');
+    sheet.appendRow([new Date(), type, details, payload || '']);
+    // Mantém apenas as últimas 100 linhas de log
+    if (sheet.getLastRow() > 105) {
+      sheet.deleteRows(2, 10);
+    }
+  } catch (e) {}
+}
+`;
 `;
