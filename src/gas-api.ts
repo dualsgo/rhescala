@@ -100,6 +100,23 @@ export const apiStore = {
             console.error('Erro ao atualizar senha:', e);
             return { success: false, error: 'Falha ao atualizar senha.' };
         }
+    },
+
+    async checkSetup(tempUrl?: string): Promise<{ initialized: boolean }> {
+        const url = tempUrl || getConfiguredApiUrl();
+        if (!url) return { initialized: false };
+
+        try {
+            const response = await fetch(`${url}?action=check_setup`, {
+                method: 'GET',
+                redirect: 'follow',
+            });
+            if (!response.ok) return { initialized: false };
+            return await response.json();
+        } catch (e) {
+            console.error('Erro ao verificar setup:', e);
+            return { initialized: false };
+        }
     }
 };
 

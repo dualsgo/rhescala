@@ -12,6 +12,7 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
     const [adminPass, setAdminPass] = useState('admin');
     const [viewerPass, setViewerPass] = useState('1234');
     const [testing, setTesting] = useState(false);
+    const [isInitialized, setIsInitialized] = useState<boolean | null>(null);
     const [error, setError] = useState('');
     const [showCode, setShowCode] = useState(false);
     const [copied, setCopied] = useState(false);
@@ -23,15 +24,9 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
     };
 
     async function handleConnect() {
-        // ... (existing logic)
         const trimmed = url.trim();
         if (!trimmed.startsWith('https://script.google.com')) {
             setError('Cole o link completo do Web App do Google Apps Script.');
-            return;
-        }
-
-        if (!adminPass || !viewerPass) {
-            setError('Defina as senhas de acesso para continuar.');
             return;
         }
 
@@ -39,18 +34,27 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
         setError('');
 
         try {
-            // 1. Testar conexão (Ping)
-            const response = await fetch(`${trimmed}?key=_ping`, {
-                method: 'GET',
-                redirect: 'follow',
-            });
-            if (!response.ok) throw new Error('Não foi possível conectar.');
-            
-            // 2. Salvar URL temporariamente para as chamadas de API
-            setConfiguredApiUrl(trimmed);
-
-            // 3. Configurar as senhas na planilha
             const api = (await import('../src/gas-api')).apiStore;
+            
+            // 1. Verificar se a planilha já está configurada
+            const { initialized } = await api.checkSetup(trimmed);
+            
+            if (initialized) {
+                // Se já existe uma senha, apenas salvamos a URL e finalizamos
+                setConfiguredApiUrl(trimmed);
+                onComplete();
+                return;
+            }
+
+            // 2. Se NÃO estiver inicializada, exige senhas
+            if (!adminPass || !viewerPass) {
+                setError('Esta é uma nova planilha. Defina as senhas de acesso para continuar.');
+                setTesting(false);
+                return;
+            }
+
+            // 3. Salvar URL e Configurar as senhas na planilha
+            setConfiguredApiUrl(trimmed);
             await api.updatePassword('admin', adminPass);
             await api.updatePassword('viewer', viewerPass);
 
@@ -145,11 +149,34 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
                                         rows={2}
                                         placeholder="https://script.google.com/macros/s/..."
                                         value={url}
-                                        onChange={(e) => { setUrl(e.target.value); setError(''); }}
+                                        onChange={(e) => { 
+                                            setUrl(e.target.value); 
+                                            setError(''); 
+                                            setIsInitialized(null);
+                                        }}
+                                        onBlur={async () => {
+                                            const trimmed = url.trim();
+                                            if (trimmed.startsWith('https://script.google.com')) {
+                                                const api = (await import('../src/gas-api')).apiStore;
+                                                const { initialized } = await api.checkSetup(trimmed);
+                                                setIsInitialized(initialized);
+                                            }
+                                        }}
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-1 gap-4">
+                                {isInitialized === true && (
+                                    <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl animate-fade-in">
+                                        <div className="flex items-center gap-3">
+                                            <Icon name="check_circle" className="text-emerald-500" />
+                                            <p className="text-[10px] text-emerald-200/70 leading-relaxed font-medium">
+                                                <strong className="text-emerald-400 uppercase">Unidade Identificada:</strong> Esta planilha já possui senhas configuradas. Clique em finalizar para conectar.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {isInitialized === false && (
                                     <div>
                                         <label className="block text-[9px] font-black text-orange-500 uppercase tracking-widest mb-2 ml-1">Senha Gerente (Admin)</label>
                                         <input
@@ -168,7 +195,7 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
                                             onChange={(e) => setViewerPass(e.target.value)}
                                         />
                                     </div>
-                                </div>
+                                )}
 
                                 {error && (
                                     <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl animate-shake">

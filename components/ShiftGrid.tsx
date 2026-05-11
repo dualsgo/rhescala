@@ -153,12 +153,16 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 <th className="sticky left-0 z-[50] bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 py-2 px-4 text-left min-w-[180px] w-[180px]">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</span>
                 </th>
-                <th className="sticky left-[180px] z-[50] bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 py-2 px-4 text-left min-w-[125px] w-[125px]">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horário</span>
-                </th>
-                <th className="sticky left-[305px] z-[50] bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 py-2 px-4 text-left min-w-[100px] w-[100px]">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Posição</span>
-                </th>
+                {!isReadOnly && (
+                  <>
+                    <th className="sticky left-[180px] z-[50] bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 py-2 px-4 text-left min-w-[125px] w-[125px]">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horário</span>
+                    </th>
+                    <th className="sticky left-[305px] z-[50] bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 py-2 px-4 text-left min-w-[100px] w-[100px]">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Posição</span>
+                    </th>
+                  </>
+                )}
                 {filteredDays.map(d => {
                   const dayIdx = d.num - 1;
                   const stats = employees.reduce((acc, emp) => {
@@ -240,8 +244,12 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                         <td className="sticky left-0 py-1.5 px-2 font-black text-[10px] uppercase text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]">
                           {groupName}
                         </td>
-                        <td className="sticky left-[180px] border-r border-slate-200 dark:border-slate-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]" />
-                        <td className="sticky left-[305px] border-r border-slate-200 dark:border-slate-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]" />
+                        {!isReadOnly && (
+                          <>
+                            <td className="sticky left-[180px] border-r border-slate-200 dark:border-slate-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]" />
+                            <td className="sticky left-[305px] border-r border-slate-200 dark:border-slate-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]" />
+                          </>
+                        )}
                         <td colSpan={filteredDays.length} className="bg-inherit h-7" />
                       </tr>
 
@@ -265,75 +273,79 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                 <Icon name="chevron_right" className="text-slate-300 group-hover/name:text-orange-500 opacity-0 group-hover/name:opacity-100 transition-all text-sm ml-auto" />
                               </button>
                             </td>
-                             {/* Hours Select */}
-                            <td className="sticky left-[180px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 py-1 px-2 min-w-[125px] w-[125px]">
-                              <select
-                                value={emp.dailyHours[monthKey]?.[selectedDayIdx] || ''}
-                                onChange={(e) => onUpdateEmployeeDailyHour(emp.id, selectedDayIdx, e.target.value)}
-                                className="w-full bg-transparent border-none p-0 text-[11px] font-black text-orange-600 focus:ring-0 uppercase"
-                              >
-                                {(() => {
-                                  const date = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1);
-                                  const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`);
-                                  const isSun = date.getDay() === 0;
-
-                                  let options = jornadaSettings.shiftHours.weekday;
-                                  if (isHol) options = jornadaSettings.shiftHours.holiday;
-                                  else if (isSun) options = jornadaSettings.shiftHours.sunday;
-                                  if (emp.isYoungApprentice) options = jornadaSettings.shiftHours.apprentice;
-
-                                  const currentVal = emp.dailyHours[monthKey]?.[selectedDayIdx];
-                                  const finalOptions = [...new Set([...options])].filter(Boolean);
-
-                                  return (
-                                    <>
-                                      <option value="">AUTO 🤖</option>
-                                      {finalOptions.map(h => (
-                                        <option key={h} value={h}>{h}</option>
-                                      ))}
-                                      {currentVal && !finalOptions.includes(currentVal) && (
-                                        <option value={currentVal}>{currentVal}</option>
-                                      )}
-                                    </>
-                                  );
-                                })()}
-                              </select>
-                            </td>
-                            {/* Tactical Select */}
-                            <td className="sticky left-[305px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 py-1 px-2 min-w-[100px] w-[100px]">
-                              <select
-                                value={emp.tacticalPositions?.[monthKey]?.[selectedDayIdx] || 'AUTO'}
-                                onChange={(e) => onUpdateTacticalPosition(emp.id, selectedDayIdx, e.target.value)}
-                                className="w-full bg-transparent border-none p-0 text-[11px] font-black text-slate-900 dark:text-slate-100 focus:ring-0 uppercase"
-                              >
-                                <option value="AUTO">AUTO 🤖</option>
-                                {(() => {
-                                  const empHour = emp.dailyHours[monthKey]?.[selectedDayIdx] || emp.workPeriod;
-                                  const isSun = days[selectedDayIdx]?.isSunday;
-                                  const group = getShiftClassification(empHour, isSun, jornadaSettings);
-
-                                  // Find all positions assigned to this group
-                                  const groupPositions = employees
-                                    .filter(e => !e.isHidden && e.status === 'active')
-                                    .filter(e => {
-                                      const eHour = e.dailyHours[monthKey]?.[selectedDayIdx] || e.workPeriod;
-                                      return getShiftClassification(eHour, isSun, jornadaSettings) === group;
-                                    })
-                                    .map(e => e.tacticalPositions?.[monthKey]?.[selectedDayIdx] || resolvedPositions[e.id])
-                                    .filter(Boolean);
-
-                                  const uniquePositions = [...new Set(groupPositions)].sort();
-                                  const labels: Record<string, string> = { 'P1': 'P1 🟥', 'P2': 'P2 🟨', 'P3': 'P3 🟩', 'P4': 'P4 🟦', 'ESTQ': 'ESTQ 📦' };
-                                  
-                                  // Fallback: if no positions resolved yet or just AUTO, show all
-                                  const finalPositions = uniquePositions.length > 0 ? uniquePositions : ['P1', 'P2', 'P3', 'P4', 'ESTQ'];
-
-                                  return finalPositions.map(p => (
-                                    <option key={p} value={p}>{labels[p] || p}</option>
-                                  ));
-                                })()}
-                              </select>
-                            </td>
+                             {!isReadOnly && (
+                               <>
+                                 {/* Hours Select */}
+                                 <td className="sticky left-[180px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 py-1 px-2 min-w-[125px] w-[125px]">
+                                   <select
+                                     value={emp.dailyHours[monthKey]?.[selectedDayIdx] || ''}
+                                     onChange={(e) => onUpdateEmployeeDailyHour(emp.id, selectedDayIdx, e.target.value)}
+                                     className="w-full bg-transparent border-none p-0 text-[11px] font-black text-orange-600 focus:ring-0 uppercase"
+                                   >
+                                     {(() => {
+                                       const date = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1);
+                                       const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`);
+                                       const isSun = date.getDay() === 0;
+   
+                                       let options = jornadaSettings.shiftHours.weekday;
+                                       if (isHol) options = jornadaSettings.shiftHours.holiday;
+                                       else if (isSun) options = jornadaSettings.shiftHours.sunday;
+                                       if (emp.isYoungApprentice) options = jornadaSettings.shiftHours.apprentice;
+   
+                                       const currentVal = emp.dailyHours[monthKey]?.[selectedDayIdx];
+                                       const finalOptions = [...new Set([...options])].filter(Boolean);
+   
+                                       return (
+                                         <>
+                                           <option value="">AUTO 🤖</option>
+                                           {finalOptions.map(h => (
+                                             <option key={h} value={h}>{h}</option>
+                                           ))}
+                                           {currentVal && !finalOptions.includes(currentVal) && (
+                                             <option value={currentVal}>{currentVal}</option>
+                                           )}
+                                         </>
+                                       );
+                                     })()}
+                                   </select>
+                                 </td>
+                                 {/* Tactical Select */}
+                                 <td className="sticky left-[305px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 py-1 px-2 min-w-[100px] w-[100px]">
+                                   <select
+                                     value={emp.tacticalPositions?.[monthKey]?.[selectedDayIdx] || 'AUTO'}
+                                     onChange={(e) => onUpdateTacticalPosition(emp.id, selectedDayIdx, e.target.value)}
+                                     className="w-full bg-transparent border-none p-0 text-[11px] font-black text-slate-900 dark:text-slate-100 focus:ring-0 uppercase"
+                                   >
+                                     <option value="AUTO">AUTO 🤖</option>
+                                     {(() => {
+                                       const empHour = emp.dailyHours[monthKey]?.[selectedDayIdx] || emp.workPeriod;
+                                       const isSun = days[selectedDayIdx]?.isSunday;
+                                       const group = getShiftClassification(empHour, isSun, jornadaSettings);
+   
+                                       // Find all positions assigned to this group
+                                       const groupPositions = employees
+                                         .filter(e => !e.isHidden && e.status === 'active')
+                                         .filter(e => {
+                                           const eHour = e.dailyHours[monthKey]?.[selectedDayIdx] || e.workPeriod;
+                                           return getShiftClassification(eHour, isSun, jornadaSettings) === group;
+                                         })
+                                         .map(e => e.tacticalPositions?.[monthKey]?.[selectedDayIdx] || resolvedPositions[e.id])
+                                         .filter(Boolean);
+   
+                                       const uniquePositions = [...new Set(groupPositions)].sort();
+                                       const labels: Record<string, string> = { 'P1': 'P1 🟥', 'P2': 'P2 🟨', 'P3': 'P3 🟩', 'P4': 'P4 🟦', 'ESTQ': 'ESTQ 📦' };
+                                       
+                                       // Fallback: if no positions resolved yet or just AUTO, show all
+                                       const finalPositions = uniquePositions.length > 0 ? uniquePositions : ['P1', 'P2', 'P3', 'P4', 'ESTQ'];
+   
+                                       return finalPositions.map(p => (
+                                         <option key={p} value={p}>{labels[p] || p}</option>
+                                       ));
+                                     })()}
+                                   </select>
+                                 </td>
+                               </>
+                             )}
 
                             {/* Shift Cells */}
                             {filteredDays.map(d => {
