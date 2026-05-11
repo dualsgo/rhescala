@@ -81,7 +81,8 @@ const App: React.FC = () => {
     const filtered: Record<string, any[]> = {};
     Object.keys(allHolidayCredits).forEach(empId => {
       filtered[empId] = allHolidayCredits[empId].filter(credit => {
-        const [y, m] = credit.date.split('-');
+        if (!credit.holidayDate) return false;
+        const [y, m] = credit.holidayDate.split('-');
         const key = `${y}-${m}`;
         return validatedMonths[key] === true;
       });
