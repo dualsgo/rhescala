@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
 import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification, findSundayViolations, isWorkingShift, distributeTacticalPositions } from './hooks/useScheduleEngine';
@@ -51,6 +51,9 @@ const App: React.FC = () => {
   const [selectedEmployeeForCard, setSelectedEmployeeForCard] = useState<Employee | null>(null);
   const [auth, setAuth] = useState<{ isAuthenticated: boolean, role: 'admin' | 'viewer' }>({ isAuthenticated: false, role: 'viewer' });
   const [authenticatedEmployeeId, setAuthenticatedEmployeeId] = useState<string | null>(null);
+  
+  const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+  
   const isReadOnly = auth.role === 'viewer';
   const isValidated = validatedMonths[monthKey] || false;
   
@@ -413,7 +416,7 @@ const App: React.FC = () => {
           }
           return emp;
         }));
-        showDialog({ title: 'Sucesso', message: 'Posições distribuídas com sucesso!', type: 'info' });
+        showDialog({ title: 'Sucesso', message: 'Posições distribuídas com sucesso!', type: 'alert' });
       }
     });
   };
