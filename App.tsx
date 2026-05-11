@@ -41,6 +41,7 @@ const App: React.FC = () => {
   const [showDayDetail, setShowDayDetail] = useState(false);
   const [currentView, setCurrentView] = useState<'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays' | 'cleaning' | 'activities' | 'routine' | 'notices'>('grid');
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
+  const [validatedMonths, setValidatedMonths] = useLocalStorage<Record<string, boolean>>('riHappyValidatedMonths', {});
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
   const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
   const [isDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
@@ -50,7 +51,42 @@ const App: React.FC = () => {
   const [selectedEmployeeForCard, setSelectedEmployeeForCard] = useState<Employee | null>(null);
   const [auth, setAuth] = useState<{ isAuthenticated: boolean, role: 'admin' | 'viewer' }>({ isAuthenticated: false, role: 'viewer' });
   const isReadOnly = auth.role === 'viewer';
-  const holidayCredits = useHolidayCredits(employees, customHolidays, currentMY.year, trackingStartDate);
+  const isValidated = validatedMonths[monthKey] || false;
+  
+  const onToggleValidation = useCallback(async () => {
+    const newVal = !isValidated;
+    const confirmed = await showDialog({
+      title: newVal ? 'Oficializar Escala' : 'Retornar para Rascunho',
+      message: newVal 
+        ? `Deseja oficializar a escala de ${new Date(currentMY.year, currentMY.month).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}? Ela ficará visível para toda a equipe.`
+        : 'A escala voltará ao modo rascunho e ficará oculta para a equipe. Continuar?',
+      type: 'confirm'
+    });
+    if (confirmed) {
+      setValidatedMonths(prev => ({ ...prev, [monthKey]: newVal }));
+    }
+  }, [isValidated, monthKey, currentMY, setValidatedMonths, showDialog]);
+
+  // Sync validatedMonths to GAS
+  // We'll handle this in the useEffect that syncs all data, or add a specific one.
+  // Actually, DataManager should handle it, but for real-time we can add it here.
+
+  const allHolidayCredits = useHolidayCredits(employees, customHolidays, currentMY.year, trackingStartDate);
+  
+  // For Viewers, we only show holiday credits that come from VALIDATED months
+  const holidayCredits = useMemo(() => {
+    if (!isReadOnly) return allHolidayCredits;
+    
+    const filtered: Record<string, any[]> = {};
+    Object.keys(allHolidayCredits).forEach(empId => {
+      filtered[empId] = allHolidayCredits[empId].filter(credit => {
+        const [y, m] = credit.date.split('-');
+        const key = `${y}-${m}`;
+        return validatedMonths[key] === true;
+      });
+    });
+    return filtered;
+  }, [allHolidayCredits, isReadOnly, validatedMonths]);
 
   const onUpdateEmployee = useCallback((empId: string, data: Partial<Employee>) => {
     setEmployees(prev => prev.map(emp => emp.id === empId ? { ...emp, ...data } : emp));
@@ -421,7 +457,8 @@ const App: React.FC = () => {
               onShowHelp={() => setShowHelp(true)}
               canGoNext={canGoNext}
               sundayViolations={sundayViolations}
-
+              isValidated={isValidated}
+              onToggleValidation={onToggleValidation}
             />
 
       <main className="flex-1 overflow-hidden p-4">
@@ -440,6 +477,23 @@ const App: React.FC = () => {
 
           switch (currentView) {
             case 'grid':
+              if (isReadOnly && !isValidated) {
+                return (
+                  <div className="h-full flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+                    <div className="w-24 h-24 bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-xl shadow-amber-500/10">
+                      <Icon name="construction" className="text-5xl" />
+                    </div>
+                    <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight mb-3">Escala em Construção</h3>
+                    <p className="text-slate-500 dark:text-slate-400 font-bold text-sm max-w-sm leading-relaxed">
+                      O gerente ainda está preparando a escala para este mês. 
+                      Assim que for oficializada, você poderá visualizá-la aqui.
+                    </p>
+                    <div className="mt-10 flex gap-4">
+                       <button onClick={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })} className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all">Ver Mês Anterior</button>
+                    </div>
+                  </div>
+                );
+              }
               return (
                 <ShiftGrid
                   employees={employees}
@@ -548,6 +602,8 @@ const App: React.FC = () => {
                   syncStatus={syncStatus} 
                   employees={employees} 
                   setEmployees={setEmployees} 
+                  validatedMonths={validatedMonths}
+                  setValidatedMonths={setValidatedMonths}
                   onClose={() => setCurrentView('grid')} 
                   role={auth.role}
                 />

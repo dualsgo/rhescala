@@ -31,6 +31,8 @@ interface HeaderProps {
   onLogout: () => void;
   onSwitchRole: () => void;
   onShowHelp: () => void;
+  isValidated: boolean;
+  onToggleValidation: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -61,6 +63,8 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   onSwitchRole,
   onShowHelp,
+  isValidated,
+  onToggleValidation,
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);
   const [showPrintMenu, setShowPrintMenu] = useState(false);
@@ -140,23 +144,41 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Center/Right: Month & Filters */}
         <div className="flex items-center gap-4">
           {/* Month Selector */}
-          <div className="flex items-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1">
-            <button onClick={() => {
-              const prev = new Date(currentMY.year, currentMY.month - 1);
-              onMonthChange({ month: prev.getMonth(), year: prev.getFullYear() });
-            }} className="p-1 hover:text-orange-500 transition-colors"><Icon name="chevron_left" /></button>
-            <span className="px-3 text-[11px] font-black uppercase min-w-[120px] text-center text-slate-700 dark:text-slate-300">
-              {months[currentMY.month]} {currentMY.year}
-            </span>
-            <button 
-              onClick={() => {
-                const next = new Date(currentMY.year, currentMY.month + 1);
-                onMonthChange({ month: next.getMonth(), year: next.getFullYear() });
-              }} 
-              disabled={!canGoNext}
-              className={`p-1 transition-colors ${!canGoNext ? 'opacity-20 cursor-not-allowed' : 'hover:text-orange-500'}`}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1">
+              <button onClick={() => {
+                const prev = new Date(currentMY.year, currentMY.month - 1);
+                onMonthChange({ month: prev.getMonth(), year: prev.getFullYear() });
+              }} className="p-1 hover:text-orange-500 transition-colors"><Icon name="chevron_left" /></button>
+              <span className="px-3 text-[11px] font-black uppercase min-w-[120px] text-center text-slate-700 dark:text-slate-300">
+                {months[currentMY.month]} {currentMY.year}
+              </span>
+              <button 
+                onClick={() => {
+                  const next = new Date(currentMY.year, currentMY.month + 1);
+                  onMonthChange({ month: next.getMonth(), year: next.getFullYear() });
+                }} 
+                disabled={!canGoNext}
+                className={`p-1 transition-colors ${!canGoNext ? 'opacity-20 cursor-not-allowed' : 'hover:text-orange-500'}`}
+              >
+                <Icon name="chevron_right" />
+              </button>
+            </div>
+
+            {/* Validation Badge */}
+            <button
+              onClick={() => !isReadOnly && onToggleValidation()}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
+                isValidated 
+                  ? 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400' 
+                  : 'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-900/20 dark:border-amber-800/50 dark:text-amber-400 animate-pulse-subtle'
+              } ${isReadOnly ? 'cursor-default' : 'hover:scale-105 active:scale-95'}`}
+              title={isReadOnly ? '' : (isValidated ? 'Clique para marcar como rascunho' : 'Clique para oficializar escala')}
             >
-              <Icon name="chevron_right" />
+              <Icon name={isValidated ? 'verified' : 'edit_calendar'} className="text-sm" />
+              <span className="text-[9px] font-black uppercase tracking-widest">
+                {isValidated ? 'Oficializado' : 'Rascunho'}
+              </span>
             </button>
           </div>
 

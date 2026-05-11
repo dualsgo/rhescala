@@ -8,18 +8,24 @@ interface DataManagerProps {
   syncStatus: SyncStatus;
   employees: Employee[];
   setEmployees: (val: Employee[] | ((prev: Employee[]) => Employee[])) => void;
+  validatedMonths: Record<string, boolean>;
+  setValidatedMonths: (val: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
   onClose: () => void;
   role: 'admin' | 'viewer';
 }
 
-export const DataManager: React.FC<DataManagerProps> = ({ syncStatus, employees, setEmployees, onClose, role }) => {
+export const DataManager: React.FC<DataManagerProps> = ({ syncStatus, employees, setEmployees, validatedMonths, setValidatedMonths, onClose, role }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showDialog } = useDialog();
   const [isUpdatingPass, setIsUpdatingPass] = useState(false);
   const [passForm, setPassForm] = useState({ role: 'admin' as 'admin' | 'viewer', password: '' });
 
   const handleExportBackup = () => {
-    const dataStr = JSON.stringify(employees, null, 2);
+    const backupData = {
+      employees,
+      validatedMonths
+    };
+    const dataStr = JSON.stringify(backupData, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
@@ -39,7 +45,7 @@ export const DataManager: React.FC<DataManagerProps> = ({ syncStatus, employees,
     reader.onload = async (e) => {
       try {
         const importedData = JSON.parse(e.target?.result as string);
-        if (Array.isArray(importedData)) {
+        if (Array.isArray(importedData) || (importedData.employees && Array.isArray(importedData.employees))) {
           const confirm = await showDialog({
             title: 'Importar Backup',
             message: 'Atenção: Isso irá substituir a escala atual pelos dados do arquivo. Deseja continuar?',
@@ -47,7 +53,15 @@ export const DataManager: React.FC<DataManagerProps> = ({ syncStatus, employees,
           });
 
           if (confirm) {
-            setEmployees(importedData);
+            if (importedData.employees && Array.isArray(importedData.employees)) {
+              setEmployees(importedData.employees);
+              if (importedData.validatedMonths) {
+                setValidatedMonths(importedData.validatedMonths);
+              }
+            } else if (Array.isArray(importedData)) {
+              // Legacy support for older backups that only had the employees array
+              setEmployees(importedData);
+            }
             await showDialog({ title: 'Sucesso', message: 'Backup restaurado com sucesso!' });
           }
         } else {
