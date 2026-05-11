@@ -25,15 +25,16 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   isAdmin,
   onClose
 }) => {
-  const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
-  const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
-  const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
+  const [newRequest, setNewRequest] = React.useState('');
+  const [selectedDate, setSelectedDate] = React.useState<string | null>(null);
+  const [viewMY, setViewMY] = React.useState<MonthYear>(currentMY);
+
+  const monthKey = `${viewMY.year}-${String(viewMY.month + 1).padStart(2, '0')}`;
+  const daysInMonth = new Date(viewMY.year, viewMY.month + 1, 0).getDate();
+  const holidaySet = buildHolidaySet(viewMY.year, customHolidays);
 
   const shifts = (employee.shifts || {})[monthKey] || [];
   const hours = (employee.dailyHours || {})[monthKey] || [];
-
-  const [newRequest, setNewRequest] = React.useState('');
-  const [selectedDate, setSelectedDate] = React.useState<string | null>(null);
 
   const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -206,19 +207,39 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
 
           {/* List of Shifts for the month - Mobile Optimized */}
           <div className="mt-8 space-y-4">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 px-2">
-              <Icon name="format_list_bulleted" className="text-indigo-500" /> Detalhamento Diário
-            </h4>
+            <div className="flex items-center justify-between px-2">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <Icon name="format_list_bulleted" className="text-indigo-500" /> Calendário do Mês
+              </h4>
+              <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl gap-1">
+                <button 
+                  onClick={() => setViewMY(currentMY)}
+                  className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase transition-all ${viewMY.month === currentMY.month ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}
+                >
+                  Este Mês
+                </button>
+                <button 
+                  onClick={() => {
+                    const next = new Date(currentMY.year, currentMY.month + 1, 1);
+                    setViewMY({ month: next.getMonth(), year: next.getFullYear() });
+                  }}
+                  className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase transition-all ${viewMY.month !== currentMY.month ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}
+                >
+                  Próximo Mês
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {Array.from({ length: daysInMonth }, (_, i) => {
                 const d = i + 1;
                 const shift = shifts[i] || 'T';
                 const hour = hours[i] || employee.workPeriod;
-                const date = new Date(currentMY.year, currentMY.month, d);
+                const date = new Date(viewMY.year, viewMY.month, d);
                 const dow = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][date.getDay()];
                 const isSun = date.getDay() === 0;
-                const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
-                const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const isHol = holidaySet.has(`${viewMY.year}-${String(viewMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+                const fullDate = `${viewMY.year}-${String(viewMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const hasReq = (employee.requests || []).find(r => r.date === fullDate);
                 const isSelected = selectedDate === fullDate;
 
@@ -357,7 +378,10 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                          <button 
                           title="Marcar como Visto"
                           onClick={() => {
-                            const updated = (employee.requests || []).map(r => r.createdAt === req.createdAt ? { ...r, status: 'seen' as const } : r);
+                            const updated = (employee.requests || []).map(r => 
+                              (r.createdAt === req.createdAt || (r.text === req.text && r.date === req.date)) 
+                                ? { ...r, status: 'seen' as const } : r
+                            );
                             onUpdateEmployee(employee.id, { requests: updated });
                           }}
                           className="p-1.5 text-blue-400 hover:text-blue-600 transition-colors"
@@ -367,7 +391,10 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         <button 
                           title="Atender Pedido"
                           onClick={() => {
-                            const updated = (employee.requests || []).map(r => r.createdAt === req.createdAt ? { ...r, status: 'granted' as const } : r);
+                            const updated = (employee.requests || []).map(r => 
+                              (r.createdAt === req.createdAt || (r.text === req.text && r.date === req.date)) 
+                                ? { ...r, status: 'granted' as const } : r
+                            );
                             onUpdateEmployee(employee.id, { requests: updated });
                           }}
                           className="p-1.5 text-emerald-400 hover:text-emerald-600 transition-colors"
