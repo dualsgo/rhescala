@@ -416,11 +416,22 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                     </div>
                   </div>
                   {emp.atestadoEnd && (
-                    <div className="bg-rose-50 p-2 rounded-lg border border-rose-100 flex items-center justify-between">
-                       <span className="text-[8px] font-black text-rose-600 uppercase">Retorno previsto:</span>
-                       <span className="text-[9px] font-black text-rose-700 uppercase">
-                          {new Date(addDays(emp.atestadoEnd, 1) + 'T00:00:00').toLocaleDateString('pt-BR')}
-                       </span>
+                    <div className="space-y-2">
+                      <div className="bg-rose-50 p-2 rounded-lg border border-rose-100 flex items-center justify-between">
+                         <span className="text-[8px] font-black text-rose-600 uppercase">Retorno previsto:</span>
+                         <span className="text-[9px] font-black text-rose-700 uppercase">
+                            {new Date(addDays(emp.atestadoEnd, 1) + 'T00:00:00').toLocaleDateString('pt-BR')}
+                         </span>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          const duration = (Math.round((new Date(emp.atestadoEnd! + 'T00:00:00').getTime() - new Date(emp.atestadoStart! + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24)) + 1);
+                          handleAtestadoChange(emp, emp.atestadoStart!, duration, onUpdateEmployee);
+                        }}
+                        className="w-full py-2 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-xl text-[9px] font-black uppercase transition-all flex items-center justify-center gap-2"
+                      >
+                        <Icon name="sync" className="text-xs" /> Sincronizar com a Grade
+                      </button>
                     </div>
                   )}
                 </div>
