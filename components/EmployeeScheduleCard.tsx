@@ -26,12 +26,11 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   onClose
 }) => {
   const [newRequest, setNewRequest] = React.useState('');
-  const [selectedDate, setSelectedDate] = React.useState<string | null>(null);
-  const [viewMY, setViewMY] = React.useState<MonthYear>(currentMY);
+  const [selectedRequestDate, setSelectedRequestDate] = React.useState('');
 
-  const monthKey = `${viewMY.year}-${String(viewMY.month + 1).padStart(2, '0')}`;
-  const daysInMonth = new Date(viewMY.year, viewMY.month + 1, 0).getDate();
-  const holidaySet = buildHolidaySet(viewMY.year, customHolidays);
+  const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+  const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
+  const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
 
   const shifts = (employee.shifts || {})[monthKey] || [];
   const hours = (employee.dailyHours || {})[monthKey] || [];
@@ -196,7 +195,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                     <Icon name="celebration" className="text-xl" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Sua Folga Fixa</p>
+                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Preferência de Folga</p>
                     <p className="text-sm font-black uppercase text-orange-400">{employee.preferredDayOff || 'Variável'}</p>
                   </div>
                 </div>
@@ -209,25 +208,8 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
           <div className="mt-8 space-y-4">
             <div className="flex items-center justify-between px-2">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                <Icon name="format_list_bulleted" className="text-indigo-500" /> Calendário do Mês
+                <Icon name="format_list_bulleted" className="text-indigo-500" /> Sua Escala Atual
               </h4>
-              <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl gap-1">
-                <button 
-                  onClick={() => setViewMY(currentMY)}
-                  className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase transition-all ${viewMY.month === currentMY.month ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}
-                >
-                  Este Mês
-                </button>
-                <button 
-                  onClick={() => {
-                    const next = new Date(currentMY.year, currentMY.month + 1, 1);
-                    setViewMY({ month: next.getMonth(), year: next.getFullYear() });
-                  }}
-                  className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase transition-all ${viewMY.month !== currentMY.month ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}
-                >
-                  Próximo Mês
-                </button>
-              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -235,11 +217,11 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                 const d = i + 1;
                 const shift = shifts[i] || 'T';
                 const hour = hours[i] || employee.workPeriod;
-                const date = new Date(viewMY.year, viewMY.month, d);
+                const date = new Date(currentMY.year, currentMY.month, d);
                 const dow = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][date.getDay()];
                 const isSun = date.getDay() === 0;
-                const isHol = holidaySet.has(`${viewMY.year}-${String(viewMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
-                const fullDate = `${viewMY.year}-${String(viewMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+                const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const hasReq = (employee.requests || []).find(r => r.date === fullDate);
                 const isSelected = selectedDate === fullDate;
 
@@ -248,12 +230,10 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                 return (
                   <div 
                     key={d} 
-                    onClick={() => setSelectedDate(isSelected ? null : fullDate)}
-                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer group ${
-                      isSelected ? 'ring-2 ring-orange-500 border-orange-200 bg-orange-50/50' : 
-                      isSun ? 'bg-rose-50/30 border-rose-100 hover:border-rose-300' : 
-                      isHol ? 'bg-amber-50/30 border-amber-100 hover:border-amber-300' : 
-                      'bg-slate-50/30 border-slate-100 hover:border-slate-300'
+                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
+                      isSun ? 'bg-rose-50/30 border-rose-100' : 
+                      isHol ? 'bg-amber-50/30 border-amber-100' : 
+                      'bg-slate-50/30 border-slate-100'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -273,9 +253,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         </div>
                       </div>
                     </div>
-                    {isSelected ? (
-                      <Icon name="check_circle" className="text-orange-500" />
-                    ) : isWorkingShift(shift) ? (
+                    {isWorkingShift(shift) ? (
                       <div className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/40 rounded-full">
                         <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Presente</span>
                       </div>
@@ -288,64 +266,78 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
           <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800 space-y-6">
             <div className="flex items-center justify-between">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                <Icon name="chat_bubble_outline" className="text-orange-500" /> Sistema de Solicitações
+                <Icon name="add_circle" className="text-orange-500" /> Nova Solicitação
               </h4>
             </div>
 
             {onUpdateEmployee ? (
-              <div className="space-y-4">
-                <div className={`p-4 rounded-2xl border transition-all ${selectedDate ? 'bg-orange-50 border-orange-200' : 'bg-slate-50 border-slate-100 opacity-50'}`}>
-                  <p className="text-[10px] font-black text-slate-500 uppercase mb-2">
-                    {selectedDate ? `Pedido para o dia ${selectedDate.split('-').reverse().join('/')}` : 'Selecione um dia no calendário acima'}
+              <div className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border border-slate-200 dark:border-slate-700 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                   <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Data Desejada</label>
+                      <input 
+                        type="date"
+                        className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-4 py-3 text-xs font-bold outline-none ring-1 ring-slate-200 dark:ring-slate-700 focus:ring-2 focus:ring-orange-500 transition-all"
+                        value={selectedRequestDate}
+                        onChange={(e) => setSelectedRequestDate(e.target.value)}
+                      />
+                   </div>
+                   <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Justificativa (Breve)</label>
+                      <input 
+                        type="text"
+                        className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-4 py-3 text-xs font-bold outline-none ring-1 ring-slate-200 dark:ring-slate-700 focus:ring-2 focus:ring-orange-500 transition-all"
+                        placeholder="Ex: Consulta médica"
+                        value={newRequest}
+                        onChange={(e) => setNewRequest(e.target.value)}
+                      />
+                   </div>
+                </div>
+                
+                <div className="flex items-center justify-between gap-4 pt-2">
+                  <p className="text-[9px] text-slate-400 font-bold italic leading-tight">
+                    * Esta é uma solicitação sujeita a análise e não garante a folga até que o gestor a valide na escala oficial.
                   </p>
-                  <div className="flex gap-2">
-                    <input 
-                      type="text"
-                      className="flex-1 bg-white border-none rounded-xl px-4 py-3 text-xs font-bold outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-orange-500 transition-all disabled:cursor-not-allowed"
-                      placeholder={selectedDate ? "Ex: Preciso folgar para ir ao médico..." : "Clique em um dia primeiro"}
-                      value={newRequest}
-                      disabled={!selectedDate}
-                      onChange={(e) => setNewRequest(e.target.value)}
-                    />
-                    <button 
-                      disabled={!newRequest.trim() || !selectedDate}
-                      onClick={() => {
-                        if (!selectedDate) return;
-                        const existing = [...(employee.requests || [])].filter(r => r.date !== selectedDate);
-                        const updated = [
-                          ...existing,
-                          { 
-                            date: selectedDate, 
-                            text: newRequest.trim(), 
-                            status: 'pending',
-                            createdAt: new Date().toISOString() 
-                          }
-                        ];
-                        onUpdateEmployee(employee.id, { requests: updated });
-                        setNewRequest('');
-                        setSelectedDate(null);
-                      }}
-                      className="px-6 py-3 bg-orange-500 text-white rounded-xl text-[10px] font-black uppercase hover:bg-orange-600 transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:grayscale"
-                    >
-                      Enviar
-                    </button>
-                  </div>
+                  <button 
+                    disabled={!newRequest.trim() || !selectedRequestDate}
+                    onClick={() => {
+                      const updated = [
+                        ...(employee.requests || []).filter(r => r.date !== selectedRequestDate),
+                        { 
+                          date: selectedRequestDate, 
+                          text: newRequest.trim(), 
+                          status: 'pending',
+                          createdAt: new Date().toISOString() 
+                        }
+                      ];
+                      onUpdateEmployee(employee.id, { requests: updated });
+                      setNewRequest('');
+                      setSelectedRequestDate('');
+                    }}
+                    className="whitespace-nowrap px-6 py-3 bg-orange-500 text-white rounded-xl text-[10px] font-black uppercase hover:bg-orange-600 transition-all shadow-md active:scale-95 disabled:opacity-50"
+                  >
+                    Enviar Pedido
+                  </button>
                 </div>
               </div>
             ) : (
               <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center">
-                 <p className="text-[10px] font-bold text-slate-400 uppercase italic">Somente o próprio colaborador ou gerente podem enviar recados aqui.</p>
+                 <p className="text-[10px] font-bold text-slate-400 uppercase italic">Acesse com sua senha para enviar solicitações.</p>
               </div>
             )}
 
             {/* List existing requests */}
-            <div className="space-y-3">
-              {(employee.requests || []).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).map((req, i) => (
-                <div key={i} className={`p-4 rounded-2xl border shadow-sm relative group transition-all ${
-                  req.status === 'granted' ? 'bg-emerald-50 border-emerald-100' :
-                  req.status === 'seen' ? 'bg-blue-50 border-blue-100' :
-                  'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800'
-                }`}>
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 px-2">
+                <Icon name="history" className="text-slate-400" /> Suas Solicitações
+              </h4>
+              <div className="space-y-3">
+                {(employee.requests || []).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).map((req, i) => (
+                  <div key={i} className={`p-4 rounded-2xl border shadow-sm relative group transition-all ${
+                    req.status === 'granted' ? 'bg-emerald-50 border-emerald-100' :
+                    req.status === 'seen' ? 'bg-blue-50 border-blue-100' :
+                    'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800'
+                  }`}>
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-2">
                       <span className={`text-[9px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest ${

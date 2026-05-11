@@ -728,7 +728,7 @@ const App: React.FC = () => {
 
       {selectedEmployeeForCard && (
         <EmployeeScheduleCard 
-          employee={selectedEmployeeForCard}
+          employee={employees.find(e => e.id === selectedEmployeeForCard.id) || selectedEmployeeForCard}
           currentMY={currentMY}
           customHolidays={customHolidays}
           holidayCredits={holidayCredits[selectedEmployeeForCard.id] || []}
