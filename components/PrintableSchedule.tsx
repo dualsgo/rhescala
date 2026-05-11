@@ -28,13 +28,27 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
     return employees.filter(e => e.status === 'active' && !e.isHidden).sort((a, b) => a.name.localeCompare(b.name));
   }, [employees]);
 
+  // Atestados
+  const onMedicalLeave = activeEmployees.filter(e => {
+    if (!e.atestadoStart || !e.atestadoEnd) return false;
+    const start = new Date(e.atestadoStart + 'T00:00:00');
+    const end = new Date(e.atestadoEnd + 'T00:00:00');
+    const startM = start.getMonth();
+    const endM = end.getMonth();
+    const startY = start.getFullYear();
+    const endY = end.getFullYear();
+    return (currentMY.year === startY && currentMY.month === startM) || (currentMY.year === endY && currentMY.month === endM);
+  });
+
   // Férias
   const onVacation = activeEmployees.filter(e => {
     if (!e.vacationStart || !e.vacationEnd) return false;
-    const startM = new Date(e.vacationStart + 'T00:00:00').getMonth();
-    const endM = new Date(e.vacationEnd + 'T00:00:00').getMonth();
-    const startY = new Date(e.vacationStart + 'T00:00:00').getFullYear();
-    const endY = new Date(e.vacationEnd + 'T00:00:00').getFullYear();
+    const start = new Date(e.vacationStart + 'T00:00:00');
+    const end = new Date(e.vacationEnd + 'T00:00:00');
+    const startM = start.getMonth();
+    const endM = end.getMonth();
+    const startY = start.getFullYear();
+    const endY = end.getFullYear();
     return (currentMY.year === startY && currentMY.month === startM) || (currentMY.year === endY && currentMY.month === endM);
   });
 
@@ -103,7 +117,7 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
               </td>
               {days.map(d => {
                 const shift = emp.shifts[monthKey]?.[d.num - 1] || 'T';
-                const display = (shift === 'T' || shift === 'N/A') ? '' : (shift.startsWith('FF') ? 'FF' : shift);
+                const display = (shift === 'T' || shift === 'N/A') ? '' : (shift === 'AT' ? '+' : (shift.startsWith('FF') ? 'FF' : shift));
                 return (
                   <td key={d.num} className="border border-black p-1 text-center font-black">
                     {display}
@@ -126,8 +140,19 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
                 {onVacation.length > 0 ? onVacation.map(e => {
                   const s = e.vacationStart!.split('-').reverse().join('/');
                   const end = e.vacationEnd!.split('-').reverse().join('/');
-                  return <div key={e.id} className="text-[8px] font-bold uppercase">{e.name.split(' ')[0]}: {s.substring(0,5)} A {end.substring(0,5)}</div>;
-                }) : <div className="text-[8px] font-medium text-center">Nenhuma Férias</div>}
+                  return <div key={e.id} className="text-[7px] font-bold uppercase">{e.name.split(' ')[0]}: {s.substring(0,5)} A {end.substring(0,5)}</div>;
+                }) : <div className="text-[7px] font-medium text-center">Nenhuma Férias</div>}
+              </div>
+            </div>
+            <div className="border border-black p-1 flex flex-col">
+              <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Atestados / Retornos</h4>
+              <div className="space-y-0.5 flex-1">
+                {onMedicalLeave.length > 0 ? onMedicalLeave.map(e => {
+                  const retDate = new Date(e.atestadoEnd! + 'T00:00:00');
+                  retDate.setDate(retDate.getDate() + 1);
+                  const retStr = retDate.toLocaleDateString('pt-BR').substring(0,5);
+                  return <div key={e.id} className="text-[7px] font-bold uppercase">{e.name.split(' ')[0]}: RETORNO {retStr}</div>;
+                }) : <div className="text-[7px] font-medium text-center">Nenhum Atestado</div>}
               </div>
             </div>
             <div className="border border-black p-1 flex flex-col">

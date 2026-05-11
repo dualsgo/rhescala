@@ -223,7 +223,6 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                 const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
                 const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const hasReq = (employee.requests || []).find(r => r.date === fullDate);
-                const isSelected = selectedDate === fullDate;
 
                 if (shift === 'N/A') return null;
 

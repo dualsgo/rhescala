@@ -42,6 +42,10 @@ function isSundayUnavailable(
     if (emp.vacationStart && emp.vacationEnd) {
         if (dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) return true;
     }
+    // 1c. Atestado
+    if (emp.atestadoStart && emp.atestadoEnd) {
+        if (dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd) return true;
+    }
     // 1b. Birthday
     if (emp.birthday) {
         const empMD = emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday;
@@ -54,9 +58,9 @@ function isSundayUnavailable(
     if (emp.hiredAt && dateStr < emp.hiredAt) return true;
     // 4. Already fired
     if (emp.firedAt && dateStr > emp.firedAt) return true;
-    // 5. Existing shift already FE (manually set vacation) or F or FF
+    // 5. Existing shift already FE (manually set vacation) or F or FF or AT
     const existing = (emp.shifts[monthKey] ?? [])[dayIdx] as string | undefined;
-    if (existing === 'FE' || existing === 'F' || existing?.startsWith('FF') || existing === 'C' || existing === 'DO') return true;
+    if (existing === 'FE' || existing === 'F' || existing?.startsWith('FF') || existing === 'C' || existing === 'DO' || existing === 'AT') return true;
     return false;
 }
 
@@ -352,6 +356,9 @@ export function generateMonthForEmployee(
         // ── Overrides ──────────────────────────────────────────────────────
         if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
             shifts.push('FE'); hours.push(getTargetHours(emp, dow, isHoliday, settings)); continue;
+        }
+        if (emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd) {
+            shifts.push('AT'); hours.push(getTargetHours(emp, dow, isHoliday, settings)); continue;
         }
         if (isBirthday(emp, dateStr)) {
             shifts.push('DO'); hours.push(getTargetHours(emp, dow, isHoliday, settings)); continue;

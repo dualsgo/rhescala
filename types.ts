@@ -21,6 +21,8 @@ export interface Employee {
   shiftName: string;
   vacationStart?: string; // YYYY-MM-DD
   vacationEnd?: string;   // YYYY-MM-DD
+  atestadoStart?: string; // YYYY-MM-DD
+  atestadoEnd?: string;   // YYYY-MM-DD
   hiredAt?: string;       // YYYY-MM-DD — used to skip months before hiring
   firedAt?: string;       // YYYY-MM-DD — used to stop generating after termination
   birthday?: string;       // YYYY-MM-DD or MM-DD
