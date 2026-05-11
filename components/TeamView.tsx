@@ -97,7 +97,18 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                     <button
                       key={c}
                       type="button"
-                      onClick={() => setNewCargo(c)}
+                      onClick={() => {
+                        setNewCargo(c);
+                        if (c === 'Aprendiz') {
+                          setIsYoung(true);
+                          // No App.tsx, a lógica de folga para aprendiz é tratada, 
+                          // mas aqui podemos sinalizar ou ajustar se necessário.
+                        } else if (c === 'Estoquista') {
+                          setIsYoung(false);
+                        } else {
+                          setIsYoung(false);
+                        }
+                      }}
                       className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold border transition-all ${
                         newCargo === c
                           ? 'bg-orange-500 text-white border-orange-500 shadow'
@@ -116,11 +127,22 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
               </div>
 
               {isYoung && (
-                <div className="animate-fade-in">
-                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Dia de Curso</label>
-                    <select value={courseDay} onChange={(e) => setCourseDay(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold text-sm outline-none">
-                        {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'].map(d => <option key={d}>{d}</option>)}
-                    </select>
+                <div className="animate-fade-in p-4 bg-sky-50 border border-sky-100 rounded-xl space-y-3">
+                    <div>
+                      <label className="text-[10px] font-extrabold text-sky-600 uppercase tracking-widest block mb-1">Dia do Curso (Presencial/EAD)</label>
+                      <select value={courseDay} onChange={(e) => setCourseDay(e.target.value)} className="w-full bg-white border border-sky-200 rounded-xl p-3 font-bold text-sm outline-none text-sky-900">
+                          {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'].map(d => <option key={d}>{d}</option>)}
+                      </select>
+                      <p className="text-[9px] text-sky-400 mt-2 font-bold uppercase tracking-tight">Nota: Aprendizes terão folgas fixas aos Sábados e Domingos automaticamente.</p>
+                    </div>
+                </div>
+              )}
+
+              {newCargo === 'Estoquista' && !isYoung && (
+                <div className="animate-fade-in p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
+                  <p className="text-[9px] text-emerald-600 font-bold uppercase tracking-tight flex items-center gap-2">
+                    <Icon name="info" className="text-sm" /> Estoquistas possuem folga fixa aos Domingos por padrão.
+                  </p>
                 </div>
               )}
 
@@ -214,7 +236,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                     className="w-full bg-slate-50  border border-slate-100  rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700  focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
                   >
                     <option value="">Nenhuma</option>
-                    {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira'].map(d => (
+                    {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'].map(d => (
                       <option key={d} value={d}>{d}</option>
                     ))}
                   </select>
@@ -282,6 +304,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                    </div>
                    <div className="flex flex-col">
                       <span className="text-[10px] font-black text-slate-700  uppercase leading-none">Jovem Aprendiz</span>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Dia do Curso:</span>
                       {emp.isYoungApprentice && (
                         <select
                           value={emp.courseDay}

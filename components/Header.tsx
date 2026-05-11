@@ -25,10 +25,12 @@ interface HeaderProps {
   onSortearDomingo: () => void;
   onDistributePositions: () => void;
   showNotes: boolean;
-
   onToggleNotes: () => void;
   canGoNext: boolean;
   sundayViolations: { empName: string, date: string }[];
+  onLogout: () => void;
+  onSwitchRole: () => void;
+  onShowHelp: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -56,10 +58,14 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleNotes,
   canGoNext,
   sundayViolations,
+  onLogout,
+  onSwitchRole,
+  onShowHelp,
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);
   const [showPrintMenu, setShowPrintMenu] = useState(false);
   const [showEditMenu, setShowEditMenu] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
   const navItems = [
@@ -72,10 +78,12 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'jornada', label: 'Jornada', icon: 'schedule' },
     { id: 'feriados', label: 'Feriados', icon: 'event_busy' },
     { id: 'worked-holidays', label: 'Feriados Trabalhados', icon: 'list_alt' },
+    /* 
     { id: 'cleaning', label: 'Limpeza Copa', icon: 'cleaning_services' },
     { id: 'activities', label: 'Atividades', icon: 'assignment_turned_in' },
     { id: 'routine', label: 'Rotina Diária', icon: 'event_repeat' },
     { id: 'notices', label: 'Mural de Recados', icon: 'campaign' },
+    */
     { id: 'data', label: 'Dados', icon: 'storage' },
   ];
 
@@ -322,6 +330,50 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Icon name="content_copy" className="text-sm" /> Copiar Texto
           </button>
+          
+          <button 
+            onClick={onShowHelp}
+            className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 hover:text-orange-600 transition-all flex items-center justify-center border border-slate-200 dark:border-slate-700"
+            title="Ajuda e FAQs"
+          >
+            <Icon name="help_outline" className="text-xl" />
+          </button>
+          
+          <div className="relative">
+            <button
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              onBlur={() => setTimeout(() => setShowProfileMenu(false), 200)}
+              className="flex items-center gap-2 p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-all border border-slate-200 dark:border-slate-700"
+            >
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-white ${isReadOnly ? 'bg-indigo-500' : 'bg-orange-500'}`}>
+                <Icon name={isReadOnly ? 'person' : 'admin_panel_settings'} className="text-sm" />
+              </div>
+              <div className="hidden lg:flex flex-col items-start pr-2">
+                <span className="text-[10px] font-black uppercase text-slate-800 dark:text-slate-200 leading-none">{isReadOnly ? 'Equipe' : 'Gerente'}</span>
+                <span className="text-[8px] font-bold text-slate-400 uppercase">Perfil</span>
+              </div>
+            </button>
+            
+            {showProfileMenu && (
+              <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-1 flex flex-col gap-1 animate-in fade-in slide-in-from-top-1">
+                 <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
+                   <p className="text-[9px] font-black text-slate-400 uppercase">Ações de Acesso</p>
+                 </div>
+                 <button 
+                  onMouseDown={(e) => { e.preventDefault(); onSwitchRole(); setShowProfileMenu(false); }}
+                  className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all text-left"
+                 >
+                  <Icon name="swap_horiz" className="text-lg" /> Trocar Perfil
+                 </button>
+                 <button 
+                  onMouseDown={(e) => { e.preventDefault(); onLogout(); setShowProfileMenu(false); }}
+                  className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-rose-500 hover:bg-rose-50 transition-all text-left"
+                 >
+                  <Icon name="logout" className="text-lg" /> Sair do Sistema
+                 </button>
+              </div>
+            )}
+          </div>
           
           <div className={`w-2 h-2 rounded-full shrink-0 ${syncStatus.state === 'synced' ? 'bg-green-500' : syncStatus.state === 'syncing' ? 'bg-blue-500 animate-pulse' : 'bg-red-500'}`} title={syncStatus.state} />
         </div>

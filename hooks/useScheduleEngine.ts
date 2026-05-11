@@ -289,7 +289,11 @@ export function buildSundayAssignments(
  * Helper to select the best shift hours based on the day type and employee role.
  */
 function getTargetHours(emp: Employee, dow: number, isHoliday: boolean, settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS): string {
-    if (emp.isYoungApprentice) return settings.shiftHours.apprentice[0];
+    if (emp.isYoungApprentice) {
+        // Aprendiz folga Sábado, Domingo e Feriado
+        if (dow === 0 || dow === 6 || isHoliday) return settings.shiftHours.sunday[0]; 
+        return settings.shiftHours.apprentice[0];
+    }
 
     // Feriados
     if (isHoliday && dow !== 0) {

@@ -25,6 +25,7 @@ import { PrintableSchedule } from './components/PrintableSchedule';
 import { useHolidayCredits } from './hooks/useHolidayCredits';
 import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay, getNationalHolidays, DEFAULT_JORNADA_SETTINGS } from './constants';
 import { Employee, MonthYear, Holiday, JornadaSettings } from './types';
+import { HelpCenter } from './components/HelpCenter';
 import { JornadaManager } from './components/JornadaManager';
 
 const App: React.FC = () => {
@@ -44,6 +45,7 @@ const App: React.FC = () => {
   const [isDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
   const { showDialog } = useDialog();
   const [waModal, setWaModal] = useState<{ show: boolean, text: string }>({ show: false, text: '' });
+  const [showHelp, setShowHelp] = useState(false);
   const [auth, setAuth] = useState<{ isAuthenticated: boolean, role: 'admin' | 'viewer' }>({ isAuthenticated: false, role: 'viewer' });
   const isReadOnly = auth.role === 'viewer';
   const holidayCredits = useHolidayCredits(employees, customHolidays, currentMY.year, trackingStartDate);
@@ -59,6 +61,10 @@ const App: React.FC = () => {
   }, [setEmployees]);
 
   const onAddEmployee = useCallback((name: string, isYoung: boolean, courseDay: string, cargo: any, birthday: string) => {
+    let preferredDayOff = '';
+    if (cargo === 'Estoquista') preferredDayOff = 'Domingo';
+    if (cargo === 'Aprendiz') preferredDayOff = 'Sábado';
+
     const newEmp: Employee = {
       ...PLACEHOLDER_EMPLOYEE,
       id: Math.random().toString(36).substring(2, 9),
@@ -67,6 +73,7 @@ const App: React.FC = () => {
       courseDay: isYoung ? courseDay : undefined,
       cargo,
       birthday,
+      preferredDayOff,
       status: 'active',
       shifts: {},
       dailyHours: {},
@@ -394,6 +401,9 @@ const App: React.FC = () => {
               onDistributePositions={handleDistributePositions}
               showNotes={showNotes}
               onToggleNotes={() => setShowNotes(!showNotes)}
+              onLogout={() => setAuth({ isAuthenticated: false, role: 'viewer' })}
+              onSwitchRole={() => setAuth(prev => ({ ...prev, role: prev.role === 'admin' ? 'viewer' : 'admin' }))}
+              onShowHelp={() => setShowHelp(true)}
               canGoNext={canGoNext}
               sundayViolations={sundayViolations}
 
@@ -428,6 +438,7 @@ const App: React.FC = () => {
                   isEditable={isEditable}
                   allowRetroactive={allowRetroactive}
                   showNotes={showNotes}
+                  onCloseNotes={() => setShowNotes(false)}
                   resolvedPositions={selectedDayResolvedPositions}
                   onSelectDay={setSelectedDayIdx}
                   onUpdateShift={(empId, d, s) => {
@@ -553,6 +564,7 @@ const App: React.FC = () => {
                   onClose={() => setCurrentView('grid')}
                 />
               );
+            /*
             case 'cleaning':
               return (
                 <CleaningSchedule
@@ -584,6 +596,7 @@ const App: React.FC = () => {
                   onClose={() => setCurrentView('grid')}
                 />
               );
+            */
             case 'jornada':
               return (
                 <div className="max-w-4xl mx-auto mt-6">
@@ -603,6 +616,20 @@ const App: React.FC = () => {
 
 
       {/* Feriados Modal removed in favor of view */}
+      {waModal.show && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+           <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
+              <h3 className="text-sm font-black uppercase text-slate-800 dark:text-slate-100 mb-4">Texto para WhatsApp</h3>
+              <textarea readOnly value={waModal.text} className="w-full h-64 bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-4 text-xs font-mono outline-none" />
+              <div className="flex gap-2 mt-4">
+                <button onClick={() => { navigator.clipboard.writeText(waModal.text); setWaModal({ show: false, text: '' }); }} className="flex-1 py-3 bg-green-600 text-white rounded-xl text-[11px] font-black uppercase">Copiar e Fechar</button>
+                <button onClick={() => setWaModal({ show: false, text: '' })} className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-xl text-[11px] font-black uppercase">Fechar</button>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {showHelp && <HelpCenter onClose={() => setShowHelp(false)} />}
 
       {/* Day Detail Modal */}
       {showDayDetail && (
