@@ -224,8 +224,8 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         <span className={`text-sm font-black ${isSun ? 'text-rose-500' : 'text-slate-700 dark:text-slate-200'}`}>{d}</span>
                       </div>
                       <div>
-                        <p className={`text-[11px] font-black uppercase ${shift === 'F' ? 'text-rose-600' : shift.startsWith('FF') ? 'text-amber-600' : 'text-slate-800 dark:text-slate-100'}`}>
-                          {shift === 'T' ? 'Trabalha' : shift === 'F' ? 'Folga' : shift.startsWith('FF') ? 'Folga Feriado' : shift === 'FE' ? 'Férias' : shift === 'C' ? 'Curso' : shift === 'DO' ? 'Aniversário' : shift}
+                        <p className={`text-[11px] font-black uppercase ${shift === 'F' ? 'text-rose-600' : (typeof shift === 'string' && shift.startsWith('FF')) ? 'text-amber-600' : 'text-slate-800 dark:text-slate-100'}`}>
+                          {shift === 'T' ? 'Trabalha' : shift === 'F' ? 'Folga' : (typeof shift === 'string' && shift.startsWith('FF')) ? 'Folga Feriado' : shift === 'FE' ? 'Férias' : shift === 'C' ? 'Curso' : shift === 'DO' ? 'Aniversário' : shift}
                         </p>
                         <p className="text-[9px] font-bold text-slate-400 uppercase">{isWorkingShift(shift) ? hour : '---'}</p>
                       </div>
@@ -313,7 +313,15 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                     <span className="text-[9px] font-black bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-lg uppercase tracking-widest">
                       Para: {(req.month || '').split('-').reverse().join('/')}
                     </span>
-                    <span className="text-[8px] font-bold text-slate-400 uppercase">{req.createdAt ? new Date(req.createdAt).toLocaleDateString('pt-BR') : '---'}</span>
+                    <span className="text-[8px] font-bold text-slate-400 uppercase">
+                      {(() => {
+                        try {
+                          return req.createdAt ? new Date(req.createdAt).toLocaleDateString('pt-BR') : '---';
+                        } catch (e) {
+                          return '---';
+                        }
+                      })()}
+                    </span>
                   </div>
                   <p className="text-xs font-bold text-slate-700 dark:text-slate-200 leading-relaxed pr-8">{req.text}</p>
                   {onUpdateEmployee && (
