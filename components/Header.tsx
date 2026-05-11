@@ -96,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={() => onViewChange(item.id as any)}
                   className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all ${currentView === item.id ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                  {item.label`}
+                  {item.label}
                 </button>
               ))}
               <div className="relative">
@@ -105,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
                   onBlur={() => setTimeout(() => setShowConfigMenu(false), 200)}
                   className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all flex items-center gap-1.5 ${['team','jornada','data','feriados','worked-holidays'].includes(currentView) ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                  Configurações <Icon name={showConfigMenu ? 'expand_less' : 'expand_more'`} className="text-[14px]" />
+                  Configurações <Icon name={showConfigMenu ? 'expand_less' : 'expand_more'} className="text-[14px]" />
                 </button>
                 {showConfigMenu && (
                   <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-1 animate-in fade-in slide-in-from-top-1 duration-200">
@@ -152,7 +152,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* Period Filters */`}
+          {/* Period Filters */}
           <div className="hidden sm:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1">
             {[
               { id: 'all', label: 'Mês' },
@@ -165,7 +165,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => onFilterChange(f.id as any)}
                 className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase transition-all ${filter === f.id ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
               >
-                {f.label`}
+                {f.label}
               </button>
             ))}
           </div>
@@ -189,7 +189,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }}
                   className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all flex items-center gap-2 ${isEditable ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                  <Icon name={isEditable ? 'save' : 'edit'`} className="text-sm" />
+                  <Icon name={isEditable ? 'save' : 'edit'} className="text-sm" />
                   {isEditable ? 'Salvar' : 'Editar'}
                 </button>
                 
@@ -198,7 +198,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onClick={() => setShowEditMenu(!showEditMenu)}
                     className={`px-2 py-1.5 rounded-md transition-all ${showEditMenu ? 'text-indigo-600' : 'text-slate-400'}`}
                   >
-                    <Icon name={showEditMenu ? 'expand_less' : 'expand_more'`} />
+                    <Icon name={showEditMenu ? 'expand_less' : 'expand_more'} />
                   </button>
                 )}
               </div>
@@ -243,7 +243,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                   <div className="h-px bg-slate-100 dark:bg-slate-800 mx-2" />
                   <button 
-                    onClick={() => setShowEditMenu(false)`}
+                    onClick={() => setShowEditMenu(false)}
                     className="w-full flex items-center justify-center p-2 rounded-lg text-[9px] font-black uppercase text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
                   >
                     Fechar Menu
@@ -264,7 +264,7 @@ export const Header: React.FC<HeaderProps> = ({
             {showPrintMenu && (
               <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-1 flex flex-col gap-1">
                 <button 
-                  onClick={() => { onPrint(); setShowPrintMenu(false); `}}
+                  onClick={() => { onPrint(); setShowPrintMenu(false); }}
                   className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-slate-600 hover:bg-slate-50 transition-all"
                 >
                   <Icon name="picture_as_pdf" className="text-lg text-rose-500" /> Gerar PDF Escala
@@ -273,8 +273,7 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={() => { onToggleNotes(); setShowPrintMenu(false); }}
                   className={`w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase transition-all ${showNotes ? 'text-indigo-600 bg-indigo-50' : 'text-slate-600 hover:bg-slate-50'}`}
                 >
-                  <Icon name="edit_note" className="text-lg" /> {showNotes ? 'Esconder Recados' : 'Editar Recados'`}
-                </button>
+                  <Icon name="edit_note" className="text-lg" />{showNotes ? 'Esconder Recados' : 'Editar Recados'}</button>
               </div>
             )}
           </div>
@@ -324,7 +323,7 @@ export const Header: React.FC<HeaderProps> = ({
             <Icon name="content_copy" className="text-sm" /> Copiar Texto
           </button>
           
-          <div className={`w-2 h-2 rounded-full shrink-0 ${syncStatus.state === 'synced' ? 'bg-green-500' : syncStatus.state === 'syncing' ? 'bg-blue-500 animate-pulse' : 'bg-red-500'}`} title={syncStatus.state`} />
+          <div className={`w-2 h-2 rounded-full shrink-0 ${syncStatus.state === 'synced' ? 'bg-green-500' : syncStatus.state === 'syncing' ? 'bg-blue-500 animate-pulse' : 'bg-red-500'}`} title={syncStatus.state} />
         </div>
       </div>
     </header>

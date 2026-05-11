@@ -218,13 +218,13 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                   <Icon name="analytics" className="text-sm" /> Insights
                 </button>
                 <button 
-                  onClick={() => setViewMode('team-calendar')`}
+                  onClick={() => setViewMode('team-calendar')}
                   className={`px-6 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${viewMode === 'team-calendar' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
                 >
                   <Icon name="calendar_view_month" className="text-sm" /> Escala Geral
                 </button>
              </div>
-             <button onClick={onClose`} className="p-2.5 hover:bg-slate-100  rounded-full transition-colors order-last ml-2">
+             <button onClick={onClose} className="p-2.5 hover:bg-slate-100  rounded-full transition-colors order-last ml-2">
                <Icon name="close" className="text-slate-400 " />
              </button>
           </div>
@@ -384,27 +384,27 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                                 <button 
                                     key={s.id} 
                                     onClick={() => { setSelectedEmpId(s.id); }}
-                                    className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all border ${}`}
+                                    className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all border ${
                                         selectedEmpId === s.id 
                                         ? 'bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-100 scale-[1.02]' 
                                         : 'bg-slate-50 border-slate-100 hover:bg-slate-100'
                                     }`}
                                 >
-                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${}`}
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${
                                         selectedEmpId === s.id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'
                                     }`}>
                                         {idx + 1}
                                     </div>
                                     <div className="flex-1 text-left min-w-0">
                                         <p className={`text-xs font-black uppercase truncate ${selectedEmpId === s.id ? 'text-white' : 'text-slate-900'}`}>
-                                            {s.name`}
+                                            {s.name}
                                         </p>
                                         <div className="flex items-center gap-2 mt-1">
                                             <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${selectedEmpId === s.id ? 'bg-white/20' : 'bg-slate-200'}`}>
-                                                <div className={`h-full rounded-full ${s.isHeavy ? 'bg-rose-400' : 'bg-indigo-400'}`} style={{ width: `${(s.worked / daysInMonth) * 100}%` }`}></div>
+                                                <div className={`h-full rounded-full ${s.isHeavy ? 'bg-rose-400' : 'bg-indigo-400'}`} style={{ width: `${(s.worked / daysInMonth) * 100}%` }}></div>
                                             </div>
                                             <span className={`text-[9px] font-black shrink-0 ${selectedEmpId === s.id ? 'text-white/80' : 'text-slate-500'}`}>
-                                                {s.adherence.toFixed(0)`}% • {s.worked}/{s.theoreticalMax}d
+                                                {s.adherence.toFixed(0)}% • {s.worked}/{s.theoreticalMax}d
                                             </span>
                                         </div>
                                     </div>
@@ -433,7 +433,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                             {dailyCoverage.map(c => (
                                 <div 
                                     key={c.day}
-                                        className={`w-8 h-8 flex flex-col items-center justify-center rounded-lg border text-[9px] font-black transition-all ${}`}
+                                        className={`w-8 h-8 flex flex-col items-center justify-center rounded-lg border text-[9px] font-black transition-all ${
                                             c.total < 6 ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-indigo-50 border-indigo-100 text-indigo-600'
                                         }`}
                                 >
@@ -503,7 +503,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
 
  const InsightCard: React.FC<{ label: string, value: string, icon: any, color: any, description: string, urgent?: boolean }> = ({ label, value, icon, color, description, urgent }) => (
   <div className={`bg-white border rounded-3xl p-6 shadow-sm flex items-center gap-5 transition-all hover:translate-y-[-4px] hover:shadow-md ${urgent ? 'border-rose-300 ring-2 ring-rose-50' : 'border-slate-100'}`}>
-     <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${}`}
+     <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
        color === 'indigo' ? 'bg-indigo-50 text-indigo-600' : 
        color === 'rose' ? 'bg-rose-50 text-rose-600' : 
        color === 'amber' ? 'bg-amber-50 text-amber-600' : 'bg-sky-50 text-sky-600'
@@ -512,7 +512,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
      </div>
      <div className="min-w-0">
         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
-        <h4 className={`text-xl font-black ${urgent ? 'text-rose-600' : 'text-slate-900'} leading-none`}>{value`}</h4>
+        <h4 className={`text-xl font-black ${urgent ? 'text-rose-600' : 'text-slate-900'} leading-none`}>{value}</h4>
         <p className="text-[9px] font-bold text-slate-400 truncate">{description}</p>
      </div>
   </div>
@@ -580,12 +580,10 @@ const IndividualWeeklyCalendar: React.FC<{
                         <div 
                             key={idx}
                             title={cell.isVacation ? 'Férias' : (cell.shift as string)}
-                            className={`aspect-square rounded-xl border flex flex-col items-center justify-center transition-all relative ${shiftBg(cell.shift)} ${canEdit ? 'hover:scale-105 hover:shadow-md cursor-pointer' : ''`}`}
+                            className={`aspect-square rounded-xl border flex flex-col items-center justify-center transition-all relative ${shiftBg(cell.shift)} ${canEdit ? 'hover:scale-105 hover:shadow-md cursor-pointer' : ''}`}
                         >
-                            <span className={`text-[8px] font-black absolute top-1 left-1 ${cell.shift === 'T' || cell.isCourse ? 'text-white/80' : 'text-slate-400'}`}>{cell.day`}</span>
-                            <span className={`text-[11px] font-black mt-1 ${cell.isOff && !cell.isVacation && !cell.isBirthday ? 'opacity-40' : ''}`}>
-                                {isWorkingShift(cell.shift) ? shiftLabel : cell.isCourse ? 'C' : cell.isVacation ? 'FE' : cell.isBirthday ? 'DO' : (cell.shift?.startsWith('FF') ? 'FF' : 'F')`}
-                            </span>
+                            <span className={`text-[8px] font-black absolute top-1 left-1 ${cell.shift === 'T' || cell.isCourse ? 'text-white/80' : 'text-slate-400'}`}>{cell.day}</span>
+                            <span className={`text-[11px] font-black mt-1 ${cell.isOff && !cell.isVacation && !cell.isBirthday ? 'opacity-40' : ''}`}>{isWorkingShift(cell.shift) ? shiftLabel : cell.isCourse ? 'C' : cell.isVacation ? 'FE' : cell.isBirthday ? 'DO' : (cell.shift?.startsWith('FF') ? 'FF' : 'F')}</span>
 
 
                             {canEdit && (
@@ -669,7 +667,7 @@ const TeamMonthlyCalendar: React.FC<{
             {cell.type === 'day' && (
               <>
                 <div className="flex justify-between items-start mb-3 print:mb-1">
-                  <span className="text-xs font-black text-slate-400  print:text-[10px]">{cell.date`}</span>
+                  <span className="text-xs font-black text-slate-400  print:text-[10px]">{cell.date}</span>
                   <span className="text-[8px] font-black text-slate-300  uppercase tracking-tighter">
                     {WEEKDAY_NAMES[new Date(currentMY.year, currentMY.month, cell.date).getDay()].split('-')[0]}
                   </span>
@@ -677,10 +675,8 @@ const TeamMonthlyCalendar: React.FC<{
                 <div className="space-y-1.5">
                   {cell.dayData.map((d, i) => (
                     <div key={i} className={`flex items-center justify-between gap-1 p-2 print:p-1 rounded-xl print:rounded-md border ${d.isCourse ? 'bg-teal-50 border-teal-100 text-teal-700' : 'bg-slate-50 border-slate-100/50 text-slate-800'}`}>
-                       <span className="text-[9px] print:text-[8px] font-black uppercase truncate">{d.name`}</span>
-                       <span className={`text-[8px] font-bold shrink-0 ${d.isCourse ? 'mt-[-2px]' : 'hidden'}`}>
-                          {d.isCourse && <Icon name="school" className="text-[10px]" />`}
-                       </span>
+                       <span className="text-[9px] print:text-[8px] font-black uppercase truncate">{d.name}</span>
+                       <span className={`text-[8px] font-bold shrink-0 ${d.isCourse ? 'mt-[-2px]' : 'hidden'}`}>{d.isCourse && <Icon name="school" className="text-[10px]" />}</span>
                     </div>
                   ))}
                 </div>
@@ -829,17 +825,15 @@ const IndividualEditModal: React.FC<IndividualEditModalProps> = ({
                 <div
                   key={idx}
                   style={{ minHeight: '70px' }}
-                  className={`rounded-xl border flex flex-col items-center justify-start pt-1 gap-0.5 p-1 relative ${}`}
+                  className={`rounded-xl border flex flex-col items-center justify-start pt-1 gap-0.5 p-1 relative ${
                     isHoliday ? 'border-rose-300 bg-rose-50/70' :
                     isSunday  ? 'border-orange-300 bg-orange-50/70' :
                     isSaturday? 'border-slate-200 bg-slate-50' :
                     'border-slate-100 bg-white'
                   }`}
                 >
-                  <span className={`text-[8px] font-black self-start pl-0.5 ${isHoliday?'text-rose-400':isSunday?'text-orange-400':'text-slate-400'}`}>{day`}</span>
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-extrabold text-white shadow-sm ${shiftBg(shift)}`}>
-                    {shift?.split(' ')[0]`}
-                  </div>
+                  <span className={`text-[8px] font-black self-start pl-0.5 ${isHoliday?'text-rose-400':isSunday?'text-orange-400':'text-slate-400'}`}>{day}</span>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-extrabold text-white shadow-sm ${shiftBg(shift)}`}>{shift?.split(' ')[0]}</div>
                   {canEdit && (
                     <select
                       value={shift}
@@ -877,7 +871,7 @@ const IndividualEditModal: React.FC<IndividualEditModalProps> = ({
               <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest w-full text-center">Clique em qualquer dia para alterar o turno • Alterações refletem na tabela principal</p>
               {SHIFT_OPTIONS_MODAL.map(o => (
                 <div key={o.value} className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
-                  <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[8px] font-black text-white ${shiftBg(o.value as ShiftType)}`}>{o.value`}</div>
+                  <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[8px] font-black text-white ${shiftBg(o.value as ShiftType)}`}>{o.value}</div>
                   {o.label.split('—')[1]?.trim()}
                 </div>
               ))}

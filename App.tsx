@@ -368,7 +368,7 @@ const App: React.FC = () => {
 
   return (
     <>
-      <div className={`h-screen flex flex-col overflow-hidden ${isDarkMode ? 'dark bg-slate-950' : 'bg-slate-50'`} transition-colors font-sans print:hidden`}>
+      <div className={`h-screen flex flex-col overflow-hidden ${isDarkMode ? 'dark bg-slate-950' : 'bg-slate-50'} transition-colors font-sans print:hidden`}>
         <Header 
               currentView={currentView}
               currentMY={currentMY}

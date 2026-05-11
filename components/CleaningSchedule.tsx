@@ -154,7 +154,7 @@ export const CleaningSchedule: React.FC<CleaningScheduleProps> = ({ employees, c
               {calendarCells.map((cell, idx) => (
                 <div 
                   key={idx} 
-                  className={`min-h-[110px] rounded-[2rem] border-2 p-4 flex flex-col gap-2 transition-all ${}`}
+                  className={`min-h-[110px] rounded-[2rem] border-2 p-4 flex flex-col gap-2 transition-all ${
                     !cell 
                     ? 'border-transparent' 
                     : cell.isSunday 
@@ -168,13 +168,13 @@ export const CleaningSchedule: React.FC<CleaningScheduleProps> = ({ employees, c
                     <>
                       <div className="flex justify-between items-center">
                         <span className={`text-sm font-black ${cell.isSunday ? 'text-rose-500' : 'text-slate-300 dark:text-slate-600'}`}>
-                          {cell.day`}
+                          {cell.day}
                         </span>
                         {cell.isHoliday && <Icon name="event_busy" className="text-amber-500 text-xs" />}
                       </div>
                       <div className="flex-1 flex flex-col justify-center items-center text-center">
                         <p className={`text-[11px] font-black uppercase leading-tight ${cell.isSunday ? 'text-rose-600' : 'text-slate-900 dark:text-slate-100'}`}>
-                          {cell.empName`}
+                          {cell.empName}
                         </p>
                       </div>
                     </>

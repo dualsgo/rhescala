@@ -227,7 +227,7 @@ export const ActionToolbar: React.FC<ActionToolbarProps> = ({ employees, current
           }}
           className="flex items-center gap-3 px-5 py-3 rounded-xl border border-slate-200 transition-all bg-white hover:bg-slate-50 hover:border-slate-300 shadow-sm group"
         >
-          <div className={`w-8 h-8 ${action.bg} ${action.color`} rounded-lg flex items-center justify-center`}>
+          <div className={`w-8 h-8 ${action.bg} ${action.color} rounded-lg flex items-center justify-center`}>
             <Icon name={action.icon} className="text-lg" />
           </div>
           <span className="text-sm font-bold text-slate-700">{action.label}</span>

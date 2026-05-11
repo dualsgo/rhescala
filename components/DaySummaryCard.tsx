@@ -255,7 +255,7 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
           </div>
 
           <div className={`grid grid-cols-1 ${isHoliday ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-2.5`}>
-            <LunchSection label={isHoliday ? "Ab. (H)" : "Abertura"`} slots={getAvailableSlots(isHoliday ? HOLIDAY_LUNCH_CONFIG.abertura : LUNCH_CONFIG.abertura)} lunchData={lunchAberta} count={counts.abertura} color="orange" icon="wb_twilight" />
+            <LunchSection label={isHoliday ? "Ab. (H)" : "Abertura"} slots={getAvailableSlots(isHoliday ? HOLIDAY_LUNCH_CONFIG.abertura : LUNCH_CONFIG.abertura)} lunchData={lunchAberta} count={counts.abertura} color="orange" icon="wb_twilight" />
             {!isHoliday && <LunchSection label="Intermed." slots={getAvailableSlots(LUNCH_CONFIG.intermediario)} lunchData={lunchInter} count={counts.intermediario} color="sky" icon="sunny" />}
             {isHoliday && <LunchSection label="Int 1 (H)" slots={getAvailableSlots(HOLIDAY_LUNCH_CONFIG.interm1)} lunchData={lunchInter1} count={counts.interm1} color="emerald" icon="sunny" />}
             {isHoliday && <LunchSection label="Int 2 (H)" slots={getAvailableSlots(HOLIDAY_LUNCH_CONFIG.interm2)} lunchData={lunchInter2} count={counts.interm2} color="pink" icon="sunny" />}
@@ -268,40 +268,40 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
 };
 
 const ShiftBox: React.FC<{ label: string, range: string, count: number, names: string[], color: string, icon: any }> = ({ label, range, count, names, color, icon }) => (
-  <div className={`bg-${color}-50/40 p-2.5 rounded-xl border border-${color`}-100/60 flex flex-col justify-center min-h-[60px] transition-all hover:bg-${color}-50/80`}>
+  <div className={`bg-${color}-50/40 p-2.5 rounded-xl border border-${color}-100/60 flex flex-col justify-center min-h-[60px] transition-all hover:bg-${color}-50/80`}>
     <div className={`flex items-center gap-1.5 mb-0.5 text-${color}-600`}>
-      <Icon name={icon`} className="text-[10px]" />
+      <Icon name={icon} className="text-[10px]" />
       <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
-      <span className={`text-[7px] text-${color}-400 ml-auto font-bold`}>{range`}</span>
+      <span className={`text-[7px] text-${color}-400 ml-auto font-bold`}>{range}</span>
     </div>
     <p className="text-lg font-black text-slate-900 leading-none">{count} <span className="text-[8px] text-slate-300 font-black uppercase ml-0.5">Colab.</span></p>
-    {names.length > 0 && <p className={`text-[8px] font-bold text-${color}-500/80 mt-1 truncate max-w-full italic`}>{names.join(', ')`}</p>}
+    {names.length > 0 && <p className={`text-[8px] font-bold text-${color}-500/80 mt-1 truncate max-w-full italic`}>{names.join(', ')}</p>}
   </div>
 );
 
 const StatCircle: React.FC<{ label: string, count: number, color: string }> = ({ label, count, color }) => (
   <div className="text-center">
     <p className="text-[8px] font-black text-slate-400 uppercase mb-1 tracking-widest leading-none">{label}</p>
-    <div className={`w-8 h-8 rounded-lg bg-${color}-50 flex items-center justify-center mx-auto text-${color`}-600 font-black text-xs border border-${color}-100 shadow-sm`}>{count}</div>
+    <div className={`w-8 h-8 rounded-lg bg-${color}-50 flex items-center justify-center mx-auto text-${color}-600 font-black text-xs border border-${color}-100 shadow-sm`}>{count}</div>
   </div>
 );
 
 const LunchSection: React.FC<{ label: string, slots: string[], lunchData: any[], count: number, color: string, icon: any }> = ({ label, slots, lunchData, count, color, icon }) => (
-  <div className={`bg-${color}-50/80 rounded-xl border border-${color`}-100 p-4`}>
+  <div className={`bg-${color}-50/80 rounded-xl border border-${color}-100 p-4`}>
     <div className="flex items-center gap-2 mb-1">
       <Icon name={icon} className={`text-${color}-500 text-sm`} />
-      <span className={`text-[10px] font-extrabold text-${color}-600 uppercase tracking-wide`}>{label`}</span>
-      <span className={`text-[9px] text-${color}-400 ml-auto`}>{count`} colab{count > 1 ? 's' : ''}</span>
+      <span className={`text-[10px] font-extrabold text-${color}-600 uppercase tracking-wide`}>{label}</span>
+      <span className={`text-[9px] text-${color}-400 ml-auto`}>{count} colab{count > 1 ? 's' : ''}</span>
     </div>
     <div className="flex flex-wrap gap-1 mb-3">
       {slots.map(s => (
-        <span key={s} className={`text-[8px] font-bold text-${color}-300 border border-${color`}-200 rounded px-1 py-0.5`}>{s}</span>
+        <span key={s} className={`text-[8px] font-bold text-${color}-300 border border-${color}-200 rounded px-1 py-0.5`}>{s}</span>
       ))}
     </div>
     <div className="space-y-1">
       {lunchData.map((slot, i) => (
         <div key={i} className={`flex items-start gap-1.5 ${slot.isDouble ? 'opacity-90' : ''}`}>
-          <span className={`text-[9px] font-black rounded px-1.5 py-0.5 text-center shrink-0 min-w-[38px] ${slot.isDouble ? 'bg-amber-100 text-amber-700 border border-amber-200' : `bg-${color}-100 text-${color`}-600`}`}>
+          <span className={`text-[9px] font-black rounded px-1.5 py-0.5 text-center shrink-0 min-w-[38px] ${slot.isDouble ? 'bg-amber-100 text-amber-700 border border-amber-200' : `bg-${color}-100 text-${color}-600`}`}>
             {slot.time}
           </span>
           <span className="text-[9px] font-bold text-slate-600 leading-tight truncate">

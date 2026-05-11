@@ -60,7 +60,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 autoFocus
               />
               {error && (
-                <p className="absolute -bottom-6 left-0 right-0 text-center text-[10px] font-black text-rose-500 uppercase tracking-widest animate-shake">{error`}</p>
+                <p className="absolute -bottom-6 left-0 right-0 text-center text-[10px] font-black text-rose-500 uppercase tracking-widest animate-shake">{error}</p>
               )}
             </div>
           </div>

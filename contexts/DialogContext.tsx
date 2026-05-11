@@ -54,7 +54,7 @@ export const DialogProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-sm w-full shadow-2xl transform transition-all scale-100 animate-slide-up">
             
             <div className="flex items-center gap-3 mb-4">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${options.type === 'alert' ? 'bg-orange-100 text-orange-600' : options.type === 'confirm' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'`}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${options.type === 'alert' ? 'bg-orange-100 text-orange-600' : options.type === 'confirm' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
                  <Icon name={options.type === 'alert' ? 'warning' : options.type === 'confirm' ? 'help_outline' : 'edit'} />
               </div>
               <h3 className="text-lg font-extrabold text-slate-900">{options.title}</h3>
@@ -87,7 +87,7 @@ export const DialogProvider: React.FC<{ children: ReactNode }> = ({ children }) 
               )}
               <button 
                 onClick={() => handleClose(options.type === 'prompt' ? promptValue : true)}
-                className={`px-5 py-2 rounded-lg font-bold text-white shadow-md transition-all active:scale-95 ${options.type === 'alert' ? 'bg-orange-500 hover:bg-orange-600 w-full' : 'bg-blue-600 hover:bg-blue-700'`}`}
+                className={`px-5 py-2 rounded-lg font-bold text-white shadow-md transition-all active:scale-95 ${options.type === 'alert' ? 'bg-orange-500 hover:bg-orange-600 w-full' : 'bg-blue-600 hover:bg-blue-700'}`}
               >
                 {options.confirmText}
               </button>

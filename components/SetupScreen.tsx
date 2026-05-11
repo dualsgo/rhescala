@@ -106,7 +106,7 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
                                             onClick={handleCopy}
                                             className={`p-3 rounded-xl transition-all shadow-lg flex items-center gap-2 text-[9px] font-black uppercase tracking-widest ${copied ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
                                         >
-                                            <Icon name={copied ? 'done' : 'content_copy'`} className="text-sm" />
+                                            <Icon name={copied ? 'done' : 'content_copy'} className="text-sm" />
                                             {copied ? 'Copiado!' : 'Copiar'}
                                         </button>
                                     </div>
