@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useDialog } from '../contexts/DialogContext';
-import { Employee, ShiftType, MonthYear, Holiday } from '../types';
+import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getDefaultHourForDay } from '../constants';
 import { getShiftClassification, isWorkingShift } from '../hooks/useScheduleEngine';
@@ -39,6 +39,7 @@ interface ShiftGridProps {
   onCloseNotes: () => void;
   resolvedPositions: Record<string, string>;
   jornadaSettings: JornadaSettings;
+  onOpenEmployeeCard: (emp: Employee) => void;
 }
 
 export const ShiftGrid: React.FC<ShiftGridProps> = ({
@@ -72,6 +73,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onCloseNotes,
   resolvedPositions,
   jornadaSettings,
+  onOpenEmployeeCard,
 }) => {
   const { showDialog } = useDialog();
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
@@ -83,11 +85,14 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [currentMY.year, customHolidays]);
 
+  const [searchTerm, setSearchTerm] = useState('');
+
   const displayedEmployees = useMemo(() => {
     return [...employees]
       .filter(e => !e.isHidden && e.status === 'active')
+      .filter(e => e.name.toLowerCase().includes(searchTerm.toLowerCase()))
       .sort((a, b) => (a.workPeriod || '').localeCompare(b.workPeriod || '') || a.name.localeCompare(b.name));
-  }, [employees]);
+  }, [employees, searchTerm]);
 
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
   const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
@@ -111,6 +116,33 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
   return (
     <div className="flex flex-col gap-4 relative h-full">
+      {/* Search and Filters for Mobile/Quick Access */}
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="relative w-full sm:w-72 group">
+          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-orange-500 transition-colors">
+            <Icon name="search" className="text-xl" />
+          </div>
+          <input 
+            type="text" 
+            placeholder="Buscar colaborador..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl py-3 pl-12 pr-4 text-sm font-bold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all shadow-sm"
+          />
+          {searchTerm && (
+            <button 
+              onClick={() => setSearchTerm('')}
+              className="absolute inset-y-0 right-4 flex items-center text-slate-400 hover:text-slate-600"
+            >
+              <Icon name="close" />
+            </button>
+          )}
+        </div>
+        
+        <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+           <Icon name="info" className="text-orange-500" /> Clique no nome para ver sua escala individual
+        </div>
+      </div>
 
       {/* Grid Container */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden flex-1 flex flex-col">
@@ -131,6 +163,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   const dayIdx = d.num - 1;
                   const stats = employees.reduce((acc, emp) => {
                     if (emp.isHidden || emp.status !== 'active') return acc;
+                    if (searchTerm && !emp.name.toLowerCase().includes(searchTerm.toLowerCase())) return acc;
                     const shift = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
                     const hour = (emp.dailyHours[monthKey] || [])[dayIdx] || emp.workPeriod;
                     const shiftClass = getShiftClassification(hour, d.isSunday, jornadaSettings);
@@ -177,6 +210,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
                 employees.forEach(emp => {
                   if (emp.isHidden || emp.status !== 'active') return;
+                  if (searchTerm && !emp.name.toLowerCase().includes(searchTerm.toLowerCase())) return;
+
                   const shift = (emp.shifts[monthKey] || [])[selectedDayIdx] || 'T';
                   const isOff = !isWorkingShift(shift);
                   
@@ -187,7 +222,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
 
                   const hour = (emp.dailyHours[monthKey] || [])[selectedDayIdx] || emp.workPeriod;
-                  const isSun = filteredDays[selectedDayIdx]?.isSunday;
+                  const isSun = days[selectedDayIdx]?.isSunday;
                   const classification = getShiftClassification(hour, isSun, jornadaSettings);
                   
                   if (groups[classification]) groups[classification].push(emp);
@@ -216,15 +251,19 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                           <tr key={emp.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group/row">
                             {/* Name & Position */}
                             <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 py-1.5 px-2 min-w-[180px] w-[180px]">
-                              <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                              <button 
+                                onClick={() => onOpenEmployeeCard(emp)}
+                                className="flex items-center gap-2 w-full text-left hover:bg-orange-50 dark:hover:bg-orange-900/10 p-1 rounded-xl transition-all group/name"
+                              >
+                                <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 group-hover/name:bg-orange-100 group-hover/name:text-orange-600 group-hover/name:border-orange-200 transition-colors">
                                   {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                                 </div>
-                                <div className="flex flex-col">
-                                  <span className="text-[11px] font-black text-slate-900 dark:text-slate-100 truncate w-32">{emp.name}</span>
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-[11px] font-black text-slate-900 dark:text-slate-100 truncate w-28 group-hover/name:text-orange-600 transition-colors">{emp.name}</span>
                                   <span className="text-[9px] text-slate-400 font-bold uppercase">{emp.cargo || 'Vendedor'}</span>
                                 </div>
-                              </div>
+                                <Icon name="chevron_right" className="text-slate-300 group-hover/name:text-orange-500 opacity-0 group-hover/name:opacity-100 transition-all text-sm ml-auto" />
+                              </button>
                             </td>
                              {/* Hours Select */}
                             <td className="sticky left-[180px] z-10 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-700 py-1 px-2 min-w-[125px] w-[125px]">

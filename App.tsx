@@ -27,6 +27,7 @@ import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolida
 import { Employee, MonthYear, Holiday, JornadaSettings } from './types';
 import { HelpCenter } from './components/HelpCenter';
 import { JornadaManager } from './components/JornadaManager';
+import { EmployeeScheduleCard } from './components/EmployeeScheduleCard';
 
 const App: React.FC = () => {
   const [employees, setEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', [PLACEHOLDER_EMPLOYEE]);
@@ -46,6 +47,7 @@ const App: React.FC = () => {
   const { showDialog } = useDialog();
   const [waModal, setWaModal] = useState<{ show: boolean, text: string }>({ show: false, text: '' });
   const [showHelp, setShowHelp] = useState(false);
+  const [selectedEmployeeForCard, setSelectedEmployeeForCard] = useState<Employee | null>(null);
   const [auth, setAuth] = useState<{ isAuthenticated: boolean, role: 'admin' | 'viewer' }>({ isAuthenticated: false, role: 'viewer' });
   const isReadOnly = auth.role === 'viewer';
   const holidayCredits = useHolidayCredits(employees, customHolidays, currentMY.year, trackingStartDate);
@@ -481,11 +483,12 @@ const App: React.FC = () => {
                   onNextMonth={() => setCurrentMY(prev => prev.month === 11 ? { month: 0, year: prev.year + 1 } : { ...prev, month: prev.month + 1 })}
                   onPrevMonth={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })}
                   monthNotes={monthNotes[monthKey] || ''}
-                  onUpdateMonthNotes={(text) => {
+                   onUpdateMonthNotes={(text) => {
                     if (isReadOnly) return;
                     setMonthNotes(prev => ({ ...prev, [monthKey]: text }));
                   }}
                   jornadaSettings={jornadaSettings}
+                  onOpenEmployeeCard={(emp) => setSelectedEmployeeForCard(emp)}
                 />
               );
             case 'analysis':
@@ -630,6 +633,16 @@ const App: React.FC = () => {
       )}
 
       {showHelp && <HelpCenter onClose={() => setShowHelp(false)} />}
+
+      {selectedEmployeeForCard && (
+        <EmployeeScheduleCard 
+          employee={selectedEmployeeForCard}
+          currentMY={currentMY}
+          customHolidays={customHolidays}
+          holidayCredits={holidayCredits[selectedEmployeeForCard.id] || []}
+          onClose={() => setSelectedEmployeeForCard(null)}
+        />
+      )}
 
       {/* Day Detail Modal */}
       {showDayDetail && (

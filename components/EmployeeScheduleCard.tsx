@@ -1,0 +1,262 @@
+
+import React from 'react';
+import { Employee, MonthYear, Holiday, ShiftType } from '../types';
+import { Icon } from './Icon';
+import { HolidayCredit } from '../hooks/useHolidayCredits';
+import { isWorkingShift } from '../hooks/useScheduleEngine';
+import { buildHolidaySet } from '../constants';
+
+interface EmployeeScheduleCardProps {
+  employee: Employee;
+  currentMY: MonthYear;
+  customHolidays: Holiday[];
+  holidayCredits: HolidayCredit[];
+  onClose: () => void;
+}
+
+export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
+  employee,
+  currentMY,
+  customHolidays,
+  holidayCredits,
+  onClose
+}) => {
+  const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+  const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
+  const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
+
+  const shifts = employee.shifts[monthKey] || [];
+  const hours = employee.dailyHours[monthKey] || [];
+
+  const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+  const pendingCredits = holidayCredits.filter(c => c.status === 'pending');
+  const scheduledCredits = holidayCredits.filter(c => c.status === 'scheduled');
+
+  return (
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-300">
+        
+        {/* Header */}
+        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 z-10">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center text-xl font-black shadow-sm">
+              {employee.name.substring(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-tight">{employee.name}</h3>
+              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{employee.cargo || 'Colaborador'} • {months[currentMY.month]} {currentMY.year}</p>
+            </div>
+          </div>
+          <button 
+            onClick={onClose}
+            className="w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 transition-colors"
+          >
+            <Icon name="close" className="text-2xl" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Calendar Section */}
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <Icon name="calendar_month" className="text-orange-500" /> Sua Escala do Mês
+              </h4>
+              
+              <div className="grid grid-cols-7 gap-1">
+                {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
+                  <div key={i} className="text-center text-[9px] font-black text-slate-300 py-1 uppercase">{d}</div>
+                ))}
+                {(() => {
+                  const firstDay = new Date(currentMY.year, currentMY.month, 1).getDay();
+                  const grid = [];
+                  for (let i = 0; i < firstDay; i++) grid.push(<div key={`pad-${i}`} />);
+                  for (let d = 1; d <= daysInMonth; d++) {
+                    const shift = shifts[d - 1] || 'T';
+                    const isWorking = isWorkingShift(shift);
+                    const isToday = new Date().getDate() === d && new Date().getMonth() === currentMY.month && new Date().getFullYear() === currentMY.year;
+                    
+                    let bgClass = 'bg-slate-50 dark:bg-slate-800/50 text-slate-400';
+                    let borderClass = 'border-transparent';
+                    
+                    if (shift === 'F') bgClass = 'bg-rose-100 text-rose-600 dark:bg-rose-900/40';
+                    else if (shift.startsWith('FF')) bgClass = 'bg-amber-100 text-amber-600 dark:bg-amber-900/40';
+                    else if (shift === 'FE') bgClass = 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40';
+                    else if (shift === 'DO') bgClass = 'bg-fuchsia-600 text-white shadow-md';
+                    else if (isWorking) bgClass = 'bg-indigo-600 text-white shadow-md';
+                    
+                    if (isToday) borderClass = 'border-orange-500 ring-2 ring-orange-500/20';
+
+                    grid.push(
+                      <div 
+                        key={d} 
+                        className={`aspect-square rounded-xl flex flex-col items-center justify-center text-[11px] font-black transition-all border-2 ${bgClass} ${borderClass}`}
+                      >
+                        <span>{d}</span>
+                        {shift !== 'T' && shift !== 'F' && <span className="text-[7px] opacity-70 leading-none mt-0.5">{shift.startsWith('FF') ? 'FF' : shift}</span>}
+                      </div>
+                    );
+                  }
+                  return grid;
+                })()}
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-2">
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+                  <div className="w-2 h-2 rounded-full bg-indigo-600" />
+                  <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 uppercase">Trabalha</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-rose-50 dark:bg-rose-900/20 rounded-lg">
+                  <div className="w-2 h-2 rounded-full bg-rose-500" />
+                  <span className="text-[9px] font-bold text-rose-500 dark:text-rose-400 uppercase">Folga</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                  <div className="w-2 h-2 rounded-full bg-amber-500" />
+                  <span className="text-[9px] font-bold text-amber-500 dark:text-amber-400 uppercase">Feriado</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Details Section */}
+            <div className="space-y-6">
+              
+              {/* Holiday Credits */}
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <Icon name="history" className="text-emerald-500" /> Feriados e Folgas Especiais
+                </h4>
+                
+                <div className="space-y-2">
+                  {pendingCredits.length > 0 ? (
+                    pendingCredits.map((c, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 rounded-2xl border border-amber-100 dark:border-amber-800/50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 rounded-lg flex items-center justify-center">
+                            <Icon name="event_available" className="text-lg" />
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-black text-slate-800 dark:text-slate-100 uppercase">{c.holidayName}</p>
+                            <p className="text-[9px] font-bold text-amber-600 uppercase tracking-tighter">Pendente de Agendamento</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] font-black text-slate-400 uppercase">{c.holidayDate.split('-').reverse().slice(0, 2).join('/')}</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">Nenhum feriado pendente</p>
+                    </div>
+                  )}
+
+                  {scheduledCredits.map((c, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-100 dark:border-emerald-800/50">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-lg flex items-center justify-center">
+                          <Icon name="check_circle" className="text-lg" />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-black text-slate-800 dark:text-slate-100 uppercase">{c.holidayName}</p>
+                          <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-tighter">Agendado para {c.scheduledDate?.split('-').reverse().slice(0, 2).join('/')}</p>
+                        </div>
+                      </div>
+                      <Icon name="done_all" className="text-emerald-500" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quick Info */}
+              <div className="p-5 bg-slate-900 dark:bg-slate-800 rounded-3xl text-white shadow-lg space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+                    <Icon name="schedule" className="text-xl" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Carga Horária Base</p>
+                    <p className="text-sm font-black uppercase">{employee.workPeriod || '44h Semanais'}</p>
+                  </div>
+                </div>
+                <div className="h-px bg-white/10" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+                    <Icon name="celebration" className="text-xl" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Sua Folga Fixa</p>
+                    <p className="text-sm font-black uppercase text-orange-400">{employee.preferredDayOff || 'Variável'}</p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* List of Shifts for the month - Mobile Optimized */}
+          <div className="mt-8 space-y-4">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 px-2">
+              <Icon name="format_list_bulleted" className="text-indigo-500" /> Detalhamento Diário
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {Array.from({ length: daysInMonth }, (_, i) => {
+                const d = i + 1;
+                const shift = shifts[i] || 'T';
+                const hour = hours[i] || employee.workPeriod;
+                const date = new Date(currentMY.year, currentMY.month, d);
+                const dow = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][date.getDay()];
+                const isSun = date.getDay() === 0;
+                const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+                
+                if (shift === 'N/A') return null;
+
+                return (
+                  <div key={d} className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${isSun ? 'bg-rose-50/30 border-rose-100' : isHol ? 'bg-amber-50/30 border-amber-100' : 'bg-slate-50/30 border-slate-100'}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="flex flex-col items-center justify-center w-10 h-10 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+                        <span className="text-[8px] font-black text-slate-300 uppercase leading-none">{dow.substring(0, 3)}</span>
+                        <span className={`text-sm font-black ${isSun ? 'text-rose-500' : 'text-slate-700 dark:text-slate-200'}`}>{d}</span>
+                      </div>
+                      <div>
+                        <p className={`text-[11px] font-black uppercase ${shift === 'F' ? 'text-rose-600' : shift.startsWith('FF') ? 'text-amber-600' : 'text-slate-800 dark:text-slate-100'}`}>
+                          {shift === 'T' ? 'Trabalha' : shift === 'F' ? 'Folga' : shift.startsWith('FF') ? 'Folga Feriado' : shift === 'FE' ? 'Férias' : shift === 'C' ? 'Curso' : shift === 'DO' ? 'Aniversário' : shift}
+                        </p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase">{isWorkingShift(shift) ? hour : '---'}</p>
+                      </div>
+                    </div>
+                    {isWorkingShift(shift) && (
+                      <div className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/40 rounded-full">
+                        <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Presente</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+        </div>
+
+        {/* Footer Actions */}
+        <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+          <button 
+            onClick={() => window.print()}
+            className="flex-1 py-3.5 bg-slate-900 dark:bg-slate-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
+          >
+            <Icon name="print" /> Imprimir Minha Escala
+          </button>
+          <button 
+            onClick={onClose}
+            className="px-8 py-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-500 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95"
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
