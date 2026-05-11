@@ -261,33 +261,35 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           )}
 
-          {/* Print Group */}
-          <div className="relative">
-            <button
-              onClick={() => setShowPrintMenu(!showPrintMenu)}
-              className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase transition-all flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 ${showPrintMenu ? 'ring-2 ring-indigo-500' : ''}`}
-            >
-              <Icon name="print" className="text-sm" /> Imprimir
-            </button>
-            {showPrintMenu && (
-              <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-1 flex flex-col gap-1">
-                <button 
-                  onClick={() => { onPrint(); setShowPrintMenu(false); }}
-                  className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-slate-600 hover:bg-slate-50 transition-all"
-                >
-                  <Icon name="picture_as_pdf" className="text-lg text-rose-500" /> Gerar PDF Escala
-                </button>
-                <button 
-                  onClick={() => { onToggleNotes(); setShowPrintMenu(false); }}
-                  className={`w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase transition-all ${showNotes ? 'text-indigo-600 bg-indigo-50' : 'text-slate-600 hover:bg-slate-50'}`}
-                >
-                  <Icon name="edit_note" className="text-lg" />{showNotes ? 'Esconder Recados' : 'Editar Recados'}</button>
-              </div>
-            )}
-          </div>
+          {/* Print Group - Hidden for Viewers */}
+          {!isReadOnly && (
+            <div className="relative">
+              <button
+                onClick={() => setShowPrintMenu(!showPrintMenu)}
+                className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase transition-all flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 ${showPrintMenu ? 'ring-2 ring-indigo-500' : ''}`}
+              >
+                <Icon name="print" className="text-sm" /> Imprimir
+              </button>
+              {showPrintMenu && (
+                <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-1 flex flex-col gap-1">
+                  <button 
+                    onClick={() => { onPrint(); setShowPrintMenu(false); }}
+                    className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-slate-600 hover:bg-slate-50 transition-all"
+                  >
+                    <Icon name="picture_as_pdf" className="text-lg text-rose-500" /> Gerar PDF Escala
+                  </button>
+                  <button 
+                    onClick={() => { onToggleNotes(); setShowPrintMenu(false); }}
+                    className={`w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase transition-all ${showNotes ? 'text-indigo-600 bg-indigo-50' : 'text-slate-600 hover:bg-slate-50'}`}
+                  >
+                    <Icon name="edit_note" className="text-lg" />{showNotes ? 'Esconder Recados' : 'Editar Recados'}</button>
+                </div>
+              )}
+            </div>
+          )}
 
-          {/* Sunday Violations Alert */}
-          {sundayViolations.length > 0 && (
+          {/* Sunday Violations Alert - Only for Admin */}
+          {sundayViolations.length > 0 && !isReadOnly && (
             <div className="relative group">
               <div className="flex items-center justify-center w-8 h-8 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-full cursor-help animate-pulse transition-transform hover:scale-110">
                 <Icon name="error" className="text-xl" />
@@ -324,20 +326,24 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           )}
 
-          <button
-            onClick={onShareWhatsApp}
-            className="bg-green-600 text-white px-4 py-1.5 rounded-lg text-[11px] font-black uppercase flex items-center gap-2 hover:bg-green-700 transition-all shadow-sm"
-          >
-            <Icon name="content_copy" className="text-sm" /> Copiar Texto
-          </button>
-          
-          <button 
-            onClick={onShowHelp}
-            className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 hover:text-orange-600 transition-all flex items-center justify-center border border-slate-200 dark:border-slate-700"
-            title="Ajuda e FAQs"
-          >
-            <Icon name="help_outline" className="text-xl" />
-          </button>
+          {!isReadOnly && (
+            <>
+              <button
+                onClick={onShareWhatsApp}
+                className="bg-green-600 text-white px-4 py-1.5 rounded-lg text-[11px] font-black uppercase flex items-center gap-2 hover:bg-green-700 transition-all shadow-sm"
+              >
+                <Icon name="content_copy" className="text-sm" /> Copiar Texto
+              </button>
+              
+              <button 
+                onClick={onShowHelp}
+                className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 hover:text-orange-600 transition-all flex items-center justify-center border border-slate-200 dark:border-slate-700"
+                title="Ajuda e FAQs"
+              >
+                <Icon name="help_outline" className="text-xl" />
+              </button>
+            </>
+          )}
           
           <div className="relative">
             <button
@@ -363,7 +369,8 @@ export const Header: React.FC<HeaderProps> = ({
                   onMouseDown={(e) => { e.preventDefault(); onSwitchRole(); setShowProfileMenu(false); }}
                   className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all text-left"
                  >
-                  <Icon name="swap_horiz" className="text-lg" /> Trocar Perfil
+                  <Icon name={isReadOnly ? 'admin_panel_settings' : 'visibility'} className="text-lg" /> 
+                  {isReadOnly ? 'Acessar Gerência' : 'Ver como Equipe'}
                  </button>
                  <button 
                   onMouseDown={(e) => { e.preventDefault(); onLogout(); setShowProfileMenu(false); }}

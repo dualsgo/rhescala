@@ -98,12 +98,17 @@ const App: React.FC = () => {
   const [allowRetroactive, setAllowRetroactive] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   
-  const canGoNext = useMemo(() => {
     const today = new Date();
+    const isCurrentOrPast = new Date(currentMY.year, currentMY.month, 1) < new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    // Admins can go to next month (to prepare it)
+    // Viewers are locked to current/past months
+    if (isReadOnly) return isCurrentOrPast;
+    
     const limitDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
     const targetDate = new Date(currentMY.year, currentMY.month, 1);
     return targetDate < limitDate;
-  }, [currentMY]);
+  }, [currentMY, isReadOnly]);
 
   // Dark mode effect
   React.useEffect(() => {
@@ -404,7 +409,14 @@ const App: React.FC = () => {
               showNotes={showNotes}
               onToggleNotes={() => setShowNotes(!showNotes)}
               onLogout={() => setAuth({ isAuthenticated: false, role: 'viewer' })}
-              onSwitchRole={() => setAuth(prev => ({ ...prev, role: prev.role === 'admin' ? 'viewer' : 'admin' }))}
+              onSwitchRole={() => {
+                if (auth.role === 'admin') {
+                  setAuth(prev => ({ ...prev, role: 'viewer' }));
+                } else {
+                  // If switching from viewer to admin, we must logout to force password entry
+                  setAuth({ isAuthenticated: false, role: 'viewer' });
+                }
+              }}
               onShowHelp={() => setShowHelp(true)}
               canGoNext={canGoNext}
               sundayViolations={sundayViolations}
