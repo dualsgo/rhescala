@@ -67,6 +67,12 @@ function doPost(e) {
       return buildCorsResponse(JSON.stringify({ success: false, error: 'Role inválido' }));
     }
 
+    // Limpeza de histórico (Vacuum)
+    if (action === 'cleanup') {
+      var count = cleanupDatabase();
+      return buildCorsResponse(JSON.stringify({ success: true, removedRows: count }));
+    }
+
     if (!key) {
       return buildCorsResponse(JSON.stringify({ error: 'Key not provided' }));
     }
@@ -188,5 +194,37 @@ function logDebug(type, details, payload) {
       sheet.deleteRows(2, 10);
     }
   } catch (e) {}
+}
+
+/**
+ * Remove versões antigas de dados, mantendo apenas a última de cada chave.
+ * Isso evita que a planilha fique lenta com milhares de linhas de histórico.
+ */
+function cleanupDatabase() {
+  var sheet = getOrCreateSheet('Database');
+  var data = sheet.getDataRange().getValues();
+  if (data.length <= 2) return 0;
+  
+  var latestIndices = {};
+  // Mapeia a última ocorrência de cada chave
+  for (var i = 1; i < data.length; i++) {
+    latestIndices[data[i][0]] = i;
+  }
+  
+  var rowsToDelete = [];
+  // Identifica linhas que NÃO são a última versão
+  for (var i = 1; i < data.length; i++) {
+    var key = data[i][0];
+    if (latestIndices[key] !== i) {
+      rowsToDelete.push(i + 1);
+    }
+  }
+  
+  // Apaga de baixo para cima para não perder a referência dos índices
+  for (var j = rowsToDelete.length - 1; j >= 0; j--) {
+    sheet.deleteRow(rowsToDelete[j]);
+  }
+  
+  return rowsToDelete.length;
 }
 `;

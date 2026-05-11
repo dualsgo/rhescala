@@ -11,6 +11,7 @@ interface EmployeeScheduleCardProps {
   currentMY: MonthYear;
   customHolidays: Holiday[];
   holidayCredits: HolidayCredit[];
+  onUpdateEmployee?: (empId: string, data: Partial<Employee>) => void;
   onClose: () => void;
 }
 
@@ -19,6 +20,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   currentMY,
   customHolidays,
   holidayCredits,
+  onUpdateEmployee,
   onClose
 }) => {
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
@@ -236,6 +238,97 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Mural de Pedidos / Recados */}
+          <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800 space-y-6">
+            <div className="flex items-center justify-between">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <Icon name="chat_bubble_outline" className="text-orange-500" /> Mural de Pedidos / Recados
+              </h4>
+              {onUpdateEmployee && (
+                <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1">
+                  {(() => {
+                    const today = new Date();
+                    const next = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+                    const currKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+                    const nextKey = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+                    return [
+                      { id: currKey, label: 'Mês Atual' },
+                      { id: nextKey, label: 'Mês Seguinte' }
+                    ].map(m => (
+                      <button
+                        key={m.id}
+                        onClick={() => setRequestMonth(m.id)}
+                        className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all ${requestMonth === m.id ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500'}`}
+                      >
+                        {m.label}
+                      </button>
+                    ));
+                  })()}
+                </div>
+              )}
+            </div>
+
+            {onUpdateEmployee ? (
+              <div className="space-y-4">
+                <div className="relative group">
+                  <textarea
+                    value={newRequest}
+                    onChange={(e) => setNewRequest(e.target.value)}
+                    placeholder="Ex: Preciso de folga dia 15 (médico) ou gostaria de trocar domingo..."
+                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all min-h-[100px] resize-none"
+                  />
+                  <button
+                    onClick={() => {
+                      if (!newRequest.trim()) return;
+                      const existing = [...(employee.requests || [])].filter(r => r.month !== requestMonth);
+                      const updated = [
+                        ...existing,
+                        { month: requestMonth, text: newRequest, createdAt: new Date().toISOString() }
+                      ];
+                      onUpdateEmployee(employee.id, { requests: updated });
+                      setNewRequest('');
+                    }}
+                    disabled={!newRequest.trim()}
+                    className="absolute bottom-4 right-4 bg-orange-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-orange-600 transition-all disabled:opacity-50"
+                  >
+                    Enviar Pedido
+                  </button>
+                </div>
+                <p className="text-[9px] text-slate-400 font-bold italic px-2">Nota: O gerente visualizará este pedido ao montar a escala do mês selecionado.</p>
+              </div>
+            ) : (
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center">
+                 <p className="text-[10px] font-bold text-slate-400 uppercase italic">Somente o próprio colaborador ou gerente podem enviar recados aqui.</p>
+              </div>
+            )}
+
+            {/* List existing requests */}
+            <div className="space-y-3">
+              {(employee.requests || []).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((req, i) => (
+                <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm relative group">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-[9px] font-black bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-lg uppercase tracking-widest">
+                      Para: {req.month.split('-').reverse().join('/')}
+                    </span>
+                    <span className="text-[8px] font-bold text-slate-400 uppercase">{new Date(req.createdAt).toLocaleDateString('pt-BR')}</span>
+                  </div>
+                  <p className="text-xs font-bold text-slate-700 dark:text-slate-200 leading-relaxed pr-8">{req.text}</p>
+                  {onUpdateEmployee && (
+                    <button 
+                      onClick={() => {
+                        const updated = (employee.requests || []).filter(r => r.createdAt !== req.createdAt);
+                        onUpdateEmployee(employee.id, { requests: updated });
+                      }}
+                      className="absolute top-4 right-4 text-slate-300 hover:text-rose-500 transition-colors"
+                    >
+                      <Icon name="delete" className="text-sm" />
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 

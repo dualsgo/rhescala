@@ -266,8 +266,15 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                 <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 group-hover/name:bg-orange-100 group-hover/name:text-orange-600 group-hover/name:border-orange-200 transition-colors">
                                   {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                                 </div>
-                                <div className="flex flex-col min-w-0">
-                                  <span className="text-[11px] font-black text-slate-900 dark:text-slate-100 truncate w-28 group-hover/name:text-orange-600 transition-colors">{emp.name}</span>
+                                <div className="flex flex-col min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[11px] font-black text-slate-900 dark:text-slate-100 truncate group-hover/name:text-orange-600 transition-colors">{emp.name}</span>
+                                    {(emp.requests || []).some(r => r.month === monthKey) && (
+                                      <div className="w-3.5 h-3.5 bg-orange-500 rounded-full flex items-center justify-center animate-bounce-subtle" title="Tem recado para este mês">
+                                        <Icon name="chat_bubble" className="text-[8px] text-white" />
+                                      </div>
+                                    )}
+                                  </div>
                                   <span className="text-[9px] text-slate-400 font-bold uppercase">{emp.cargo || 'Vendedor'}</span>
                                 </div>
                                 <Icon name="chevron_right" className="text-slate-300 group-hover/name:text-orange-500 opacity-0 group-hover/name:opacity-100 transition-all text-sm ml-auto" />

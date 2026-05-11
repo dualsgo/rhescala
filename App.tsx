@@ -50,6 +50,7 @@ const App: React.FC = () => {
   const [showHelp, setShowHelp] = useState(false);
   const [selectedEmployeeForCard, setSelectedEmployeeForCard] = useState<Employee | null>(null);
   const [auth, setAuth] = useState<{ isAuthenticated: boolean, role: 'admin' | 'viewer' }>({ isAuthenticated: false, role: 'viewer' });
+  const [authenticatedEmployeeId, setAuthenticatedEmployeeId] = useState<string | null>(null);
   const isReadOnly = auth.role === 'viewer';
   const isValidated = validatedMonths[monthKey] || false;
   
@@ -555,7 +556,25 @@ const App: React.FC = () => {
                     setMonthNotes(prev => ({ ...prev, [monthKey]: text }));
                   }}
                   jornadaSettings={jornadaSettings}
-                  onOpenEmployeeCard={(emp) => setSelectedEmployeeForCard(emp)}
+                  onOpenEmployeeCard={async (emp) => {
+                    if (auth.role === 'admin' || authenticatedEmployeeId === emp.id) {
+                      setSelectedEmployeeForCard(emp);
+                    } else {
+                      // Request employee password
+                      const password = await showDialog({
+                        type: 'prompt',
+                        title: `Acesso Individual: ${emp.name}`,
+                        message: 'Digite sua senha pessoal para acessar seus dados e enviar pedidos.'
+                      });
+
+                      if (password === emp.password || (!emp.password && password === '1234')) {
+                        setAuthenticatedEmployeeId(emp.id);
+                        setSelectedEmployeeForCard(emp);
+                      } else if (password !== null) {
+                        showDialog({ title: 'Erro', message: 'Senha individual incorreta.', type: 'info' });
+                      }
+                    }
+                  }}
                 />
               );
             case 'analysis':
@@ -709,6 +728,7 @@ const App: React.FC = () => {
           currentMY={currentMY}
           customHolidays={customHolidays}
           holidayCredits={holidayCredits[selectedEmployeeForCard.id] || []}
+          onUpdateEmployee={onUpdateEmployee}
           onClose={() => setSelectedEmployeeForCard(null)}
         />
       )}

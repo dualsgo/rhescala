@@ -117,6 +117,23 @@ export const apiStore = {
             console.error('Erro ao verificar setup:', e);
             return { initialized: false };
         }
+    },
+
+    async vacuum(): Promise<{ success: boolean, removedRows?: number, error?: string }> {
+        const url = getConfiguredApiUrl();
+        if (!url) return { success: false, error: 'URL da Planilha não configurada.' };
+
+        try {
+            const response = await fetch(`${url}?action=cleanup`, {
+                method: 'POST',
+                redirect: 'follow',
+            });
+            if (!response.ok) throw new Error('Erro ao processar limpeza.');
+            return await response.json();
+        } catch (e) {
+            console.error('Erro na limpeza:', e);
+            return { success: false, error: 'Falha ao realizar limpeza.' };
+        }
     }
 };
 

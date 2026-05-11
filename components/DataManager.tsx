@@ -202,6 +202,52 @@ export const DataManager: React.FC<DataManagerProps> = ({ syncStatus, employees,
                 Restaurar Backup
               </button>
               <input type="file" accept=".json" ref={fileInputRef} onChange={handleImportBackup} className="hidden" />
+
+              <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
+              
+              <button 
+                onClick={async () => {
+                  const confirm = await showDialog({
+                    title: 'Limpar Mural',
+                    message: 'Isso irá apagar TODOS os pedidos/recados de todos os colaboradores. Deseja continuar?',
+                    type: 'confirm'
+                  });
+                  if (confirm) {
+                    setEmployees(prev => prev.map(emp => ({ ...emp, requests: [] })));
+                    await showDialog({ title: 'Sucesso', message: 'Mural de pedidos limpo!' });
+                  }
+                }}
+                className="flex items-center justify-center gap-2 w-full py-2.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl font-bold uppercase text-[10px] tracking-widest transition-all"
+              >
+                <Icon name="delete_sweep" className="text-base" />
+                Limpar Todos os Pedidos
+              </button>
+
+              <button 
+                onClick={async () => {
+                  const confirm = await showDialog({
+                    title: 'Otimizar Nuvem',
+                    message: 'Isso irá apagar o histórico de versões antigas na sua planilha para deixá-la mais leve. Seus dados atuais não serão afetados. Deseja continuar?',
+                    type: 'confirm'
+                  });
+                  if (confirm) {
+                    try {
+                      const res = await apiStore.vacuum();
+                      if (res.success) {
+                        await showDialog({ title: 'Sucesso', message: `Otimização concluída! Foram removidas ${res.removedRows} versões antigas.` });
+                      } else {
+                        throw new Error(res.error);
+                      }
+                    } catch (e) {
+                      await showDialog({ title: 'Erro', message: 'Falha na otimização da nuvem.' });
+                    }
+                  }
+                }}
+                className="flex items-center justify-center gap-2 w-full py-2.5 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 rounded-xl font-bold uppercase text-[10px] tracking-widest transition-all"
+              >
+                <Icon name="auto_fix_high" className="text-base" />
+                Otimizar Planilha (Nuvem)
+              </button>
             </div>
           </div>
 

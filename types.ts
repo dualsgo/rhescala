@@ -25,6 +25,12 @@ export interface Employee {
   firedAt?: string;       // YYYY-MM-DD — used to stop generating after termination
   birthday?: string;       // YYYY-MM-DD or MM-DD
   isHidden?: boolean;      // To hide collaborator from the grid
+  password?: string;       // Personal password for individual access
+  requests?: {             // Monthly requests/notes
+    month: string;         // YYYY-MM
+    text: string;
+    createdAt: string;
+  }[];
 }
 
 export interface Holiday {
