@@ -386,7 +386,13 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                     )}
                                     <button
                                       onClick={() => onSelectDay(d.num - 1)}
-                                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black transition-all shadow-sm ${
+                                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black transition-all shadow-sm relative ${
+                                        dayRequest ? (
+                                          dayRequest.status === 'granted' ? 'ring-2 ring-emerald-500 bg-emerald-50' :
+                                          dayRequest.status === 'seen' ? 'ring-2 ring-blue-500 bg-blue-50' :
+                                          'ring-4 ring-orange-500 bg-orange-50 animate-pulse z-20'
+                                        ) : ''
+                                      } ${
                                         shift === 'F' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
                                         shift.startsWith('FF') ? 'bg-amber-100 text-amber-600' :
                                         shift === 'C' ? 'bg-indigo-100 text-indigo-600' :
@@ -397,7 +403,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                         shift === 'P3' ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400' :
                                         shift === 'P4' ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400' :
                                         shift === 'ESTQ' ? 'bg-slate-700 text-white shadow-md ring-2 ring-slate-500' :
-                                        'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700'
+                                        (!dayRequest ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700' : '')
                                       }`}
                                     >
                                       {shift === 'AT' ? (

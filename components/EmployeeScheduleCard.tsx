@@ -27,6 +27,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
 }) => {
   const [newRequest, setNewRequest] = React.useState('');
   const [selectedRequestDate, setSelectedRequestDate] = React.useState('');
+  const [showSubmitFeedback, setShowSubmitFeedback] = React.useState(false);
 
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
@@ -314,12 +315,31 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                       onUpdateEmployee(employee.id, { requests: updated });
                       setNewRequest('');
                       setSelectedRequestDate('');
+                      setShowSubmitFeedback(true);
+                      setTimeout(() => setShowSubmitFeedback(false), 8000);
                     }}
                     className="whitespace-nowrap px-6 py-3 bg-orange-500 text-white rounded-xl text-[10px] font-black uppercase hover:bg-orange-600 transition-all shadow-md active:scale-95 disabled:opacity-50"
                   >
                     Enviar Pedido
                   </button>
                 </div>
+
+                {/* Aviso de Análise Operacional */}
+                {showSubmitFeedback && (
+                  <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-2xl animate-fade-in">
+                    <div className="flex gap-3">
+                      <div className="w-8 h-8 bg-blue-500 text-white rounded-lg flex items-center justify-center shrink-0">
+                        <Icon name="info" className="text-lg" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Solicitação Enviada!</p>
+                        <p className="text-[11px] font-bold text-blue-800 dark:text-blue-300 leading-relaxed">
+                          Sua solicitação foi enviada e será analisada durante a criação da escala. Ela será atendida sempre que possível, desde que não onere a operação da loja.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center">
