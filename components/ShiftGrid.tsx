@@ -294,11 +294,17 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   const shift = (emp.shifts[monthKey] || [])[selectedDayIdx] || 'T';
                   
                   const classification = getShiftClassification(hour, isSun, jornadaSettings);
+                  const isOff = !isWorkingShift(shift);
                   
                   // Apply group filter (from top tags)
-                  if (selectedGroup && classification !== selectedGroup) return;
+                  if (selectedGroup) {
+                    if (selectedGroup === 'Folgas/Outros') {
+                      if (!isOff) return;
+                    } else {
+                      if (isOff || classification !== selectedGroup) return;
+                    }
+                  }
 
-                  const isOff = !isWorkingShift(shift);
                   if (isOff) {
                     groups['Folgas/Outros'].push(emp);
                   } else {
