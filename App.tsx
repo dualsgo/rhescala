@@ -466,7 +466,7 @@ const App: React.FC = () => {
               onToggleValidation={onToggleValidation}
             />
 
-      <main className="flex-1 overflow-hidden p-4">
+      <main className="flex-1 overflow-hidden p-2 sm:p-4">
         {(() => {
           const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
           const isHoliday = buildHolidaySet(currentMY.year, customHolidays).has(dateStr);

@@ -70,6 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showPrintMenu, setShowPrintMenu] = useState(false);
   const [showEditMenu, setShowEditMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
   const navItems = [
@@ -94,14 +95,17 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50 shadow-sm transition-colors h-14">
       <div className="flex items-center justify-between px-4 h-full gap-4">
-        {/* Left: Logo & Nav */}
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 group cursor-pointer" onClick={() => onViewChange('grid')}>
-            {/* Logo removed as requested */}
-          </div>
+        {/* Left: Mobile Menu Trigger & Logo */}
+        <div className="flex items-center gap-2 lg:gap-6">
+          <button 
+            onClick={() => setShowMobileMenu(!showMobileMenu)}
+            className="lg:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-all"
+          >
+            <Icon name={showMobileMenu ? 'close' : 'menu'} />
+          </button>
 
           {!isReadOnly && (
-            <nav className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+            <nav className="hidden lg:flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
               {navItems.map(item => (
                 <button
                   key={item.id}
@@ -142,15 +146,15 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Center/Right: Month & Filters */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 lg:gap-4 flex-1 justify-center lg:flex-none">
           {/* Month Selector */}
           <div className="flex items-center gap-2">
-            <div className="flex items-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1">
+            <div className="flex items-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-0.5 sm:p-1">
               <button onClick={() => {
                 const prev = new Date(currentMY.year, currentMY.month - 1);
                 onMonthChange({ month: prev.getMonth(), year: prev.getFullYear() });
-              }} className="p-1 hover:text-orange-500 transition-colors"><Icon name="chevron_left" /></button>
-              <span className="px-3 text-[11px] font-black uppercase min-w-[120px] text-center text-slate-700 dark:text-slate-300">
+              }} className="p-1 hover:text-orange-500 transition-colors"><Icon name="chevron_left" className="text-sm sm:text-base" /></button>
+              <span className="px-1 sm:px-3 text-[10px] sm:text-[11px] font-black uppercase min-w-[90px] sm:min-w-[120px] text-center text-slate-700 dark:text-slate-300">
                 {months[currentMY.month]} {currentMY.year}
               </span>
               <button 
@@ -161,29 +165,30 @@ export const Header: React.FC<HeaderProps> = ({
                 disabled={!canGoNext}
                 className={`p-1 transition-colors ${!canGoNext ? 'opacity-20 cursor-not-allowed' : 'hover:text-orange-500'}`}
               >
-                <Icon name="chevron_right" />
+                <Icon name="chevron_right" className="text-sm sm:text-base" />
               </button>
             </div>
 
             {/* Validation Badge */}
             <button
               onClick={() => !isReadOnly && onToggleValidation()}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border transition-all ${
                 isValidated 
                   ? 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400' 
                   : 'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-900/20 dark:border-amber-800/50 dark:text-amber-400 animate-pulse-subtle'
               } ${isReadOnly ? 'cursor-default' : 'hover:scale-105 active:scale-95'}`}
               title={isReadOnly ? '' : (isValidated ? 'Clique para marcar como rascunho' : 'Clique para oficializar escala')}
             >
-              <Icon name={isValidated ? 'verified' : 'edit_calendar'} className="text-sm" />
-              <span className="text-[9px] font-black uppercase tracking-widest">
-                {isValidated ? 'Oficializado' : 'Rascunho'}
+              <Icon name={isValidated ? 'verified' : 'edit_calendar'} className="text-xs sm:text-sm" />
+              <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-tighter sm:tracking-widest">
+                <span className="inline sm:hidden">{isValidated ? 'OK' : 'Edit'}</span>
+                <span className="hidden sm:inline">{isValidated ? 'Oficializado' : 'Rascunho'}</span>
               </span>
             </button>
           </div>
 
           {/* Period Filters */}
-          <div className="hidden sm:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1">
+          <div className="hidden xl:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1">
             {[
               { id: 'all', label: 'Mês' },
               { id: 'sunday', label: 'Dom' },
@@ -202,10 +207,10 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Right: Actions & Status */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 lg:gap-3">
           {/* Edit Group */}
           {currentView === 'grid' && !isReadOnly && (
-            <div className="relative">
+            <div className="hidden lg:relative lg:block">
               <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
                 <button
                   onClick={() => {
@@ -285,7 +290,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Print Group - Hidden for Viewers */}
           {!isReadOnly && (
-            <div className="relative">
+            <div className="hidden lg:relative lg:block">
               <button
                 onClick={() => setShowPrintMenu(!showPrintMenu)}
                 className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase transition-all flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 ${showPrintMenu ? 'ring-2 ring-indigo-500' : ''}`}
@@ -352,14 +357,14 @@ export const Header: React.FC<HeaderProps> = ({
             <>
               <button
                 onClick={onShareWhatsApp}
-                className="bg-green-600 text-white px-4 py-1.5 rounded-lg text-[11px] font-black uppercase flex items-center gap-2 hover:bg-green-700 transition-all shadow-sm"
+                className="hidden lg:flex bg-green-600 text-white px-4 py-1.5 rounded-lg text-[11px] font-black uppercase items-center gap-2 hover:bg-green-700 transition-all shadow-sm"
               >
                 <Icon name="content_copy" className="text-sm" /> Copiar Texto
               </button>
               
               <button 
                 onClick={onShowHelp}
-                className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 hover:text-orange-600 transition-all flex items-center justify-center border border-slate-200 dark:border-slate-700"
+                className="hidden lg:flex w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 hover:text-orange-600 transition-all items-center justify-center border border-slate-200 dark:border-slate-700"
                 title="Ajuda e FAQs"
               >
                 <Icon name="help_outline" className="text-xl" />
@@ -371,10 +376,10 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               onBlur={() => setTimeout(() => setShowProfileMenu(false), 200)}
-              className="flex items-center gap-2 p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-all border border-slate-200 dark:border-slate-700"
+              className="flex items-center gap-2 p-1 rounded-lg sm:p-1.5 sm:rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-all border border-slate-200 dark:border-slate-700"
             >
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-white ${isReadOnly ? 'bg-indigo-500' : 'bg-orange-500'}`}>
-                <Icon name={isReadOnly ? 'person' : 'admin_panel_settings'} className="text-sm" />
+              <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md sm:rounded-lg flex items-center justify-center text-white ${isReadOnly ? 'bg-indigo-500' : 'bg-orange-500'}`}>
+                <Icon name={isReadOnly ? 'person' : 'admin_panel_settings'} className="text-xs sm:text-sm" />
               </div>
               <div className="hidden lg:flex flex-col items-start pr-2">
                 <span className="text-[10px] font-black uppercase text-slate-800 dark:text-slate-200 leading-none">{isReadOnly ? 'Equipe' : 'Gerente'}</span>
@@ -407,6 +412,90 @@ export const Header: React.FC<HeaderProps> = ({
           <div className={`w-2 h-2 rounded-full shrink-0 ${syncStatus.state === 'synced' ? 'bg-green-500' : syncStatus.state === 'syncing' ? 'bg-blue-500 animate-pulse' : 'bg-red-500'}`} title={syncStatus.state} />
         </div>
       </div>
+
+      {/* Mobile Menu Overlay */}
+      {showMobileMenu && (
+        <div className="lg:hidden fixed inset-0 z-[60] bg-white dark:bg-slate-950 p-6 pt-20 animate-in slide-in-from-left duration-300 overflow-y-auto">
+          <div className="flex flex-col gap-8">
+            {/* Nav Items */}
+            {!isReadOnly && (
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-2">Navegação Principal</p>
+                {navItems.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => { onViewChange(item.id as any); setShowMobileMenu(false); }}
+                    className={`w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase transition-all ${currentView === item.id ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900'}`}
+                  >
+                    <Icon name={item.icon} className="text-xl" />
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Config Items */}
+            {!isReadOnly && (
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-2">Configurações e Dados</p>
+                {configItems.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => { onViewChange(item.id as any); setShowMobileMenu(false); }}
+                    className={`w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase transition-all ${currentView === item.id ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900'}`}
+                  >
+                    <Icon name={item.icon} className="text-xl" />
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Actions for Admins */}
+            {!isReadOnly && currentView === 'grid' && (
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-2">Ferramentas de Edição</p>
+                <button
+                  onClick={() => { onToggleEdit(); setShowMobileMenu(false); }}
+                  className={`w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase transition-all ${isEditable ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900'}`}
+                >
+                  <Icon name={isEditable ? 'save' : 'edit'} className="text-xl" />
+                  {isEditable ? 'Salvar Edição' : 'Habilitar Edição'}
+                </button>
+                {isEditable && (
+                  <>
+                    <button onClick={() => { onCreateMonth(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-slate-500 hover:bg-slate-50">
+                      <Icon name="add_circle" className="text-xl text-orange-500" /> Criar Mês
+                    </button>
+                    <button onClick={() => { onApplyFolgas(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-slate-500 hover:bg-slate-50">
+                      <Icon name="event_available" className="text-xl" /> Aplicar Folgas
+                    </button>
+                  </>
+                )}
+                <button onClick={() => { onPrint(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-slate-500 hover:bg-slate-50">
+                  <Icon name="print" className="text-xl" /> Imprimir / PDF
+                </button>
+              </div>
+            )}
+
+            {/* General Actions */}
+            <div className="flex flex-col gap-2">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-2">Outras Opções</p>
+              {!isReadOnly && (
+                <button onClick={() => { onShareWhatsApp(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10">
+                  <Icon name="content_copy" className="text-xl" /> Copiar para WhatsApp
+                </button>
+              )}
+              <button onClick={() => { onShowHelp(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-slate-500 hover:bg-slate-50">
+                <Icon name="help_outline" className="text-xl" /> Ajuda e FAQs
+              </button>
+              <button onClick={() => { onLogout(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-rose-500 hover:bg-rose-50">
+                <Icon name="logout" className="text-xl" /> Sair do Sistema
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };
