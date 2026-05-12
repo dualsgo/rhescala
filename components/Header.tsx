@@ -415,7 +415,17 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Mobile Menu Overlay */}
       {showMobileMenu && (
-        <div className="lg:hidden fixed inset-0 z-[60] bg-white dark:bg-slate-950 p-6 pt-20 animate-in slide-in-from-left duration-300 overflow-y-auto">
+        <div className="lg:hidden fixed inset-0 z-[60] bg-white dark:bg-slate-950 p-6 pt-10 animate-in slide-in-from-left duration-300 overflow-y-auto">
+          {/* Close Button Inside Menu */}
+          <div className="flex justify-end mb-6">
+            <button 
+              onClick={() => setShowMobileMenu(false)}
+              className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-all shadow-sm"
+            >
+              <Icon name="close" className="text-2xl" />
+            </button>
+          </div>
+
           <div className="flex flex-col gap-8">
             {/* Nav Items */}
             {!isReadOnly && (
