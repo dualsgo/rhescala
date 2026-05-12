@@ -93,7 +93,7 @@ export const Header: React.FC<HeaderProps> = ({
   ];
 
   return (
-    <header className="bg-white dark:bg-black border-b border-slate-200 dark:border-zinc-800 sticky top-0 z-50 shadow-sm transition-colors h-14">
+    <header className="bg-white dark:bg-black border-b border-slate-200 dark:border-zinc-800 sticky top-0 z-50 shadow-md transition-colors h-14">
       <div className="flex items-center justify-between px-4 h-full gap-4">
         {/* Left: Mobile Menu Trigger & Logo */}
         <div className="flex items-center gap-2 lg:gap-6">

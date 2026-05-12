@@ -150,7 +150,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           <table className="w-full border-separate border-spacing-0">
             <thead className="sticky top-0 z-40 bg-slate-50 dark:bg-zinc-900">
               <tr className="bg-slate-50 dark:bg-zinc-900/50">
-                <th className="sticky left-0 z-[50] bg-slate-50 dark:bg-zinc-900 border-b border-r border-slate-200 dark:border-zinc-800 py-2 px-2 sm:px-4 text-left min-w-[120px] sm:min-w-[180px] w-[120px] sm:w-[180px]">
+                <th className="sticky left-0 z-[50] bg-slate-50 dark:bg-zinc-900 border-b border-r border-slate-200 dark:border-zinc-800 py-2 px-2 sm:px-4 text-left min-w-[120px] sm:min-w-[180px] w-[120px] sm:w-[180px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]">
                   <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</span>
                 </th>
                 {!isReadOnly && (
@@ -241,7 +241,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     <React.Fragment key={groupName}>
                       {/* Group Header Row */}
                       <tr className="bg-slate-100/90 dark:bg-zinc-900/90 backdrop-blur-md sticky z-20">
-                        <td className="sticky left-0 py-1.5 px-2 font-black text-[9px] sm:text-[10px] uppercase text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-zinc-800 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(39,39,42,1)]">
+                        <td className="sticky left-0 py-1.5 px-2 font-black text-[9px] sm:text-[10px] uppercase text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-zinc-800 bg-inherit shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]">
                           {groupName}
                         </td>
                         {!isReadOnly && (
@@ -258,7 +258,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                         return (
                           <tr key={emp.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group/row">
                             {/* Name & Position */}
-                            <td className="sticky left-0 z-10 bg-white dark:bg-black border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-1.5 sm:py-1.5 sm:px-2 min-w-[120px] sm:min-w-[180px] w-[120px] sm:w-[180px]">
+                            <td className="sticky left-0 z-[10] bg-white dark:bg-black border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-1.5 sm:py-1.5 sm:px-2 min-w-[120px] sm:min-w-[180px] w-[120px] sm:w-[180px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]">
                               <button 
                                 onClick={() => onOpenEmployeeCard(emp)}
                                 className="flex items-center gap-1.5 sm:gap-2 w-full text-left hover:bg-orange-50 dark:hover:bg-orange-950/20 p-0.5 sm:p-1 rounded-lg sm:rounded-xl transition-all group/name"
