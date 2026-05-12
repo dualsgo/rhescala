@@ -494,7 +494,7 @@ const App: React.FC = () => {
                       Assim que for oficializada, você poderá visualizá-la aqui.
                     </p>
                     <div className="mt-10 flex gap-4">
-                       <button onClick={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })} className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all">Ver Mês Anterior</button>
+                       <button onClick={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })} className="px-6 py-3 bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-slate-300 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all">Ver Mês Anterior</button>
                     </div>
                   </div>
                 );

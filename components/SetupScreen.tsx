@@ -67,7 +67,10 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4 py-20 font-sans">
+        <div className="min-h-screen bg-black flex items-center justify-center p-4 py-20 font-sans relative overflow-hidden">
+            {/* Ambient Background Glows */}
+            <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-orange-500/5 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+            <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] translate-x-1/2 translate-y-1/2 pointer-events-none" />
             <div className="w-full max-w-2xl">
                 {/* Logo / Header */}
                 <div className="text-center mb-10">
@@ -131,7 +134,7 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
 
                     {/* Coluna Direita: Link e Senhas */}
                     <div className="space-y-6">
-                        <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-2xl border border-white/5 relative overflow-hidden">
+                        <div className="bg-white dark:bg-black rounded-[2rem] p-8 shadow-2xl border border-white/5 dark:border-zinc-800 relative overflow-hidden">
                              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -mr-16 -mt-16 blur-2xl" />
                              
                              <h2 className="text-slate-800 dark:text-white font-black text-xs uppercase tracking-widest mb-6 flex items-center gap-2">
@@ -143,7 +146,7 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
                                 <div>
                                     <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Link do Web App Gerado</label>
                                     <textarea
-                                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-xs text-slate-800 dark:text-white placeholder-slate-400 resize-none focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+                                        className="w-full bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 text-xs text-slate-800 dark:text-white placeholder-slate-400 resize-none focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
                                         rows={2}
                                         placeholder="https://script.google.com/macros/s/..."
                                         value={url}
@@ -179,7 +182,7 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
                                             <label className="block text-[9px] font-black text-orange-500 uppercase tracking-widest mb-2 ml-1">Senha Gerente (Admin)</label>
                                             <input
                                                 type="text"
-                                                className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:border-orange-500 transition-all"
+                                                className="w-full bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:border-orange-500 transition-all"
                                                 value={adminPass}
                                                 onChange={(e) => setAdminPass(e.target.value)}
                                             />
@@ -188,7 +191,7 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
                                             <label className="block text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-2 ml-1">Senha Equipe (Viewer)</label>
                                             <input
                                                 type="text"
-                                                className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500 transition-all"
+                                                className="w-full bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500 transition-all"
                                                 value={viewerPass}
                                                 onChange={(e) => setViewerPass(e.target.value)}
                                             />

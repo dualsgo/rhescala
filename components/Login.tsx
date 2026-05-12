@@ -36,8 +36,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 font-sans">
-      <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 p-10 animate-fade-in">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4 font-sans relative overflow-hidden">
+      {/* Ambient Background Glows */}
+      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-orange-500/5 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] translate-x-1/2 translate-y-1/2 pointer-events-none" />
+      
+      <div className="max-w-md w-full bg-white dark:bg-black rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-zinc-800 p-10 animate-fade-in relative z-10">
         <div className="flex flex-col items-center mb-8">
           <div className="w-20 h-20 bg-orange-500 rounded-3xl shadow-lg shadow-orange-500/20 flex items-center justify-center mb-6 animate-bounce-subtle">
              <Icon name="event_note" className="text-4xl text-white" />
@@ -56,7 +60,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 disabled={isLoading}
-                className={`w-full bg-slate-50 dark:bg-slate-800/50 border ${error ? 'border-rose-500 ring-2 ring-rose-500/20' : 'border-slate-200 dark:border-slate-700'} rounded-2xl p-4 text-center text-lg font-bold focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all dark:text-white disabled:opacity-50`}
+                className={`w-full bg-slate-50 dark:bg-zinc-900/50 border ${error ? 'border-rose-500 ring-2 ring-rose-500/20' : 'border-slate-200 dark:border-zinc-800'} rounded-2xl p-4 text-center text-lg font-bold focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all dark:text-white disabled:opacity-50`}
                 autoFocus
               />
               {error && (
@@ -79,7 +83,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </button>
         </form>
 
-        <div className="mt-12 pt-8 border-t border-slate-100 dark:border-slate-800">
+        <div className="mt-12 pt-8 border-t border-slate-100 dark:border-zinc-800">
           <div className="flex flex-col items-center gap-6">
             <div className="flex justify-center gap-8 w-full">
               <div className="flex flex-col items-center">
