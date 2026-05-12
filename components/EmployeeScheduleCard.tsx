@@ -42,11 +42,11 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   const scheduledCredits = holidayCredits.filter(c => c.status === 'scheduled');
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-300">
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-white dark:bg-black w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-300">
         
         {/* Header */}
-        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 z-10">
+        <div className="px-8 py-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between sticky top-0 bg-white dark:bg-black z-10">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center text-xl font-black shadow-sm">
               {employee.name.substring(0, 2).toUpperCase()}
@@ -58,7 +58,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
           </div>
           <button 
             onClick={onClose}
-            className="w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 transition-colors"
+            className="w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-zinc-900 flex items-center justify-center text-slate-400 transition-colors"
           >
             <Icon name="close" className="text-2xl" />
           </button>
@@ -88,7 +88,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                     const isWorking = isWorkingShift(shift);
                     const isToday = new Date().getDate() === d && new Date().getMonth() === currentMY.month && new Date().getFullYear() === currentMY.year;
                     
-                    let bgClass = 'bg-slate-50 dark:bg-slate-800/50 text-slate-400';
+                    let bgClass = 'bg-slate-50 dark:bg-zinc-900/50 text-slate-400';
                     let borderClass = 'border-transparent';
                     
                     if (shift === 'F') bgClass = 'bg-rose-100 text-rose-600 dark:bg-rose-900/40';
@@ -157,7 +157,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                       </div>
                     ))
                   ) : (
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center">
+                    <div className="p-4 bg-slate-50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800 text-center">
                       <p className="text-[10px] font-bold text-slate-400 uppercase">Nenhum feriado pendente</p>
                     </div>
                   )}
@@ -180,7 +180,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
               </div>
 
               {/* Quick Info */}
-              <div className="p-5 bg-slate-900 dark:bg-slate-800 rounded-3xl text-white shadow-lg space-y-3">
+              <div className="p-5 bg-slate-950 dark:bg-zinc-900 rounded-3xl text-white shadow-lg space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
                     <Icon name="schedule" className="text-xl" />
@@ -237,7 +237,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex flex-col items-center justify-center w-10 h-10 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+                      <div className="flex flex-col items-center justify-center w-10 h-10 bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-slate-100 dark:border-zinc-800">
                         <span className="text-[8px] font-black text-slate-300 uppercase leading-none">{dow.substring(0, 3)}</span>
                         <span className={`text-sm font-black ${isSun ? 'text-rose-500' : 'text-slate-700 dark:text-slate-200'}`}>{d}</span>
                       </div>
@@ -265,7 +265,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
           </div>
 
           {/* Mural de Pedidos / Recados */}
-          <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800 space-y-6">
+          <div className="mt-8 pt-8 border-t border-slate-100 dark:border-zinc-800 space-y-6">
             <div className="flex items-center justify-between">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <Icon name="add_circle" className="text-orange-500" /> Nova Solicitação
@@ -273,13 +273,13 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
             </div>
 
             {onUpdateEmployee ? (
-              <div className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border border-slate-200 dark:border-slate-700 space-y-4">
+              <div className="p-5 bg-slate-50 dark:bg-zinc-900/50 rounded-[2rem] border border-slate-200 dark:border-zinc-800 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <div className="space-y-1.5">
                       <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Data Desejada</label>
                       <input 
                         type="date"
-                        className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-4 py-3 text-xs font-bold outline-none ring-1 ring-slate-200 dark:ring-slate-700 focus:ring-2 focus:ring-orange-500 transition-all"
+                        className="w-full bg-slate-100 dark:bg-zinc-950 border-none rounded-xl px-4 py-3 text-xs font-bold outline-none ring-1 ring-slate-200 dark:ring-zinc-800 focus:ring-2 focus:ring-orange-500 transition-all"
                         value={selectedRequestDate}
                         onChange={(e) => setSelectedRequestDate(e.target.value)}
                       />
@@ -288,7 +288,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                       <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Justificativa (Breve)</label>
                       <input 
                         type="text"
-                        className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-4 py-3 text-xs font-bold outline-none ring-1 ring-slate-200 dark:ring-slate-700 focus:ring-2 focus:ring-orange-500 transition-all"
+                        className="w-full bg-slate-100 dark:bg-zinc-950 border-none rounded-xl px-4 py-3 text-xs font-bold outline-none ring-1 ring-slate-200 dark:ring-zinc-800 focus:ring-2 focus:ring-orange-500 transition-all"
                         placeholder="Ex: Consulta médica"
                         value={newRequest}
                         onChange={(e) => setNewRequest(e.target.value)}
@@ -357,7 +357,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                   <div key={i} className={`p-4 rounded-2xl border shadow-sm relative group transition-all ${
                     req.status === 'granted' ? 'bg-emerald-50 border-emerald-100' :
                     req.status === 'seen' ? 'bg-blue-50 border-blue-100' :
-                    'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800'
+                    'bg-white dark:bg-black border-slate-100 dark:border-zinc-800'
                   }`}>
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-2">
@@ -435,7 +435,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
       </div>
 
         {/* Footer Actions */}
-        <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+        <div className="p-6 bg-slate-50 dark:bg-zinc-900/50 border-t border-slate-100 dark:border-zinc-800 flex gap-3">
           <button 
             onClick={() => window.print()}
             className="flex-1 py-3.5 bg-slate-900 dark:bg-slate-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
@@ -444,7 +444,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
           </button>
           <button 
             onClick={onClose}
-            className="px-8 py-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-500 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95"
+            className="px-8 py-3.5 bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 text-slate-500 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95"
           >
             Fechar
           </button>

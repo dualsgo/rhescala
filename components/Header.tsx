@@ -93,7 +93,7 @@ export const Header: React.FC<HeaderProps> = ({
   ];
 
   return (
-    <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50 shadow-sm transition-colors h-14">
+    <header className="bg-white dark:bg-black border-b border-slate-200 dark:border-zinc-800 sticky top-0 z-50 shadow-sm transition-colors h-14">
       <div className="flex items-center justify-between px-4 h-full gap-4">
         {/* Left: Mobile Menu Trigger & Logo */}
         <div className="flex items-center gap-2 lg:gap-6">
@@ -105,12 +105,12 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           {!isReadOnly && (
-            <nav className="hidden lg:flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+            <nav className="hidden lg:flex items-center gap-1 bg-slate-100 dark:bg-zinc-900 p-1 rounded-lg">
               {navItems.map(item => (
                 <button
                   key={item.id}
                   onClick={() => onViewChange(item.id as any)}
-                  className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all ${currentView === item.id ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all ${currentView === item.id ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                   {item.label}
                 </button>
@@ -119,12 +119,12 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   onClick={() => setShowConfigMenu(!showConfigMenu)}
                   onBlur={() => setTimeout(() => setShowConfigMenu(false), 200)}
-                  className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all flex items-center gap-1.5 ${['team','jornada','data','feriados','worked-holidays'].includes(currentView) ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all flex items-center gap-1.5 ${['team','jornada','data','feriados','worked-holidays'].includes(currentView) ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                   Configurações <Icon name={showConfigMenu ? 'expand_less' : 'expand_more'} className="text-[14px]" />
                 </button>
                 {showConfigMenu && (
-                  <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 p-1 animate-in fade-in slide-in-from-top-1 duration-200">
                     {configItems.map(item => (
                       <button
                         key={item.id}
@@ -133,7 +133,7 @@ export const Header: React.FC<HeaderProps> = ({
                           onViewChange(item.id as any); 
                           setShowConfigMenu(false); 
                         }}
-                        className="w-full flex items-center gap-3 p-3 rounded-lg text-[11px] font-bold uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left"
+                        className="w-full flex items-center gap-3 p-3 rounded-lg text-[11px] font-bold uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all text-left"
                       >
                         <Icon name={item.icon} className="text-base" /> {item.label}
                       </button>
@@ -149,7 +149,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-2 lg:gap-4 flex-1 justify-center lg:flex-none">
           {/* Month Selector */}
           <div className="flex items-center gap-2">
-            <div className="flex items-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-0.5 sm:p-1">
+            <div className="flex items-center bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg p-0.5 sm:p-1">
               <button onClick={() => {
                 const prev = new Date(currentMY.year, currentMY.month - 1);
                 onMonthChange({ month: prev.getMonth(), year: prev.getFullYear() });
@@ -174,8 +174,8 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => !isReadOnly && onToggleValidation()}
               className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border transition-all ${
                 isValidated 
-                  ? 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400' 
-                  : 'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-900/20 dark:border-amber-800/50 dark:text-amber-400 animate-pulse-subtle'
+                  ? 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-950/30 dark:border-emerald-900/50 dark:text-emerald-400' 
+                  : 'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-950/30 dark:border-amber-900/50 dark:text-amber-400 animate-pulse-subtle'
               } ${isReadOnly ? 'cursor-default' : 'hover:scale-105 active:scale-95'}`}
               title={isReadOnly ? '' : (isValidated ? 'Clique para marcar como rascunho' : 'Clique para oficializar escala')}
             >
@@ -222,7 +222,7 @@ export const Header: React.FC<HeaderProps> = ({
                       setShowEditMenu(false);
                     }
                   }}
-                  className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all flex items-center gap-2 ${isEditable ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all flex items-center gap-2 ${isEditable ? 'bg-white dark:bg-zinc-800 text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                   <Icon name={isEditable ? 'save' : 'edit'} className="text-sm" />
                   {isEditable ? 'Salvar' : 'Editar'}
@@ -239,7 +239,7 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
               
               {isEditable && showEditMenu && (
-                <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-1 flex flex-col gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 p-1 flex flex-col gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
                   <button 
                     onClick={() => { onCreateMonth(); setShowEditMenu(false); }} 
                     className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all text-left"
@@ -378,7 +378,7 @@ export const Header: React.FC<HeaderProps> = ({
               onBlur={() => setTimeout(() => setShowProfileMenu(false), 200)}
               className="flex items-center gap-2 p-1 rounded-lg sm:p-1.5 sm:rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-all border border-slate-200 dark:border-slate-700"
             >
-              <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md sm:rounded-lg flex items-center justify-center text-white ${isReadOnly ? 'bg-indigo-500' : 'bg-orange-500'}`}>
+              <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md sm:rounded-lg flex items-center justify-center text-white ${isReadOnly ? 'bg-indigo-600' : 'bg-orange-500'}`}>
                 <Icon name={isReadOnly ? 'person' : 'admin_panel_settings'} className="text-xs sm:text-sm" />
               </div>
               <div className="hidden lg:flex flex-col items-start pr-2">
@@ -415,7 +415,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Mobile Menu Overlay */}
       {showMobileMenu && (
-        <div className="lg:hidden fixed inset-0 z-[60] bg-white dark:bg-slate-950 p-6 pt-10 animate-in slide-in-from-left duration-300 overflow-y-auto">
+        <div className="lg:hidden fixed inset-0 z-[60] bg-white dark:bg-black p-6 pt-10 animate-in slide-in-from-left duration-300 overflow-y-auto">
           {/* Close Button Inside Menu */}
           <div className="flex justify-end mb-6">
             <button 
