@@ -420,7 +420,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                         <select
                                           value={shift}
                                           onChange={(e) => onUpdateShift(emp.id, d.num - 1, e.target.value as ShiftType)}
-                                          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                                          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-50"
                                         >
                                           <option value="T">Trabalha (T)</option>
                                           <option value="F">Folga (F)</option>
