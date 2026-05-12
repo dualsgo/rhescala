@@ -6,8 +6,8 @@ import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet, getDefaultHourFor
 // ─── Shared weekday names ─────────────────────────────────────────────────────
 
 const WEEKDAY_NAMES = [
-    'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira',
-    'Quinta-feira', 'Sexta-feira', 'Sábado',
+    'Domingo', 'Segunda', 'Terça', 'Quarta',
+    'Quinta', 'Sexta', 'Sábado',
 ];
 
 export function isWorkingShift(s: string | undefined): boolean {
@@ -380,7 +380,13 @@ export function generateMonthForEmployee(
         }
 
         // ── Regular ───────────────────────────────────────────────────────
-        if (WEEKDAY_NAMES[dow] === emp.preferredDayOff) {
+        const isPreferredDay = emp.preferredDayOff && (
+            WEEKDAY_NAMES[dow] === emp.preferredDayOff || 
+            `${WEEKDAY_NAMES[dow]}-feira` === emp.preferredDayOff ||
+            WEEKDAY_NAMES[dow] === `${emp.preferredDayOff}-feira`
+        );
+
+        if (isPreferredDay) {
             shifts.push('F'); hours.push(getTargetHours(emp, dow, isHoliday, settings)); continue;
         }
 
@@ -720,9 +726,14 @@ export function applyMonthUpdate(
                 continue;
             }
 
-            // Apply preferred weekday-off in Pass 1 (not deferred to streak pass)
-            // This prevents the streak pass from accidentally voiding the preferred day
-            if (emp.preferredDayOff && WEEKDAY_NAMES[dow] === emp.preferredDayOff) {
+            // Apply preferred weekday-off in Pass 1
+            const isPreferredDay = emp.preferredDayOff && (
+                WEEKDAY_NAMES[dow] === emp.preferredDayOff || 
+                `${WEEKDAY_NAMES[dow]}-feira` === emp.preferredDayOff ||
+                WEEKDAY_NAMES[dow] === `${emp.preferredDayOff}-feira`
+            );
+
+            if (isPreferredDay) {
                 newShifts[dayIdx] = 'F';
                 continue;
             }
@@ -734,23 +745,67 @@ export function applyMonthUpdate(
         }
 
         // 2. Pass: Streak-based force-rest (6x1 compliance)
-        // At this point preferred day-offs are already set — only enforce max-streak rule here
         let currentStreak = prevStreaks.get(emp.id) || 0;
 
         for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
             const shift = newShifts[dayIdx];
-            if (shift === 'FE' || shift === 'F' || shift?.startsWith('FF') || shift === 'C' || shift === 'N/A') {
+            if (shift === 'FE' || shift === 'F' || shift?.startsWith('FF') || shift === 'C' || shift === 'N/A' || shift === 'DO' || shift === 'AT') {
                 currentStreak = 0;
                 continue;
             }
 
-            // shift === 'T'
             currentStreak++;
 
             if (currentStreak > 6) {
-                // Force a rest day — pick the next non-Sunday non-preferred day
-                newShifts[dayIdx] = 'F';
-                currentStreak = 0;
+                // Force rest ONLY if they don't have another rest day coming in this legal window
+                let hasFutureRest = false;
+                for (let lookAhead = 1; lookAhead <= 2; lookAhead++) {
+                    const nextDay = dayIdx + lookAhead;
+                    if (nextDay < daysInMonth) {
+                        const nextShift = newShifts[nextDay];
+                        if (nextShift === 'F' || nextShift === 'FE' || nextShift === 'AT' || nextShift === 'DO' || nextShift?.startsWith('FF')) {
+                            hasFutureRest = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!hasFutureRest) {
+                    newShifts[dayIdx] = 'F';
+                    currentStreak = 0;
+                }
+            }
+        }
+
+        // 3. Pass: Clean Redundant Common Off-Days (Mon-Fri)
+        // If an employee has two 'F' days in the same Mon-Fri week, keep only the preferred one.
+        for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
+            const date = new Date(year, month, dayIdx + 1);
+            if (date.getDay() === 1) { // Monday
+                const weekIndices: number[] = [];
+                for (let i = 0; i < 5; i++) { // Mon to Fri
+                    if (dayIdx + i < daysInMonth) weekIndices.push(dayIdx + i);
+                }
+
+                const commonOffIndices = weekIndices.filter(idx => newShifts[idx] === 'F');
+                if (commonOffIndices.length > 1) {
+                    const preferredIdx = weekIndices.find(idx => {
+                        const d = new Date(year, month, idx + 1).getDay();
+                        return emp.preferredDayOff && (
+                            WEEKDAY_NAMES[d] === emp.preferredDayOff || 
+                            `${WEEKDAY_NAMES[d]}-feira` === emp.preferredDayOff ||
+                            WEEKDAY_NAMES[d] === `${emp.preferredDayOff}-feira`
+                        );
+                    });
+
+                    if (preferredIdx !== undefined) {
+                        commonOffIndices.forEach(idx => {
+                            if (idx !== preferredIdx) {
+                                newShifts[idx] = 'T';
+                            }
+                        });
+                    }
+                }
             }
         }
 
