@@ -77,6 +77,18 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 }) => {
   const { showDialog } = useDialog();
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+  const [showLegend, setShowLegend] = useState(false);
+  const [hasScrolled, setHasScrolled] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+
+  const legendItems = [
+    { code: 'F', label: 'Folga Comum', color: 'bg-rose-500' },
+    { code: 'FF', label: 'Folga de Feriado', color: 'bg-amber-500' },
+    { code: 'FE', label: 'Férias', color: 'bg-emerald-500' },
+    { code: 'DO', label: 'Aniversário / Especial', color: 'bg-fuchsia-600' },
+    { code: 'C', label: 'Curso / Treinamento', color: 'bg-slate-500' },
+    { code: 'AT', label: 'Atestado Médico', color: 'bg-rose-400' },
+  ];
 
   const allHolidays = useMemo(() => {
     return [...getNationalHolidays(currentMY.year), ...customHolidays]
@@ -107,7 +119,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     });
   }, [currentMY, daysInMonth, holidaySet]);
 
-  // Filtering logic
   const filteredDays = useMemo(() => {
     if (filter === 'sunday') return days.filter(d => d.isSunday);
     if (filter === 'holiday') return days.filter(d => d.isHoliday);
@@ -132,21 +143,80 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           {searchTerm && (
             <button 
               onClick={() => setSearchTerm('')}
-              className="absolute inset-y-0 right-4 flex items-center text-slate-400 hover:text-slate-600"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
             >
-              <Icon name="close" />
+              <Icon name="close" className="text-lg" />
             </button>
           )}
         </div>
         
-        <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setShowLegend(true)}
+            className="p-3 rounded-2xl bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 text-slate-400 hover:text-orange-500 transition-all shadow-sm flex items-center justify-center"
+            title="Ver Legenda de Cores"
+          >
+            <Icon name="help_outline" />
+          </button>
+          
+          <div className="hidden sm:flex items-center gap-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl px-4 py-2">
            <Icon name="info" className="text-orange-500" /> Clique no nome para ver sua escala individual
         </div>
       </div>
 
+      {/* Group Filters */}
+      <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2 px-1">
+        <button 
+          onClick={() => setSelectedGroup(null)}
+          className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${!selectedGroup ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20' : 'bg-white dark:bg-zinc-900 text-slate-400 border-slate-200 dark:border-zinc-800 hover:bg-slate-50'}`}
+        >
+          Todos
+        </button>
+        {['Abertura', 'Intermediário', 'Fechamento', 'Folgas/Outros'].map(group => (
+          <button 
+            key={group}
+            onClick={() => setSelectedGroup(group)}
+            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${selectedGroup === group ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20' : 'bg-white dark:bg-zinc-900 text-slate-400 border-slate-200 dark:border-zinc-800 hover:bg-slate-50'}`}
+          >
+            {group}
+          </button>
+        ))}
+      </div>
+      </div>
+
+      {showLegend && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" onClick={() => setShowLegend(false)}>
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="font-black text-slate-800 dark:text-white mb-4">Legenda de Escalas</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {legendItems.map(item => (
+                <div key={item.code} className="flex items-center gap-2">
+                  <div className={`w-4 h-4 rounded ${item.color}`} />
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{item.label}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setShowLegend(false)} className="w-full mt-6 py-2 bg-orange-500 text-white rounded-xl font-black text-sm">Fechar</button>
+          </div>
+        </div>
+      )}
+
       {/* Grid Container */}
-      <div className="bg-white dark:bg-black rounded-3xl border border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden flex-1 flex flex-col">
-        <div className="overflow-auto custom-scrollbar flex-1">
+      <div className="bg-white dark:bg-black rounded-3xl border border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden flex-1 flex flex-col relative">
+        {/* Scroll Indicator Hint */}
+        {!hasScrolled && (
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 z-30 pointer-events-none animate-pulse-subtle bg-orange-500/90 text-white px-3 py-2 rounded-xl flex items-center gap-2 shadow-lg lg:hidden">
+             <span className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap">Deslize para ver mais</span>
+             <Icon name="arrow_forward" className="text-sm animate-bounce-x" />
+          </div>
+        )}
+        
+        <div 
+          className="overflow-auto custom-scrollbar flex-1"
+          onScroll={(e) => {
+            if (!hasScrolled && e.currentTarget.scrollLeft > 10) setHasScrolled(true);
+          }}
+        >
           <table className="w-full border-separate border-spacing-0">
             <thead className="sticky top-0 z-40 bg-slate-50 dark:bg-zinc-900">
               <tr className="bg-slate-50 dark:bg-zinc-900/50">
@@ -209,28 +279,32 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   'Abertura': [],
                   'Intermediário': [],
                   'Fechamento': [],
+                  'Estoque': [],
                   'Folgas/Outros': []
                 };
 
                 employees.forEach(emp => {
                   if (emp.isHidden || emp.status !== 'active') return;
-                  if (searchTerm && !emp.name.toLowerCase().includes(searchTerm.toLowerCase())) return;
-
-                  const shift = (emp.shifts[monthKey] || [])[selectedDayIdx] || 'T';
-                  const isOff = !isWorkingShift(shift);
                   
-                  if (isOff) {
-                    groups['Folgas/Outros'].push(emp);
-                    return;
-                  }
-
-
+                  // Apply search filter
+                  if (searchTerm && !emp.name.toLowerCase().includes(searchTerm.toLowerCase())) return;
+                  
                   const hour = (emp.dailyHours[monthKey] || [])[selectedDayIdx] || emp.workPeriod;
                   const isSun = days[selectedDayIdx]?.isSunday;
+                  const shift = (emp.shifts[monthKey] || [])[selectedDayIdx] || 'T';
+                  
                   const classification = getShiftClassification(hour, isSun, jornadaSettings);
                   
-                  if (groups[classification]) groups[classification].push(emp);
-                  else groups['Folgas/Outros'].push(emp);
+                  // Apply group filter (from top tags)
+                  if (selectedGroup && classification !== selectedGroup) return;
+
+                  const isOff = !isWorkingShift(shift);
+                  if (isOff) {
+                    groups['Folgas/Outros'].push(emp);
+                  } else {
+                    if (groups[classification]) groups[classification].push(emp);
+                    else groups['Fechamento'].push(emp);
+                  }
                 });
 
                 return ['Abertura', 'Intermediário', 'Fechamento', 'Folgas/Outros'].map(groupName => {

@@ -409,7 +409,12 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
           
-          <div className={`w-2 h-2 rounded-full shrink-0 ${syncStatus.state === 'synced' ? 'bg-green-500' : syncStatus.state === 'syncing' ? 'bg-blue-500 animate-pulse' : 'bg-red-500'}`} title={syncStatus.state} />
+          <div className="flex items-center gap-2 px-2.5 py-1.5 bg-slate-50 dark:bg-zinc-900 rounded-lg border border-slate-100 dark:border-zinc-800">
+            <div className={`w-1.5 h-1.5 rounded-full ${syncStatus.state === 'synced' ? 'bg-emerald-500' : syncStatus.state === 'syncing' ? 'bg-blue-500 animate-pulse' : 'bg-rose-500'}`} />
+            <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">
+              {syncStatus.state === 'synced' ? 'Nuvem OK' : syncStatus.state === 'syncing' ? 'Salvando' : 'Erro'}
+            </span>
+          </div>
         </div>
       </div>
 
