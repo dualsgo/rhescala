@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useDialog } from '../contexts/DialogContext';
 import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings } from '../types';
 import { Icon } from './Icon';
@@ -80,6 +80,34 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   const [showLegend, setShowLegend] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to today on mount or when month changes to current month
+  useEffect(() => {
+    const todayDate = new Date();
+    const isCurrentMonth = currentMY.year === todayDate.getFullYear() && currentMY.month === todayDate.getMonth();
+    
+    if (isCurrentMonth && scrollContainerRef.current) {
+      const todayDay = todayDate.getDate();
+      if (todayDay > 1) {
+        // Approximate day column width (min-w-60 is 60px) + some padding
+        const colWidth = 60;
+        const scrollPos = (todayDay - 1) * colWidth;
+        
+        // Use a small timeout to ensure layout is ready
+        const timeout = setTimeout(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({
+              left: scrollPos,
+              behavior: 'smooth'
+            });
+            setHasScrolled(true);
+          }
+        }, 500);
+        return () => clearTimeout(timeout);
+      }
+    }
+  }, [currentMY.month, currentMY.year]);
 
   const legendItems = [
     { code: 'F', label: 'Folga Comum', color: 'bg-rose-500' },
@@ -238,6 +266,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
         )}
         
         <div 
+          ref={scrollContainerRef}
           className="overflow-auto custom-scrollbar flex-1"
           onScroll={(e) => {
             if (!hasScrolled && e.currentTarget.scrollLeft > 10) setHasScrolled(true);
