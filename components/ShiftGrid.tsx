@@ -37,7 +37,7 @@ interface ShiftGridProps {
   allowRetroactive: boolean;
   showNotes: boolean;
   onCloseNotes: () => void;
-  resolvedPositions: Record<string, string>;
+  onFilterChange: (f: 'all' | 'sunday' | 'holiday' | 'week') => void;
   jornadaSettings: JornadaSettings;
   onOpenEmployeeCard: (emp: Employee) => void;
 }
@@ -77,7 +77,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 }) => {
   const { showDialog } = useDialog();
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
-  const [showLegend, setShowLegend] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -125,14 +124,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [currentMY.year, customHolidays]);
 
-  const [searchTerm, setSearchTerm] = useState('');
-
   const displayedEmployees = useMemo(() => {
     return [...employees]
       .filter(e => !e.isHidden && e.status === 'active')
-      .filter(e => e.name.toLowerCase().includes(searchTerm.toLowerCase()))
       .sort((a, b) => (a.workPeriod || '').localeCompare(b.workPeriod || '') || a.name.localeCompare(b.name));
-  }, [employees, searchTerm]);
+  }, [employees]);
 
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
   const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
@@ -155,40 +151,46 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
   return (
     <div className="flex flex-col gap-4 relative h-full">
-      {/* Search and Filters for Mobile/Quick Access */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-        <div className="relative w-full sm:w-72 group">
-          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-orange-500 transition-colors">
-            <Icon name="search" className="text-xl" />
+      {/* Legend & Info Row */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 p-4 rounded-3xl shadow-sm">
+          <div className="flex items-center gap-2 pr-4 border-r border-slate-100 dark:border-zinc-800">
+            <Icon name="info" className="text-orange-500 text-lg" />
+            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Legenda:</span>
           </div>
-          <input 
-            type="text" 
-            placeholder="Buscar colaborador..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-2xl py-3 pl-12 pr-4 text-sm font-bold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all shadow-sm"
-          />
-          {searchTerm && (
-            <button 
-              onClick={() => setSearchTerm('')}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
-            >
-              <Icon name="close" className="text-lg" />
-            </button>
-          )}
+          {legendItems.map(item => (
+            <div key={item.code} className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${item.color} shadow-sm`} />
+              <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-tight">{item.label}</span>
+            </div>
+          ))}
         </div>
         
-        <div className="flex gap-2">
-          <button 
-            onClick={() => setShowLegend(true)}
-            className="p-3 rounded-2xl bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 text-slate-400 hover:text-orange-500 transition-all shadow-sm flex items-center justify-center"
-            title="Ver Legenda de Cores"
-          >
-            <Icon name="help_outline" />
-          </button>
-          
-          <div className="hidden sm:flex items-center gap-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl px-4 py-2">
-           <Icon name="info" className="text-orange-500" /> Clique no nome para ver sua escala individual
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          {/* Period Filters (Mês, Dom, Fer, Sem) */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Exibir:</span>
+            <div className="flex bg-slate-100 dark:bg-zinc-900 p-1 rounded-2xl gap-1 overflow-x-auto custom-scrollbar no-scrollbar w-full sm:w-auto">
+              {[
+                { id: 'all', label: 'Mês Inteiro' },
+                { id: 'sunday', label: 'Domingos' },
+                { id: 'holiday', label: 'Feriados' },
+                { id: 'week', label: 'Semana' }
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => onFilterChange(f.id as any)}
+                  className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${filter === f.id ? 'bg-white dark:bg-zinc-800 shadow-md text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase bg-slate-50 dark:bg-zinc-900/50 px-4 py-2 rounded-2xl">
+            <Icon name="mouse" className="text-orange-500" /> Clique no nome para ver escala individual
+          </div>
         </div>
       </div>
 
@@ -238,22 +240,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       </div>
       </div>
 
-      {showLegend && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" onClick={() => setShowLegend(false)}>
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
-            <h3 className="font-black text-slate-800 dark:text-white mb-4">Legenda de Escalas</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {legendItems.map(item => (
-                <div key={item.code} className="flex items-center gap-2">
-                  <div className={`w-4 h-4 rounded ${item.color}`} />
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{item.label}</span>
-                </div>
-              ))}
-            </div>
-            <button onClick={() => setShowLegend(false)} className="w-full mt-6 py-2 bg-orange-500 text-white rounded-xl font-black text-sm">Fechar</button>
-          </div>
-        </div>
-      )}
+      </div>
 
       {/* Grid Container */}
       <div className="bg-white dark:bg-black rounded-3xl border border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden flex-1 flex flex-col relative">

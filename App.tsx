@@ -508,6 +508,7 @@ const App: React.FC = () => {
                   customHolidays={customHolidays}
                   holidayCredits={holidayCredits}
                   filter={filter}
+                  onFilterChange={setFilter}
                   isReadOnly={isReadOnly}
                   isEditable={isEditable}
                   allowRetroactive={allowRetroactive}

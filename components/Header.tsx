@@ -99,7 +99,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-2 lg:gap-6">
           <button 
             onClick={() => setShowMobileMenu(!showMobileMenu)}
-            className="lg:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-all"
+            className="lg:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-all z-[70] relative"
           >
             <Icon name={showMobileMenu ? 'close' : 'menu'} />
           </button>
@@ -188,24 +188,6 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* Period Filters */}
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 sm:p-1 rounded-lg gap-0.5 sm:gap-1">
-            {[
-              { id: 'all', label: 'Mês', short: 'Mês' },
-              { id: 'sunday', label: 'Dom', short: 'Dom' },
-              { id: 'holiday', label: 'Fer', short: 'Fer' },
-              { id: 'week', label: 'Sem', short: 'Sem' }
-            ].map(f => (
-              <button
-                key={f.id}
-                onClick={() => onFilterChange(f.id as any)}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[9px] sm:text-[10px] font-black uppercase transition-all ${filter === f.id ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                <span className="hidden xs:inline">{f.label}</span>
-                <span className="xs:hidden">{f.short}</span>
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Right: Actions & Status */}
@@ -422,16 +404,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Mobile Menu Overlay */}
       {showMobileMenu && (
-        <div className="lg:hidden fixed inset-0 z-[60] bg-white dark:bg-black p-6 pt-10 animate-in slide-in-from-left duration-300 overflow-y-auto">
-          {/* Close Button Inside Menu */}
-          <div className="flex justify-end mb-6">
-            <button 
-              onClick={() => setShowMobileMenu(false)}
-              className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-all shadow-sm"
-            >
-              <Icon name="close" className="text-2xl" />
-            </button>
-          </div>
+        <div className="lg:hidden fixed inset-0 z-[60] bg-white dark:bg-black p-6 pt-20 animate-in slide-in-from-left duration-300 overflow-y-auto">
 
           <div className="flex flex-col gap-8">
             {/* Nav Items */}
