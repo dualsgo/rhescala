@@ -277,7 +277,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   const dayIdx = d.num - 1;
                   const stats = employees.reduce((acc, emp) => {
                     if (emp.isHidden || emp.status !== 'active') return acc;
-                    if (searchTerm && !emp.name.toLowerCase().includes(searchTerm.toLowerCase())) return acc;
                     const shift = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
                     const hour = (emp.dailyHours[monthKey] || [])[dayIdx] || emp.workPeriod;
                     const shiftClass = getShiftClassification(hour, d.isSunday, jornadaSettings);
@@ -325,9 +324,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
                 employees.forEach(emp => {
                   if (emp.isHidden || emp.status !== 'active') return;
-                  
-                  // Apply search filter
-                  if (searchTerm && !emp.name.toLowerCase().includes(searchTerm.toLowerCase())) return;
                   
                   const hour = (emp.dailyHours[monthKey] || [])[selectedDayIdx] || emp.workPeriod;
                   const isSun = days[selectedDayIdx]?.isSunday;
