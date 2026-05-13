@@ -711,18 +711,6 @@ const App: React.FC = () => {
 
 
       {/* Feriados Modal removed in favor of view */}
-      {waModal.show && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-           <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
-              <h3 className="text-sm font-black uppercase text-slate-800 dark:text-slate-100 mb-4">Texto para WhatsApp</h3>
-              <textarea readOnly value={waModal.text} className="w-full h-64 bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-4 text-xs font-mono outline-none" />
-              <div className="flex gap-2 mt-4">
-                <button onClick={() => { navigator.clipboard.writeText(waModal.text); setWaModal({ show: false, text: '' }); }} className="flex-1 py-3 bg-green-600 text-white rounded-xl text-[11px] font-black uppercase">Copiar e Fechar</button>
-                <button onClick={() => setWaModal({ show: false, text: '' })} className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-xl text-[11px] font-black uppercase">Fechar</button>
-              </div>
-           </div>
-        </div>
-      )}
 
       {showHelp && <HelpCenter onClose={() => setShowHelp(false)} />}
 
@@ -849,6 +837,9 @@ const App: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
       {/* Floating Manager Toolbar for Mobile */}
       {!isReadOnly && currentView === 'grid' && (
         <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-slate-200 dark:border-zinc-800 p-2 rounded-3xl shadow-2xl animate-in slide-in-from-bottom-10 duration-500 ring-1 ring-black/5 dark:ring-white/10">
