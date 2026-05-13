@@ -166,21 +166,47 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
       {/* Group Filters */}
       <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2 px-1">
-        <button 
-          onClick={() => setSelectedGroup(null)}
-          className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${!selectedGroup ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20' : 'bg-white dark:bg-zinc-900 text-slate-400 border-slate-200 dark:border-zinc-800 hover:bg-slate-50'}`}
-        >
-          Todos
-        </button>
-        {['Abertura', 'Intermediário', 'Fechamento', 'Folgas/Outros'].map(group => (
+        {/* Desktop View: Buttons */}
+        <div className="hidden sm:flex items-center gap-2">
           <button 
-            key={group}
-            onClick={() => setSelectedGroup(group)}
-            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${selectedGroup === group ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20' : 'bg-white dark:bg-zinc-900 text-slate-400 border-slate-200 dark:border-zinc-800 hover:bg-slate-50'}`}
+            onClick={() => setSelectedGroup(null)}
+            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${!selectedGroup ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20' : 'bg-white dark:bg-zinc-900 text-slate-400 border-slate-200 dark:border-zinc-800 hover:bg-slate-50'}`}
           >
-            {group}
+            Todos
           </button>
-        ))}
+          {['Abertura', 'Intermediário', 'Fechamento', 'Folgas/Outros'].map(group => (
+            <button 
+              key={group}
+              onClick={() => setSelectedGroup(group)}
+              className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${selectedGroup === group ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20' : 'bg-white dark:bg-zinc-900 text-slate-400 border-slate-200 dark:border-zinc-800 hover:bg-slate-50'}`}
+            >
+              {group}
+            </button>
+          ))}
+        </div>
+
+        {/* Mobile View: Select Dropdown */}
+        <div className="flex sm:hidden w-full items-center gap-2">
+          <div className="relative w-full">
+            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-orange-500">
+              <Icon name="filter_list" className="text-sm" />
+            </div>
+            <select 
+              value={selectedGroup || ''} 
+              onChange={(e) => setSelectedGroup(e.target.value || null)}
+              className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 pl-9 pr-4 text-[10px] font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all appearance-none text-slate-700 dark:text-slate-300 shadow-sm"
+            >
+              <option value="">Exibir: Todos</option>
+              <option value="Abertura">Abertura</option>
+              <option value="Intermediário">Intermediário</option>
+              <option value="Fechamento">Fechamento</option>
+              <option value="Folgas/Outros">Folgas / Outros</option>
+            </select>
+            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
+              <Icon name="expand_more" className="text-sm" />
+            </div>
+          </div>
+        </div>
       </div>
       </div>
 

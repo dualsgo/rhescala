@@ -205,8 +205,8 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
             </div>
           </div>
 
-          {/* List of Shifts for the month - Mobile Optimized */}
-          <div className="mt-8 space-y-4">
+          {/* List of Shifts for the month - Desktop Only (redundant on mobile due to calendar) */}
+          <div className="hidden sm:block mt-8 space-y-4">
             <div className="flex items-center justify-between px-2">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <Icon name="format_list_bulleted" className="text-indigo-500" /> Sua Escala Atual

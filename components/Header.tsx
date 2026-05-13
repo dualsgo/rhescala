@@ -154,8 +154,9 @@ export const Header: React.FC<HeaderProps> = ({
                 const prev = new Date(currentMY.year, currentMY.month - 1);
                 onMonthChange({ month: prev.getMonth(), year: prev.getFullYear() });
               }} className="p-1 hover:text-orange-500 transition-colors"><Icon name="chevron_left" className="text-sm sm:text-base" /></button>
-              <span className="px-1 sm:px-3 text-[10px] sm:text-[11px] font-black uppercase min-w-[90px] sm:min-w-[120px] text-center text-slate-700 dark:text-slate-300">
-                {months[currentMY.month]} {currentMY.year}
+              <span className="px-1 sm:px-3 text-[10px] sm:text-[11px] font-black uppercase min-w-[80px] sm:min-w-[120px] text-center text-slate-700 dark:text-slate-300">
+                <span className="xs:hidden">{months[currentMY.month].substring(0, 3)}</span>
+                <span className="hidden xs:inline">{months[currentMY.month]}</span> {currentMY.year}
               </span>
               <button 
                 onClick={() => {
@@ -188,19 +189,20 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Period Filters */}
-          <div className="hidden xl:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1">
+          <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 sm:p-1 rounded-lg gap-0.5 sm:gap-1">
             {[
-              { id: 'all', label: 'Mês' },
-              { id: 'sunday', label: 'Dom' },
-              { id: 'holiday', label: 'Fer' },
-              { id: 'week', label: 'Sem' }
+              { id: 'all', label: 'Mês', short: 'Mês' },
+              { id: 'sunday', label: 'Dom', short: 'Dom' },
+              { id: 'holiday', label: 'Fer', short: 'Fer' },
+              { id: 'week', label: 'Sem', short: 'Sem' }
             ].map(f => (
               <button
                 key={f.id}
                 onClick={() => onFilterChange(f.id as any)}
-                className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase transition-all ${filter === f.id ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[9px] sm:text-[10px] font-black uppercase transition-all ${filter === f.id ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
               >
-                {f.label}
+                <span className="hidden xs:inline">{f.label}</span>
+                <span className="xs:hidden">{f.short}</span>
               </button>
             ))}
           </div>

@@ -849,6 +849,34 @@ const App: React.FC = () => {
               </button>
             </div>
           </div>
+      {/* Floating Manager Toolbar for Mobile */}
+      {!isReadOnly && currentView === 'grid' && (
+        <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-slate-200 dark:border-zinc-800 p-2 rounded-3xl shadow-2xl animate-in slide-in-from-bottom-10 duration-500 ring-1 ring-black/5 dark:ring-white/10">
+           <button 
+            onClick={() => setIsEditable(!isEditable)}
+            className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${isEditable ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}
+           >
+             <Icon name={isEditable ? 'save' : 'edit'} className="text-base" />
+             {isEditable ? 'Salvar' : 'Editar'}
+           </button>
+           
+           <div className="w-px h-8 bg-slate-200 dark:bg-zinc-800 mx-1" />
+           
+           <button 
+            onClick={() => handleShareWhatsApp(selectedDayIdx)}
+            className="flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 active:scale-90 transition-all"
+            title="Copiar WhatsApp"
+           >
+             <Icon name="content_copy" className="text-xl" />
+           </button>
+           
+           <button 
+            onClick={() => window.print()}
+            className="flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-900 dark:bg-slate-700 text-white shadow-lg shadow-slate-900/20 active:scale-90 transition-all"
+            title="Imprimir"
+           >
+             <Icon name="print" className="text-xl" />
+           </button>
         </div>
       )}
       </div>
