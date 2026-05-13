@@ -238,9 +238,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           </div>
         </div>
       </div>
-      </div>
-
-      </div>
 
       {/* Grid Container */}
       <div className="bg-white dark:bg-black rounded-3xl border border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden flex-1 flex flex-col relative">
