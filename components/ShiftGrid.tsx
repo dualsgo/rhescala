@@ -73,6 +73,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onCloseNotes,
   resolvedPositions,
   jornadaSettings,
+  onFilterChange,
   onOpenEmployeeCard,
 }) => {
   const { showDialog } = useDialog();
