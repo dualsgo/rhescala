@@ -73,7 +73,6 @@ export function getDefaultHourForDay(emp: Employee, isHoliday: boolean, isSunday
 
 /**
  * Returns all fixed Brazilian national holidays for a given year.
- * Also includes Corpus Christi (calculated) and Carnival.
  */
 export function getNationalHolidays(year: number): Holiday[] {
   // Easter Sunday calculation (Anonymous Gregorian algorithm)
@@ -105,27 +104,19 @@ export function getNationalHolidays(year: number): Holiday[] {
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
   const easter = easterDate(year);
-  const carnival1 = addDays(easter, -48); // Monday
-  const carnival2 = addDays(easter, -47); // Tuesday
   const goodFriday = addDays(easter, -2);
-  const corpusChristi = addDays(easter, 60);
 
   const fixed: Array<Omit<Holiday, 'id'>> = [
-    { date: `${year}-01-01`, name: 'Confraternização Universal',      type: 'national', recurring: false },
-    { date: `${year}-01-20`, name: 'São Sebastião (Rio de Janeiro)',   type: 'municipal', recurring: false },
-    { date: fmt(carnival1),  name: 'Carnaval (Segunda)',              type: 'national', recurring: false },
-    { date: fmt(carnival2),  name: 'Carnaval (Terça)',                type: 'national', recurring: false },
-    { date: fmt(goodFriday), name: 'Sexta-feira Santa',               type: 'national', recurring: false },
-    { date: `${year}-04-21`, name: 'Tiradentes',                     type: 'national', recurring: false },
-    { date: `${year}-04-23`, name: 'São Jorge (Rio de Janeiro)',       type: 'state',     recurring: false },
-    { date: `${year}-05-01`, name: 'Dia do Trabalho',                type: 'national', recurring: false },
-    { date: fmt(corpusChristi), name: 'Corpus Christi',              type: 'national', recurring: false },
-    { date: `${year}-09-07`, name: 'Independência do Brasil',        type: 'national', recurring: false },
-    { date: `${year}-10-12`, name: 'Nossa Sra. Aparecida',           type: 'national', recurring: false },
-    { date: `${year}-11-02`, name: 'Finados',                        type: 'national', recurring: false },
-    { date: `${year}-11-15`, name: 'Proclamação da República',       type: 'national', recurring: false },
-    { date: `${year}-11-20`, name: 'Consciência Negra',              type: 'national', recurring: false },
-    { date: `${year}-12-25`, name: 'Natal',                          type: 'national', recurring: false },
+    { date: `${year}-01-01`, name: 'Confraternização Universal', type: 'national', recurring: false },
+    { date: fmt(goodFriday), name: 'Paixão de Cristo',           type: 'national', recurring: false },
+    { date: `${year}-04-21`, name: 'Tiradentes',                 type: 'national', recurring: false },
+    { date: `${year}-05-01`, name: 'Dia do Trabalho',            type: 'national', recurring: false },
+    { date: `${year}-09-07`, name: 'Independência',              type: 'national', recurring: false },
+    { date: `${year}-10-12`, name: 'N. Sra. Aparecida',          type: 'national', recurring: false },
+    { date: `${year}-11-02`, name: 'Finados',                    type: 'national', recurring: false },
+    { date: `${year}-11-15`, name: 'Proclamação da República',   type: 'national', recurring: false },
+    { date: `${year}-11-20`, name: 'Dia da Consciência Negra',   type: 'national', recurring: false },
+    { date: `${year}-12-25`, name: 'Natal',                      type: 'national', recurring: false },
   ];
 
   return fixed.map((h, i) => ({ ...h, id: `national-${year}-${i}` }));
