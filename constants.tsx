@@ -127,9 +127,10 @@ export function getNationalHolidays(year: number): Holiday[] {
  */
 export function buildHolidaySet(
   year: number,
-  customHolidays: Holiday[] = []
+  customHolidays: Holiday[] = [],
+  deletedNationalHolidays: string[] = []
 ): Set<string> {
-  const nationals = getNationalHolidays(year);
+  const nationals = getNationalHolidays(year).filter(h => !deletedNationalHolidays.includes(h.id));
   const allHolidays = [...nationals, ...customHolidays];
   return new Set(allHolidays.map(h => h.date).filter(Boolean));
 }

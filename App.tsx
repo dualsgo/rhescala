@@ -34,6 +34,7 @@ const App: React.FC = () => {
   const [jornadaSettings, setJornadaSettings] = useLocalStorage<JornadaSettings>('riHappyJornadaSettings', DEFAULT_JORNADA_SETTINGS);
 
   const [customHolidays, setCustomHolidays] = useLocalStorage<Holiday[]>('riHappyCustomHolidays', []);
+  const [deletedNationalHolidays, setDeletedNationalHolidays] = useLocalStorage<string[]>('riHappyDeletedNationalHolidays', []);
   const [monthNotes, setMonthNotes] = useLocalStorage<Record<string, string>>('riHappyMonthNotes', {});
   const [trackingStartDate, setTrackingStartDate] = useLocalStorage<string>('riHappyTrackingStart', `${new Date().getFullYear()}-01-01`);
   const syncStatus = useSyncStatus();
@@ -132,8 +133,21 @@ const App: React.FC = () => {
   }, [setCustomHolidays]);
 
   const onRemoveHoliday = useCallback((id: string) => {
-    setCustomHolidays(prev => prev.filter(h => h.id !== id));
-  }, [setCustomHolidays]);
+    if (id.startsWith('national-')) {
+      setDeletedNationalHolidays(prev => [...prev, id]);
+    } else {
+      setCustomHolidays(prev => prev.filter(h => h.id !== id));
+    }
+  }, [setCustomHolidays, setDeletedNationalHolidays]);
+
+  const onEditHoliday = useCallback((id: string, updatedHoliday: Omit<Holiday, 'id'>) => {
+    if (id.startsWith('national-')) {
+      setDeletedNationalHolidays(prev => [...prev, id]);
+      onAddHoliday(updatedHoliday);
+    } else {
+      setCustomHolidays(prev => prev.map(h => h.id === id ? { ...h, ...updatedHoliday } : h));
+    }
+  }, [setDeletedNationalHolidays, onAddHoliday, setCustomHolidays]);
 
   const [isEditable, setIsEditable] = useState(false);
   const [allowRetroactive, setAllowRetroactive] = useState(false);
@@ -222,7 +236,7 @@ const App: React.FC = () => {
       const targetGroup = getShiftClassification(targetHour, isSunday);
 
       // 2. Get current resolved positions for this group
-      const isHoliday = buildHolidaySet(currentMY.year, customHolidays).has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`);
+      const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`);
       const resolved = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, jornadaSettings);
       
       const oldPos = targetEmp.tacticalPositions?.[monthKey]?.[dayIdx] || resolved[empId];
@@ -301,7 +315,7 @@ const App: React.FC = () => {
     const dateFormatted = `${String(dayIdx + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}`;
     
     const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
-    const isHoliday = buildHolidaySet(currentMY.year, customHolidays).has(dateStr);
+    const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(dateStr);
     const isSunday = date.getDay() === 0;
 
     let text = `📅 *Escala ${weekdayName} ${dateFormatted}*\n`;
@@ -469,7 +483,7 @@ const App: React.FC = () => {
       <main className="flex-1 overflow-hidden p-2 sm:p-4">
         {(() => {
           const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
-          const isHoliday = buildHolidaySet(currentMY.year, customHolidays).has(dateStr);
+          const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(dateStr);
           const isSunday = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1).getDay() === 0;
             const selectedDayResolvedPositions = resolveTacticalDay(
               employees.filter(e => !e.isHidden && e.status === 'active'),
@@ -638,10 +652,12 @@ const App: React.FC = () => {
                 <div className="max-w-xl mx-auto mt-6">
                   <HolidayManager 
                     year={currentMY.year}
-                    customHolidays={customHolidays} 
+                    customHolidays={customHolidays}
+                    deletedNationalHolidays={deletedNationalHolidays}
                     isReadOnly={isReadOnly}
                     onAdd={onAddHoliday}
                     onRemove={onRemoveHoliday}
+                    onEdit={onEditHoliday}
                     trackingStartDate={trackingStartDate}
                     onUpdateTrackingStartDate={setTrackingStartDate}
                     onClose={() => setCurrentView('grid')} 

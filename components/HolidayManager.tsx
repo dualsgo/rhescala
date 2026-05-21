@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Holiday } from '../types';
 import { getNationalHolidays } from '../constants';
@@ -7,8 +6,11 @@ import { Icon } from './Icon';
 interface HolidayManagerProps {
   year: number;
   customHolidays: Holiday[];
+  deletedNationalHolidays?: string[];
+  isReadOnly?: boolean;
   onAdd: (h: Omit<Holiday, 'id'>) => void;
   onRemove: (id: string) => void;
+  onEdit?: (id: string, h: Omit<Holiday, 'id'>) => void;
   trackingStartDate?: string;
   onUpdateTrackingStartDate?: (date: string) => void;
   onClose: () => void;
@@ -18,18 +20,21 @@ const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 export const HolidayManager: React.FC<HolidayManagerProps> = ({
-  year, customHolidays, onAdd, onRemove, trackingStartDate, onUpdateTrackingStartDate, onClose,
+  year, customHolidays, deletedNationalHolidays, isReadOnly, onAdd, onRemove, onEdit, trackingStartDate, onUpdateTrackingStartDate, onClose,
 }) => {
   const [newDate, setNewDate] = useState('');
   const [newName, setNewName] = useState('');
-  const [newType, setNewType] = useState<'state' | 'municipal'>('state');
+  const [newType, setNewType] = useState<'state' | 'municipal' | 'national'>('state');
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  const nationals = useMemo(() => getNationalHolidays(year), [year]);
+  const nationals = useMemo(() => {
+    return getNationalHolidays(year).filter(h => !(deletedNationalHolidays || []).includes(h.id));
+  }, [year, deletedNationalHolidays]);
 
   const allHolidays = useMemo(() => {
     return [
-      ...nationals.map(h => ({ ...h, isPermanent: true })),
-      ...customHolidays.map(h => ({ ...h, isPermanent: false })),
+      ...nationals,
+      ...customHolidays,
     ].sort((a, b) => a.date.localeCompare(b.date));
   }, [nationals, customHolidays]);
 
@@ -43,11 +48,33 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
     }).filter(g => g.items.length > 0);
   }, [allHolidays, year]);
 
-  const handleAdd = () => {
+  const handleSave = () => {
     if (!newDate || !newName.trim()) return;
-    onAdd({ date: newDate, name: newName.trim(), type: newType, recurring: false });
+    
+    if (editingId && onEdit) {
+      onEdit(editingId, { date: newDate, name: newName.trim(), type: newType, recurring: false });
+      setEditingId(null);
+    } else {
+      onAdd({ date: newDate, name: newName.trim(), type: newType, recurring: false });
+    }
+    
     setNewDate('');
     setNewName('');
+    setNewType('state');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setNewDate('');
+    setNewName('');
+    setNewType('state');
+  };
+
+  const handleEditClick = (h: Holiday) => {
+    setEditingId(h.id);
+    setNewDate(h.date);
+    setNewName(h.name);
+    setNewType(h.type);
   };
 
   const formatDate = (dateStr: string) => {
@@ -74,38 +101,47 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
           </button>
         </div>
 
-        {/* Add Form */}
-        <div className="p-6 bg-slate-50  border-b border-slate-100 ">
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-3">
-                <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400  uppercase tracking-widest pl-1">Novo Feriado Local</label>
-                    <input
-                      type="text"
-                      value={newName}
-                      onChange={e => setNewName(e.target.value)}
-                      placeholder="Título do Feriado"
-                      className="w-full bg-white  border border-slate-200  rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700  focus:ring-2 focus:ring-rose-500/20 transition-all outline-none"
-                    />
-                </div>
-                <div className="flex gap-2">
-                    <input
-                      type="date"
-                      value={newDate}
-                      onChange={e => setNewDate(e.target.value)}
-                      className="flex-1 bg-white  border border-slate-200  rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700  focus:ring-2 focus:ring-rose-500/20 transition-all outline-none"
-                    />
-                    <button
-                      onClick={handleAdd}
-                      disabled={!newName || !newDate}
-                      className="bg-rose-600  text-white px-6 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-700  transition-all disabled:opacity-30 flex items-center gap-2 shadow-lg"
-                    >
-                      Salvar
-                    </button>
-                </div>
+        {/* Add/Edit Form */}
+        {!isReadOnly && (
+          <div className={`p-6 border-b border-slate-100 ${editingId ? 'bg-amber-50' : 'bg-slate-50'}`}>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-3">
+                  <div className="space-y-1 flex items-center justify-between">
+                      <label className={`text-[9px] font-black uppercase tracking-widest pl-1 ${editingId ? 'text-amber-600' : 'text-slate-400'}`}>
+                        {editingId ? 'Editando Feriado' : 'Novo Feriado Local'}
+                      </label>
+                      {editingId && (
+                        <button onClick={handleCancelEdit} className="text-[10px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest">
+                          Cancelar
+                        </button>
+                      )}
+                  </div>
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={e => setNewName(e.target.value)}
+                    placeholder="Título do Feriado"
+                    className="w-full bg-white  border border-slate-200  rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700  focus:ring-2 focus:ring-rose-500/20 transition-all outline-none"
+                  />
+                  <div className="flex gap-2">
+                      <input
+                        type="date"
+                        value={newDate}
+                        onChange={e => setNewDate(e.target.value)}
+                        className="flex-1 bg-white  border border-slate-200  rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700  focus:ring-2 focus:ring-rose-500/20 transition-all outline-none"
+                      />
+                      <button
+                        onClick={handleSave}
+                        disabled={!newName || !newDate}
+                        className={`text-white px-6 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-30 flex items-center gap-2 shadow-lg ${editingId ? 'bg-amber-500 hover:bg-amber-600' : 'bg-rose-600 hover:bg-rose-700'}`}
+                      >
+                        {editingId ? 'Atualizar' : 'Salvar'}
+                      </button>
+                  </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Tracking Start Date Config */}
         <div className="px-6 py-4 bg-amber-50/50 border-b border-slate-100 flex items-center justify-between">
@@ -117,7 +153,8 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
               type="date" 
               value={trackingStartDate || ''} 
               onChange={(e) => onUpdateTrackingStartDate?.(e.target.value)}
-              className="bg-white border border-amber-200 rounded-lg px-3 py-1.5 text-[11px] font-black text-amber-900 outline-none focus:ring-2 focus:ring-amber-500/20"
+              disabled={isReadOnly}
+              className="bg-white border border-amber-200 rounded-lg px-3 py-1.5 text-[11px] font-black text-amber-900 outline-none focus:ring-2 focus:ring-amber-500/20 disabled:opacity-50"
            />
         </div>
 
@@ -133,30 +170,38 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
               <div key={monthName} className="space-y-3">
                 <h5 className="text-[10px] font-black text-slate-400  uppercase tracking-[0.2em]">{monthName}</h5>
                 <div className="grid grid-cols-1 gap-2">
-                  {items.map((h: any) => (
+                  {items.map((h: Holiday) => (
                     <div key={h.id} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
-                      h.isPermanent 
-                        ? (h.type === 'national' ? 'bg-rose-50/50 border-rose-100' : 'bg-orange-50/50 border-orange-100')
-                        : 'bg-white border-slate-100'
+                      h.type === 'national' ? 'bg-rose-50/50 border-rose-100' : 'bg-white border-slate-100'
                     }`}>
                       <div className="flex items-center gap-4">
-                        <div className={`text-lg font-black ${h.type === 'national' ? 'text-rose-600' : h.type === 'state' || h.type === 'municipal' ? 'text-orange-600' : 'text-slate-900'}`}>
+                        <div className={`text-lg font-black ${h.type === 'national' ? 'text-rose-600' : 'text-slate-900'}`}>
                           {formatDate(h.date)}
                         </div>
                         <div>
                           <p className="text-xs font-black text-slate-900  uppercase tracking-tight leading-none mb-1">{h.name}</p>
-                          <p className={`text-[8px] font-black uppercase tracking-widest ${h.type === 'national' ? 'text-rose-400' : h.type === 'state' || h.type === 'municipal' ? 'text-orange-400' : 'text-slate-400'}`}>
+                          <p className={`text-[8px] font-black uppercase tracking-widest ${h.type === 'national' ? 'text-rose-400' : 'text-slate-400'}`}>
                           {h.type === 'national' ? '🇧🇷 Feriado Nacional' : h.type === 'state' ? '🏛 Feriado Estadual' : h.type === 'municipal' ? '🏙 Feriado Municipal' : '🏙 Feriado Local'}
                           </p>
                         </div>
                       </div>
-                      {!h.isPermanent && (
-                        <button
-                          onClick={() => onRemove(h.id)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:bg-rose-50  hover:text-rose-500 transition-all"
-                        >
-                          <Icon name="delete" className="text-sm" />
-                        </button>
+                      {!isReadOnly && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleEditClick(h)}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:bg-amber-50 hover:text-amber-500 transition-all"
+                            title="Editar"
+                          >
+                            <Icon name="edit" className="text-sm" />
+                          </button>
+                          <button
+                            onClick={() => onRemove(h.id)}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all"
+                            title="Remover"
+                          >
+                            <Icon name="delete" className="text-sm" />
+                          </button>
+                        </div>
                       )}
                     </div>
                   ))}
