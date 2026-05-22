@@ -235,7 +235,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onClick={() => { onApplyFolgas(); setShowEditMenu(false); }} 
                     className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left"
                   >
-                    <Icon name="event_available" className="text-lg" /> Aplicar Folgas
+                    <Icon name="event_available" className="text-lg" /> Aplicar Pré-definições
                   </button>
                   <button 
                     onClick={() => { onSortearDomingo(); setShowEditMenu(false); }} 
@@ -458,7 +458,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <Icon name="add_circle" className="text-xl text-orange-500" /> Criar Mês
                     </button>
                     <button onClick={() => { onApplyFolgas(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-slate-500 hover:bg-slate-50">
-                      <Icon name="event_available" className="text-xl" /> Aplicar Folgas
+                      <Icon name="event_available" className="text-xl" /> Aplicar Pré-definições
                     </button>
                   </>
                 )}

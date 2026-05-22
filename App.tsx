@@ -269,24 +269,23 @@ const App: React.FC = () => {
   }, [currentMY, customHolidays]);
 
   const handleApplyFolgas = (targetMY = currentMY, targetKey = monthKey) => {
+    // We now use applyMonthUpdate which does a full sweep of folgas and hours resetting.
+    const updatedData = applyMonthUpdate(employees, targetMY.year, targetMY.month, customHolidays, deletedNationalHolidays, jornadaSettings);
     setEmployees(prev => prev.map(emp => {
-      if (emp.status !== 'active') return emp;
-      const shifts = [...(emp.shifts[targetKey] || [])];
-      const daysInMonth = new Date(targetMY.year, targetMY.month + 1, 0).getDate();
-      for (let d = 0; d < daysInMonth; d++) {
-        const date = new Date(targetMY.year, targetMY.month, d + 1);
-        const dow = date.toLocaleDateString('pt-BR', { weekday: 'long' });
-        if (dow.toLowerCase() === emp.preferredDayOff?.toLowerCase()) {
-           shifts[d] = 'F';
-        }
+      if (updatedData[emp.id]) {
+        return {
+          ...emp,
+          shifts: { ...emp.shifts, [targetKey]: updatedData[emp.id].shifts },
+          dailyHours: { ...emp.dailyHours, [targetKey]: updatedData[emp.id].hours }
+        };
       }
-      return { ...emp, shifts: { ...emp.shifts, [targetKey]: shifts } };
+      return emp;
     }));
   };
 
   const handleSortearDomingo = (targetMY = currentMY, targetKey = monthKey, skipConfirm = false) => {
     const perform = () => {
-      const updatedData = applyMonthUpdate(employees, targetMY.year, targetMY.month, customHolidays, jornadaSettings);
+      const updatedData = applyMonthUpdate(employees, targetMY.year, targetMY.month, customHolidays, deletedNationalHolidays, jornadaSettings);
       setEmployees(prev => prev.map(emp => {
         if (updatedData[emp.id]) {
           return {
@@ -419,7 +418,7 @@ const App: React.FC = () => {
       type: 'confirm'
     }).then(ok => {
       if (ok) {
-        const updatedShifts = distributeTacticalPositions(employees, currentMY, customHolidays, jornadaSettings);
+        const updatedShifts = distributeTacticalPositions(employees, currentMY, customHolidays, deletedNationalHolidays, jornadaSettings);
         setEmployees(prev => prev.map(emp => {
           if (updatedShifts[emp.id]) {
             return {
