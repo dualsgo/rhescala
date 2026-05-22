@@ -34,7 +34,8 @@ export interface Employee {
 export interface EmployeeRequest {
     date: string; // YYYY-MM-DD
     text: string;
-    status: 'pending' | 'seen' | 'granted';
+    status: 'pending' | 'seen' | 'granted' | 'refused';
+    feedback?: string;
     createdAt: string;
 }
 

@@ -13,6 +13,7 @@ interface EmployeeScheduleCardProps {
   holidayCredits: HolidayCredit[];
   onUpdateEmployee?: (empId: string, data: Partial<Employee>) => void;
   isAdmin?: boolean;
+  isValidated?: boolean;
   onClose: () => void;
 }
 
@@ -23,6 +24,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   holidayCredits,
   onUpdateEmployee,
   isAdmin,
+  isValidated,
   onClose
 }) => {
   const [newRequest, setNewRequest] = React.useState('');
@@ -354,22 +356,27 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
               </h4>
               <div className="space-y-3">
                 {(employee.requests || []).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).map((req, i) => (
-                  <div key={i} className={`p-4 rounded-2xl border shadow-sm relative group transition-all ${
-                    req.status === 'granted' ? 'bg-emerald-50 border-emerald-100' :
-                    req.status === 'seen' ? 'bg-blue-50 border-blue-100' :
+                  <div className={`p-4 rounded-2xl border shadow-sm relative group transition-all ${
+                    req.status === 'granted' && (isAdmin || isValidated) ? 'bg-emerald-50 border-emerald-100' :
+                    req.status === 'refused' && (isAdmin || isValidated) ? 'bg-red-50 border-red-100' :
+                    req.status === 'seen' && (isAdmin || isValidated) ? 'bg-blue-50 border-blue-100' :
                     'bg-white dark:bg-black border-slate-100 dark:border-zinc-800'
                   }`}>
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-2">
                       <span className={`text-[9px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest ${
-                        req.status === 'granted' ? 'bg-emerald-100 text-emerald-700' :
-                        req.status === 'seen' ? 'bg-blue-100 text-blue-700' :
+                        req.status === 'granted' && (isAdmin || isValidated) ? 'bg-emerald-100 text-emerald-700' :
+                        req.status === 'refused' && (isAdmin || isValidated) ? 'bg-red-100 text-red-700' :
+                        req.status === 'seen' && (isAdmin || isValidated) ? 'bg-blue-100 text-blue-700' :
                         'bg-orange-100 text-orange-700'
                       }`}>
                         {(req.date || '').split('-').reverse().join('/')}
                       </span>
                       <span className="text-[8px] font-black text-slate-400 uppercase">
-                        {req.status === 'granted' ? 'Atendido' : req.status === 'seen' ? 'Visto' : 'Pendente'}
+                        {req.status === 'granted' && (isAdmin || isValidated) ? 'Aprovado' : 
+                         req.status === 'refused' && (isAdmin || isValidated) ? 'Recusado' : 
+                         req.status === 'seen' && (isAdmin || isValidated) ? 'Visto' : 
+                         'Pendente'}
                       </span>
                     </div>
                     <span className="text-[8px] font-bold text-slate-400 uppercase">
@@ -383,6 +390,13 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                     </span>
                   </div>
                   <p className="text-xs font-bold text-slate-700 dark:text-slate-200 leading-relaxed pr-8">{req.text}</p>
+                  
+                  {req.feedback && (isAdmin || isValidated) && (
+                    <div className="mt-3 p-2 bg-slate-50 dark:bg-zinc-900 rounded-lg border border-slate-100 dark:border-zinc-800">
+                      <p className="text-[9px] font-black uppercase text-slate-400 mb-0.5">Justificativa do Gerente:</p>
+                      <p className="text-[10px] font-bold text-slate-600 dark:text-slate-300 italic">{req.feedback}</p>
+                    </div>
+                  )}
                   
                   <div className="absolute top-4 right-4 flex items-center gap-2">
                     {/* Admin Actions - Only show if current user is admin/manager */}
@@ -406,7 +420,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                           onClick={() => {
                             const updated = (employee.requests || []).map(r => 
                               (r.createdAt === req.createdAt || (r.text === req.text && r.date === req.date)) 
-                                ? { ...r, status: 'granted' as const } : r
+                                ? { ...r, status: 'granted' as const, feedback: undefined } : r
                             );
                             onUpdateEmployee(employee.id, { requests: updated });
                           }}
@@ -414,10 +428,27 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         >
                           <Icon name="check_circle" className="text-sm" />
                         </button>
+                        <button 
+                          title="Recusar Pedido"
+                          onClick={() => {
+                            const justification = window.prompt('Por que este pedido está sendo recusado? (Esta justificativa será visível para o colaborador)');
+                            if (justification !== null) {
+                              const updated = (employee.requests || []).map(r => 
+                                (r.createdAt === req.createdAt || (r.text === req.text && r.date === req.date)) 
+                                  ? { ...r, status: 'refused' as const, feedback: justification.trim() || undefined } : r
+                              );
+                              onUpdateEmployee(employee.id, { requests: updated });
+                            }
+                          }}
+                          className="p-1.5 text-red-400 hover:text-red-600 transition-colors"
+                        >
+                          <Icon name="cancel" className="text-sm" />
+                        </button>
                       </div>
                     )}
                     
                     <button 
+                      title="Excluir Pedido"
                       onClick={() => {
                         const updated = (employee.requests || []).filter(r => r.createdAt !== req.createdAt);
                         onUpdateEmployee?.(employee.id, { requests: updated });

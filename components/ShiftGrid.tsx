@@ -396,7 +396,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                 <Icon name="chevron_right" className="hidden sm:block text-slate-300 group-hover/name:text-orange-500 opacity-0 group-hover/name:opacity-100 transition-all text-sm ml-auto" />
                               </button>
                             </td>
-                             {!isReadOnly && (
+                             {!isReadOnly && isEditable && (
                                <>
                                  {/* Hours Select */}
                                  <td className="hidden sm:table-cell sticky left-[180px] z-10 bg-white dark:bg-black border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-2 min-w-[125px] w-[125px]">
@@ -420,12 +420,12 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
    
                                        return (
                                          <>
-                                           <option value="">AUTO 🤖</option>
+                                           <option value="" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">AUTO 🤖</option>
                                            {finalOptions.map(h => (
-                                             <option key={h} value={h}>{h}</option>
+                                             <option key={h} value={h} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">{h}</option>
                                            ))}
                                            {currentVal && !finalOptions.includes(currentVal) && (
-                                             <option value={currentVal}>{currentVal}</option>
+                                             <option value={currentVal} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">{currentVal}</option>
                                            )}
                                          </>
                                        );
@@ -439,30 +439,13 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                      onChange={(e) => onUpdateTacticalPosition(emp.id, selectedDayIdx, e.target.value)}
                                      className="w-full bg-transparent border-none p-0 text-[11px] font-black text-slate-900 dark:text-slate-100 focus:ring-0 uppercase"
                                    >
-                                     <option value="AUTO">AUTO 🤖</option>
+                                     <option value="AUTO" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">AUTO 🤖</option>
                                      {(() => {
-                                       const empHour = emp.dailyHours[monthKey]?.[selectedDayIdx] || emp.workPeriod;
-                                       const isSun = days[selectedDayIdx]?.isSunday;
-                                       const group = getShiftClassification(empHour, isSun, jornadaSettings);
-   
-                                       // Find all positions assigned to this group
-                                       const groupPositions = employees
-                                         .filter(e => !e.isHidden && e.status === 'active')
-                                         .filter(e => {
-                                           const eHour = e.dailyHours[monthKey]?.[selectedDayIdx] || e.workPeriod;
-                                           return getShiftClassification(eHour, isSun, jornadaSettings) === group;
-                                         })
-                                         .map(e => e.tacticalPositions?.[monthKey]?.[selectedDayIdx] || resolvedPositions[e.id])
-                                         .filter(Boolean);
-   
-                                       const uniquePositions = [...new Set(groupPositions)].sort();
                                        const labels: Record<string, string> = { 'P1': 'P1 🟥', 'P2': 'P2 🟨', 'P3': 'P3 🟩', 'P4': 'P4 🟦', 'ESTQ': 'ESTQ 📦' };
-                                       
-                                       // Fallback: if no positions resolved yet or just AUTO, show all
-                                       const finalPositions = uniquePositions.length > 0 ? uniquePositions : ['P1', 'P2', 'P3', 'P4', 'ESTQ'];
+                                       const finalPositions = ['P1', 'P2', 'P3', 'P4', 'ESTQ'];
    
                                        return finalPositions.map(p => (
-                                         <option key={p} value={p}>{labels[p] || p}</option>
+                                         <option key={p} value={p} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">{labels[p] || p}</option>
                                        ));
                                      })()}
                                    </select>
@@ -491,20 +474,33 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                 <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all relative ${dimClass} ${selectedDayIdx === d.num - 1 ? 'ring-2 ring-inset ring-orange-400/50' : ''} ${hasAlert ? 'ring-2 ring-inset ring-rose-500' : ''}`}>
                                   <div className="relative group flex flex-col items-center gap-1">
                                     {dayRequest && (
-                                      <div 
-                                        className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full z-10 border-2 border-white dark:border-slate-900 ${
+                                      <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full z-10 border-2 border-white dark:border-slate-900 cursor-help flex items-center justify-center group/balloon">
+                                        <div className={`w-full h-full rounded-full ${
                                           dayRequest.status === 'granted' ? 'bg-emerald-500' : 
+                                          dayRequest.status === 'refused' ? 'bg-red-500' :
                                           dayRequest.status === 'seen' ? 'bg-blue-500' : 
                                           'bg-orange-500 animate-pulse'
-                                        }`}
-                                        title={`Pedido: ${dayRequest.text}`}
-                                      />
+                                        }`} />
+                                        
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-900 dark:bg-slate-800 text-white p-3 rounded-2xl shadow-xl opacity-0 invisible group-hover/balloon:opacity-100 group-hover/balloon:visible transition-all z-[100] pointer-events-none scale-95 group-hover/balloon:scale-100 origin-bottom">
+                                          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800" />
+                                          <p className="text-[10px] font-black uppercase text-slate-400 mb-1 border-b border-slate-700 pb-1">Pedido do Colaborador</p>
+                                          <p className="text-xs font-bold leading-snug">{dayRequest.text}</p>
+                                          {dayRequest.feedback && (
+                                            <div className="mt-2 pt-2 border-t border-slate-700">
+                                              <p className="text-[9px] font-black uppercase text-orange-400 mb-0.5">Resposta do Gerente</p>
+                                              <p className="text-[10px] font-bold text-slate-300 italic">{dayRequest.feedback}</p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
                                     )}
                                     <button
                                       onClick={() => onSelectDay(d.num - 1)}
                                       className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black transition-all shadow-sm relative ${
                                         dayRequest ? (
                                           dayRequest.status === 'granted' ? 'ring-2 ring-emerald-500 bg-emerald-50' :
+                                          dayRequest.status === 'refused' ? 'ring-2 ring-red-500 bg-red-50' :
                                           dayRequest.status === 'seen' ? 'ring-2 ring-blue-500 bg-blue-50' :
                                           'ring-4 ring-orange-500 bg-orange-50 animate-pulse z-20'
                                         ) : ''

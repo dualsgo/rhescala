@@ -738,6 +738,7 @@ const App: React.FC = () => {
           holidayCredits={holidayCredits[selectedEmployeeForCard.id] || []}
           onUpdateEmployee={onUpdateEmployee}
           isAdmin={auth.role === 'admin'}
+          isValidated={isReadOnly}
           onClose={() => setSelectedEmployeeForCard(null)}
         />
       )}
