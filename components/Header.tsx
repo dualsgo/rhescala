@@ -4,7 +4,7 @@ import { Icon } from './Icon';
 import { MonthYear, SyncStatus } from '../types';
 
 interface HeaderProps {
-  currentView: 'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays' | 'cleaning' | 'activities' | 'routine' | 'notices';
+  currentView: 'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays' | 'cleaning' | 'activities' | 'routine' | 'notices' | 'requests';
   currentMY: MonthYear;
   filter: 'all' | 'sunday' | 'holiday' | 'week';
   onViewChange: (view: any) => void;
@@ -33,6 +33,7 @@ interface HeaderProps {
   onShowHelp: () => void;
   isValidated: boolean;
   onToggleValidation: () => void;
+  pendingRequestsCount: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -65,6 +66,7 @@ export const Header: React.FC<HeaderProps> = ({
   onShowHelp,
   isValidated,
   onToggleValidation,
+  pendingRequestsCount,
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);
   const [showPrintMenu, setShowPrintMenu] = useState(false);
@@ -76,6 +78,7 @@ export const Header: React.FC<HeaderProps> = ({
   const navItems = [
     { id: 'grid', label: 'Grade', icon: 'grid_view' },
     { id: 'analysis', label: 'Análise', icon: 'insights' },
+    { id: 'requests', label: 'Solicitações', icon: 'assignment' },
   ];
 
   const configItems = [
@@ -110,9 +113,17 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   key={item.id}
                   onClick={() => onViewChange(item.id as any)}
-                  className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all ${currentView === item.id ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`relative px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all ${currentView === item.id ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                   {item.label}
+                  {item.id === 'requests' && pendingRequestsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 items-center justify-center text-[8px] text-white shadow-sm">
+                        {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
+                      </span>
+                    </span>
+                  )}
                 </button>
               ))}
               <div className="relative">
@@ -415,10 +426,15 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     key={item.id}
                     onClick={() => { onViewChange(item.id as any); setShowMobileMenu(false); }}
-                    className={`w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase transition-all ${currentView === item.id ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900'}`}
+                    className={`relative w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase transition-all ${currentView === item.id ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900'}`}
                   >
                     <Icon name={item.icon} className="text-xl" />
                     {item.label}
+                    {item.id === 'requests' && pendingRequestsCount > 0 && (
+                      <span className="ml-auto bg-rose-500 text-white px-2 py-0.5 rounded-full text-[10px]">
+                        {pendingRequestsCount} pendentes
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>

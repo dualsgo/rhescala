@@ -37,6 +37,8 @@ export interface EmployeeRequest {
     status: 'pending' | 'seen' | 'granted' | 'refused';
     feedback?: string;
     createdAt: string;
+    type?: 'folga_aviso' | 'troca_turno';
+    targetEmployeeId?: string;
 }
 
 export interface Holiday {

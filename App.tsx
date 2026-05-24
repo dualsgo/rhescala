@@ -28,6 +28,7 @@ import { Employee, MonthYear, Holiday, JornadaSettings } from './types';
 import { HelpCenter } from './components/HelpCenter';
 import { JornadaManager } from './components/JornadaManager';
 import { EmployeeScheduleCard } from './components/EmployeeScheduleCard';
+import { RequestManager } from './components/RequestManager';
 
 const App: React.FC = () => {
   const [employees, setEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', [PLACEHOLDER_EMPLOYEE]);
@@ -40,7 +41,7 @@ const App: React.FC = () => {
   const syncStatus = useSyncStatus();
   const [showHolidayManager, setShowHolidayManager] = useState(false);
   const [showDayDetail, setShowDayDetail] = useState(false);
-  const [currentView, setCurrentView] = useState<'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays' | 'cleaning' | 'activities' | 'routine' | 'notices'>('grid');
+  const [currentView, setCurrentView] = useState<'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays' | 'cleaning' | 'activities' | 'routine' | 'notices' | 'requests'>('grid');
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
   const [validatedMonths, setValidatedMonths] = useLocalStorage<Record<string, boolean>>('riHappyValidatedMonths', {});
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
@@ -94,6 +95,16 @@ const App: React.FC = () => {
     });
     return filtered;
   }, [allHolidayCredits, isReadOnly, validatedMonths]);
+
+  const pendingRequestsCount = useMemo(() => {
+    let count = 0;
+    employees.forEach(emp => {
+      if (!emp.isHidden && emp.status === 'active') {
+        count += (emp.requests || []).filter(r => r.status === 'pending').length;
+      }
+    });
+    return count;
+  }, [employees]);
 
   const onUpdateEmployee = useCallback((empId: string, data: Partial<Employee>) => {
     setEmployees(prev => prev.map(emp => emp.id === empId ? { ...emp, ...data } : emp));
@@ -477,6 +488,7 @@ const App: React.FC = () => {
               sundayViolations={sundayViolations}
               isValidated={isValidated}
               onToggleValidation={onToggleValidation}
+              pendingRequestsCount={pendingRequestsCount}
             />
 
       <main className="flex-1 overflow-hidden p-2 sm:p-4">
@@ -719,6 +731,15 @@ const App: React.FC = () => {
                   />
                 </div>
               );
+            case 'requests':
+              return (
+                <RequestManager
+                  employees={employees}
+                  currentMY={currentMY}
+                  onUpdateEmployee={onUpdateEmployee}
+                  isReadOnly={isReadOnly}
+                />
+              );
             default:
               return null;
           }
@@ -732,6 +753,7 @@ const App: React.FC = () => {
 
       {selectedEmployeeForCard && (
         <EmployeeScheduleCard 
+          employees={employees}
           employee={employees.find(e => e.id === selectedEmployeeForCard.id) || selectedEmployeeForCard}
           currentMY={currentMY}
           customHolidays={customHolidays}

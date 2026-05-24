@@ -7,6 +7,7 @@ import { isWorkingShift } from '../hooks/useScheduleEngine';
 import { buildHolidaySet } from '../constants';
 
 interface EmployeeScheduleCardProps {
+  employees?: Employee[];
   employee: Employee;
   currentMY: MonthYear;
   customHolidays: Holiday[];
@@ -18,6 +19,7 @@ interface EmployeeScheduleCardProps {
 }
 
 export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
+  employees,
   employee,
   currentMY,
   customHolidays,
@@ -31,6 +33,8 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   const [selectedRequestDate, setSelectedRequestDate] = React.useState('');
   const [showSubmitFeedback, setShowSubmitFeedback] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<'mes' | 'atual' | 'pedidos'>('mes');
+  const [requestType, setRequestType] = React.useState<'folga_aviso' | 'troca_turno'>('folga_aviso');
+  const [targetEmployeeId, setTargetEmployeeId] = React.useState('');
 
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
@@ -49,7 +53,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
       <div className="bg-white dark:bg-black w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-300">
         
         {/* Header */}
-        <div className="px-8 py-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between sticky top-0 bg-white dark:bg-black z-10">
+        <div className="shrink-0 px-8 py-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-black z-10">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center text-xl font-black shadow-sm">
               {employee.name.substring(0, 2).toUpperCase()}
@@ -68,7 +72,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-slate-100 dark:border-zinc-800 px-8 overflow-x-auto custom-scrollbar">
+        <div className="shrink-0 flex border-b border-slate-100 dark:border-zinc-800 px-8 overflow-x-auto custom-scrollbar">
           <button 
             onClick={() => setActiveTab('mes')}
             className={`px-4 py-4 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${activeTab === 'mes' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
@@ -304,6 +308,23 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
 
             {onUpdateEmployee ? (
               <div className="p-5 bg-slate-50 dark:bg-zinc-900/50 rounded-[2rem] border border-slate-200 dark:border-zinc-800 space-y-4">
+                
+                {/* Tipo de Pedido */}
+                <div className="flex bg-slate-100 dark:bg-zinc-950 p-1 rounded-2xl gap-1 w-full max-w-sm">
+                  <button 
+                    onClick={() => setRequestType('folga_aviso')}
+                    className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${requestType === 'folga_aviso' ? 'bg-white dark:bg-zinc-800 text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    Folga / Aviso
+                  </button>
+                  <button 
+                    onClick={() => setRequestType('troca_turno')}
+                    className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${requestType === 'troca_turno' ? 'bg-white dark:bg-zinc-800 text-purple-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    Troca de Turno
+                  </button>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <div className="space-y-1.5">
                       <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Data Desejada</label>
@@ -314,41 +335,64 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         onChange={(e) => setSelectedRequestDate(e.target.value)}
                       />
                    </div>
-                   <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Justificativa (Breve)</label>
-                      <input 
-                        type="text"
-                        className="w-full bg-slate-100 dark:bg-zinc-950 border-none rounded-xl px-4 py-3 text-xs font-bold outline-none ring-1 ring-slate-200 dark:ring-zinc-800 focus:ring-2 focus:ring-orange-500 transition-all"
-                        placeholder="Ex: Consulta médica"
-                        value={newRequest}
-                        onChange={(e) => setNewRequest(e.target.value)}
-                      />
-                   </div>
+                   {requestType === 'folga_aviso' ? (
+                     <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Justificativa (Breve)</label>
+                        <input 
+                          type="text"
+                          className="w-full bg-slate-100 dark:bg-zinc-950 border-none rounded-xl px-4 py-3 text-xs font-bold outline-none ring-1 ring-slate-200 dark:ring-zinc-800 focus:ring-2 focus:ring-orange-500 transition-all"
+                          placeholder="Ex: Consulta médica"
+                          value={newRequest}
+                          onChange={(e) => setNewRequest(e.target.value)}
+                        />
+                     </div>
+                   ) : (
+                     <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Trocar com quem?</label>
+                        <select 
+                          className="w-full bg-slate-100 dark:bg-zinc-950 border-none rounded-xl px-4 py-3 text-xs font-bold outline-none ring-1 ring-slate-200 dark:ring-zinc-800 focus:ring-2 focus:ring-orange-500 transition-all text-slate-700 dark:text-slate-300"
+                          value={targetEmployeeId}
+                          onChange={(e) => setTargetEmployeeId(e.target.value)}
+                        >
+                          <option value="">-- Selecione o Colega --</option>
+                          {(employees || [])
+                            .filter(e => e.id !== employee.id && !e.isHidden && e.status === 'active')
+                            .map(e => (
+                              <option key={e.id} value={e.id}>{e.name}</option>
+                          ))}
+                        </select>
+                     </div>
+                   )}
                 </div>
                 
                 <div className="flex items-center justify-between gap-4 pt-2">
-                  <p className="text-[9px] text-slate-400 font-bold italic leading-tight">
-                    * Esta é uma solicitação sujeita a análise e não garante a folga até que o gestor a valide na escala oficial.
+                  <p className="text-[9px] text-slate-400 font-bold italic leading-tight max-w-[60%]">
+                    {requestType === 'folga_aviso' 
+                      ? '* Esta é uma solicitação sujeita a análise e não garante a folga até que o gestor a valide na escala oficial.'
+                      : '* A troca só será validada após a confirmação do gestor. Avise seu colega!'}
                   </p>
                   <button 
-                    disabled={!newRequest.trim() || !selectedRequestDate}
+                    disabled={(!newRequest.trim() && requestType === 'folga_aviso') || (!targetEmployeeId && requestType === 'troca_turno') || !selectedRequestDate}
                     onClick={() => {
                       const updated = [
                         ...(employee.requests || []).filter(r => r.date !== selectedRequestDate),
                         { 
                           date: selectedRequestDate, 
-                          text: newRequest.trim(), 
+                          text: requestType === 'troca_turno' ? `Gostaria de trocar meu turno com ${(employees || []).find(e => e.id === targetEmployeeId)?.name?.split(' ')[0]}.` : newRequest.trim(), 
                           status: 'pending',
-                          createdAt: new Date().toISOString() 
+                          createdAt: new Date().toISOString(),
+                          type: requestType,
+                          targetEmployeeId: requestType === 'troca_turno' ? targetEmployeeId : undefined
                         }
                       ];
                       onUpdateEmployee(employee.id, { requests: updated });
                       setNewRequest('');
                       setSelectedRequestDate('');
+                      setTargetEmployeeId('');
                       setShowSubmitFeedback(true);
                       setTimeout(() => setShowSubmitFeedback(false), 8000);
                     }}
-                    className="whitespace-nowrap px-6 py-3 bg-orange-500 text-white rounded-xl text-[10px] font-black uppercase hover:bg-orange-600 transition-all shadow-md active:scale-95 disabled:opacity-50"
+                    className={`whitespace-nowrap px-6 py-3 text-white rounded-xl text-[10px] font-black uppercase transition-all shadow-md active:scale-95 disabled:opacity-50 ${requestType === 'troca_turno' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-orange-500 hover:bg-orange-600'}`}
                   >
                     Enviar Pedido
                   </button>
@@ -400,6 +444,11 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                       }`}>
                         {(req.date || '').split('-').reverse().join('/')}
                       </span>
+                      {req.type === 'troca_turno' && (
+                        <span className="text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest bg-purple-100 text-purple-700 border border-purple-200">
+                          Troca de Turno
+                        </span>
+                      )}
                       <span className="text-[8px] font-black text-slate-400 uppercase">
                         {req.status === 'granted' && (isAdmin || isValidated) ? 'Pedido Aprovado' : 
                          req.status === 'refused' && (isAdmin || isValidated) ? 'Pedido Recusado' : 
@@ -452,6 +501,68 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                       >
                         <Icon name="event_available" className="text-[11px]" /> Dar Folga (F)
                       </button>
+
+                      {req.type === 'troca_turno' && req.targetEmployeeId && (
+                        <button 
+                          onClick={() => {
+                            if(window.confirm('Isto trocará automaticamente os turnos, horários e posições dos dois colaboradores neste dia. Confirmar?')) {
+                              const [year, month, day] = (req.date || '').split('-');
+                              if (year && month && day) {
+                                const mKey = `${year}-${month}`;
+                                const dIdx = parseInt(day, 10) - 1;
+                                
+                                const targetEmp = (employees || []).find(e => e.id === req.targetEmployeeId);
+                                if (targetEmp) {
+                                  // Get current values
+                                  const myShift = (employee.shifts[mKey] || [])[dIdx] || 'T';
+                                  const myHour = (employee.dailyHours[mKey] || [])[dIdx] || employee.workPeriod;
+                                  const myPos = (employee.tacticalPositions?.[mKey] || [])[dIdx] || null;
+                                  
+                                  const theirShift = (targetEmp.shifts[mKey] || [])[dIdx] || 'T';
+                                  const theirHour = (targetEmp.dailyHours[mKey] || [])[dIdx] || targetEmp.workPeriod;
+                                  const theirPos = (targetEmp.tacticalPositions?.[mKey] || [])[dIdx] || null;
+                                  
+                                  // Set target employee values to mine
+                                  const newTargetShifts = [...(targetEmp.shifts[mKey] || Array(31).fill('T'))];
+                                  newTargetShifts[dIdx] = myShift;
+                                  const newTargetHours = [...(targetEmp.dailyHours[mKey] || [])];
+                                  newTargetHours[dIdx] = myHour;
+                                  const newTargetPos = [...(targetEmp.tacticalPositions?.[mKey] || [])];
+                                  newTargetPos[dIdx] = myPos;
+                                  
+                                  onUpdateEmployee(targetEmp.id, { 
+                                    shifts: { ...targetEmp.shifts, [mKey]: newTargetShifts },
+                                    dailyHours: { ...targetEmp.dailyHours, [mKey]: newTargetHours },
+                                    tacticalPositions: { ...targetEmp.tacticalPositions, [mKey]: newTargetPos }
+                                  });
+                                  
+                                  // Set my values to theirs
+                                  const newMyShifts = [...(employee.shifts[mKey] || Array(31).fill('T'))];
+                                  newMyShifts[dIdx] = theirShift;
+                                  const newMyHours = [...(employee.dailyHours[mKey] || [])];
+                                  newMyHours[dIdx] = theirHour;
+                                  const newMyPos = [...(employee.tacticalPositions?.[mKey] || [])];
+                                  newMyPos[dIdx] = theirPos;
+                                  
+                                  const updated = (employee.requests || []).map(r => 
+                                    (r.createdAt === req.createdAt) 
+                                      ? { ...r, status: 'granted' as const, feedback: `Troca de turno com ${targetEmp.name.split(' ')[0]} efetuada na escala.` } : r
+                                  );
+                                  onUpdateEmployee(employee.id, { 
+                                    requests: updated, 
+                                    shifts: { ...employee.shifts, [mKey]: newMyShifts },
+                                    dailyHours: { ...employee.dailyHours, [mKey]: newMyHours },
+                                    tacticalPositions: { ...employee.tacticalPositions, [mKey]: newMyPos }
+                                  });
+                                }
+                              }
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg text-[9px] font-black uppercase transition-colors flex items-center gap-1 shadow-sm"
+                        >
+                          <Icon name="swap_horiz" className="text-[11px]" /> Efetuar Troca (Auto)
+                        </button>
+                      )}
 
                       <button 
                         onClick={() => {
