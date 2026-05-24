@@ -455,7 +455,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
                             {/* Shift Cells */}
                             {filteredDays.map(d => {
-                              const shift = emp.shifts[monthKey]?.[d.num - 1] || 'T';
+                              const rawShift = emp.shifts[monthKey]?.[d.num - 1] || 'T';
+                              // Em visão de colaborador, oculta posições e mostra apenas 'T'
+                              const shift = (isReadOnly && ['P1', 'P2', 'P3', 'P4', 'ESTQ'].includes(rawShift)) ? 'T' : rawShift;
+                              
                               let streak = 0;
                               for (let i = d.num - 1; i >= 0; i--) {
                                 if (isWorkingShift(emp.shifts[monthKey]?.[i])) streak++;
