@@ -229,6 +229,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
               </div>
 
             </div>
+          </div>
           )}
 
           {/* List of Shifts for the month */}
@@ -289,6 +290,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                 );
               })}
             </div>
+          </div>
           )}
 
           {/* Mural de Pedidos / Recados */}
@@ -487,9 +489,10 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                 </div>
               ))}
             </div>
+          </div>
+          </div>
           )}
         </div>
-      </div>
 
         {/* Footer Actions */}
         <div className="p-6 bg-slate-50 dark:bg-zinc-900/50 border-t border-slate-100 dark:border-zinc-800 flex gap-3">
