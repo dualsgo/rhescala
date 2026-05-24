@@ -263,7 +263,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 <th className="sticky left-0 z-[50] bg-slate-50 dark:bg-zinc-900 border-b border-r border-slate-200 dark:border-zinc-800 py-2 px-2 sm:px-4 text-left min-w-[120px] sm:min-w-[180px] w-[120px] sm:w-[180px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]">
                   <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</span>
                 </th>
-                {!isReadOnly && (
+                {!isReadOnly && isEditable && (
                   <>
                     <th className="hidden sm:table-cell sticky left-[180px] z-[50] bg-slate-50 dark:bg-zinc-900 border-b border-r border-slate-200 dark:border-zinc-800 py-2 px-4 text-left min-w-[125px] w-[125px]">
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horário</span>
@@ -360,7 +360,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                         <td className="sticky left-0 py-1.5 px-2 font-black text-[9px] sm:text-[10px] uppercase text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-zinc-800 bg-inherit shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]">
                           {groupName}
                         </td>
-                        {!isReadOnly && (
+                        {!isReadOnly && isEditable && (
                           <>
                             <td className="hidden sm:table-cell sticky left-[180px] border-r border-slate-200 dark:border-slate-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]" />
                             <td className="hidden md:table-cell sticky left-[305px] border-r border-slate-200 dark:border-slate-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]" />
