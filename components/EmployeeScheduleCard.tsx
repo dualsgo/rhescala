@@ -30,6 +30,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   const [newRequest, setNewRequest] = React.useState('');
   const [selectedRequestDate, setSelectedRequestDate] = React.useState('');
   const [showSubmitFeedback, setShowSubmitFeedback] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState<'mes' | 'atual' | 'pedidos'>('mes');
 
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
@@ -66,10 +67,33 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
           </button>
         </div>
 
+        {/* Tab Navigation */}
+        <div className="flex border-b border-slate-100 dark:border-zinc-800 px-8 overflow-x-auto custom-scrollbar">
+          <button 
+            onClick={() => setActiveTab('mes')}
+            className={`px-4 py-4 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${activeTab === 'mes' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+          >
+            Escala do Mês
+          </button>
+          <button 
+            onClick={() => setActiveTab('atual')}
+            className={`px-4 py-4 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${activeTab === 'atual' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+          >
+            Escala Atual
+          </button>
+          <button 
+            onClick={() => setActiveTab('pedidos')}
+            className={`px-4 py-4 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${activeTab === 'pedidos' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+          >
+            Solicitações
+          </button>
+        </div>
+
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {activeTab === 'mes' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
             
             {/* Calendar Section */}
             <div className="space-y-4">
@@ -205,10 +229,11 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
               </div>
 
             </div>
-          </div>
+          )}
 
-          {/* List of Shifts for the month - Desktop Only (redundant on mobile due to calendar) */}
-          <div className="hidden sm:block mt-8 space-y-4">
+          {/* List of Shifts for the month */}
+          {activeTab === 'atual' && (
+            <div className="space-y-4 animate-fade-in">
             <div className="flex items-center justify-between px-2">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <Icon name="format_list_bulleted" className="text-indigo-500" /> Sua Escala Atual
@@ -264,10 +289,11 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                 );
               })}
             </div>
-          </div>
+          )}
 
           {/* Mural de Pedidos / Recados */}
-          <div className="mt-8 pt-8 border-t border-slate-100 dark:border-zinc-800 space-y-6">
+          {activeTab === 'pedidos' && (
+            <div className="space-y-6 animate-fade-in">
             <div className="flex items-center justify-between">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <Icon name="add_circle" className="text-orange-500" /> Nova Solicitação
@@ -461,7 +487,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                 </div>
               ))}
             </div>
-          </div>
+          )}
         </div>
       </div>
 
