@@ -401,10 +401,10 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         {(req.date || '').split('-').reverse().join('/')}
                       </span>
                       <span className="text-[8px] font-black text-slate-400 uppercase">
-                        {req.status === 'granted' && (isAdmin || isValidated) ? 'Aprovado' : 
-                         req.status === 'refused' && (isAdmin || isValidated) ? 'Recusado' : 
-                         req.status === 'seen' && (isAdmin || isValidated) ? 'Visto' : 
-                         'Pendente'}
+                        {req.status === 'granted' && (isAdmin || isValidated) ? 'Pedido Aprovado' : 
+                         req.status === 'refused' && (isAdmin || isValidated) ? 'Pedido Recusado' : 
+                         req.status === 'seen' && (isAdmin || isValidated) ? 'Gestor Ciente (Aviso)' : 
+                         'Em Análise (Pendente)'}
                       </span>
                     </div>
                     <span className="text-[8px] font-bold text-slate-400 uppercase">
@@ -426,55 +426,96 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                     </div>
                   )}
                   
-                  <div className="absolute top-4 right-4 flex items-center gap-2">
-                    {/* Admin Actions - Only show if current user is admin/manager */}
-                    {isAdmin && onUpdateEmployee && (
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <button 
-                          title="Marcar como Visto"
-                          onClick={() => {
-                            const updated = (employee.requests || []).map(r => 
-                              (r.createdAt === req.createdAt || (r.text === req.text && r.date === req.date)) 
-                                ? { ...r, status: 'seen' as const } : r
-                            );
-                            onUpdateEmployee(employee.id, { requests: updated });
-                          }}
-                          className="p-1.5 text-blue-400 hover:text-blue-600 transition-colors"
-                        >
-                          <Icon name="visibility" className="text-sm" />
-                        </button>
-                        <button 
-                          title="Atender Pedido"
-                          onClick={() => {
-                            const updated = (employee.requests || []).map(r => 
-                              (r.createdAt === req.createdAt || (r.text === req.text && r.date === req.date)) 
-                                ? { ...r, status: 'granted' as const, feedback: undefined } : r
-                            );
-                            onUpdateEmployee(employee.id, { requests: updated });
-                          }}
-                          className="p-1.5 text-emerald-400 hover:text-emerald-600 transition-colors"
-                        >
-                          <Icon name="check_circle" className="text-sm" />
-                        </button>
-                        <button 
-                          title="Recusar Pedido"
-                          onClick={() => {
-                            const justification = window.prompt('Por que este pedido está sendo recusado? (Esta justificativa será visível para o colaborador)');
-                            if (justification !== null) {
+                  {isAdmin && onUpdateEmployee && req.status === 'pending' && (
+                    <div className="mt-4 flex flex-wrap gap-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
+                      <p className="w-full text-[9px] font-black uppercase text-slate-400">Ação do Gestor:</p>
+                      
+                      <button 
+                        onClick={() => {
+                          if(window.confirm('Isto marcará o dia como Folga (F) na escala oficial. Confirmar?')) {
+                            const [year, month, day] = (req.date || '').split('-');
+                            if (year && month && day) {
+                              const mKey = `${year}-${month}`;
+                              const dIdx = parseInt(day, 10) - 1;
+                              const newShifts = [...(employee.shifts[mKey] || Array(31).fill('T'))];
+                              newShifts[dIdx] = 'F';
+
                               const updated = (employee.requests || []).map(r => 
-                                (r.createdAt === req.createdAt || (r.text === req.text && r.date === req.date)) 
-                                  ? { ...r, status: 'refused' as const, feedback: justification.trim() || undefined } : r
+                                (r.createdAt === req.createdAt) 
+                                  ? { ...r, status: 'granted' as const, feedback: 'Folga Oficial (F) concedida e lançada na escala.' } : r
                               );
-                              onUpdateEmployee(employee.id, { requests: updated });
+                              onUpdateEmployee(employee.id, { requests: updated, shifts: { ...employee.shifts, [mKey]: newShifts } });
                             }
-                          }}
-                          className="p-1.5 text-red-400 hover:text-red-600 transition-colors"
-                        >
-                          <Icon name="cancel" className="text-sm" />
-                        </button>
-                      </div>
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg text-[9px] font-black uppercase transition-colors flex items-center gap-1 shadow-sm"
+                      >
+                        <Icon name="event_available" className="text-[11px]" /> Dar Folga (F)
+                      </button>
+
+                      <button 
+                        onClick={() => {
+                          const msg = window.prompt('Justificativa da aprovação (ex: Liberado mais cedo):', 'Pedido aprovado.');
+                          if (msg !== null) {
+                            const updated = (employee.requests || []).map(r => 
+                              (r.createdAt === req.createdAt) 
+                                ? { ...r, status: 'granted' as const, feedback: msg } : r
+                            );
+                            onUpdateEmployee(employee.id, { requests: updated });
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-teal-100 hover:bg-teal-200 text-teal-700 rounded-lg text-[9px] font-black uppercase transition-colors flex items-center gap-1 shadow-sm"
+                      >
+                        <Icon name="check_circle" className="text-[11px]" /> Aprovar (Outro)
+                      </button>
+
+                      <button 
+                        onClick={() => {
+                          const updated = (employee.requests || []).map(r => 
+                            (r.createdAt === req.createdAt) 
+                              ? { ...r, status: 'seen' as const, feedback: 'Gestor ciente do aviso.' } : r
+                          );
+                          onUpdateEmployee(employee.id, { requests: updated });
+                        }}
+                        className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-[9px] font-black uppercase transition-colors flex items-center gap-1 shadow-sm"
+                      >
+                        <Icon name="visibility" className="text-[11px]" /> Ciente (Aviso)
+                      </button>
+
+                      <button 
+                        onClick={() => {
+                          const justification = window.prompt('Por que este pedido está sendo recusado?');
+                          if (justification !== null) {
+                            const updated = (employee.requests || []).map(r => 
+                              (r.createdAt === req.createdAt) 
+                                ? { ...r, status: 'refused' as const, feedback: justification.trim() || undefined } : r
+                            );
+                            onUpdateEmployee(employee.id, { requests: updated });
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-[9px] font-black uppercase transition-colors flex items-center gap-1 shadow-sm"
+                      >
+                        <Icon name="cancel" className="text-[11px]" /> Recusar
+                      </button>
+                    </div>
+                  )}
+                  
+                  <div className="absolute top-4 right-4 flex items-center gap-2">
+                    {isAdmin && onUpdateEmployee && req.status !== 'pending' && (
+                       <button 
+                        title="Desfazer e voltar para pendente"
+                        onClick={() => {
+                          const updated = (employee.requests || []).map(r => 
+                            (r.createdAt === req.createdAt) 
+                              ? { ...r, status: 'pending' as const, feedback: undefined } : r
+                          );
+                          onUpdateEmployee(employee.id, { requests: updated });
+                        }}
+                        className="p-1.5 text-slate-300 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        <Icon name="undo" className="text-sm" />
+                      </button>
                     )}
-                    
                     <button 
                       title="Excluir Pedido"
                       onClick={() => {

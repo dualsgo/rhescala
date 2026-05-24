@@ -385,11 +385,27 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                 <div className="flex flex-col min-w-0 flex-1">
                                   <div className="flex items-center gap-1">
                                     <span className="text-[10px] sm:text-[11px] font-black text-slate-900 dark:text-slate-100 truncate group-hover/name:text-orange-600 transition-colors">{emp.name}</span>
-                                    {(emp.requests || []).some(r => r.date && r.date.startsWith(monthKey)) && (
-                                      <div className="w-3 h-3 sm:w-3.5 sm:h-3.5 bg-orange-500 rounded-full flex items-center justify-center animate-bounce-subtle" title="Tem pedidos para este mês">
-                                        <Icon name="chat_bubble" className="text-[7px] sm:text-[8px] text-white" />
-                                      </div>
-                                    )}
+                                    {(() => {
+                                      const reqs = emp.requests || [];
+                                      const hasAnswered = reqs.some(r => r.date?.startsWith(monthKey) && r.status !== 'pending');
+                                      const hasPending = reqs.some(r => r.date?.startsWith(monthKey) && r.status === 'pending');
+                                      
+                                      if (hasAnswered) {
+                                        return (
+                                          <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center shadow-md animate-pulse-subtle" title="Pedido respondido!">
+                                            <Icon name="notifications_active" className="text-[9px] text-white" />
+                                          </div>
+                                        );
+                                      }
+                                      if (hasPending) {
+                                        return (
+                                          <div className="w-3.5 h-3.5 bg-orange-500 rounded-full flex items-center justify-center animate-bounce-subtle" title="Tem pedidos pendentes">
+                                            <Icon name="chat_bubble" className="text-[8px] text-white" />
+                                          </div>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
                                   </div>
                                   <span className="text-[8px] sm:text-[9px] text-slate-400 font-bold uppercase truncate">{emp.cargo || 'Vendedor'}</span>
                                 </div>
