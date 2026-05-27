@@ -166,16 +166,24 @@ const App: React.FC = () => {
   
   const canGoNext = useMemo(() => {
     const today = new Date();
-    const isCurrentOrPast = new Date(currentMY.year, currentMY.month, 1) < new Date(today.getFullYear(), today.getMonth(), 1);
+    const targetDate = new Date(currentMY.year, currentMY.month, 1);
+    const currentMonthDate = new Date(today.getFullYear(), today.getMonth(), 1);
     
     // Admins can go to next month (to prepare it)
-    // Viewers are locked to current/past months
-    if (isReadOnly) return isCurrentOrPast;
+    // Viewers are locked to current/past months, unless next month is validated
+    if (isReadOnly) {
+      if (targetDate < currentMonthDate) return true;
+      if (targetDate.getTime() === currentMonthDate.getTime()) {
+        const nextDate = new Date(currentMY.year, currentMY.month + 1, 1);
+        const nextKey = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
+        return validatedMonths[nextKey] === true;
+      }
+      return false;
+    }
     
     const limitDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-    const targetDate = new Date(currentMY.year, currentMY.month, 1);
     return targetDate < limitDate;
-  }, [currentMY, isReadOnly]);
+  }, [currentMY, isReadOnly, validatedMonths]);
 
   // Dark mode effect
   React.useEffect(() => {
