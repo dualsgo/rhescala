@@ -386,6 +386,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                   <div className="flex items-center gap-1">
                                     <span className="text-[10px] sm:text-[11px] font-black text-slate-900 dark:text-slate-100 truncate group-hover/name:text-orange-600 transition-colors">{emp.name}</span>
                                     {(() => {
+                                      if (isReadOnly) return null;
                                       const reqs = emp.requests || [];
                                       const hasAnswered = reqs.some(r => r.date?.startsWith(monthKey) && r.status !== 'pending');
                                       const hasPending = reqs.some(r => r.date?.startsWith(monthKey) && r.status === 'pending');
@@ -487,7 +488,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const dimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
                               
                               const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d.num).padStart(2, '0')}`;
-                              const dayRequest = (emp.requests || []).find(r => r.date === fullDate);
+                              const dayRequest = !isReadOnly ? (emp.requests || []).find(r => r.date === fullDate) : undefined;
 
                               return (
                                 <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all relative ${dimClass} ${selectedDayIdx === d.num - 1 ? 'ring-2 ring-inset ring-orange-400/50' : ''} ${hasAlert ? 'ring-2 ring-inset ring-rose-500' : ''}`}>
