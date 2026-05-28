@@ -154,24 +154,26 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     <div className="flex flex-col gap-4 relative h-full">
       {/* Legend & Info Row */}
       <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 p-4 rounded-3xl shadow-sm">
-          <div className="flex items-center gap-2 pr-4 border-r border-slate-100 dark:border-zinc-800">
+        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-x-6 gap-y-3 bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 p-3 sm:p-4 rounded-3xl shadow-sm">
+          <div className="flex items-center gap-2 pr-0 sm:pr-4 border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-zinc-800 pb-2 sm:pb-0 w-full sm:w-auto">
             <Icon name="info" className="text-orange-500 text-lg" />
             <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Legenda:</span>
           </div>
-          {legendItems.map(item => (
-            <div key={item.code} className="flex items-center gap-2">
-              <div className={`w-3 h-3 rounded-full ${item.color} shadow-sm`} />
-              <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-tight">{item.label}</span>
-            </div>
-          ))}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {legendItems.map(item => (
+              <div key={item.code} className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${item.color} shadow-sm`} />
+                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-tight">{item.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           {/* Period Filters (Mês, Dom, Fer, Sem) */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Exibir:</span>
-            <div className="flex bg-slate-100 dark:bg-zinc-900 p-1 rounded-2xl gap-1 overflow-x-auto custom-scrollbar no-scrollbar w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap pl-2 sm:pl-0">Exibir:</span>
+            <div className="grid grid-cols-2 sm:flex bg-slate-100 dark:bg-zinc-900 p-1 rounded-2xl gap-1 w-full sm:w-auto">
               {[
                 { id: 'all', label: 'Mês Inteiro' },
                 { id: 'sunday', label: 'Domingos' },
@@ -181,7 +183,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 <button
                   key={f.id}
                   onClick={() => onFilterChange(f.id as any)}
-                  className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${filter === f.id ? 'bg-white dark:bg-zinc-800 shadow-md text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`px-2 sm:px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all flex-1 text-center ${filter === f.id ? 'bg-white dark:bg-zinc-800 shadow-md text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                   {f.label}
                 </button>
