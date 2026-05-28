@@ -184,7 +184,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Validation Badge */}
             <button
               onClick={() => !isReadOnly && onToggleValidation()}
-              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border transition-all ${
+              className={`hidden sm:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border transition-all ${
                 isValidated 
                   ? 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-950/30 dark:border-emerald-900/50 dark:text-emerald-400' 
                   : 'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-950/30 dark:border-amber-900/50 dark:text-amber-400 animate-pulse-subtle'
@@ -367,7 +367,7 @@ export const Header: React.FC<HeaderProps> = ({
             </>
           )}
           
-          <div className="relative">
+          <div className="hidden sm:block relative">
             <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               onBlur={() => setTimeout(() => setShowProfileMenu(false), 200)}
@@ -404,7 +404,7 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
           
-          <div className="flex items-center gap-2 px-2.5 py-1.5 bg-slate-50 dark:bg-zinc-900 rounded-lg border border-slate-100 dark:border-zinc-800">
+          <div className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 bg-slate-50 dark:bg-zinc-900 rounded-lg border border-slate-100 dark:border-zinc-800">
             <div className={`w-1.5 h-1.5 rounded-full ${syncStatus.state === 'synced' ? 'bg-emerald-500' : syncStatus.state === 'syncing' ? 'bg-blue-500 animate-pulse' : 'bg-rose-500'}`} />
             <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">
               {syncStatus.state === 'synced' ? 'Nuvem OK' : syncStatus.state === 'syncing' ? 'Salvando' : 'Erro'}
@@ -487,6 +487,15 @@ export const Header: React.FC<HeaderProps> = ({
             {/* General Actions */}
             <div className="flex flex-col gap-2">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-2">Outras Opções</p>
+              
+              <button 
+                onClick={() => { onSwitchRole(); setShowMobileMenu(false); }}
+                className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-slate-500 hover:bg-slate-50"
+               >
+                <Icon name={isReadOnly ? 'admin_panel_settings' : 'visibility'} className="text-xl" /> 
+                {isReadOnly ? 'Acessar Gerência' : 'Ver como Equipe'}
+              </button>
+
               {!isReadOnly && (
                 <button onClick={() => { onShareWhatsApp(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10">
                   <Icon name="content_copy" className="text-xl" /> Copiar para WhatsApp
