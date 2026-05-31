@@ -116,7 +116,7 @@ const App: React.FC = () => {
     setEmployees(prev => prev.filter(emp => emp.id !== empId));
   }, [setEmployees]);
 
-  const onAddEmployee = useCallback((name: string, isYoung: boolean, courseDay: string, cargo: any, birthday: string) => {
+  const onAddEmployee = useCallback((name: string, isYoung: boolean, courseDay: string, cargo: any, birthday: string, contractType?: 'CLT' | 'Sazonal', jornada?: '6x1' | '5x2') => {
     let preferredDayOff = '';
     if (cargo === 'Estoquista') preferredDayOff = 'Domingo';
     if (cargo === 'Aprendiz') preferredDayOff = 'Sábado';
@@ -127,6 +127,8 @@ const App: React.FC = () => {
       name,
       isYoungApprentice: isYoung,
       courseDay: isYoung ? courseDay : undefined,
+      contractType: contractType || 'CLT',
+      jornada: jornada || '6x1',
       cargo,
       birthday,
       preferredDayOff,

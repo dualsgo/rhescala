@@ -7,6 +7,8 @@ export interface Employee {
   id: string;
   name: string;
   isYoungApprentice: boolean;
+  contractType?: 'CLT' | 'Sazonal';
+  jornada?: '6x1' | '5x2';
   cargo?: EmployeeCargo;           // 'Atendente' (padrão) | 'Estoquista' | 'Aprendiz' | 'Fiscal'
   courseDay?: string; // e.g. 'Segunda-feira'
   status: 'active' | 'inactive';

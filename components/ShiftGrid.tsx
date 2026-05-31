@@ -418,7 +418,15 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                       return null;
                                     })()}
                                   </div>
-                                  <span className="text-[8px] sm:text-[9px] text-slate-400 font-bold uppercase truncate">{emp.cargo || 'Vendedor'}</span>
+                                  <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                                    <span className="text-[8px] sm:text-[9px] text-slate-400 font-bold uppercase truncate">{emp.cargo || 'Vendedor'}</span>
+                                    {emp.contractType === 'Sazonal' && (
+                                      <span className="text-[7px] px-1 rounded bg-amber-100 text-amber-600 font-bold uppercase tracking-widest">Sazonal</span>
+                                    )}
+                                    {emp.jornada === '5x2' && (
+                                      <span className="text-[7px] px-1 rounded bg-purple-100 text-purple-600 font-bold uppercase tracking-widest">5x2</span>
+                                    )}
+                                  </div>
                                 </div>
                                 <Icon name="chevron_right" className="hidden sm:block text-slate-300 group-hover/name:text-orange-500 opacity-0 group-hover/name:opacity-100 transition-all text-sm ml-auto" />
                               </button>

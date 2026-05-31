@@ -9,7 +9,7 @@ interface TeamViewProps {
   employees: Employee[];
   onUpdateEmployee: (empId: string, data: Partial<Employee>) => void;
   onDeleteEmployee: (empId: string) => void;
-  onAddEmployee: (name: string, isYoung: boolean, courseDay: string, cargo: EmployeeCargo, birthday: string) => void;
+  onAddEmployee: (name: string, isYoung: boolean, courseDay: string, cargo: EmployeeCargo, birthday: string, contractType?: 'CLT' | 'Sazonal', jornada?: '6x1' | '5x2') => void;
 }
 
 const CARGO_OPTIONS: EmployeeCargo[] = ['Atendente', 'Estoquista', 'Aprendiz', 'Fiscal'];
@@ -83,6 +83,8 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
   const [courseDay, setCourseDay] = useState('Segunda-feira');
   const [newCargo, setNewCargo] = useState<EmployeeCargo>('Atendente');
   const [newBirthday, setNewBirthday] = useState('');
+  const [newContractType, setNewContractType] = useState<'CLT' | 'Sazonal'>('CLT');
+  const [newJornada, setNewJornada] = useState<'6x1' | '5x2'>('6x1');
 
   const { showDialog } = useDialog();
 
@@ -94,11 +96,13 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
         message: `Deseja cadastrar o colaborador ${newName}?`
       });
       if (confirmed) {
-        onAddEmployee(newName, isYoung, courseDay, newCargo, newBirthday);
+        onAddEmployee(newName, isYoung, courseDay, newCargo, newBirthday, newContractType, newJornada);
         setNewName('');
         setIsYoung(false);
         setNewCargo('Atendente');
         setNewBirthday('');
+        setNewContractType('CLT');
+        setNewJornada('6x1');
         setShowAddModal(false);
       }
     }
@@ -132,6 +136,23 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
               <div>
                 <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Data de Nascimento (Aniversário)</label>
                 <input type="date" value={newBirthday} onChange={(e) => setNewBirthday(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold focus:ring-2 focus:ring-orange-500 outline-none" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Contrato</label>
+                  <select value={newContractType} onChange={(e) => setNewContractType(e.target.value as any)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold text-sm focus:ring-2 focus:ring-orange-500 outline-none text-slate-700">
+                    <option value="CLT">CLT</option>
+                    <option value="Sazonal">Sazonal</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Jornada</label>
+                  <select value={newJornada} onChange={(e) => setNewJornada(e.target.value as any)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold text-sm focus:ring-2 focus:ring-orange-500 outline-none text-slate-700">
+                    <option value="6x1">6x1</option>
+                    <option value="5x2">5x2</option>
+                  </select>
+                </div>
               </div>
 
               {/* Cargo */}
@@ -218,8 +239,14 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                   placeholder="Nome do Colaborador"
                   className="w-full text-base font-black text-slate-900  bg-transparent border-none p-0 focus:ring-0 placeholder-slate-300  uppercase"
                 />
-                <div className="flex items-center gap-2">
-                   <span className="text-[10px] font-bold text-slate-400  uppercase tracking-wider">{emp.cargo || 'Atendente'}</span>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{emp.cargo || 'Atendente'}</span>
+                   {emp.contractType === 'Sazonal' && (
+                     <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-600 font-bold uppercase tracking-wider">Sazonal</span>
+                   )}
+                   {emp.jornada === '5x2' && (
+                     <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-600 font-bold uppercase tracking-wider">5x2</span>
+                   )}
                    <div className={`w-1.5 h-1.5 rounded-full ${emp.status === 'active' ? 'bg-green-500' : 'bg-slate-400'}`}></div>
                 </div>
               </div>
@@ -309,6 +336,31 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                       <option value="Estoquista">Estoquista</option>
                       <option value="Aprendiz">Aprendiz</option>
                       <option value="Fiscal">Fiscal</option>
+                    </select>
+                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                 <div className="space-y-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Contrato</label>
+                   <select
+                      value={emp.contractType || 'CLT'}
+                      onChange={(e) => onUpdateEmployee(emp.id, { contractType: e.target.value as any })}
+                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
+                    >
+                      <option value="CLT">CLT</option>
+                      <option value="Sazonal">Sazonal</option>
+                    </select>
+                 </div>
+                 <div className="space-y-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Jornada</label>
+                   <select
+                      value={emp.jornada || '6x1'}
+                      onChange={(e) => onUpdateEmployee(emp.id, { jornada: e.target.value as any })}
+                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
+                    >
+                      <option value="6x1">6x1</option>
+                      <option value="5x2">5x2</option>
                     </select>
                  </div>
               </div>

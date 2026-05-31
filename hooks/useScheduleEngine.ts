@@ -757,8 +757,9 @@ export function applyMonthUpdate(
             }
         }
 
-        // 2. Pass: Streak-based force-rest (6x1 compliance)
+        // 2. Pass: Streak-based force-rest (6x1 or 5x2 compliance)
         let currentStreak = prevStreaks.get(emp.id) || 0;
+        const maxStreak = emp.jornada === '5x2' ? 5 : 6;
 
         for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
             const shift = newShifts[dayIdx];
@@ -769,7 +770,7 @@ export function applyMonthUpdate(
 
             currentStreak++;
 
-            if (currentStreak > 6) {
+            if (currentStreak > maxStreak) {
                 // Force rest ONLY if they don't have another rest day coming in this legal window
                 let hasFutureRest = false;
                 for (let lookAhead = 1; lookAhead <= 2; lookAhead++) {
@@ -790,33 +791,87 @@ export function applyMonthUpdate(
             }
         }
 
-        // 3. Pass: Clean Redundant Common Off-Days (Mon-Fri)
-        // If an employee has two 'F' days in the same Mon-Fri week, keep only the preferred one.
+        // 3. Pass: Clean Redundant Common Off-Days and Guarantee 5x2
         for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
             const date = new Date(year, month, dayIdx + 1);
             if (date.getDay() === 1) { // Monday
                 const weekIndices: number[] = [];
-                for (let i = 0; i < 5; i++) { // Mon to Fri
+                for (let i = 0; i < 7; i++) { // Mon to Sun
                     if (dayIdx + i < daysInMonth) weekIndices.push(dayIdx + i);
                 }
 
-                const commonOffIndices = weekIndices.filter(idx => newShifts[idx] === 'F');
-                if (commonOffIndices.length > 1) {
-                    const preferredIdx = weekIndices.find(idx => {
+                const offIndices = weekIndices.filter(idx => newShifts[idx] === 'F' || newShifts[idx]?.startsWith('FF') || newShifts[idx] === 'FE' || newShifts[idx] === 'DO' || newShifts[idx] === 'AT');
+                
+                if (emp.jornada !== '5x2') {
+                    // Current 6x1 cleanup logic: only clean Mon-Fri to keep preferred day if > 1 F in Mon-Fri.
+                    const monFriIndices = weekIndices.filter(idx => {
                         const d = new Date(year, month, idx + 1).getDay();
-                        return emp.preferredDayOff && (
-                            WEEKDAY_NAMES[d] === emp.preferredDayOff || 
-                            `${WEEKDAY_NAMES[d]}-feira` === emp.preferredDayOff ||
-                            WEEKDAY_NAMES[d] === `${emp.preferredDayOff}-feira`
-                        );
+                        return d >= 1 && d <= 5;
                     });
-
-                    if (preferredIdx !== undefined) {
-                        commonOffIndices.forEach(idx => {
-                            if (idx !== preferredIdx) {
-                                newShifts[idx] = 'T';
-                            }
+                    const commonOffIndices = monFriIndices.filter(idx => newShifts[idx] === 'F');
+                    if (commonOffIndices.length > 1) {
+                        const preferredIdx = monFriIndices.find(idx => {
+                            const d = new Date(year, month, idx + 1).getDay();
+                            return emp.preferredDayOff && (
+                                WEEKDAY_NAMES[d] === emp.preferredDayOff || 
+                                `${WEEKDAY_NAMES[d]}-feira` === emp.preferredDayOff ||
+                                WEEKDAY_NAMES[d] === `${emp.preferredDayOff}-feira`
+                            );
                         });
+
+                        if (preferredIdx !== undefined) {
+                            commonOffIndices.forEach(idx => {
+                                if (idx !== preferredIdx) {
+                                    newShifts[idx] = 'T';
+                                }
+                            });
+                        }
+                    }
+                } else {
+                    // 5x2 logic
+                    if (offIndices.length < 2) {
+                        // Need to add more off days in this week!
+                        // Try to find a working day that is not Sunday to turn into 'F'.
+                        const workingIndices = weekIndices.filter(idx => {
+                            const d = new Date(year, month, idx + 1).getDay();
+                            return newShifts[idx] === 'T' && d !== 0; // Don't turn a working Sunday into F here
+                        });
+                        
+                        let needed = 2 - offIndices.length;
+                        // Give preference to Tuesday, Wednesday, Thursday
+                        const preferredAddOrder = workingIndices.sort((a, b) => {
+                           const dayA = new Date(year, month, a + 1).getDay();
+                           const dayB = new Date(year, month, b + 1).getDay();
+                           const scoreA = (dayA >= 2 && dayA <= 4) ? 0 : 1;
+                           const scoreB = (dayB >= 2 && dayB <= 4) ? 0 : 1;
+                           return scoreA - scoreB;
+                        });
+
+                        for (let i = 0; i < preferredAddOrder.length && needed > 0; i++) {
+                            newShifts[preferredAddOrder[i]] = 'F';
+                            needed--;
+                        }
+                    } else if (offIndices.length > 2) {
+                        // Need to remove some 'F' days (keep preferred, keep Sunday if F)
+                        const fIndices = weekIndices.filter(idx => newShifts[idx] === 'F');
+                        let excess = offIndices.length - 2;
+                        
+                        // Sort Fs to remove: remove non-preferred, non-Sunday Fs first
+                        const toRemove = fIndices.sort((a, b) => {
+                            const dayA = new Date(year, month, a + 1).getDay();
+                            const dayB = new Date(year, month, b + 1).getDay();
+                            const isPrefA = emp.preferredDayOff && WEEKDAY_NAMES[dayA].includes(emp.preferredDayOff.split('-')[0]) ? 1 : 0;
+                            const isPrefB = emp.preferredDayOff && WEEKDAY_NAMES[dayB].includes(emp.preferredDayOff.split('-')[0]) ? 1 : 0;
+                            const isSunA = dayA === 0 ? 1 : 0;
+                            const isSunB = dayB === 0 ? 1 : 0;
+                            
+                            return (isPrefA + isSunA * 2) - (isPrefB + isSunB * 2); // lower score gets removed
+                        });
+                        
+                        for (let i = 0; i < toRemove.length && excess > 0; i++) {
+                            newShifts[toRemove[i]] = 'T';
+                            excess--;
+                        }
                     }
                 }
             }
