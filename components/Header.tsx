@@ -88,6 +88,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'worked-holidays', label: 'Feriados Trabalhados', icon: 'list_alt' },
     { id: 'cleaning', label: 'Limpeza Copa', icon: 'cleaning_services' },
     { id: 'patrol', label: 'Ronda da Loja', icon: 'local_police' },
+    { id: 'sections', label: 'Donos de Seção', icon: 'category' },
     /* 
     { id: 'activities', label: 'Atividades', icon: 'assignment_turned_in' },
     { id: 'routine', label: 'Rotina Diária', icon: 'event_repeat' },

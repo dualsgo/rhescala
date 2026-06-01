@@ -17,6 +17,7 @@ import { DataManager } from './components/DataManager';
 import { WorkedHolidaysList } from './components/WorkedHolidaysList';
 import { CleaningSchedule } from './components/CleaningSchedule';
 import { PatrolSchedule } from './components/PatrolSchedule';
+import { SectionManager } from './components/SectionManager';
 import { EssentialActivities } from './components/EssentialActivities';
 import { DailyRoutine } from './components/DailyRoutine';
 import { OperationalNotices } from './components/OperationalNotices';
@@ -42,8 +43,9 @@ const App: React.FC = () => {
   const syncStatus = useSyncStatus();
   const [showHolidayManager, setShowHolidayManager] = useState(false);
   const [showDayDetail, setShowDayDetail] = useState(false);
-  const [currentView, setCurrentView] = useState<'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays' | 'cleaning' | 'patrol' | 'activities' | 'routine' | 'notices' | 'requests'>('grid');
+  const [currentView, setCurrentView] = useState<'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays' | 'cleaning' | 'patrol' | 'sections' | 'activities' | 'routine' | 'notices' | 'requests'>('grid');
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
+  const [sectionAssignments, setSectionAssignments] = useLocalStorage<Record<string, any>>('riHappySectionAssignments', {});
   const [validatedMonths, setValidatedMonths] = useLocalStorage<Record<string, boolean>>('riHappyValidatedMonths', {});
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
   const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
@@ -713,6 +715,17 @@ const App: React.FC = () => {
                   employees={employees}
                   currentMY={currentMY}
                   customHolidays={customHolidays}
+                  jornadaSettings={jornadaSettings}
+                  onClose={() => setCurrentView('grid')}
+                />
+              );
+            case 'sections':
+              return (
+                <SectionManager
+                  employees={employees}
+                  currentMY={currentMY}
+                  assignments={sectionAssignments[monthKey] || { Q1: {}, Q2: {} }}
+                  onUpdateAssignments={(newData) => setSectionAssignments(prev => ({ ...prev, [monthKey]: newData }))}
                   jornadaSettings={jornadaSettings}
                   onClose={() => setCurrentView('grid')}
                 />
