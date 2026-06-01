@@ -16,6 +16,7 @@ import { DaySummaryCard } from './components/DaySummaryCard';
 import { DataManager } from './components/DataManager';
 import { WorkedHolidaysList } from './components/WorkedHolidaysList';
 import { CleaningSchedule } from './components/CleaningSchedule';
+import { PatrolSchedule } from './components/PatrolSchedule';
 import { EssentialActivities } from './components/EssentialActivities';
 import { DailyRoutine } from './components/DailyRoutine';
 import { OperationalNotices } from './components/OperationalNotices';
@@ -41,7 +42,7 @@ const App: React.FC = () => {
   const syncStatus = useSyncStatus();
   const [showHolidayManager, setShowHolidayManager] = useState(false);
   const [showDayDetail, setShowDayDetail] = useState(false);
-  const [currentView, setCurrentView] = useState<'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays' | 'cleaning' | 'activities' | 'routine' | 'notices' | 'requests'>('grid');
+  const [currentView, setCurrentView] = useState<'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays' | 'cleaning' | 'patrol' | 'activities' | 'routine' | 'notices' | 'requests'>('grid');
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
   const [validatedMonths, setValidatedMonths] = useLocalStorage<Record<string, boolean>>('riHappyValidatedMonths', {});
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
@@ -703,6 +704,16 @@ const App: React.FC = () => {
                   employees={employees}
                   currentMY={currentMY}
                   customHolidays={customHolidays}
+                  onClose={() => setCurrentView('grid')}
+                />
+              );
+            case 'patrol':
+              return (
+                <PatrolSchedule
+                  employees={employees}
+                  currentMY={currentMY}
+                  customHolidays={customHolidays}
+                  jornadaSettings={jornadaSettings}
                   onClose={() => setCurrentView('grid')}
                 />
               );
