@@ -697,7 +697,6 @@ const App: React.FC = () => {
                   onClose={() => setCurrentView('grid')}
                 />
               );
-            /*
             case 'cleaning':
               return (
                 <CleaningSchedule
@@ -707,6 +706,7 @@ const App: React.FC = () => {
                   onClose={() => setCurrentView('grid')}
                 />
               );
+            /*
             case 'activities':
               return (
                 <EssentialActivities
