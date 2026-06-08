@@ -557,8 +557,34 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                       }`}
                                     >
                                       {shift === 'AT' ? (
-                                        <div className="flex items-center justify-center text-rose-500 font-black">
+                                        <div className="flex flex-col items-center justify-center text-rose-500 font-black leading-none">
                                           <Icon name="add" className="text-sm" />
+                                          {(() => {
+                                            if (emp.atestadoStart && emp.atestadoEnd && fullDate >= emp.atestadoStart && fullDate <= emp.atestadoEnd) {
+                                              const s = new Date(emp.atestadoStart + 'T00:00:00').getTime();
+                                              const e = new Date(emp.atestadoEnd + 'T00:00:00').getTime();
+                                              const c = new Date(fullDate + 'T00:00:00').getTime();
+                                              const total = Math.round((e - s) / 86400000) + 1;
+                                              const cur = Math.round((c - s) / 86400000) + 1;
+                                              return <span className="text-[6px] opacity-80 mt-0.5">{cur}/{total}</span>;
+                                            }
+                                            return null;
+                                          })()}
+                                        </div>
+                                      ) : shift === 'FE' ? (
+                                        <div className="flex flex-col items-center justify-center leading-none">
+                                          <span>FE</span>
+                                          {(() => {
+                                            if (emp.vacationStart && emp.vacationEnd && fullDate >= emp.vacationStart && fullDate <= emp.vacationEnd) {
+                                              const s = new Date(emp.vacationStart + 'T00:00:00').getTime();
+                                              const e = new Date(emp.vacationEnd + 'T00:00:00').getTime();
+                                              const c = new Date(fullDate + 'T00:00:00').getTime();
+                                              const total = Math.round((e - s) / 86400000) + 1;
+                                              const cur = Math.round((c - s) / 86400000) + 1;
+                                              return <span className="text-[6px] opacity-80 mt-0.5">{cur}/{total}</span>;
+                                            }
+                                            return null;
+                                          })()}
                                         </div>
                                       ) : shift === 'C' ? <span className="text-[7px]">CURSO</span> : (shift === 'T' ? (d.isSunday ? 'DOM' : 'T') : (shift.startsWith('FF') ? 'FF' : shift))}
                                     </button>

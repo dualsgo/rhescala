@@ -135,7 +135,31 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         className={`aspect-square rounded-xl flex flex-col items-center justify-center text-[11px] font-black transition-all border-2 ${bgClass} ${borderClass}`}
                       >
                         <span>{d}</span>
-                        {shift !== 'T' && shift !== 'F' && <span className="text-[7px] opacity-70 leading-none mt-0.5">{shift.startsWith('FF') ? 'FF' : shift}</span>}
+                        {shift !== 'T' && shift !== 'F' && <span className="text-[7px] opacity-70 leading-none mt-0.5">{
+                          (shift === 'FE' && employee.vacationStart && employee.vacationEnd) ? (() => {
+                            const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                            if (fullDate >= employee.vacationStart && fullDate <= employee.vacationEnd) {
+                               const s = new Date(employee.vacationStart + 'T00:00:00').getTime();
+                               const e = new Date(employee.vacationEnd + 'T00:00:00').getTime();
+                               const c = new Date(fullDate + 'T00:00:00').getTime();
+                               const total = Math.round((e - s) / 86400000) + 1;
+                               const cur = Math.round((c - s) / 86400000) + 1;
+                               return `FE ${cur}/${total}`;
+                            }
+                            return 'FE';
+                          })() : (shift === 'AT' && employee.atestadoStart && employee.atestadoEnd) ? (() => {
+                            const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                            if (fullDate >= employee.atestadoStart && fullDate <= employee.atestadoEnd) {
+                               const s = new Date(employee.atestadoStart + 'T00:00:00').getTime();
+                               const e = new Date(employee.atestadoEnd + 'T00:00:00').getTime();
+                               const c = new Date(fullDate + 'T00:00:00').getTime();
+                               const total = Math.round((e - s) / 86400000) + 1;
+                               const cur = Math.round((c - s) / 86400000) + 1;
+                               return `AT ${cur}/${total}`;
+                            }
+                            return 'AT';
+                          })() : (shift.startsWith('FF') ? 'FF' : shift)
+                        }</span>}
                       </div>
                     );
                   }
@@ -275,7 +299,27 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                       </div>
                       <div>
                         <p className={`text-[11px] font-black uppercase ${shift === 'F' ? 'text-rose-600' : (typeof shift === 'string' && shift.startsWith('FF')) ? 'text-amber-600' : 'text-slate-800 dark:text-slate-100'}`}>
-                          {shift === 'T' ? 'Trabalha' : shift === 'F' ? 'Folga' : (typeof shift === 'string' && shift.startsWith('FF')) ? 'Folga Feriado' : shift === 'FE' ? 'Férias' : shift === 'C' ? 'Curso' : shift === 'DO' ? 'Aniversário' : shift}
+                          {shift === 'T' ? 'Trabalha' : shift === 'F' ? 'Folga' : (typeof shift === 'string' && shift.startsWith('FF')) ? 'Folga Feriado' : shift === 'FE' ? (() => {
+                            if (employee.vacationStart && employee.vacationEnd && fullDate >= employee.vacationStart && fullDate <= employee.vacationEnd) {
+                              const s = new Date(employee.vacationStart + 'T00:00:00').getTime();
+                              const e = new Date(employee.vacationEnd + 'T00:00:00').getTime();
+                              const c = new Date(fullDate + 'T00:00:00').getTime();
+                              const total = Math.round((e - s) / 86400000) + 1;
+                              const cur = Math.round((c - s) / 86400000) + 1;
+                              return `Férias (${cur}/${total})`;
+                            }
+                            return 'Férias';
+                          })() : shift === 'AT' ? (() => {
+                            if (employee.atestadoStart && employee.atestadoEnd && fullDate >= employee.atestadoStart && fullDate <= employee.atestadoEnd) {
+                              const s = new Date(employee.atestadoStart + 'T00:00:00').getTime();
+                              const e = new Date(employee.atestadoEnd + 'T00:00:00').getTime();
+                              const c = new Date(fullDate + 'T00:00:00').getTime();
+                              const total = Math.round((e - s) / 86400000) + 1;
+                              const cur = Math.round((c - s) / 86400000) + 1;
+                              return `Atestado (${cur}/${total})`;
+                            }
+                            return 'Atestado';
+                          })() : shift === 'C' ? 'Curso' : shift === 'DO' ? 'Aniversário' : shift}
                         </p>
                         <div className="flex items-center gap-2">
                            <p className="text-[9px] font-bold text-slate-400 uppercase">{isWorkingShift(shift) ? hour : '---'}</p>
