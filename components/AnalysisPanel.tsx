@@ -38,8 +38,8 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
     // Check if employee is on vacation
     if (emp.vacationStart) {
       const start = emp.vacationStart;
-      // If no vacationEnd, assume 30 days
-      const end = emp.vacationEnd || addDays(start, 30);
+      // If no vacationEnd, assume 30 days including start day (so start + 29 days)
+      const end = emp.vacationEnd || addDays(start, 29);
       if (dateStr >= start && dateStr <= end) return 'FE';
     }
 

@@ -27,7 +27,7 @@ function handleVacationStart(empId: string, startDate: string, onUpdate: (id: st
     onUpdate(empId, { vacationStart: '', vacationEnd: '' });
     return;
   }
-  const endDate = addDays(startDate, 30);
+  const endDate = addDays(startDate, 29);
   onUpdate(empId, { vacationStart: startDate, vacationEnd: endDate });
 }
 
