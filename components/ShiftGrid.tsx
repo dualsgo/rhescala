@@ -605,14 +605,14 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                           {(holidayCredits[emp.id] || [])
                                             .filter(c => c.status === 'pending')
                                             .map(c => (
-                                              <option key={c.holidayDate} value={`FF ${c.holidayDate}`}>
+                                              <option key={c.id || c.holidayDate} value={`FF ${c.id || c.holidayDate}`}>
                                                 FF — {c.holidayName}
                                               </option>
                                             ))
                                           }
                                           
                                           {/* Current value if it's a specific FF already matched but not in pending anymore */}
-                                          {shift?.startsWith('FF ') && !(holidayCredits[emp.id] || []).some(c => c.status === 'pending' && `FF ${c.holidayDate}` === shift) && (
+                                          {shift?.startsWith('FF ') && !(holidayCredits[emp.id] || []).some(c => c.status === 'pending' && `FF ${c.id || c.holidayDate}` === shift) && (
                                             <option value={shift}>{shift.replace('FF ', 'FF — ')}</option>
                                           )}
                                           <option value="FE">Férias (FE)</option>

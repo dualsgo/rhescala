@@ -1,9 +1,9 @@
-
 import { useMemo } from 'react';
 import { Employee, Holiday } from '../types';
 import { getNationalHolidays } from '../constants';
 
 export interface HolidayCredit {
+  id: string;
   holidayDate: string;
   holidayName: string;
   status: 'pending' | 'scheduled' | 'granted';
@@ -22,7 +22,7 @@ export function useHolidayCredits(employees: Employee[], customHolidays: Holiday
     const todayStr = new Date().toLocaleDateString('en-CA');
 
     employees.forEach(emp => {
-      const workedHolidays: { date: string, name: string }[] = [];
+      const workedHolidays: { id: string, date: string, name: string }[] = [];
       const offDays: { date: string, explicitHoliday?: string }[] = [];
 
       const sortedMonthKeys = Object.keys(emp.shifts).sort();
@@ -41,12 +41,17 @@ export function useHolidayCredits(employees: Employee[], customHolidays: Holiday
           const isStrictlyPast = dateStr < todayStr;
 
           if (holiday && isStrictlyPast && shift && !['F', 'FF', 'FE', 'C', 'N/A', 'DO'].includes(shift) && !shift.startsWith('FF')) {
-            // Worked on holiday and it's already finished (at least 1 day ago)
-            workedHolidays.push({ date: dateStr, name: holiday.name });
+            // Trabalhou no feriado (e já passou pelo menos 1 dia)
+            if (dateStr.endsWith('-05-01')) {
+              workedHolidays.push({ id: dateStr, date: dateStr, name: `${holiday.name} (Folga 1)` });
+              workedHolidays.push({ id: `${dateStr}-extra`, date: dateStr, name: `${holiday.name} (Folga 2)` });
+            } else {
+              workedHolidays.push({ id: dateStr, date: dateStr, name: holiday.name });
+            }
           }
 
           if (shift && shift.startsWith('FF')) {
-            const explicit = shift.split(' ')[1]; // "FF 2026-04-21" -> "2026-04-21"
+            const explicit = shift.split(' ')[1]; // "FF 2026-04-21" -> "2026-04-21" ou "2026-05-01-extra"
             offDays.push({ date: dateStr, explicitHoliday: explicit });
           }
         });
@@ -59,10 +64,11 @@ export function useHolidayCredits(employees: Employee[], customHolidays: Holiday
       
       const matched: HolidayCredit[] = workedHolidays.map(wh => {
         // Try to find an explicit match
-        const explicitMatch = offDays.find(o => o.explicitHoliday === wh.date && !usedOffDates.has(o.date));
+        const explicitMatch = offDays.find(o => o.explicitHoliday === wh.id && !usedOffDates.has(o.date));
         if (explicitMatch) {
           usedOffDates.add(explicitMatch.date);
           return {
+            id: wh.id,
             holidayDate: wh.date,
             holidayName: wh.name,
             status: explicitMatch.date < todayStr ? 'granted' : 'scheduled',
@@ -75,6 +81,7 @@ export function useHolidayCredits(employees: Employee[], customHolidays: Holiday
         if (fifoMatch) {
           usedOffDates.add(fifoMatch.date);
           return {
+            id: wh.id,
             holidayDate: wh.date,
             holidayName: wh.name,
             status: fifoMatch.date < todayStr ? 'granted' : 'scheduled',
@@ -82,7 +89,7 @@ export function useHolidayCredits(employees: Employee[], customHolidays: Holiday
           };
         }
 
-        return { holidayDate: wh.date, holidayName: wh.name, status: 'pending' };
+        return { id: wh.id, holidayDate: wh.date, holidayName: wh.name, status: 'pending' };
       });
 
       results[emp.id] = matched;

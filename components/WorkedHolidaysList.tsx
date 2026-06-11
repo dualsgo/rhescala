@@ -62,9 +62,8 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
         found = true;
         text += `👤 *${worker.name.toUpperCase()}*\n`;
         pendingCredits.forEach(c => {
-          const holiday = [...getNationalHolidays(currentMY.year), ...customHolidays].find(h => h.date === c.holidayDate);
           const dateFormatted = c.holidayDate.split('-').reverse().join('/');
-          text += `   • ${dateFormatted} - ${holiday?.name || 'Feriado'}\n`;
+          text += `   • ${dateFormatted} - ${c.holidayName}\n`;
         });
         text += '\n';
       }
@@ -90,10 +89,9 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
         found = true;
         text += `👤 *${worker.name.toUpperCase()}*\n`;
         scheduledCredits.forEach(c => {
-          const holiday = [...getNationalHolidays(currentMY.year), ...customHolidays].find(h => h.date === c.holidayDate);
           const workedDate = c.holidayDate.split('-').reverse().join('/');
           const offDate = c.offDate?.split('-').reverse().join('/') || 'Não informada';
-          text += `   • Trabalhou: ${workedDate} (${holiday?.name || 'Feriado'})\n`;
+          text += `   • Trabalhou: ${workedDate} (${c.holidayName})\n`;
           text += `     ✅ Agendada para: *${offDate}*\n`;
         });
         text += '\n';
@@ -191,17 +189,22 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
 
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                    {workers.length > 0 ? workers.map(worker => {
-                     const credit = (holidayCredits[worker.id] || []).find(c => c.holidayDate === holiday.date);
+                     const credits = (holidayCredits[worker.id] || []).filter(c => c.holidayDate === holiday.date);
                      
-                     return (
-                       <div key={worker.id} className="flex items-center justify-between bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                     return credits.map((credit, idx) => (
+                       <div key={`${worker.id}-${credit.id || idx}`} className={`flex items-center justify-between bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800 ${idx > 0 ? 'mt-2' : ''}`}>
                           <div className="flex items-center gap-3">
                              <div className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center text-[10px] font-black text-slate-500">
                                {worker.name.charAt(0)}
                              </div>
                              <div>
                                <p className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase">{worker.name}</p>
-                               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{worker.cargo}</p>
+                               <div className="flex items-center gap-2">
+                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{worker.cargo}</p>
+                                 {credits.length > 1 && (
+                                   <span className="text-[8px] font-black bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 px-1.5 py-0.5 rounded uppercase">{credit.holidayName.includes('Folga 2') ? '2ª FOLGA' : '1ª FOLGA'}</span>
+                                 )}
+                               </div>
                              </div>
                           </div>
                           <div className="flex flex-col items-end gap-1">
@@ -222,7 +225,7 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
                              )}
                           </div>
                        </div>
-                     );
+                     ));
                    }) : (
                      <p className="text-[10px] font-bold text-slate-400 uppercase text-center py-4">Ninguém trabalhou neste dia</p>
                    )}
