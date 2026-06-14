@@ -571,9 +571,16 @@ export function calculateLunches(
              for (let i = 0; i < N; i++) {
                  openingPlan.push(openingSlots[OS - 1 - i]);
              }
+             // Reverse to distribute evenly: e.g. for N=3 -> 13h, 13h30, 14h
+             openingPlan.reverse();
         } else {
             for (let i = 0; i < N; i++) {
-                openingPlan.push(openingSlots[i % OS]);
+                if (i < OS) {
+                    openingPlan.push(openingSlots[i]);
+                } else {
+                    // Extra people go to the last slot (14h) because the afternoon shift has arrived.
+                    openingPlan.push(openingSlots[OS - 1]);
+                }
             }
         }
         
