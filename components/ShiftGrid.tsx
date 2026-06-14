@@ -153,100 +153,99 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
   return (
     <div className="flex flex-col gap-4 relative h-full">
-      {/* Legend & Info Row */}
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-y-3 bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 p-3 sm:p-4 rounded-3xl shadow-sm">
-          <button 
-            onClick={() => setShowLegend(!showLegend)} 
-            className="flex items-center justify-between w-full sm:w-auto"
-          >
-            <div className="flex items-center gap-2 pr-0 sm:pr-4 sm:border-r border-slate-100 dark:border-zinc-800 w-full sm:w-auto">
-              <Icon name="info" className="text-orange-500 text-lg" />
-              <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Legenda</span>
-            </div>
-            <Icon name={showLegend ? 'expand_less' : 'expand_more'} className="text-slate-400 sm:hidden" />
-          </button>
-          
-          <div className={`${showLegend ? 'flex' : 'hidden'} sm:flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-none border-slate-100 dark:border-zinc-800`}>
-            {legendItems.map(item => (
-              <div key={item.code} className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${item.color} shadow-sm`} />
-                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-tight">{item.label}</span>
+      {/* Top Controls: Exibir + Group Filters + Legend */}
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+            {/* Period Filters */}
+            <div className="flex items-center bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 p-1 rounded-xl shadow-sm w-full md:w-auto">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2 hidden sm:block whitespace-nowrap">Exibir:</span>
+              <div className="flex items-center w-full md:w-auto">
+                {[
+                  { id: 'all', label: 'Mês' },
+                  { id: 'sunday', label: 'Domingos' },
+                  { id: 'holiday', label: 'Feriados' },
+                  { id: 'week', label: 'Semana', mobileHidden: true }
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => onFilterChange(f.id as any)}
+                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all flex-1 md:flex-none text-center ${f.mobileHidden ? 'hidden sm:block' : ''} ${filter === f.id ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          {/* Period Filters (Mês, Dom, Fer, Sem) */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap pl-2 sm:pl-0">Exibir:</span>
-            <div className="grid grid-cols-3 sm:flex bg-slate-100 dark:bg-zinc-900 p-1 rounded-2xl gap-1 w-full sm:w-auto">
-              {[
-                { id: 'all', label: 'Mês' },
-                { id: 'sunday', label: 'Domingos' },
-                { id: 'holiday', label: 'Feriados' },
-                { id: 'week', label: 'Semana', mobileHidden: true }
-              ].map(f => (
-                <button
-                  key={f.id}
-                  onClick={() => onFilterChange(f.id as any)}
-                  className={`px-2 sm:px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all flex-1 text-center ${f.mobileHidden ? 'hidden sm:block' : ''} ${filter === f.id ? 'bg-white dark:bg-zinc-800 shadow-md text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  {f.label}
-                </button>
-              ))}
             </div>
-          </div>
 
-          <div className="hidden sm:flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase bg-slate-50 dark:bg-zinc-900/50 px-4 py-2 rounded-2xl">
-            <Icon name="mouse" className="text-orange-500" /> Clique no nome para ver escala individual
-          </div>
-        </div>
-      </div>
-
-      {/* Group Filters */}
-      <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2 px-1">
-        {/* Desktop View: Buttons */}
-        <div className="hidden sm:flex items-center gap-2">
-          <button 
-            onClick={() => setSelectedGroup(null)}
-            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${!selectedGroup ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20' : 'bg-white dark:bg-zinc-900 text-slate-400 border-slate-200 dark:border-zinc-800 hover:bg-slate-50'}`}
-          >
-            Todos
-          </button>
-          {['Abertura', 'Intermediário', 'Fechamento', 'Folgas/Outros'].map(group => (
-            <button 
-              key={group}
-              onClick={() => setSelectedGroup(group)}
-              className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${selectedGroup === group ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20' : 'bg-white dark:bg-zinc-900 text-slate-400 border-slate-200 dark:border-zinc-800 hover:bg-slate-50'}`}
-            >
-              {group}
-            </button>
-          ))}
-        </div>
-
-        {/* Mobile View: Select Dropdown */}
-        <div className="flex sm:hidden w-full items-center gap-2">
-          <div className="relative w-full">
-            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-orange-500">
-              <Icon name="filter_list" className="text-sm" />
+            {/* Group Filters */}
+            <div className="flex items-center bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 p-1 rounded-xl shadow-sm w-full md:w-auto">
+               <div className="hidden sm:flex items-center">
+                  <button 
+                    onClick={() => setSelectedGroup(null)}
+                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${!selectedGroup ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}
+                  >
+                    Todos
+                  </button>
+                  {['Abertura', 'Intermediário', 'Fechamento', 'Folgas/Outros'].map(group => (
+                    <button 
+                      key={group}
+                      onClick={() => setSelectedGroup(group)}
+                      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${selectedGroup === group ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}
+                    >
+                      {group}
+                    </button>
+                  ))}
+               </div>
+               
+               <div className="flex sm:hidden w-full items-center">
+                 <div className="relative w-full">
+                   <div className="absolute inset-y-0 left-2 flex items-center pointer-events-none text-orange-500">
+                     <Icon name="filter_list" className="text-sm" />
+                   </div>
+                   <select 
+                     value={selectedGroup || ''} 
+                     onChange={(e) => setSelectedGroup(e.target.value || null)}
+                     className="w-full bg-transparent border-none py-1.5 pl-8 pr-4 text-[10px] font-black uppercase tracking-widest outline-none focus:ring-0 appearance-none text-slate-700 dark:text-slate-300"
+                   >
+                     <option value="">Grupo: Todos</option>
+                     <option value="Abertura">Abertura</option>
+                     <option value="Intermediário">Intermediário</option>
+                     <option value="Fechamento">Fechamento</option>
+                     <option value="Folgas/Outros">Folgas / Outros</option>
+                   </select>
+                   <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none text-slate-400">
+                     <Icon name="expand_more" className="text-sm" />
+                   </div>
+                 </div>
+               </div>
             </div>
-            <select 
-              value={selectedGroup || ''} 
-              onChange={(e) => setSelectedGroup(e.target.value || null)}
-              className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl py-2.5 pl-9 pr-4 text-[10px] font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all appearance-none text-slate-700 dark:text-slate-300 shadow-sm"
-            >
-              <option value="">Exibir: Todos</option>
-              <option value="Abertura">Abertura</option>
-              <option value="Intermediário">Intermediário</option>
-              <option value="Fechamento">Fechamento</option>
-              <option value="Folgas/Outros">Folgas / Outros</option>
-            </select>
-            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
-              <Icon name="expand_more" className="text-sm" />
+            
+            {/* Legend Component */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 px-3 py-1.5 rounded-xl shadow-sm w-full xl:w-auto">
+              <button 
+                onClick={() => setShowLegend(!showLegend)} 
+                className="flex items-center justify-between sm:justify-start w-full sm:w-auto sm:pr-3 sm:border-r border-slate-100 dark:border-zinc-800 py-0.5"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Icon name="info" className="text-orange-500 text-[14px]" />
+                  <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Legenda</span>
+                </div>
+                <Icon name={showLegend ? 'expand_less' : 'expand_more'} className="text-slate-400 sm:hidden text-[14px]" />
+              </button>
+              
+              <div className={`${showLegend ? 'flex' : 'hidden'} sm:flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 sm:mt-0 pb-1 sm:pb-0 w-full sm:w-auto`}>
+                {legendItems.map(item => (
+                  <div key={item.code} className="flex items-center gap-1.5">
+                    <div className={`w-2 h-2 rounded-full ${item.color}`} />
+                    <span className="text-[8.5px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight whitespace-nowrap">{item.label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+
+            <div className="hidden xl:flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase bg-white dark:bg-black px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm ml-auto">
+              <Icon name="mouse" className="text-orange-500 text-[12px]" /> Clique no nome p/ ver escala
+            </div>
         </div>
       </div>
 
