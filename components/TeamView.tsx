@@ -22,13 +22,47 @@ function addDays(dateStr: string, days: number): string {
 }
 
 /** When user sets vacation start (saída), auto-compute end = start + 30 days */
-function handleVacationStart(empId: string, startDate: string, onUpdate: (id: string, data: Partial<Employee>) => void) {
+function handleVacationStart(emp: Employee, startDate: string, onUpdate: (id: string, data: Partial<Employee>) => void) {
   if (!startDate) {
-    onUpdate(empId, { vacationStart: '', vacationEnd: '' });
+    onUpdate(emp.id, { vacationStart: '', vacationEnd: '' });
     return;
   }
   const endDate = addDays(startDate, 29);
-  onUpdate(empId, { vacationStart: startDate, vacationEnd: endDate });
+  const updates: Partial<Employee> = { vacationStart: startDate, vacationEnd: endDate };
+
+  // Automatic sync: Update shifts in affected months
+  const startObj = new Date(startDate + 'T00:00:00');
+  const endObj = new Date(endDate + 'T00:00:00');
+  
+  const newShifts = { ...emp.shifts };
+  
+  // Iterate through affected months
+  let current = new Date(startObj.getFullYear(), startObj.getMonth(), 1);
+  while (current <= endObj) {
+    const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+    const shifts = [...(newShifts[monthKey] || [])];
+    const daysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+    
+    // Ensure array is initialized
+    if (shifts.length === 0) {
+      for (let i = 0; i < daysInMonth; i++) shifts[i] = 'T';
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      if (dStr >= startDate && dStr <= endDate) {
+        shifts[d - 1] = 'FE';
+      } else if (shifts[d - 1] === 'FE') {
+        // Clear old FE if they are now outside the range
+        shifts[d - 1] = 'T';
+      }
+    }
+    newShifts[monthKey] = shifts;
+    current.setMonth(current.getMonth() + 1);
+  }
+  
+  updates.shifts = newShifts;
+  onUpdate(emp.id, updates);
 }
 
 /** When user sets atestado start and duration, compute end = start + days - 1 */
@@ -425,14 +459,38 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                 </div>
 
                 {!emp.isYoungApprentice && (
-                  <div className="space-y-1 pt-2">
+                  <div className="space-y-2 pt-2">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Férias (Início)</label>
                     <input
                       type="date"
                       value={emp.vacationStart || ''}
-                      onChange={(e) => handleVacationStart(emp.id, e.target.value, onUpdateEmployee)}
+                      onChange={(e) => handleVacationStart(emp, e.target.value, onUpdateEmployee)}
                       className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[11px] font-bold text-slate-700 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
                     />
+                    {emp.vacationStart && emp.vacationEnd && (
+                      <div className="bg-sky-50 p-2 rounded-lg border border-sky-100 flex items-center justify-between mt-1">
+                         <span className="text-[8px] font-black text-sky-600 uppercase">Fim das Férias:</span>
+                         <span className="text-[9px] font-black text-sky-700 uppercase">
+                            {new Date(emp.vacationEnd + 'T00:00:00').toLocaleDateString('pt-BR')}
+                         </span>
+                      </div>
+                    )}
+                    {emp.vacationEnd && (
+                      <div className="bg-emerald-50 p-2 rounded-lg border border-emerald-100 flex items-center justify-between">
+                         <span className="text-[8px] font-black text-emerald-600 uppercase">Retorno Previsto:</span>
+                         <span className="text-[9px] font-black text-emerald-700 uppercase">
+                            {new Date(addDays(emp.vacationEnd, 1) + 'T00:00:00').toLocaleDateString('pt-BR')}
+                         </span>
+                      </div>
+                    )}
+                    {emp.vacationEnd && (
+                      <button 
+                        onClick={() => handleVacationStart(emp, emp.vacationStart!, onUpdateEmployee)}
+                        className="w-full py-2 bg-sky-100 hover:bg-sky-200 text-sky-600 rounded-xl text-[9px] font-black uppercase transition-all flex items-center justify-center gap-2 mt-1"
+                      >
+                        <Icon name="sync" className="text-xs" /> Sincronizar com a Grade
+                      </button>
+                    )}
                   </div>
                 )}
 
