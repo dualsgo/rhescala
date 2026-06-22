@@ -291,25 +291,38 @@ export function buildSundayAssignments(
  */
 /**
  * Helper to select the best shift hours based on the day type and employee role.
+ * For holidays and Sundays, the employee's workPeriod is used to select the
+ * proportional slot (so a "fechamento" employee keeps a closing-equivalent hour).
  */
 function getTargetHours(emp: Employee, dow: number, isHoliday: boolean, settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS): string {
     if (emp.isYoungApprentice) {
         // Aprendiz folga Sábado, Domingo e Feriado
-        if (dow === 0 || dow === 6 || isHoliday) return settings.shiftHours.sunday[0]; 
+        if (dow === 0 || dow === 6 || isHoliday) return settings.shiftHours.sunday[0];
         return settings.shiftHours.apprentice[0];
     }
 
-    // Feriados
+    const wp = emp.workPeriod || '';
+
+    // Feriados (não-domingo)
     if (isHoliday && dow !== 0) {
-        return settings.shiftHours.holiday[0]; 
+        const holidaySlots = settings.shiftHours.holiday;
+        // Map workPeriod → proportional holiday slot
+        if (wp.startsWith('10h'))  return holidaySlots[0] ?? holidaySlots[0]; // 12h às 18h
+        if (wp.startsWith('12h'))  return holidaySlots[1] ?? holidaySlots[0]; // 13h às 19h
+        if (wp.startsWith('13h'))  return holidaySlots[holidaySlots.length - 1] ?? holidaySlots[0]; // 15h às 21h (fechamento)
+        // Fallback: first slot
+        return holidaySlots[0];
     }
 
     // Domingos
     if (dow === 0) {
-        return settings.shiftHours.sunday[0];
+        const sundaySlots = settings.shiftHours.sunday;
+        // Abertura / Intermediário → opening Sunday; Fechamento → closing Sunday
+        if (wp.startsWith('13h')) return sundaySlots[sundaySlots.length - 1] ?? sundaySlots[0]; // 13h às 21h
+        return sundaySlots[0]; // 12h às 20h
     }
 
-    // Dias de semana
+    // Dias de semana normais
     return emp.workPeriod;
 }
 
