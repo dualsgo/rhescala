@@ -134,46 +134,43 @@ export const CleaningSchedule: React.FC<CleaningScheduleProps> = ({ employees, c
 
         {/* Calendar Area */}
         <div className="flex-1 overflow-auto custom-scrollbar bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-xl p-6 lg:p-10">
-          <div id="cleaning-calendar-capture" className="bg-white dark:bg-slate-900 p-8 w-[1120px] mx-auto">
+          <div id="cleaning-calendar-capture" className="bg-white p-8 w-[1120px] mx-auto text-black font-sans">
             
             {/* Title for Screenshot */}
-            <div className="text-center mb-10">
-               <h1 className="text-4xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Cronograma de Limpeza • Copa</h1>
-               <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.3em] mt-1">{MONTH_NAMES[currentMY.month]} {currentMY.year}</p>
+            <div className="text-center mb-8 border-b-2 border-black pb-4">
+               <h1 className="text-4xl font-black uppercase tracking-tighter">Cronograma de Limpeza • Copa</h1>
+               <p className="text-sm font-bold uppercase tracking-[0.3em] mt-1">{MONTH_NAMES[currentMY.month]} {currentMY.year}</p>
             </div>
 
-            <div className="grid grid-cols-7 gap-3 mb-3">
+            <div className="grid grid-cols-7 gap-2 mb-2">
               {WEEKDAY_NAMES.map(wd => (
-                <div key={wd} className="text-center py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b-2 border-slate-50 dark:border-slate-800">
+                <div key={wd} className="text-center py-2 text-[10px] font-black uppercase tracking-widest border-b-2 border-black">
                   {wd}
                 </div>
               ))}
             </div>
 
-            <div className="grid grid-cols-7 gap-3">
+            <div className="grid grid-cols-7 gap-2">
               {calendarCells.map((cell, idx) => (
                 <div 
                   key={idx} 
-                  className={`min-h-[110px] rounded-[2rem] border-2 p-4 flex flex-col gap-2 transition-all ${
+                  className={`min-h-[110px] p-3 flex flex-col gap-2 ${
                     !cell 
                     ? 'border-transparent' 
-                    : cell.isSunday 
-                      ? 'bg-rose-50/30 border-rose-100 dark:bg-rose-900/5 dark:border-rose-900/20' 
-                      : cell.isHoliday
-                        ? 'bg-amber-50/30 border-amber-100 dark:bg-amber-900/5 dark:border-amber-900/20'
-                        : 'bg-white dark:bg-slate-800 border-slate-50 dark:border-slate-700/50 hover:shadow-md'
+                    : 'bg-white border-2 border-black'
                   }`}
                 >
                   {cell && (
                     <>
-                      <div className="flex justify-between items-center">
-                        <span className={`text-sm font-black ${cell.isSunday ? 'text-rose-500' : 'text-slate-300 dark:text-slate-600'}`}>
+                      <div className="flex justify-between items-center border-b border-gray-300 pb-1">
+                        <span className="text-sm font-black">
                           {cell.day}
                         </span>
-                        {cell.isHoliday && <Icon name="event_busy" className="text-amber-500 text-xs" />}
+                        {cell.isSunday && <span className="text-[9px] font-black uppercase">DOM</span>}
+                        {cell.isHoliday && <span className="text-[9px] font-black uppercase border border-black px-1">FER</span>}
                       </div>
                       <div className="flex-1 flex flex-col justify-center items-center text-center">
-                        <p className={`text-[11px] font-black uppercase leading-tight ${cell.isSunday ? 'text-rose-600' : 'text-slate-900 dark:text-slate-100'}`}>
+                        <p className="text-[12px] font-black uppercase leading-tight">
                           {cell.empName}
                         </p>
                       </div>
@@ -184,44 +181,42 @@ export const CleaningSchedule: React.FC<CleaningScheduleProps> = ({ employees, c
             </div>
 
             {/* Legend/Notes for Screenshot */}
-            <div className="mt-12 p-8 bg-slate-50 dark:bg-slate-800/50 rounded-[2.5rem] border border-slate-100 dark:border-slate-700/50 flex flex-col md:flex-row justify-between gap-8">
-                <div className="flex-1 flex flex-col gap-4">
-                    <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
-                        <Icon name="info" className="text-xl" />
+            <div className="mt-8 p-6 bg-white border-2 border-black flex flex-col md:flex-row justify-between gap-8">
+                <div className="flex-1 flex flex-col gap-3">
+                    <div className="flex items-center gap-2 border-b border-black pb-2">
                         <p className="text-xs font-black uppercase tracking-widest">Manutenção Leve (Coletiva)</p>
                     </div>
                     <ul className="space-y-2">
-                        <li className="flex items-start gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-400">
-                            <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full mt-1.5" /> 
+                        <li className="flex items-start gap-2 text-[11px] font-bold">
+                            <span className="font-black text-lg leading-none">•</span>
                             <span>Organizar bancada e mesa (<b>Quem suja, lava sua louça</b>)</span>
                         </li>
-                        <li className="flex items-start gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-400">
-                            <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full mt-1.5" /> 
+                        <li className="flex items-start gap-2 text-[11px] font-bold">
+                            <span className="font-black text-lg leading-none">•</span>
                             <span>Higienizar superfícies (bancada, mesa e micro-ondas)</span>
                         </li>
-                        <li className="flex items-start gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-400">
-                            <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full mt-1.5" /> 
+                        <li className="flex items-start gap-2 text-[11px] font-bold">
+                            <span className="font-black text-lg leading-none">•</span>
                             <span>Trocar sacos de lixo e organizar os utensílios comuns</span>
                         </li>
                     </ul>
                 </div>
 
-                <div className="flex-1 flex flex-col gap-4 border-l border-slate-200 dark:border-slate-700 pl-0 md:pl-8">
-                    <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
-                        <Icon name="schedule" className="text-xl" />
+                <div className="flex-1 flex flex-col gap-3 border-l-2 border-black pl-0 md:pl-8">
+                    <div className="flex items-center gap-2 border-b border-black pb-2">
                         <p className="text-xs font-black uppercase tracking-widest">Horário e Regras</p>
                     </div>
                     <ul className="space-y-2">
-                        <li className="flex items-start gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-400">
-                            <Icon name="history_toggle_off" className="text-sm mt-0.5 text-orange-500" /> 
+                        <li className="flex items-start gap-2 text-[11px] font-bold">
+                            <span className="font-black text-lg leading-none">•</span>
                             <span>Realizar entre <b>14h e 18h</b> (período de baixo fluxo).</span>
                         </li>
-                        <li className="flex items-start gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-400">
-                            <Icon name="groups" className="text-sm mt-0.5 text-orange-500" /> 
+                        <li className="flex items-start gap-2 text-[11px] font-bold">
+                            <span className="font-black text-lg leading-none">•</span>
                             <span>Necessário mínimo de <b>3 pessoas</b> na loja para iniciar.</span>
                         </li>
-                        <li className="flex items-start gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-400">
-                            <Icon name="notification_important" className="text-sm mt-0.5 text-rose-500" /> 
+                        <li className="flex items-start gap-2 text-[11px] font-bold">
+                            <span className="font-black text-lg leading-none">•</span>
                             <span>Se houver apenas 2 pessoas, <b>não limpar</b> e avisar no grupo.</span>
                         </li>
                     </ul>

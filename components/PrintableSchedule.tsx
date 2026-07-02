@@ -117,7 +117,8 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
               </td>
               {days.map(d => {
                 const shift = emp.shifts[monthKey]?.[d.num - 1] || 'T';
-                const display = (shift === 'T' || shift === 'N/A') ? '' : (shift === 'AT' ? '+' : (shift.startsWith('FF') ? 'FF' : shift));
+                const isWorking = shift === 'T' || ['P1', 'P2', 'P3', 'P4', 'ESTQ'].includes(shift);
+                const display = (isWorking || shift === 'N/A') ? '' : (shift === 'AT' ? '+' : (shift.startsWith('FF') ? 'FF' : shift));
                 return (
                   <td key={d.num} className="border border-black p-1 text-center font-black">
                     {display}
@@ -223,12 +224,14 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
       </div>
 
       {/* Bloco 3: RECADOS */}
-      <div className="border-2 border-black p-2 flex flex-col">
-        <h3 className="font-black uppercase mb-1 text-[11px] border-b border-black pb-0.5 text-center">RECADOS IMPORTANTES</h3>
-        <div className="text-[10px] font-bold p-1 whitespace-pre-wrap leading-tight h-16">
-          {monthNotes || ''}
+      {monthNotes && monthNotes.trim().length > 0 && (
+        <div className="border-2 border-black p-2 flex flex-col">
+          <h3 className="font-black uppercase mb-1 text-[11px] border-b border-black pb-0.5 text-center">RECADOS IMPORTANTES</h3>
+          <div className="text-[10px] font-bold p-1 whitespace-pre-wrap leading-tight h-16">
+            {monthNotes}
+          </div>
         </div>
-      </div>
+      )}
       
     </div>
   );

@@ -198,41 +198,47 @@ export const SectionManager: React.FC<SectionManagerProps> = ({
 
         {/* Sections Area */}
         <div className="flex-1 overflow-auto custom-scrollbar bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-xl p-6 lg:p-10">
-          <div id="section-capture" className="bg-white dark:bg-slate-900 p-8 w-[1120px] mx-auto">
+          <div id="section-capture" className="bg-white p-8 w-[1120px] mx-auto text-black font-sans">
             
             {/* Title for Screenshot */}
-            <div className="text-center mb-10">
-               <h1 className="text-4xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Donos de Seção • Loja</h1>
-               <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.3em] mt-1">
+            <div className="text-center mb-10 border-b-2 border-black pb-4">
+               <h1 className="text-4xl font-black uppercase tracking-tighter">Donos de Seção • Loja</h1>
+               <p className="text-sm font-bold uppercase tracking-[0.3em] mt-1">
                  {MONTH_NAMES[currentMY.month]} {currentMY.year} • {activeTab === 'Q1' ? '1ª Quinzena' : '2ª Quinzena'}
                </p>
             </div>
 
             <div className="grid grid-cols-5 gap-4">
               {SECTIONS.map(secName => (
-                <div key={secName} className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 rounded-[2rem] p-5 flex flex-col gap-4">
-                  <div className="text-center min-h-[60px] flex items-center justify-center">
-                      <h3 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase leading-tight">{secName}</h3>
+                <div key={secName} className="bg-white border-2 border-black p-4 flex flex-col gap-4">
+                  <div className="text-center min-h-[60px] flex items-center justify-center border-b border-black pb-2">
+                      <h3 className="text-sm font-black uppercase leading-tight">{secName}</h3>
                   </div>
                   
                   <div className="flex-1 flex flex-col gap-2">
-                      {(currentData[secName] || []).map(empId => (
-                          <div key={empId} className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-xl p-2 border border-slate-100 dark:border-slate-700 shadow-sm group">
+                      {(currentData[secName] || []).map(empId => {
+                         const emp = employees.find(e => e.id === empId);
+                         const cls = emp ? getShiftClassification(emp.workPeriod, false, jornadaSettings) : '';
+                         const shiftLabel = cls === 'Abertura' ? 'ABRE' : (cls === 'Fechamento' ? 'FECHA' : 'INTER');
+                         
+                         return (
+                          <div key={empId} className="flex items-center justify-between bg-white border border-black p-2 group">
                               <div className="flex items-center gap-2 truncate">
-                                <div className={`w-2 h-2 rounded-full ${getEmpShiftColor(empId).split(' ')[0]}`} />
-                                <span className="text-[11px] font-black uppercase text-slate-700 dark:text-slate-200 truncate">{getEmpName(empId)}</span>
+                                <span className="text-[9px] font-bold border border-black px-1 uppercase">{shiftLabel}</span>
+                                <span className="text-[11px] font-black uppercase truncate">{getEmpName(empId)}</span>
                               </div>
-                              <button onClick={() => handleRemoveEmp(secName, empId)} className="opacity-0 group-hover:opacity-100 text-rose-500 hover:bg-rose-50 p-1 rounded-md transition-all">
+                              <button onClick={() => handleRemoveEmp(secName, empId)} className="opacity-0 group-hover:opacity-100 p-1 transition-all no-print text-black hover:bg-gray-200 rounded">
                                 <Icon name="close" className="text-[10px]" />
                               </button>
                           </div>
-                      ))}
+                         )
+                      })}
 
                       <div className="mt-auto pt-2 no-print">
                           <select 
                               onChange={(e) => handleAddEmp(secName, e.target.value)}
                               value=""
-                              className="w-full bg-transparent border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-2 text-[10px] font-bold text-slate-400 focus:outline-none focus:border-pink-300 transition-all uppercase"
+                              className="w-full bg-white border border-black rounded-sm p-1 text-[10px] font-bold focus:outline-none transition-all uppercase"
                           >
                               <option value="" disabled>+ Adicionar</option>
                               {unassignedEmps.map(emp => (
@@ -245,24 +251,8 @@ export const SectionManager: React.FC<SectionManagerProps> = ({
               ))}
             </div>
 
-            {/* Legend for Screenshot */}
-            <div className="mt-12 flex justify-center gap-8">
-                <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-sky-100" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Abertura</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-indigo-100" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Fechamento</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-amber-100" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Intermediário</span>
-                </div>
-            </div>
-
-            <div className="mt-8 p-6 bg-pink-50 dark:bg-pink-900/10 rounded-[2rem] border border-pink-100 dark:border-pink-900/20 text-center">
-               <p className="text-[11px] font-bold text-pink-700 dark:text-pink-400 uppercase tracking-widest">
+            <div className="mt-8 p-4 bg-white border-2 border-black text-center">
+               <p className="text-[11px] font-bold uppercase tracking-widest">
                  O dono da seção é responsável por manter a área precificada, limpa e organizada durante o seu turno.
                </p>
             </div>
