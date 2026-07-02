@@ -153,52 +153,49 @@ export const PatrolSchedule: React.FC<PatrolScheduleProps> = ({ employees, curre
 
         {/* Calendar Area */}
         <div className="flex-1 overflow-auto custom-scrollbar bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-xl p-6 lg:p-10">
-          <div id="patrol-calendar-capture" className="bg-white dark:bg-slate-900 p-8 w-[1120px] mx-auto">
+          <div id="patrol-calendar-capture" className="bg-white p-8 w-[1120px] mx-auto text-black font-sans">
             
             {/* Title for Screenshot */}
-            <div className="text-center mb-10">
-               <h1 className="text-4xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Cronograma de Ronda • Loja</h1>
-               <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.3em] mt-1">{MONTH_NAMES[currentMY.month]} {currentMY.year}</p>
+            <div className="text-center mb-8 border-b-2 border-black pb-4">
+               <h1 className="text-4xl font-black uppercase tracking-tighter">Cronograma de Ronda • Loja</h1>
+               <p className="text-sm font-bold uppercase tracking-[0.3em] mt-1">{MONTH_NAMES[currentMY.month]} {currentMY.year}</p>
             </div>
 
-            <div className="grid grid-cols-7 gap-3 mb-3">
+            <div className="grid grid-cols-7 gap-2 mb-2">
               {WEEKDAY_NAMES.map(wd => (
-                <div key={wd} className="text-center py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b-2 border-slate-50 dark:border-slate-800">
+                <div key={wd} className="text-center py-2 text-[10px] font-black uppercase tracking-widest border-b-2 border-black">
                   {wd}
                 </div>
               ))}
             </div>
 
-            <div className="grid grid-cols-7 gap-3">
+            <div className="grid grid-cols-7 gap-2">
               {calendarCells.map((cell, idx) => (
                 <div 
                   key={idx} 
-                  className={`min-h-[110px] rounded-[2rem] border-2 p-3 flex flex-col gap-1 transition-all ${
+                  className={`min-h-[110px] p-2 flex flex-col gap-1 ${
                     !cell 
                     ? 'border-transparent' 
-                    : cell.isSunday 
-                      ? 'bg-rose-50/30 border-rose-100 dark:bg-rose-900/5 dark:border-rose-900/20' 
-                      : cell.isHoliday
-                        ? 'bg-amber-50/30 border-amber-100 dark:bg-amber-900/5 dark:border-amber-900/20'
-                        : 'bg-white dark:bg-slate-800 border-slate-50 dark:border-slate-700/50 hover:shadow-md'
+                    : 'bg-white border-2 border-black'
                   }`}
                 >
                   {cell && (
                     <>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className={`text-sm font-black ${cell.isSunday ? 'text-rose-500' : 'text-slate-300 dark:text-slate-600'}`}>
+                      <div className="flex justify-between items-center border-b border-gray-300 pb-1 mb-1">
+                        <span className="text-sm font-black">
                           {cell.day}
                         </span>
-                        {cell.isHoliday && <Icon name="event_busy" className="text-amber-500 text-xs" />}
+                        {cell.isSunday && <span className="text-[9px] font-black uppercase">DOM</span>}
+                        {cell.isHoliday && <span className="text-[9px] font-black uppercase border border-black px-1">FER</span>}
                       </div>
                       <div className="flex-1 flex flex-col justify-center gap-1.5">
-                        <div className="flex items-center justify-between bg-sky-50 dark:bg-sky-900/20 rounded-xl px-2 py-1">
-                          <span className="text-[8px] font-black text-sky-500 uppercase">Abert.</span>
-                          <span className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase truncate max-w-[60px]">{cell.aberturaName}</span>
+                        <div className="flex items-center justify-between border border-black rounded-sm px-1 py-1">
+                          <span className="text-[8px] font-black uppercase">ABERT.</span>
+                          <span className="text-[10px] font-black uppercase truncate max-w-[60px]">{cell.aberturaName}</span>
                         </div>
-                        <div className="flex items-center justify-between bg-indigo-50 dark:bg-indigo-900/20 rounded-xl px-2 py-1">
-                          <span className="text-[8px] font-black text-indigo-500 uppercase">Fech.</span>
-                          <span className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase truncate max-w-[60px]">{cell.fechamentoName}</span>
+                        <div className="flex items-center justify-between border border-black rounded-sm px-1 py-1">
+                          <span className="text-[8px] font-black uppercase">FECH.</span>
+                          <span className="text-[10px] font-black uppercase truncate max-w-[60px]">{cell.fechamentoName}</span>
                         </div>
                       </div>
                     </>
@@ -208,40 +205,38 @@ export const PatrolSchedule: React.FC<PatrolScheduleProps> = ({ employees, curre
             </div>
 
             {/* Legend/Notes for Screenshot */}
-            <div className="mt-12 p-8 bg-slate-50 dark:bg-slate-800/50 rounded-[2.5rem] border border-slate-100 dark:border-slate-700/50 flex flex-col md:flex-row justify-between gap-8">
-                <div className="flex-1 flex flex-col gap-4">
-                    <div className="flex items-center gap-2 text-sky-600 dark:text-sky-400">
-                        <Icon name="fact_check" className="text-xl" />
+            <div className="mt-8 p-6 bg-white border-2 border-black flex flex-col md:flex-row justify-between gap-8">
+                <div className="flex-1 flex flex-col gap-3">
+                    <div className="flex items-center gap-2 border-b border-black pb-2">
                         <p className="text-xs font-black uppercase tracking-widest">Responsabilidades (Checklist)</p>
                     </div>
                     <ul className="space-y-2">
-                        <li className="flex items-start gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-400">
-                            <div className="w-1.5 h-1.5 bg-sky-400 rounded-full mt-1.5" /> 
+                        <li className="flex items-start gap-2 text-[11px] font-bold">
+                            <span className="font-black text-lg leading-none">•</span>
                             <span>Engajar o time para <b>varrer e passar pano</b> no chão do salão.</span>
                         </li>
-                        <li className="flex items-start gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-400">
-                            <div className="w-1.5 h-1.5 bg-sky-400 rounded-full mt-1.5" /> 
+                        <li className="flex items-start gap-2 text-[11px] font-bold">
+                            <span className="font-black text-lg leading-none">•</span>
                             <span>Garantir que a loja seja <b>puxada de frente</b> (produtos organizados).</span>
                         </li>
-                        <li className="flex items-start gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-400">
-                            <div className="w-1.5 h-1.5 bg-sky-400 rounded-full mt-1.5" /> 
+                        <li className="flex items-start gap-2 text-[11px] font-bold">
+                            <span className="font-black text-lg leading-none">•</span>
                             <span>Assegurar que a loja fique <b>minimamente organizada</b> para o próximo turno.</span>
                         </li>
                     </ul>
                 </div>
 
-                <div className="flex-1 flex flex-col gap-4 border-l border-slate-200 dark:border-slate-700 pl-0 md:pl-8">
-                    <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
-                        <Icon name="schedule" className="text-xl" />
+                <div className="flex-1 flex flex-col gap-3 border-l-2 border-black pl-0 md:pl-8">
+                    <div className="flex items-center gap-2 border-b border-black pb-2">
                         <p className="text-xs font-black uppercase tracking-widest">Momentos da Ronda</p>
                     </div>
                     <ul className="space-y-2">
-                        <li className="flex items-start gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-400">
-                            <Icon name="wb_sunny" className="text-sm mt-0.5 text-amber-500" /> 
+                        <li className="flex items-start gap-2 text-[11px] font-bold">
+                            <span className="font-black text-lg leading-none">•</span>
                             <span><b>Turno Abertura:</b> Realizar a ronda e engajar a equipe antes da saída (aprox. 30min antes).</span>
                         </li>
-                        <li className="flex items-start gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-400">
-                            <Icon name="nights_stay" className="text-sm mt-0.5 text-indigo-500" /> 
+                        <li className="flex items-start gap-2 text-[11px] font-bold">
+                            <span className="font-black text-lg leading-none">•</span>
                             <span><b>Turno Fechamento:</b> Realizar a ronda ao final do dia para garantir que a loja amanheça arrumada.</span>
                         </li>
                     </ul>
