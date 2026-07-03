@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
-import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification, findSundayViolations, isWorkingShift, distributeTacticalPositions } from './hooks/useScheduleEngine';
+import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification, findSundayViolations, isWorkingShift, distributeTacticalPositions } from './hooks/useS[...]
 
 
 import { Header } from './components/Header';
@@ -43,7 +43,7 @@ const App: React.FC = () => {
   const syncStatus = useSyncStatus();
   const [showHolidayManager, setShowHolidayManager] = useState(false);
   const [showDayDetail, setShowDayDetail] = useState(false);
-  const [currentView, setCurrentView] = useState<'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays' | 'cleaning' | 'patrol' | 'sections' | 'activities' | 'routine' | 'notices' | 'requests'>('grid');
+  const [currentView, setCurrentView] = useState<'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays' | 'cleaning' | 'patrol' | 'sections' | 'activities' | 'routine' [...]
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
   const [sectionAssignments, setSectionAssignments] = useLocalStorage<Record<string, any>>('riHappySectionAssignments', {});
   const [validatedMonths, setValidatedMonths] = useLocalStorage<Record<string, boolean>>('riHappyValidatedMonths', {});
@@ -260,7 +260,7 @@ const App: React.FC = () => {
       const targetGroup = getShiftClassification(targetHour, isSunday);
 
       // 2. Get current resolved positions for this group
-      const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`);
+      const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padSta[...]
       const resolved = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, jornadaSettings);
       
       const oldPos = targetEmp.tacticalPositions?.[monthKey]?.[dayIdx] || resolved[empId];
@@ -346,10 +346,19 @@ const App: React.FC = () => {
       text += `⏱️ Jornada 5h45 + 15 min. pausa\n`;
     }
     text += `\n📍 *Posicionamento*\n`;
-    text += `🟥 P1 Caixa\n`;
-    text += `🟨 P2 Porta\n`;
-    text += `🟩 P3 Salão\n`;
-    text += `🟦 P4 Flexível\n\n`;
+    text += `🟥 *P1 – Caixa*\n`;
+    text += `• Apenas 1 colaborador no P1.\n`;
+    text += `• Responsável pelo caixa até a rendição prevista.\n`;
+    text += `• Só deixa o posto quando houver rendição ou orientação da liderança.\n\n`;
+    
+    text += `🟨 *P2 – Porta*\n`;
+    text += `• Apenas 1 colaborador no P2.\n`;
+    text += `• Responsável pela recepção e abordagem dos clientes.\n`;
+    text += `• Quando outro colaborador assumir a rendição, o titular retorna imediatamente ao seu posto de origem.\n`;
+    text += `• Não devem permanecer dois colaboradores na porta, salvo orientação da liderança.\n\n`;
+    
+    text += `🟩 *P3 – Salão*\n`;
+    text += `• Atendimento, vendas, organização e apoio à operação conforme necessidade.\n\n`;
 
     const groups: Record<string, any[]> = {};
     const folgas: string[] = [];
@@ -504,455 +513,455 @@ const App: React.FC = () => {
               pendingRequestsCount={pendingRequestsCount}
             />
 
-      <main className="flex-1 overflow-hidden p-2 sm:p-4">
-        {(() => {
-          const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
-          const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(dateStr);
-          const isSunday = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1).getDay() === 0;
-            const selectedDayResolvedPositions = resolveTacticalDay(
-              employees.filter(e => !e.isHidden && e.status === 'active'),
-              monthKey,
-              selectedDayIdx,
-              isHoliday,
-              isSunday,
-              jornadaSettings
-            );
+       <main className="flex-1 overflow-hidden p-2 sm:p-4">
+         {(() => {
+           const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
+           const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(dateStr);
+           const isSunday = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1).getDay() === 0;
+             const selectedDayResolvedPositions = resolveTacticalDay(
+               employees.filter(e => !e.isHidden && e.status === 'active'),
+               monthKey,
+               selectedDayIdx,
+               isHoliday,
+               isSunday,
+               jornadaSettings
+             );
 
-          switch (currentView) {
-            case 'grid':
-              if (isReadOnly && !isValidated) {
-                return (
-                  <div className="h-full flex flex-col items-center justify-center p-8 text-center animate-fade-in">
-                    <div className="w-24 h-24 bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-xl shadow-amber-500/10">
-                      <Icon name="construction" className="text-5xl" />
-                    </div>
-                    <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight mb-3">Escala em Construção</h3>
-                    <p className="text-slate-500 dark:text-slate-400 font-bold text-sm max-w-sm leading-relaxed">
-                      O gerente ainda está preparando a escala para este mês. 
-                      Assim que for oficializada, você poderá visualizá-la aqui.
-                    </p>
-                    <div className="mt-10 flex gap-4">
-                       <button onClick={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })} className="px-6 py-3 bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-slate-300 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all">Ver Mês Anterior</button>
-                    </div>
-                  </div>
-                );
-              }
-              return (
-                <ShiftGrid
-                  employees={employees}
-                  currentMY={currentMY}
-                  selectedDayIdx={selectedDayIdx}
-                  today={new Date()}
-                  customHolidays={customHolidays}
-                  holidayCredits={holidayCredits}
-                  filter={filter}
-                  onFilterChange={setFilter}
-                  isReadOnly={isReadOnly}
-                  isEditable={isEditable}
-                  allowRetroactive={allowRetroactive}
-                  showNotes={showNotes}
-                  onCloseNotes={() => setShowNotes(false)}
-                  resolvedPositions={selectedDayResolvedPositions}
-                  onSelectDay={setSelectedDayIdx}
-                  onUpdateShift={(empId, d, s) => {
-                    if (isReadOnly) return;
-                    setEmployees(prev => prev.map(emp => {
-                      if (emp.id !== empId) return emp;
-                      const sfs = [...(emp.shifts[monthKey] || [])];
-                      sfs[d] = s;
-                      return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
-                    }));
-                  }}
-                  onUpdateShifts={(updates) => {
-                    if (isReadOnly) return;
-                    setEmployees(prev => prev.map(emp => {
-                      const empU = updates.filter(u => u.empId === emp.id);
-                      if (empU.length === 0) return emp;
-                      const sfs = [...(emp.shifts[monthKey] || [])];
-                      empU.forEach(u => { sfs[u.dayIdx] = u.newShift; });
-                      return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
-                    }));
-                  }}
-                  onUpdateEmployeeDailyHour={(empId, dayIdx, newHour) => {
-                    if (isReadOnly) return;
-                    onUpdateEmployeeDailyHour(empId, dayIdx, newHour);
-                  }}
-                  onUpdateTacticalPosition={(empId, dayIdx, newPos) => {
-                    if (isReadOnly) return;
-                    onUpdateTacticalPosition(empId, dayIdx, newPos);
-                  }}
-                  onShareWhatsApp={handleShareWhatsApp}
-                  onOpenDayDetail={(idx) => {
-                    setSelectedDayIdx(idx);
-                    setShowDayDetail(true);
-                  }}
-                  onResetMonth={handleCreateMonth}
-                  onApplyFolgas={handleApplyFolgas}
-                  onSortearDomingo={handleSortearDomingo}
-                  onOpenAnalysis={() => setCurrentView('analysis')}
-                  onShowHolidayManager={() => setCurrentView('feriados')}
-                  onNextMonth={() => setCurrentMY(prev => prev.month === 11 ? { month: 0, year: prev.year + 1 } : { ...prev, month: prev.month + 1 })}
-                  onPrevMonth={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })}
-                  monthNotes={monthNotes[monthKey] || ''}
-                   onUpdateMonthNotes={(text) => {
-                    if (isReadOnly) return;
-                    setMonthNotes(prev => ({ ...prev, [monthKey]: text }));
-                  }}
-                  jornadaSettings={jornadaSettings}
-                  onOpenEmployeeCard={async (emp) => {
-                    if (auth.role === 'admin' || authenticatedEmployeeId === emp.id) {
-                      setSelectedEmployeeForCard(emp);
-                    } else {
-                      // Request employee password
-                      const password = await showDialog({
-                        type: 'prompt',
-                        title: `Acesso Individual: ${emp.name}`,
-                        message: 'Digite sua senha pessoal para acessar seus dados e enviar pedidos.'
-                      });
+           switch (currentView) {
+             case 'grid':
+               if (isReadOnly && !isValidated) {
+                 return (
+                   <div className="h-full flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+                     <div className="w-24 h-24 bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-xl shadow-amber-50[...]
+                       <Icon name="construction" className="text-5xl" />
+                     </div>
+                     <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight mb-3">Escala em Construção</h3>
+                     <p className="text-slate-500 dark:text-slate-400 font-bold text-sm max-w-sm leading-relaxed">
+                       O gerente ainda está preparando a escala para este mês. 
+                       Assim que for oficializada, você poderá visualizá-la aqui.
+                     </p>
+                     <div className="mt-10 flex gap-4">
+                        <button onClick={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })} className="px-6 py-3 bg-slate-100 d[...]
+                     </div>
+                   </div>
+                 );
+               }
+               return (
+                 <ShiftGrid
+                   employees={employees}
+                   currentMY={currentMY}
+                   selectedDayIdx={selectedDayIdx}
+                   today={new Date()}
+                   customHolidays={customHolidays}
+                   holidayCredits={holidayCredits}
+                   filter={filter}
+                   onFilterChange={setFilter}
+                   isReadOnly={isReadOnly}
+                   isEditable={isEditable}
+                   allowRetroactive={allowRetroactive}
+                   showNotes={showNotes}
+                   onCloseNotes={() => setShowNotes(false)}
+                   resolvedPositions={selectedDayResolvedPositions}
+                   onSelectDay={setSelectedDayIdx}
+                   onUpdateShift={(empId, d, s) => {
+                     if (isReadOnly) return;
+                     setEmployees(prev => prev.map(emp => {
+                       if (emp.id !== empId) return emp;
+                       const sfs = [...(emp.shifts[monthKey] || [])];
+                       sfs[d] = s;
+                       return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
+                     }));
+                   }}
+                   onUpdateShifts={(updates) => {
+                     if (isReadOnly) return;
+                     setEmployees(prev => prev.map(emp => {
+                       const empU = updates.filter(u => u.empId === emp.id);
+                       if (empU.length === 0) return emp;
+                       const sfs = [...(emp.shifts[monthKey] || [])];
+                       empU.forEach(u => { sfs[u.dayIdx] = u.newShift; });
+                       return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
+                     }));
+                   }}
+                   onUpdateEmployeeDailyHour={(empId, dayIdx, newHour) => {
+                     if (isReadOnly) return;
+                     onUpdateEmployeeDailyHour(empId, dayIdx, newHour);
+                   }}
+                   onUpdateTacticalPosition={(empId, dayIdx, newPos) => {
+                     if (isReadOnly) return;
+                     onUpdateTacticalPosition(empId, dayIdx, newPos);
+                   }}
+                   onShareWhatsApp={handleShareWhatsApp}
+                   onOpenDayDetail={(idx) => {
+                     setSelectedDayIdx(idx);
+                     setShowDayDetail(true);
+                   }}
+                   onResetMonth={handleCreateMonth}
+                   onApplyFolgas={handleApplyFolgas}
+                   onSortearDomingo={handleSortearDomingo}
+                   onOpenAnalysis={() => setCurrentView('analysis')}
+                   onShowHolidayManager={() => setCurrentView('feriados')}
+                   onNextMonth={() => setCurrentMY(prev => prev.month === 11 ? { month: 0, year: prev.year + 1 } : { ...prev, month: prev.month + 1 })}
+                   onPrevMonth={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })}
+                   monthNotes={monthNotes[monthKey] || ''}
+                    onUpdateMonthNotes={(text) => {
+                     if (isReadOnly) return;
+                     setMonthNotes(prev => ({ ...prev, [monthKey]: text }));
+                   }}
+                   jornadaSettings={jornadaSettings}
+                   onOpenEmployeeCard={async (emp) => {
+                     if (auth.role === 'admin' || authenticatedEmployeeId === emp.id) {
+                       setSelectedEmployeeForCard(emp);
+                     } else {
+                       // Request employee password
+                       const password = await showDialog({
+                         type: 'prompt',
+                         title: `Acesso Individual: ${emp.name}`,
+                         message: 'Digite sua senha pessoal para acessar seus dados e enviar pedidos.'
+                       });
 
-                      if (password === emp.password || (!emp.password && password === '1234')) {
-                        setAuthenticatedEmployeeId(emp.id);
-                        setSelectedEmployeeForCard(emp);
-                      } else if (password !== null) {
-                        showDialog({ title: 'Erro', message: 'Senha individual incorreta.', type: 'alert' });
-                      }
-                    }
-                  }}
-                />
-              );
-            case 'analysis':
-              return (
-                <AnalysisPanel 
-                  employees={employees} 
-                  currentMY={currentMY} 
-                  customHolidays={customHolidays} 
-                  jornadaSettings={jornadaSettings}
-                  onClose={() => setCurrentView('grid')} 
-                  onUpdateShift={(empId, dayIdx, shift) => {
-                    if (isReadOnly) return;
-                    setEmployees(prev => prev.map(emp => {
-                      if (emp.id !== empId) return emp;
-                      const sfs = [...(emp.shifts[monthKey] || [])];
-                      sfs[dayIdx] = shift;
-                      return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
-                    }));
-                  }}
-                  onUpdateHour={(empId, dayIdx, hour) => {
-                    if (isReadOnly) return;
-                    setEmployees(prev => prev.map(emp => {
-                      if (emp.id !== empId) return emp;
-                      const hrs = [...(emp.dailyHours[monthKey] || [])];
-                      hrs[dayIdx] = hour;
-                      return { ...emp, dailyHours: { ...emp.dailyHours, [monthKey]: hrs } };
-                    }));
-                  }}
-                />
-              );
-            case 'team':
-              return (
-                <TeamView 
-                  employees={employees} 
-                  isReadOnly={isReadOnly}
-                  onUpdateEmployee={onUpdateEmployee}
-                  onDeleteEmployee={onDeleteEmployee}
-                  onAddEmployee={onAddEmployee}
-                />
-              );
-            case 'data':
-              return (
-                <DataManager 
-                  syncStatus={syncStatus} 
-                  employees={employees} 
-                  setEmployees={setEmployees} 
-                  validatedMonths={validatedMonths}
-                  setValidatedMonths={setValidatedMonths}
-                  onClose={() => setCurrentView('grid')} 
-                  role={auth.role}
-                />
-              );
+                       if (password === emp.password || (!emp.password && password === '1234')) {
+                         setAuthenticatedEmployeeId(emp.id);
+                         setSelectedEmployeeForCard(emp);
+                       } else if (password !== null) {
+                         showDialog({ title: 'Erro', message: 'Senha individual incorreta.', type: 'alert' });
+                       }
+                     }
+                   }}
+                 />
+               );
+             case 'analysis':
+               return (
+                 <AnalysisPanel 
+                   employees={employees} 
+                   currentMY={currentMY} 
+                   customHolidays={customHolidays} 
+                   jornadaSettings={jornadaSettings}
+                   onClose={() => setCurrentView('grid')} 
+                   onUpdateShift={(empId, dayIdx, shift) => {
+                     if (isReadOnly) return;
+                     setEmployees(prev => prev.map(emp => {
+                       if (emp.id !== empId) return emp;
+                       const sfs = [...(emp.shifts[monthKey] || [])];
+                       sfs[dayIdx] = shift;
+                       return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
+                     }));
+                   }}
+                   onUpdateHour={(empId, dayIdx, hour) => {
+                     if (isReadOnly) return;
+                     setEmployees(prev => prev.map(emp => {
+                       if (emp.id !== empId) return emp;
+                       const hrs = [...(emp.dailyHours[monthKey] || [])];
+                       hrs[dayIdx] = hour;
+                       return { ...emp, dailyHours: { ...emp.dailyHours, [monthKey]: hrs } };
+                     }));
+                   }}
+                 />
+               );
+             case 'team':
+               return (
+                 <TeamView 
+                   employees={employees} 
+                   isReadOnly={isReadOnly}
+                   onUpdateEmployee={onUpdateEmployee}
+                   onDeleteEmployee={onDeleteEmployee}
+                   onAddEmployee={onAddEmployee}
+                 />
+               );
+             case 'data':
+               return (
+                 <DataManager 
+                   syncStatus={syncStatus} 
+                   employees={employees} 
+                   setEmployees={setEmployees} 
+                   validatedMonths={validatedMonths}
+                   setValidatedMonths={setValidatedMonths}
+                   onClose={() => setCurrentView('grid')} 
+                   role={auth.role}
+                 />
+               );
 
-            case 'feriados':
-              return (
-                <div className="max-w-xl mx-auto mt-6">
-                  <HolidayManager 
-                    year={currentMY.year}
-                    customHolidays={customHolidays}
-                    deletedNationalHolidays={deletedNationalHolidays}
-                    isReadOnly={isReadOnly}
-                    onAdd={onAddHoliday}
-                    onRemove={onRemoveHoliday}
-                    onEdit={onEditHoliday}
-                    trackingStartDate={trackingStartDate}
-                    onUpdateTrackingStartDate={setTrackingStartDate}
-                    onClose={() => setCurrentView('grid')} 
-                  />
-                </div>
-              );
-            case 'worked-holidays':
-              return (
-                <WorkedHolidaysList
-                  employees={employees}
-                  currentMY={currentMY}
-                  customHolidays={customHolidays}
-                  holidayCredits={holidayCredits}
-                  trackingStartDate={trackingStartDate}
-                  onUpdateTrackingStartDate={setTrackingStartDate}
-                  onClose={() => setCurrentView('grid')}
-                />
-              );
-            case 'cleaning':
-              return (
-                <CleaningSchedule
-                  employees={employees}
-                  currentMY={currentMY}
-                  customHolidays={customHolidays}
-                  onClose={() => setCurrentView('grid')}
-                />
-              );
-            case 'patrol':
-              return (
-                <PatrolSchedule
-                  employees={employees}
-                  currentMY={currentMY}
-                  customHolidays={customHolidays}
-                  jornadaSettings={jornadaSettings}
-                  onClose={() => setCurrentView('grid')}
-                />
-              );
-            case 'sections':
-              return (
-                <SectionManager
-                  employees={employees}
-                  currentMY={currentMY}
-                  assignments={sectionAssignments[monthKey] || { Q1: {}, Q2: {} }}
-                  onUpdateAssignments={(newData) => setSectionAssignments(prev => ({ ...prev, [monthKey]: newData }))}
-                  jornadaSettings={jornadaSettings}
-                  onClose={() => setCurrentView('grid')}
-                />
-              );
-            /*
-            case 'activities':
-              return (
-                <EssentialActivities
-                  currentMY={currentMY}
-                  customHolidays={customHolidays}
-                  onClose={() => setCurrentView('grid')}
-                />
-              );
-            case 'routine':
-              return (
-                <DailyRoutine
-                  currentMY={currentMY}
-                  customHolidays={customHolidays}
-                  onClose={() => setCurrentView('grid')}
-                />
-              );
-            case 'notices':
-              return (
-                <OperationalNotices
-                  onClose={() => setCurrentView('grid')}
-                />
-              );
-            */
-            case 'jornada':
-              return (
-                <div className="max-w-4xl mx-auto mt-6">
-                  <JornadaManager 
-                    settings={jornadaSettings}
-                    onUpdate={setJornadaSettings}
-                    onClose={() => setCurrentView('grid')}
-                    isReadOnly={isReadOnly}
-                  />
-                </div>
-              );
-            case 'requests':
-              return (
-                <RequestManager
-                  employees={employees}
-                  currentMY={currentMY}
-                  onUpdateEmployee={onUpdateEmployee}
-                  isReadOnly={isReadOnly}
-                />
-              );
-            default:
-              return null;
-          }
-        })()}
-      </main>
+             case 'feriados':
+               return (
+                 <div className="max-w-xl mx-auto mt-6">
+                   <HolidayManager 
+                     year={currentMY.year}
+                     customHolidays={customHolidays}
+                     deletedNationalHolidays={deletedNationalHolidays}
+                     isReadOnly={isReadOnly}
+                     onAdd={onAddHoliday}
+                     onRemove={onRemoveHoliday}
+                     onEdit={onEditHoliday}
+                     trackingStartDate={trackingStartDate}
+                     onUpdateTrackingStartDate={setTrackingStartDate}
+                     onClose={() => setCurrentView('grid')} 
+                   />
+                 </div>
+               );
+             case 'worked-holidays':
+               return (
+                 <WorkedHolidaysList
+                   employees={employees}
+                   currentMY={currentMY}
+                   customHolidays={customHolidays}
+                   holidayCredits={holidayCredits}
+                   trackingStartDate={trackingStartDate}
+                   onUpdateTrackingStartDate={setTrackingStartDate}
+                   onClose={() => setCurrentView('grid')}
+                 />
+               );
+             case 'cleaning':
+               return (
+                 <CleaningSchedule
+                   employees={employees}
+                   currentMY={currentMY}
+                   customHolidays={customHolidays}
+                   onClose={() => setCurrentView('grid')}
+                 />
+               );
+             case 'patrol':
+               return (
+                 <PatrolSchedule
+                   employees={employees}
+                   currentMY={currentMY}
+                   customHolidays={customHolidays}
+                   jornadaSettings={jornadaSettings}
+                   onClose={() => setCurrentView('grid')}
+                 />
+               );
+             case 'sections':
+               return (
+                 <SectionManager
+                   employees={employees}
+                   currentMY={currentMY}
+                   assignments={sectionAssignments[monthKey] || { Q1: {}, Q2: {} }}
+                   onUpdateAssignments={(newData) => setSectionAssignments(prev => ({ ...prev, [monthKey]: newData }))}
+                   jornadaSettings={jornadaSettings}
+                   onClose={() => setCurrentView('grid')}
+                 />
+               );
+             /*
+             case 'activities':
+               return (
+                 <EssentialActivities
+                   currentMY={currentMY}
+                   customHolidays={customHolidays}
+                   onClose={() => setCurrentView('grid')}
+                 />
+               );
+             case 'routine':
+               return (
+                 <DailyRoutine
+                   currentMY={currentMY}
+                   customHolidays={customHolidays}
+                   onClose={() => setCurrentView('grid')}
+                 />
+               );
+             case 'notices':
+               return (
+                 <OperationalNotices
+                   onClose={() => setCurrentView('grid')}
+                 />
+               );
+             */
+             case 'jornada':
+               return (
+                 <div className="max-w-4xl mx-auto mt-6">
+                   <JornadaManager 
+                     settings={jornadaSettings}
+                     onUpdate={setJornadaSettings}
+                     onClose={() => setCurrentView('grid')}
+                     isReadOnly={isReadOnly}
+                   />
+                 </div>
+               );
+             case 'requests':
+               return (
+                 <RequestManager
+                   employees={employees}
+                   currentMY={currentMY}
+                   onUpdateEmployee={onUpdateEmployee}
+                   isReadOnly={isReadOnly}
+                 />
+               );
+             default:
+               return null;
+           }
+         })()}
+       </main>
 
 
-      {/* Feriados Modal removed in favor of view */}
+       {/* Feriados Modal removed in favor of view */}
 
-      {showHelp && <HelpCenter onClose={() => setShowHelp(false)} />}
+       {showHelp && <HelpCenter onClose={() => setShowHelp(false)} />}
 
-      {selectedEmployeeForCard && (
-        <EmployeeScheduleCard 
-          employees={employees}
-          employee={employees.find(e => e.id === selectedEmployeeForCard.id) || selectedEmployeeForCard}
-          currentMY={currentMY}
-          customHolidays={customHolidays}
-          holidayCredits={holidayCredits[selectedEmployeeForCard.id] || []}
-          onUpdateEmployee={onUpdateEmployee}
-          isAdmin={auth.role === 'admin'}
-          isValidated={isReadOnly}
-          onClose={() => setSelectedEmployeeForCard(null)}
-        />
-      )}
+       {selectedEmployeeForCard && (
+         <EmployeeScheduleCard 
+           employees={employees}
+           employee={employees.find(e => e.id === selectedEmployeeForCard.id) || selectedEmployeeForCard}
+           currentMY={currentMY}
+           customHolidays={customHolidays}
+           holidayCredits={holidayCredits[selectedEmployeeForCard.id] || []}
+           onUpdateEmployee={onUpdateEmployee}
+           isAdmin={auth.role === 'admin'}
+           isValidated={isReadOnly}
+           onClose={() => setSelectedEmployeeForCard(null)}
+         />
+       )}
 
-      {/* Day Detail Modal */}
-      {showDayDetail && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] w-full max-w-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] overflow-hidden">
-            <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 z-10 no-print">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center">
-                  <Icon name="event_available" className="text-xl" />
-                </div>
-                <div>
-                  <h4 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Escala do Dia</h4>
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => setSelectedDayIdx(prev => Math.max(0, prev - 1))}
-                      className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"
-                    >
-                      <Icon name="chevron_left" />
-                    </button>
-                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{selectedDayIdx + 1}/{currentMY.month + 1}/{currentMY.year}</p>
-                    <button 
-                      onClick={() => setSelectedDayIdx(prev => Math.min(30, prev + 1))}
-                      className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"
-                    >
-                      <Icon name="chevron_right" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={async () => {
-                    const el = document.getElementById('day-detail-screenshot');
-                    if (el) {
-                      const dataUrl = await toPng(el, { 
-                        backgroundColor: '#ffffff', 
-                        pixelRatio: 2,
-                        style: { 
-                          padding: '30px', 
-                          borderRadius: '32px',
-                          transform: 'scale(0.9)',
-                          transformOrigin: 'center'
-                        } 
-                      });
-                      const link = document.createElement('a');
-                      const date = `${String(selectedDayIdx + 1).padStart(2, '0')}-${String(currentMY.month + 1).padStart(2, '0')}`;
-                      link.download = `escala-dia-${date}.png`;
-                      link.href = dataUrl;
-                      link.click();
-                    }
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md active:scale-95"
-                  title="Baixar Imagem"
-                >
-                  <Icon name="download" className="text-sm" /> Baixar Imagem
-                </button>
-                <button 
-                  onClick={() => handleShareWhatsApp(selectedDayIdx)}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md active:scale-95"
-                >
-                  <Icon name="content_copy" className="text-sm" /> Copiar Texto
-                </button>
-                <button onClick={() => setShowDayDetail(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400">
-                  <Icon name="close" />
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-white dark:bg-slate-900">
-              <div id="day-detail-screenshot" className="bg-white dark:bg-slate-900">
-                <DaySummaryCard 
-                  selectedDayIdx={selectedDayIdx} 
-                  employees={employees} 
-                  currentMY={currentMY} 
-                  customHolidays={customHolidays} 
-                  jornadaSettings={jornadaSettings}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+       {/* Day Detail Modal */}
+       {showDayDetail && (
+         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+           <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] w-full max-w-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] overflow-hidden">
+             <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 z-10 no-print">
+               <div className="flex items-center gap-4">
+                 <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center">
+                   <Icon name="event_available" className="text-xl" />
+                 </div>
+                 <div>
+                   <h4 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Escala do Dia</h4>
+                   <div className="flex items-center gap-2">
+                     <button 
+                       onClick={() => setSelectedDayIdx(prev => Math.max(0, prev - 1))}
+                       className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"
+                     >
+                       <Icon name="chevron_left" />
+                     </button>
+                     <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{selectedDayIdx + 1}/{currentMY.month + 1}/{currentMY.year}</p>
+                     <button 
+                       onClick={() => setSelectedDayIdx(prev => Math.min(30, prev + 1))}
+                       className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"
+                     >
+                       <Icon name="chevron_right" />
+                     </button>
+                   </div>
+                 </div>
+               </div>
+               <div className="flex items-center gap-2">
+                 <button 
+                   onClick={async () => {
+                     const el = document.getElementById('day-detail-screenshot');
+                     if (el) {
+                       const dataUrl = await toPng(el, { 
+                         backgroundColor: '#ffffff', 
+                         pixelRatio: 2,
+                         style: { 
+                           padding: '30px', 
+                           borderRadius: '32px',
+                           transform: 'scale(0.9)',
+                           transformOrigin: 'center'
+                         } 
+                       });
+                       const link = document.createElement('a');
+                       const date = `${String(selectedDayIdx + 1).padStart(2, '0')}-${String(currentMY.month + 1).padStart(2, '0')}`;
+                       link.download = `escala-dia-${date}.png`;
+                       link.href = dataUrl;
+                       link.click();
+                     }
+                   }}
+                   className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md ac[...]
+                   title="Baixar Imagem"
+                 >
+                   <Icon name="download" className="text-sm" /> Baixar Imagem
+                 </button>
+                 <button 
+                   onClick={() => handleShareWhatsApp(selectedDayIdx)}
+                   className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md [...]
+                 >
+                   <Icon name="content_copy" className="text-sm" /> Copiar Texto
+                 </button>
+                 <button onClick={() => setShowDayDetail(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400">
+                   <Icon name="close" />
+                 </button>
+               </div>
+             </div>
+             <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-white dark:bg-slate-900">
+               <div id="day-detail-screenshot" className="bg-white dark:bg-slate-900">
+                 <DaySummaryCard 
+                   selectedDayIdx={selectedDayIdx} 
+                   employees={employees} 
+                   currentMY={currentMY} 
+                   customHolidays={customHolidays} 
+                   jornadaSettings={jornadaSettings}
+                 />
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
 
-      {/* WhatsApp Modal */}
-      {waModal.show && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800">
-            <div className="flex justify-between items-center mb-6">
-              <h4 className="text-xl font-extrabold flex items-center gap-2 text-slate-900 dark:text-slate-100">
-                <Icon name="chat" className="text-green-600 dark:text-green-500" /> Escala Diária
-              </h4>
-              <button onClick={() => setWaModal({ show: false, text: '' })} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400">
-                <Icon name="close" />
-              </button>
-            </div>
-            <textarea
-              readOnly
-              className="w-full h-80 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm font-medium focus:ring-0 resize-none whitespace-pre-wrap outline-none text-slate-700 dark:text-slate-300"
-              value={waModal.text}
-            />
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={async () => { 
-                  navigator.clipboard.writeText(waModal.text); 
-                  await showDialog({ message: 'Texto da escala copiado!' }); 
-                  setWaModal({ show: false, text: '' });
-                }}
-                className="flex-1 bg-green-600 dark:bg-green-700 text-white font-extrabold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:bg-green-700 dark:hover:bg-green-600 transition-all active:scale-95"
-              >
-                <Icon name="content_copy" /> Copiar Escala
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+       {/* WhatsApp Modal */}
+       {waModal.show && (
+         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+           <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800">
+             <div className="flex justify-between items-center mb-6">
+               <h4 className="text-xl font-extrabold flex items-center gap-2 text-slate-900 dark:text-slate-100">
+                 <Icon name="chat" className="text-green-600 dark:text-green-500" /> Escala Diária
+               </h4>
+               <button onClick={() => setWaModal({ show: false, text: '' })} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400">
+                 <Icon name="close" />
+               </button>
+             </div>
+             <textarea
+               readOnly
+               className="w-full h-80 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm font-medium focus:ring-0 resize-none whitespace-pre-wrap[...]
+               value={waModal.text}
+             />
+             <div className="mt-6 flex gap-3">
+               <button
+                 onClick={async () => { 
+                   navigator.clipboard.writeText(waModal.text); 
+                   await showDialog({ message: 'Texto da escala copiado!' }); 
+                   setWaModal({ show: false, text: '' });
+                 }}
+                 className="flex-1 bg-green-600 dark:bg-green-700 text-white font-extrabold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:bg-green-700 dark:hover:bg-green-[...]
+               >
+                 <Icon name="content_copy" /> Copiar Escala
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
 
-      {/* Floating Manager Toolbar for Mobile */}
-      {!isReadOnly && currentView === 'grid' && (
-        <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-slate-200 dark:border-zinc-800 p-2 rounded-3xl shadow-2xl animate-in slide-in-from-bottom-10 duration-500 ring-1 ring-black/5 dark:ring-white/10">
-           <button 
-            onClick={() => setIsEditable(!isEditable)}
-            className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${isEditable ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}
-           >
-             <Icon name={isEditable ? 'save' : 'edit'} className="text-base" />
-             {isEditable ? 'Salvar' : 'Editar'}
-           </button>
-           
-           <div className="w-px h-8 bg-slate-200 dark:bg-zinc-800 mx-1" />
-           
-           <button 
-            onClick={() => handleShareWhatsApp(selectedDayIdx)}
-            className="flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 active:scale-90 transition-all"
-            title="Copiar WhatsApp"
-           >
-             <Icon name="content_copy" className="text-xl" />
-           </button>
-           
-           <button 
-            onClick={() => window.print()}
-            className="flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-900 dark:bg-slate-700 text-white shadow-lg shadow-slate-900/20 active:scale-90 transition-all"
-            title="Imprimir"
-           >
-             <Icon name="print" className="text-xl" />
-           </button>
-        </div>
-      )}
-      </div>
+       {/* Floating Manager Toolbar for Mobile */}
+       {!isReadOnly && currentView === 'grid' && (
+         <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-slate-200 dark:border-zin[...]
+            <button 
+             onClick={() => setIsEditable(!isEditable)}
+             className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${isEditable ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'b[...]
+            >
+              <Icon name={isEditable ? 'save' : 'edit'} className="text-base" />
+              {isEditable ? 'Salvar' : 'Editar'}
+            </button>
+            
+            <div className="w-px h-8 bg-slate-200 dark:bg-zinc-800 mx-1" />
+            
+            <button 
+             onClick={() => handleShareWhatsApp(selectedDayIdx)}
+             className="flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 active:scale-90 transition-all"
+             title="Copiar WhatsApp"
+            >
+              <Icon name="content_copy" className="text-xl" />
+            </button>
+            
+            <button 
+             onClick={() => window.print()}
+             className="flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-900 dark:bg-slate-700 text-white shadow-lg shadow-slate-900/20 active:scale-90 transition-all"
+             title="Imprimir"
+            >
+              <Icon name="print" className="text-xl" />
+            </button>
+         </div>
+       )}
+       </div>
 
-      <PrintableSchedule 
-        employees={employees} 
-        currentMY={currentMY} 
-        customHolidays={customHolidays} 
-        monthNotes={monthNotes[monthKey] || ''}
-      />
-    </>
-  );
+       <PrintableSchedule 
+         employees={employees} 
+         currentMY={currentMY} 
+         customHolidays={customHolidays} 
+         monthNotes={monthNotes[monthKey] || ''}
+       />
+     </>
+   );
 };
 
 export default App;
