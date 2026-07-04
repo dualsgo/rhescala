@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
-import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification, findSundayViolations, isWorkingShift, distributeTacticalPositions } from './hooks/useS[...]
+import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification, findSundayViolations, isWorkingShift, distributeTacticalPositions } from './hooks/useScheduleEngine';
 
 
 import { Header } from './components/Header';
@@ -43,7 +43,7 @@ const App: React.FC = () => {
   const syncStatus = useSyncStatus();
   const [showHolidayManager, setShowHolidayManager] = useState(false);
   const [showDayDetail, setShowDayDetail] = useState(false);
-  const [currentView, setCurrentView] = useState<'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays' | 'cleaning' | 'patrol' | 'sections' | 'activities' | 'routine' [...]
+  const [currentView, setCurrentView] = useState<string>('grid');
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
   const [sectionAssignments, setSectionAssignments] = useLocalStorage<Record<string, any>>('riHappySectionAssignments', {});
   const [validatedMonths, setValidatedMonths] = useLocalStorage<Record<string, boolean>>('riHappyValidatedMonths', {});
@@ -260,7 +260,7 @@ const App: React.FC = () => {
       const targetGroup = getShiftClassification(targetHour, isSunday);
 
       // 2. Get current resolved positions for this group
-      const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padSta[...]
+      const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`);
       const resolved = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, jornadaSettings);
       
       const oldPos = targetEmp.tacticalPositions?.[monthKey]?.[dayIdx] || resolved[empId];
@@ -532,7 +532,7 @@ const App: React.FC = () => {
                if (isReadOnly && !isValidated) {
                  return (
                    <div className="h-full flex flex-col items-center justify-center p-8 text-center animate-fade-in">
-                     <div className="w-24 h-24 bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-xl shadow-amber-50[...]
+                     <div className="w-24 h-24 bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-xl shadow-amber-500/10">
                        <Icon name="construction" className="text-5xl" />
                      </div>
                      <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight mb-3">Escala em Construção</h3>
@@ -541,7 +541,7 @@ const App: React.FC = () => {
                        Assim que for oficializada, você poderá visualizá-la aqui.
                      </p>
                      <div className="mt-10 flex gap-4">
-                        <button onClick={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })} className="px-6 py-3 bg-slate-100 d[...]
+                        <button onClick={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })} className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Voltar</button>
                      </div>
                    </div>
                  );
@@ -858,14 +858,14 @@ const App: React.FC = () => {
                        link.click();
                      }
                    }}
-                   className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md ac[...]
+                   className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md active:scale-95"
                    title="Baixar Imagem"
                  >
                    <Icon name="download" className="text-sm" /> Baixar Imagem
                  </button>
                  <button 
                    onClick={() => handleShareWhatsApp(selectedDayIdx)}
-                   className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md [...]
+                   className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md active:scale-95"
                  >
                    <Icon name="content_copy" className="text-sm" /> Copiar Texto
                  </button>
@@ -903,7 +903,7 @@ const App: React.FC = () => {
              </div>
              <textarea
                readOnly
-               className="w-full h-80 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm font-medium focus:ring-0 resize-none whitespace-pre-wrap[...]
+               className="w-full h-80 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm font-medium focus:ring-0 resize-none whitespace-pre-wrap"
                value={waModal.text}
              />
              <div className="mt-6 flex gap-3">
@@ -913,7 +913,7 @@ const App: React.FC = () => {
                    await showDialog({ message: 'Texto da escala copiado!' }); 
                    setWaModal({ show: false, text: '' });
                  }}
-                 className="flex-1 bg-green-600 dark:bg-green-700 text-white font-extrabold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:bg-green-700 dark:hover:bg-green-[...]
+                 className="flex-1 bg-green-600 dark:bg-green-700 text-white font-extrabold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:bg-green-700 dark:hover:bg-green-800 transition-all active:scale-95"
                >
                  <Icon name="content_copy" /> Copiar Escala
                </button>
@@ -924,10 +924,10 @@ const App: React.FC = () => {
 
        {/* Floating Manager Toolbar for Mobile */}
        {!isReadOnly && currentView === 'grid' && (
-         <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-slate-200 dark:border-zin[...]
+         <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-slate-200 dark:border-zinc-800 rounded-full p-2 shadow-2xl shadow-black/20">
             <button 
              onClick={() => setIsEditable(!isEditable)}
-             className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${isEditable ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'b[...]
+             className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${isEditable ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300'}`}
             >
               <Icon name={isEditable ? 'save' : 'edit'} className="text-base" />
               {isEditable ? 'Salvar' : 'Editar'}
