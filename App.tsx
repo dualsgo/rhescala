@@ -400,6 +400,8 @@ const App: React.FC = () => {
                       isSunday ? ['12h às 20h', '13h às 21h'] :
                       ['10h às 16h15', '10h às 18h20', '12h às 20h20', '13h40 às 22h'];
 
+    const allWorkingEmps: any[] = []; // To collect members for overlap analysis
+
     Object.keys(groups).sort((a, b) => {
       const idxA = hourOrder.indexOf(a);
       const idxB = hourOrder.indexOf(b);
@@ -415,6 +417,7 @@ const App: React.FC = () => {
 
       members.forEach((m, idx) => {
         text += `${m.posEmoji} ${m.firstName} (almoço ${lunches[idx]})\n`;
+        allWorkingEmps.push({ ...m, shiftName, lunch: lunches[idx] });
       });
       text += '\n';
     });
@@ -422,6 +425,17 @@ const App: React.FC = () => {
     if (folgas.length > 0) {
       text += `Folgas: ${folgas.join(', ')}\n`;
     }
+
+    text += `\n🤝 *Revezamento e Dinâmica*\n`;
+    const p1Abertura = allWorkingEmps.find(m => m.pos === 'P1' && m.shiftName === 'Abertura');
+    const p1Fechamento = allWorkingEmps.find(m => m.pos === 'P1' && (m.shiftName === 'Fechamento' || m.shiftName === 'Intermediário'));
+
+    if (p1Abertura && p1Fechamento) {
+      text += `• *Rendição Caixa (P1):* O(a) ${p1Fechamento.firstName} (Fechamento) rende o almoço do(a) ${p1Abertura.firstName} (Abertura). Quando o(a) ${p1Abertura.firstName} retornar, o(a) ${p1Fechamento.firstName} vai almoçar.\n`;
+      text += `• *Prioridade Caixa:* Quando ambos estiverem presentes (nenhum no almoço), o(a) ${p1Abertura.firstName} tem prioridade no P1, e o(a) ${p1Fechamento.firstName} vai para o P3 (Salão) ou P4 (Abastecimento).\n`;
+    }
+    
+    text += `• *Múltiplos Colaboradores:* Caso haja muitos colaboradores na mesma função simultaneamente, o foco deve ser cuidar da seção, puxar frentes e arrumação.\n`;
 
     if (isHoliday) {
       text += `\n⚠️ *Aviso:* Pausa para almoço 1 colaborador por vez. Saída permitida somente após o retorno do outro. Primeira saída 14h30\n`;
