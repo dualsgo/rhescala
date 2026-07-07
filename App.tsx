@@ -345,20 +345,7 @@ const App: React.FC = () => {
     if (isHoliday) {
       text += `⏱️ Jornada 5h45 + 15 min. pausa\n`;
     }
-    text += `\n📍 *Posicionamento*\n`;
-    text += `🟥 *P1 – Caixa*\n`;
-    text += `• Apenas 1 colaborador no P1.\n`;
-    text += `• Responsável pelo caixa até a rendição prevista.\n`;
-    text += `• Só deixa o posto quando houver rendição ou orientação da liderança.\n\n`;
-    
-    text += `🟨 *P2 – Porta*\n`;
-    text += `• Apenas 1 colaborador no P2.\n`;
-    text += `• Responsável pela recepção e abordagem dos clientes.\n`;
-    text += `• Quando outro colaborador assumir a rendição, o titular retorna imediatamente ao seu posto de origem.\n`;
-    text += `• Não devem permanecer dois colaboradores na porta, salvo orientação da liderança.\n\n`;
-    
-    text += `🟩 *P3 – Salão*\n`;
-    text += `• Atendimento, vendas, organização e apoio à operação conforme necessidade.\n\n`;
+    text += `\n`;
 
     const groups: Record<string, any[]> = {};
     const folgas: string[] = [];
@@ -368,7 +355,6 @@ const App: React.FC = () => {
     
     activeEmps.forEach(e => {
       const shift = e.shifts[monthKey]?.[dayIdx] || 'T';
-
       
       if (shift === 'F' || shift.startsWith('FF')) {
         folgas.push(`${e.name.split(' ')[0]} (${shift})`);
@@ -377,20 +363,13 @@ const App: React.FC = () => {
       
       if (!isWorkingShift(shift)) return; // Ignore FE, C, etc.
 
-
-
       const hour = e.dailyHours[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
       let pos = e.tacticalPositions?.[monthKey]?.[dayIdx];
       if (!pos || pos === 'AUTO') {
-        // If the shift itself is a position, use it
-        if (shift !== 'T') {
-          pos = shift;
-        } else {
-          pos = resolvedPositions[e.id];
-        }
+        if (shift !== 'T') pos = shift;
+        else pos = resolvedPositions[e.id];
       }
       const posEmoji = pos === 'P1' ? '🟥' : pos === 'P2' ? '🟨' : pos === 'P3' ? '🟩' : pos === 'P4' ? '🟦' : pos === 'ESTQ' ? '📦' : '🔹';
-
       
       if (!groups[hour]) groups[hour] = [];
       groups[hour].push({ ...e, firstName: e.name.split(' ')[0], posEmoji, pos });
@@ -399,8 +378,6 @@ const App: React.FC = () => {
     const hourOrder = isHoliday ? ['12h às 18h', '13h às 19h', '14h às 20h', '15h às 21h'] : 
                       isSunday ? ['12h às 20h', '13h às 21h'] :
                       ['10h às 16h15', '10h às 18h20', '12h às 20h20', '13h40 às 22h'];
-
-    const allWorkingEmps: any[] = []; // To collect members for overlap analysis
 
     Object.keys(groups).sort((a, b) => {
       const idxA = hourOrder.indexOf(a);
@@ -417,7 +394,6 @@ const App: React.FC = () => {
 
       members.forEach((m, idx) => {
         text += `${m.posEmoji} ${m.firstName} (almoço ${lunches[idx]})\n`;
-        allWorkingEmps.push({ ...m, shiftName, lunch: lunches[idx] });
       });
       text += '\n';
     });
@@ -426,20 +402,68 @@ const App: React.FC = () => {
       text += `Folgas: ${folgas.join(', ')}\n`;
     }
 
-    text += `\n🤝 *Revezamento e Dinâmica*\n`;
+    if (isHoliday) {
+      text += `\n⚠️ *Aviso:* Pausa para almoço 1 colaborador por vez. Saída permitida somente após o retorno do outro. Primeira saída 14h30\n`;
+    }
+
+    setWaModal({ show: true, text });
+  }, [currentMY, employees, monthKey, customHolidays]);
+
+  const handleShareApoioWhatsApp = useCallback((dayIdx: number) => {
+    const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+    const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(dateStr);
+    const date = new Date(currentMY.year, currentMY.month, dayIdx + 1);
+    const isSunday = date.getDay() === 0;
+
+    let text = `🛠️ *Apoio Operacional*\n\n`;
+
+    text += `📍 *Posicionamento Diário*\n`;
+    text += `🟥 *P1 – Caixa*\n`;
+    text += `• Só deixa o posto quando houver rendição.\n`;
+    text += `• Sem filas: não ficar parado. Adiantar saquinhos de presente e alinhar produtos próximos.\n\n`;
+    
+    text += `🟨 *P2 – Porta*\n`;
+    text += `• Foco 100% no fluxo. Tocar o sino em ondas de clientes.\n`;
+    text += `• Quando assumir rendição, retornar imediatamente ao posto de origem depois.\n\n`;
+    
+    text += `🟩 *P3 – Salão / Anfitrião*\n`;
+    text += `• Largar qualquer tarefa de arrumação imediatamente se visualizar um cliente.\n`;
+    text += `• 2º nível de apoio ao caixa (acionado quando P4 não der conta).\n\n`;
+
+    text += `🟦 *P4 – Suporte Flexível*\n`;
+    text += `• Atendimento digital (WhatsApp da loja), precificação e abastecimento (só sem clientes).\n`;
+    text += `• 1º nível de apoio ao caixa: largar tudo e ir se o sino tocar.\n\n`;
+
+    text += `⚡ *Dança de Cobertura*\n`;
+    text += `• Ida p/ Caixa: Vai o P4 > P3 > P2 (emergência extrema).\n`;
+    text += `• Retorno: P2 > P3 > P4.\n\n`;
+
+    const activeEmps = employees.filter(e => !e.isHidden && e.status === 'active');
+    const resolvedPositions = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, jornadaSettings);
+    
+    const allWorkingEmps: any[] = [];
+    activeEmps.forEach(e => {
+      const shift = e.shifts[monthKey]?.[dayIdx] || 'T';
+      if (!isWorkingShift(shift)) return;
+      const hour = e.dailyHours[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
+      const shiftName = getShiftClassification(hour, isSunday);
+      let pos = e.tacticalPositions?.[monthKey]?.[dayIdx];
+      if (!pos || pos === 'AUTO') {
+        pos = (shift !== 'T') ? shift : resolvedPositions[e.id];
+      }
+      allWorkingEmps.push({ ...e, firstName: e.name.split(' ')[0], pos, shiftName });
+    });
+
     const p1Abertura = allWorkingEmps.find(m => m.pos === 'P1' && m.shiftName === 'Abertura');
     const p1Fechamento = allWorkingEmps.find(m => m.pos === 'P1' && (m.shiftName === 'Fechamento' || m.shiftName === 'Intermediário'));
 
     if (p1Abertura && p1Fechamento) {
-      text += `• *Rendição Caixa (P1):* O(a) ${p1Fechamento.firstName} (Fechamento) rende o almoço do(a) ${p1Abertura.firstName} (Abertura). Quando o(a) ${p1Abertura.firstName} retornar, o(a) ${p1Fechamento.firstName} vai almoçar.\n`;
-      text += `• *Prioridade Caixa:* Quando ambos estiverem presentes (nenhum no almoço), o(a) ${p1Abertura.firstName} tem prioridade no P1, e o(a) ${p1Fechamento.firstName} vai para o P3 (Salão) ou P4 (Abastecimento).\n`;
+      text += `🤝 *Revezamento (P1)*\n`;
+      text += `• O(a) ${p1Fechamento.firstName} (Fechamento) rende o almoço do(a) ${p1Abertura.firstName} (Abertura). Quando o(a) ${p1Abertura.firstName} retornar, o(a) ${p1Fechamento.firstName} almoça.\n`;
+      text += `• Quando ambos presentes, o(a) ${p1Abertura.firstName} tem prioridade no P1, e o(a) ${p1Fechamento.firstName} atua no P3/P4.\n\n`;
     }
-    
-    text += `• *Múltiplos Colaboradores:* Caso haja muitos colaboradores na mesma função simultaneamente, o foco deve ser cuidar da seção, puxar frentes e arrumação.\n`;
 
-    if (isHoliday) {
-      text += `\n⚠️ *Aviso:* Pausa para almoço 1 colaborador por vez. Saída permitida somente após o retorno do outro. Primeira saída 14h30\n`;
-    }
+    text += `*Tempo Ocioso:* P1 abastece o balcão/saquinhos. Se tiver muitos no P3, foquem em arrumar a seção e abastecer no baixo fluxo.\n`;
 
     setWaModal({ show: true, text });
   }, [currentMY, employees, monthKey, customHolidays]);
@@ -496,6 +520,7 @@ const App: React.FC = () => {
               onMonthChange={setCurrentMY}
               onFilterChange={setFilter}
               onShareWhatsApp={() => handleShareWhatsApp(selectedDayIdx)}
+              onShareApoioWhatsApp={() => handleShareApoioWhatsApp(selectedDayIdx)}
               syncStatus={syncStatus}
               selectedDayIdx={selectedDayIdx}
               isReadOnly={auth.role === 'viewer'}

@@ -5,6 +5,7 @@ import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings } from '../typ
 import { Icon } from './Icon';
 import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getDefaultHourForDay } from '../constants';
 import { getShiftClassification, isWorkingShift } from '../hooks/useScheduleEngine';
+import { OperationalGuideModal } from './OperationalGuideModal';
 
 import { HolidayCredit } from '../hooks/useHolidayCredits';
 
@@ -82,6 +83,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLegend, setShowLegend] = useState(false);
+  const [showGuideModal, setShowGuideModal] = useState(false);
 
   // Auto-scroll to today on mount or when month changes to current month
   useEffect(() => {
@@ -155,6 +157,15 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     <div className="flex flex-col gap-4 relative h-full">
       {/* Top Controls: Exibir + Group Filters + Legend */}
       <div className="flex flex-col gap-2">
+        {isReadOnly && (
+          <button 
+            onClick={() => setShowGuideModal(true)}
+            className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-xl shadow-lg flex items-center justify-center gap-3 transition-transform hover:scale-[1.02] active:scale-95 animate-in fade-in"
+          >
+            <Icon name="menu_book" className="text-xl animate-pulse" />
+            <span className="font-black uppercase tracking-widest text-sm text-center">📖 Manual de Boas Práticas da Loja</span>
+          </button>
+        )}
         <div className="flex flex-wrap items-center gap-2">
             {/* Period Filters */}
             <div className="flex items-center bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 p-1 rounded-xl shadow-sm w-full md:w-auto">
@@ -667,6 +678,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             {monthNotes.length} / 450 caracteres
           </div>
         </div>
+      )}
+
+      {showGuideModal && (
+        <OperationalGuideModal onClose={() => setShowGuideModal(false)} />
       )}
     </div>
   );

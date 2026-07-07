@@ -11,6 +11,7 @@ interface HeaderProps {
   onMonthChange: (my: MonthYear) => void;
   onFilterChange: (f: any) => void;
   onShareWhatsApp: () => void;
+  onShareApoioWhatsApp: () => void;
   syncStatus: SyncStatus;
   selectedDayIdx: number;
   // New Action Props
@@ -44,6 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
   onMonthChange,
   onFilterChange,
   onShareWhatsApp,
+  onShareApoioWhatsApp,
   syncStatus,
   selectedDayIdx,
   isReadOnly,
@@ -356,7 +358,14 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={onShareWhatsApp}
                 className="hidden lg:flex bg-green-600 text-white px-4 py-1.5 rounded-lg text-[11px] font-black uppercase items-center gap-2 hover:bg-green-700 transition-all shadow-sm"
               >
-                <Icon name="content_copy" className="text-sm" /> Copiar Texto
+                <Icon name="content_copy" className="text-sm" /> Copiar Escala
+              </button>
+
+              <button
+                onClick={onShareApoioWhatsApp}
+                className="hidden lg:flex bg-blue-600 text-white px-4 py-1.5 rounded-lg text-[11px] font-black uppercase items-center gap-2 hover:bg-blue-700 transition-all shadow-sm"
+              >
+                <Icon name="info" className="text-sm" /> Copiar Apoio
               </button>
               
               <button 
@@ -499,9 +508,14 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
 
               {!isReadOnly && (
-                <button onClick={() => { onShareWhatsApp(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10">
-                  <Icon name="content_copy" className="text-xl" /> Copiar para WhatsApp
-                </button>
+                <>
+                  <button onClick={() => { onShareWhatsApp(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10">
+                    <Icon name="content_copy" className="text-xl" /> Copiar Escala
+                  </button>
+                  <button onClick={() => { onShareApoioWhatsApp(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-blue-600 bg-blue-50 dark:bg-blue-900/10 mt-2">
+                    <Icon name="info" className="text-xl" /> Copiar Apoio
+                  </button>
+                </>
               )}
               <button onClick={() => { onShowHelp(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-slate-500 hover:bg-slate-50">
                 <Icon name="help_outline" className="text-xl" /> Ajuda e FAQs
