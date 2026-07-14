@@ -402,6 +402,36 @@ const App: React.FC = () => {
       text += `Folgas: ${folgas.join(', ')}\n`;
     }
 
+    const workingEmps = activeEmps.filter(e => isWorkingShift(e.shifts[monthKey]?.[dayIdx] || 'T'));
+    if (workingEmps.length > 0) {
+      const sortedWorking = [...workingEmps].sort((a, b) => a.name.localeCompare(b.name));
+      const digitalIdx = (dayIdx * 7 + currentMY.month * 11) % sortedWorking.length;
+      const digitalPerson = sortedWorking[digitalIdx];
+
+      text += `\n📱 *Digital (WhatsApp da Loja)*\n`;
+      text += `• Responsável: ${digitalPerson.name.split(' ')[0]}\n`;
+
+      const shiftGroups: Record<string, any[]> = {};
+      workingEmps.forEach(e => {
+        const hour = e.dailyHours[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
+        const shiftName = getShiftClassification(hour, isSunday);
+        if (!shiftGroups[shiftName]) shiftGroups[shiftName] = [];
+        shiftGroups[shiftName].push(e);
+      });
+
+      text += `\n🛍️ *Retiradas Online*\n`;
+      Object.keys(shiftGroups).sort().forEach(shiftName => {
+        const empsInShift = shiftGroups[shiftName].sort((a, b) => a.name.localeCompare(b.name));
+        if (empsInShift.length >= 2) {
+          const idx1 = (dayIdx * 3 + currentMY.month * 5 + shiftName.length) % empsInShift.length;
+          const idx2 = (idx1 + 1) % empsInShift.length;
+          text += `• ${shiftName}: ${empsInShift[idx1].name.split(' ')[0]} (Cobertura: ${empsInShift[idx2].name.split(' ')[0]})\n`;
+        } else if (empsInShift.length === 1) {
+          text += `• ${shiftName}: ${empsInShift[0].name.split(' ')[0]} (Sem cobertura)\n`;
+        }
+      });
+    }
+
     if (isHoliday) {
       text += `\n⚠️ *Aviso:* Pausa para almoço 1 colaborador por vez. Saída permitida somente após o retorno do outro. Primeira saída 14h30\n`;
     }
