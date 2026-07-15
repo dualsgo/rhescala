@@ -84,6 +84,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLegend, setShowLegend] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
+  const [contractFilter, setContractFilter] = useState<'all' | 'clt' | 'sazonal'>('all');
 
   // Auto-scroll to today on mount or when month changes to current month
   useEffect(() => {
@@ -186,6 +187,26 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Contract Filter */}
+            <div className="flex items-center bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 p-1 rounded-xl shadow-sm w-full md:w-auto">
+               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2 hidden sm:block whitespace-nowrap">Contrato:</span>
+               <div className="flex items-center w-full md:w-auto">
+                 {[
+                   { id: 'all', label: 'Todos' },
+                   { id: 'clt', label: 'Efetivos' },
+                   { id: 'sazonal', label: 'Sazonais' }
+                 ].map(f => (
+                   <button
+                     key={f.id}
+                     onClick={() => setContractFilter(f.id as any)}
+                     className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all flex-1 md:flex-none text-center ${contractFilter === f.id ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}
+                   >
+                     {f.label}
+                   </button>
+                 ))}
+               </div>
             </div>
 
             {/* Group Filters */}
@@ -345,6 +366,9 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 employees.forEach(emp => {
                   if (emp.isHidden || emp.status !== 'active') return;
                   
+                  if (contractFilter === 'clt' && emp.contractType === 'Sazonal') return;
+                  if (contractFilter === 'sazonal' && emp.contractType !== 'Sazonal') return;
+
                   const hour = (emp.dailyHours[monthKey] || [])[selectedDayIdx] || emp.workPeriod;
                   const isSun = days[selectedDayIdx]?.isSunday;
                   const shift = (emp.shifts[monthKey] || [])[selectedDayIdx] || 'T';
