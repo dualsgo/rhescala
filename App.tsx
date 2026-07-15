@@ -404,12 +404,57 @@ const App: React.FC = () => {
 
     const workingEmps = activeEmps.filter(e => isWorkingShift(e.shifts[monthKey]?.[dayIdx] || 'T'));
     if (workingEmps.length > 0) {
-      const sortedWorking = [...workingEmps].sort((a, b) => a.name.localeCompare(b.name));
-      const digitalIdx = (dayIdx * 7 + currentMY.month * 11) % sortedWorking.length;
-      const digitalPerson = sortedWorking[digitalIdx];
+      const empsWithPos = workingEmps.map(e => {
+        const shift = e.shifts[monthKey]?.[dayIdx] || 'T';
+        const hour = e.dailyHours[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
+        const shiftName = getShiftClassification(hour, isSunday);
+        let pos = e.tacticalPositions?.[monthKey]?.[dayIdx];
+        if (!pos || pos === 'AUTO') {
+          if (shift !== 'T') pos = shift;
+          else pos = resolvedPositions[e.id];
+        }
+        return { ...e, shiftName, pos };
+      });
+
+      const getPriority = (pos: string) => {
+        if (pos === 'P3') return 1;
+        if (pos === 'P1') return 2;
+        if (pos === 'P4') return 3;
+        return 4;
+      };
+
+      const pickDigital = (group: any[]) => {
+        if (group.length === 0) return null;
+        const minPriority = Math.min(...group.map(e => getPriority(e.pos)));
+        const candidates = group.filter(e => getPriority(e.pos) === minPriority);
+        candidates.sort((a, b) => a.name.localeCompare(b.name));
+        const digitalIdx = (dayIdx * 7 + currentMY.month * 11) % candidates.length;
+        return candidates[digitalIdx];
+      };
+
+      const turno1 = empsWithPos.filter(e => e.shiftName === 'Abertura');
+      const turno2 = empsWithPos.filter(e => e.shiftName !== 'Abertura');
+
+      let digital1 = pickDigital(turno1);
+      let digital2 = pickDigital(turno2);
+      
+      if (!digital1 && turno2.length > 1) {
+        const remaining = turno2.filter(e => e.id !== digital2?.id);
+        digital1 = pickDigital(remaining);
+      } else if (!digital2 && turno1.length > 1) {
+        const remaining = turno1.filter(e => e.id !== digital1?.id);
+        digital2 = pickDigital(remaining);
+      }
 
       text += `\n📱 *Digital (WhatsApp da Loja)*\n`;
-      text += `• Responsável: ${digitalPerson.name.split(' ')[0]}\n`;
+      const digitals = [digital1, digital2].filter(Boolean);
+      if (digitals.length > 0) {
+        digitals.forEach(d => {
+          text += `• ${d.shiftName}: ${d.name.split(' ')[0]}\n`;
+        });
+      } else {
+        text += `• Responsável: Não definido\n`;
+      }
 
       const shiftGroups: Record<string, any[]> = {};
       workingEmps.forEach(e => {
