@@ -423,12 +423,14 @@ const App: React.FC = () => {
         return 4;
       };
 
-      const pickDigital = (group: any[]) => {
-        if (group.length === 0) return null;
-        const minPriority = Math.min(...group.map(e => getPriority(e.pos)));
-        const candidates = group.filter(e => getPriority(e.pos) === minPriority);
+      const pickDigital = (group: any[], excludeIds: string[] = [], seedOffset: number = 0) => {
+        let available = group.filter(e => !excludeIds.includes(e.id));
+        if (available.length === 0) available = group;
+        if (available.length === 0) return null;
+        const minPriority = Math.min(...available.map(e => getPriority(e.pos)));
+        const candidates = available.filter(e => getPriority(e.pos) === minPriority);
         candidates.sort((a, b) => a.name.localeCompare(b.name));
-        const digitalIdx = (dayIdx * 7 + currentMY.month * 11) % candidates.length;
+        const digitalIdx = (dayIdx * 7 + currentMY.month * 11 + seedOffset) % candidates.length;
         return candidates[digitalIdx];
       };
 
@@ -456,25 +458,27 @@ const App: React.FC = () => {
         text += `• Responsável: Não definido\n`;
       }
 
-      const shiftGroups: Record<string, any[]> = {};
-      workingEmps.forEach(e => {
-        const hour = e.dailyHours[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
-        const shiftName = getShiftClassification(hour, isSunday);
-        if (!shiftGroups[shiftName]) shiftGroups[shiftName] = [];
-        shiftGroups[shiftName].push(e);
-      });
+      const excludeForRetiradas = [digital1?.id, digital2?.id].filter(Boolean) as string[];
+      let retirada1 = pickDigital(turno1, excludeForRetiradas, 3);
+      let retirada2 = pickDigital(turno2, excludeForRetiradas, 3);
+
+      if (!retirada1 && turno2.length > 1) {
+        const remaining = turno2.filter(e => e.id !== retirada2?.id);
+        retirada1 = pickDigital(remaining, excludeForRetiradas, 3);
+      } else if (!retirada2 && turno1.length > 1) {
+        const remaining = turno1.filter(e => e.id !== retirada1?.id);
+        retirada2 = pickDigital(remaining, excludeForRetiradas, 3);
+      }
 
       text += `\n🛍️ *Retiradas Online*\n`;
-      Object.keys(shiftGroups).sort().forEach(shiftName => {
-        const empsInShift = shiftGroups[shiftName].sort((a, b) => a.name.localeCompare(b.name));
-        if (empsInShift.length >= 2) {
-          const idx1 = (dayIdx * 3 + currentMY.month * 5 + shiftName.length) % empsInShift.length;
-          const idx2 = (idx1 + 1) % empsInShift.length;
-          text += `• ${shiftName}: ${empsInShift[idx1].name.split(' ')[0]} (Cobertura: ${empsInShift[idx2].name.split(' ')[0]})\n`;
-        } else if (empsInShift.length === 1) {
-          text += `• ${shiftName}: ${empsInShift[0].name.split(' ')[0]} (Sem cobertura)\n`;
-        }
-      });
+      const retiradas = [retirada1, retirada2].filter(Boolean);
+      if (retiradas.length > 0) {
+        retiradas.forEach(r => {
+          text += `• ${r.shiftName}: ${r.name.split(' ')[0]}\n`;
+        });
+      } else {
+        text += `• Responsável: Não definido\n`;
+      }
     }
 
     if (isHoliday) {
