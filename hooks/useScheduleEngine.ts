@@ -215,6 +215,7 @@ export function buildSundayAssignments(
     // give rest to the same index-0 employees
     const rotationOffset = month % Math.max(activeRegular.length, 1);
     const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const rotIdx = (emp: Employee) => (activeRegular.indexOf(emp) - rotationOffset + activeRegular.length) % activeRegular.length;
 
     for (const sundayDayIdx of sundaysInMonth) {
         const dayNum = sundayDayIdx + 1;
@@ -225,56 +226,69 @@ export function buildSundayAssignments(
             emp => !isSundayUnavailable(emp, dateStr, monthKey, sundayDayIdx)
         );
 
-        // How many can rest while keeping ≥ MIN_SUNDAY_WORKERS and ≥ 1
-        const maxRestIdeal = Math.max(0, available.length - settings.minSundayWorkers);
-        const maxRestSafe = available.length > 0
-            ? Math.min(maxRestIdeal, available.length - 1)
-            : 0;
+        // Separa quem já atingiu o limite inegociável (streak >= 2)
+        const mustRest = available.filter(emp => (consecutive.get(emp.id) ?? 0) >= 2);
+        const canWork = available.filter(emp => (consecutive.get(emp.id) ?? 0) < 2);
+
+        // Separa elegíveis entre regulares e estoquistas
+        const regularCanWork = canWork.filter(emp => emp.cargo !== 'Estoquista');
+        const estoquistasCanWork = canWork.filter(emp => emp.cargo === 'Estoquista');
 
         const resting = new Set<string>();
+        const working = new Set<string>();
 
-        if (maxRestSafe > 0) {
-            // Rotated index for tiebreaking (fair across months)
-            const rotIdx = (emp: Employee) =>
-                (activeRegular.indexOf(emp) - rotationOffset + activeRegular.length) % activeRegular.length;
+        // 1. Quem TEM que folgar, folga (Restrição inegociável)!
+        mustRest.forEach(emp => resting.add(emp.id));
 
-            // TIER 1: MUST rest — streak ≥ 2 (3rd consecutive would violate rule)
-            const mustRest = available
-                .filter(emp => (consecutive.get(emp.id) ?? 0) >= 2)
-                .sort((a, b) => {
-                    const sa = consecutive.get(a.id) ?? 0;
-                    const sb = consecutive.get(b.id) ?? 0;
-                    return sb - sa || rotIdx(a) - rotIdx(b);
-                });
+        const neededWorkers = settings.minSundayWorkers;
 
-            // TIER 2: PREFER rest — streak = 1 (alternating, worked last Sunday)
-            const preferRest = available
-                .filter(emp => (consecutive.get(emp.id) ?? 0) === 1)
-                .sort((a, b) => rotIdx(a) - rotIdx(b));
+        // Ordena para priorizar quem tem streak MENOR a trabalhar primeiro (ou seja, streak 0 trabalha antes de streak 1)
+        regularCanWork.sort((a, b) => {
+            const streakA = consecutive.get(a.id) ?? 0;
+            const streakB = consecutive.get(b.id) ?? 0;
+            if (streakA !== streakB) return streakA - streakB;
+            return rotIdx(a) - rotIdx(b);
+        });
 
-            // TIER 3: optional — streak = 0 (just rested; fill only if slots remain)
-            const optionalRest = available
-                .filter(emp => (consecutive.get(emp.id) ?? 0) === 0)
-                .sort((a, b) => rotIdx(a) - rotIdx(b));
+        estoquistasCanWork.sort((a, b) => {
+            const streakA = consecutive.get(a.id) ?? 0;
+            const streakB = consecutive.get(b.id) ?? 0;
+            if (streakA !== streakB) return streakA - streakB;
+            return rotIdx(a) - rotIdx(b);
+        });
 
-            const fillOrder = [...mustRest, ...preferRest, ...optionalRest];
-
-            let slots = maxRestSafe;
-            for (const emp of fillOrder) {
-                if (slots <= 0) break;
-                if (!resting.has(emp.id)) { resting.add(emp.id); slots--; }
+        // 2. Aloca Atendentes/Fiscais/Regulares até atingir a meta
+        for (const emp of regularCanWork) {
+            if (working.size < neededWorkers) {
+                working.add(emp.id);
+            } else {
+                resting.add(emp.id);
             }
         }
 
-        // Record
+        // 3. Se ainda faltar, completa com Estoquistas
+        for (const emp of estoquistasCanWork) {
+            if (working.size < neededWorkers) {
+                working.add(emp.id);
+            } else {
+                resting.add(emp.id);
+            }
+        }
+
+        // Record assignments
         for (const empId of resting) assignments.get(empId)!.add(sundayDayIdx);
 
-        // Update consecutive counts for available pool only
-        for (const emp of available) {
-            consecutive.set(
-                emp.id,
-                resting.has(emp.id) ? 0 : (consecutive.get(emp.id) ?? 0) + 1
-            );
+        // Atualizar streaks.
+        // Se a pessoa NÃO estava available (férias, folga forçada, etc), a sequência DELA zera.
+        for (const emp of activeRegular) {
+            if (!available.includes(emp)) {
+                consecutive.set(emp.id, 0); // Ausência quebra o ciclo, começa do 0.
+            } else {
+                consecutive.set(
+                    emp.id,
+                    resting.has(emp.id) ? 0 : (consecutive.get(emp.id) ?? 0) + 1
+                );
+            }
         }
     }
 
