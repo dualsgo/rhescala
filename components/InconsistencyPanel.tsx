@@ -69,14 +69,7 @@ export function detectInconsistencies(
   today:      Date
 ): Inconsistency[] {
   const results:    Inconsistency[] = [];
-  const monthKey    = `${year}-${String(month + 1).padStart(2, '0')}`;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
-  const isPastMonth = year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth());
-  const todayIdx = today.getDate() - 1;
-
-  if (isPastMonth) return [];
 
   // Previous month work streaks & consecutive Sundays
   const prevWorkStreaks = getPrevMonthWorkStreak(employees, year, month);
@@ -88,105 +81,101 @@ export function detectInconsistencies(
     if (new Date(year, month, d + 1).getDay() === 0) sundaysThisMonth.push(d);
   }
 
-    for (const emp of employees) {
-      if (emp.status !== 'active' || emp.isYoungApprentice) continue;
+  for (const emp of employees) {
+    if (emp.status !== 'active' || emp.isYoungApprentice) continue;
 
-      // ── Rule 1: 6×1 — 7 or more consecutive working days (including cross-month) ──
-      const prevStreak  = prevWorkStreaks.get(emp.id) || 0;
-      let workStreak    = prevStreak;
-      let streakStartFromPrev = prevStreak > 0;
-      let streakStart   = 0;
+    // ── Rule 1: 6×1 — 7 or more consecutive working days (including cross-month) ──
+    const prevStreak  = prevWorkStreaks.get(emp.id) || 0;
+    let workStreak    = prevStreak;
+    let streakStartFromPrev = prevStreak > 0;
+    let streakStart   = 0;
 
-      for (let d = 0; d < daysInMonth; d++) {
-        const s = getEffectiveShift(emp, year, month, d);
+    for (let d = 0; d < daysInMonth; d++) {
+      const s = getEffectiveShift(emp, year, month, d);
 
-        if (isActivityShift(s)) {
-          if (workStreak === 0) { streakStart = d; streakStartFromPrev = false; }
-          workStreak++;
+      if (isActivityShift(s)) {
+        if (workStreak === 0) { streakStart = d; streakStartFromPrev = false; }
+        workStreak++;
 
-          if (workStreak > 6) {
-            const fixDay = d;
-            const fixDayNum = fixDay + 1;
-            const detailMsg = streakStartFromPrev && streakStart === 0
-              ? `7º dia consecutivo de trabalho sem folga (${prevStreak} dia(s) no mês anterior + ${d + 1} neste mês). Folga obrigatória no dia ${fixDayNum}!`
-              : `7º dia consecutivo de trabalho sem folga (dia ${streakStart + 1} → dia ${d + 1}). Folga obrigatória no dia ${fixDayNum}!`;
-
-            results.push({
-              id:       `${emp.id}-6x1-${streakStart}-${d}`,
-              empId:    emp.id,
-              empName:  emp.name,
-              type:     'consecutive_work',
-              severity: 'error',
-              detail:   detailMsg,
-              dayIdx:   d,
-              fix: {
-                label:    `Dar folga no 7º dia (dia ${fixDayNum})`,
-                empId:    emp.id,
-                dayIdx:   fixDay,
-                newShift: 'F',
-              },
-            });
-            // Assume the fix is applied so we can keep checking the rest of the month!
-            workStreak = 0;
-            streakStartFromPrev = false;
-          }
-        } else {
-          workStreak    = 0;
-          streakStartFromPrev = false;
-        }
-      }
-
-      // ── Rule 2: 3+ consecutive Sundays (considering retro) ────────────────
-      const initialStreak = prevMonthConsecs.get(emp.id) || 0;
-      let currentStreak = initialStreak;
-      let streakIndices: number[] = []; 
-
-      for (const sunIdx of sundaysThisMonth) {
-        const s = getEffectiveShift(emp, year, month, sunIdx);
-
-        if (isActivityShift(s)) {
-          currentStreak++;
-          streakIndices.push(sunIdx);
-        } else {
-          currentStreak = 0;
-          streakIndices = [];
-        }
-
-        if (currentStreak >= 3) {
-          const domDays = streakIndices.map(d => d + 1).join(', ');
-          const detailPrefix = initialStreak > 0 && streakIndices.length < currentStreak 
-            ? `Iniciou no mês anterior (${initialStreak} dom. anterior${initialStreak > 1 ? 'es' : ''}), totalizando ${currentStreak} domingos seguidos: ` 
-            : '';
+        if (workStreak > 6) {
+          const fixDay = d;
+          const fixDayNum = fixDay + 1;
+          const detailMsg = streakStartFromPrev && streakStart === 0
+            ? `7º dia consecutivo de trabalho sem folga (${prevStreak} dia(s) no mês anterior + ${d + 1} neste mês). Folga obrigatória no dia ${fixDayNum}!`
+            : `7º dia consecutivo de trabalho sem folga (dia ${streakStart + 1} → dia ${d + 1}). Folga obrigatória no dia ${fixDayNum}!`;
 
           results.push({
-            id:       `${emp.id}-sun-${sunIdx}`,
+            id:       `${emp.id}-6x1-${streakStart}-${d}`,
             empId:    emp.id,
             empName:  emp.name,
-            type:     'consecutive_sunday',
+            type:     'consecutive_work',
             severity: 'error',
-            detail:   `${detailPrefix}${currentStreak} domingos seguidos trabalhados (mês atual: ${domDays || 'nenhum'})`,
-            dayIdx:   sunIdx,
+            detail:   detailMsg,
+            dayIdx:   d,
             fix: {
-              label:    `Dar folga no domingo dia ${sunIdx + 1}`,
+              label:    `Dar folga no 7º dia (dia ${fixDayNum})`,
               empId:    emp.id,
-              dayIdx:   sunIdx,
+              dayIdx:   fixDay,
               newShift: 'F',
             },
           });
+          // Assume the fix is applied so we can keep checking the rest of the month!
+          workStreak = 0;
+          streakStartFromPrev = false;
         }
+      } else {
+        workStreak    = 0;
+        streakStartFromPrev = false;
       }
     }
+
+    // ── Rule 2: 3+ consecutive Sundays (considering retro) ────────────────
+    const initialStreak = prevMonthConsecs.get(emp.id) || 0;
+    let currentStreak = initialStreak;
+    let streakIndices: number[] = []; 
+
+    for (const sunIdx of sundaysThisMonth) {
+      const s = getEffectiveShift(emp, year, month, sunIdx);
+
+      if (isActivityShift(s)) {
+        currentStreak++;
+        streakIndices.push(sunIdx);
+      } else {
+        currentStreak = 0;
+        streakIndices = [];
+      }
+
+      if (currentStreak >= 3) {
+        const domDays = streakIndices.map(d => d + 1).join(', ');
+        const detailPrefix = initialStreak > 0 && streakIndices.length < currentStreak 
+          ? `Iniciou no mês anterior (${initialStreak} dom. anterior${initialStreak > 1 ? 'es' : ''}), totalizando ${currentStreak} domingos seguidos: ` 
+          : '';
+
+        results.push({
+          id:       `${emp.id}-sun-${sunIdx}`,
+          empId:    emp.id,
+          empName:  emp.name,
+          type:     'consecutive_sunday',
+          severity: 'error',
+          detail:   `${detailPrefix}${currentStreak} domingos seguidos trabalhados (mês atual: ${domDays || 'nenhum'})`,
+          dayIdx:   sunIdx,
+          fix: {
+            label:    `Dar folga no domingo dia ${sunIdx + 1}`,
+            empId:    emp.id,
+            dayIdx:   sunIdx,
+            newShift: 'F',
+          },
+        });
+      }
+    }
+  }
 
   // ── Rule 3: Sunday with fewer than 6 CLT workers ────────────────────────
   const MIN_WORKERS = 6;
   for (const sunIdx of sundaysThisMonth) {
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(sunIdx + 1).padStart(2, '0')}`;
-
-    // Count CLTs actually working this Sunday (not on vacation, not resting)
     const workers = employees.filter(emp => {
       if (emp.isYoungApprentice || emp.status !== 'active') return false;
       const s = getEffectiveShift(emp, year, month, sunIdx);
-      // Apenas T conta como presença na loja
       return isStorePresence(s);
     });
 
@@ -199,16 +188,13 @@ export function detectInconsistencies(
         severity: 'error',
         detail:   `Domingo dia ${sunIdx + 1}: apenas ${workers.length} CLT${workers.length !== 1 ? 's' : ''} trabalhando (mínimo: ${MIN_WORKERS})`,
         dayIdx:   sunIdx,
-        fix:      null,   // can’t auto-fix by removing someone’s rest
+        fix:      null,
       });
     }
   }
 
-  // ── Final Filter: Only show issues for today or future days ───────────
-  return results.filter(issue => {
-    if (!isCurrentMonth) return true; // Show all for future months
-    return issue.dayIdx >= todayIdx;  // Only show today/future for current month
-  });
+  // Retorna todas as inconsistências do mês (inclusive para escalas finalizadas)
+  return results;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────

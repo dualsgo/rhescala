@@ -32,9 +32,100 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   const [newRequest, setNewRequest] = React.useState('');
   const [selectedRequestDate, setSelectedRequestDate] = React.useState('');
   const [showSubmitFeedback, setShowSubmitFeedback] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState<'mes' | 'atual' | 'pedidos'>('mes');
+  const [activeTab, setActiveTab] = React.useState<'mes' | 'atual' | 'pedidos' | 'atestado'>('mes');
   const [requestType, setRequestType] = React.useState<'folga_aviso' | 'troca_turno'>('folga_aviso');
   const [targetEmployeeId, setTargetEmployeeId] = React.useState('');
+
+  const [atestadoStartInput, setAtestadoStartInput] = React.useState(employee.atestadoStart || '');
+  const [atestadoDurationInput, setAtestadoDurationInput] = React.useState<number>(() => {
+    if (employee.atestadoStart && employee.atestadoEnd) {
+      const s = new Date(employee.atestadoStart + 'T00:00:00').getTime();
+      const e = new Date(employee.atestadoEnd + 'T00:00:00').getTime();
+      return Math.max(1, Math.round((e - s) / 86400000) + 1);
+    }
+    return 1;
+  });
+  const [atestadoSaveFeedback, setAtestadoSaveFeedback] = React.useState(false);
+
+  React.useEffect(() => {
+    setAtestadoStartInput(employee.atestadoStart || '');
+    if (employee.atestadoStart && employee.atestadoEnd) {
+      const s = new Date(employee.atestadoStart + 'T00:00:00').getTime();
+      const e = new Date(employee.atestadoEnd + 'T00:00:00').getTime();
+      setAtestadoDurationInput(Math.max(1, Math.round((e - s) / 86400000) + 1));
+    } else {
+      setAtestadoDurationInput(1);
+    }
+  }, [employee.id, employee.atestadoStart, employee.atestadoEnd]);
+
+  const addDaysStr = (dateStr: string, days: number): string => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    return d.toISOString().split('T')[0];
+  };
+
+  const handleSaveAtestado = () => {
+    if (!onUpdateEmployee) return;
+    if (!atestadoStartInput || atestadoDurationInput <= 0) {
+      handleClearAtestado();
+      return;
+    }
+    const endDate = addDaysStr(atestadoStartInput, atestadoDurationInput - 1);
+    const startObj = new Date(atestadoStartInput + 'T00:00:00');
+    const endObj = new Date(endDate + 'T00:00:00');
+    
+    const newShifts = { ...(employee.shifts || {}) };
+    let current = new Date(startObj.getFullYear(), startObj.getMonth(), 1);
+    
+    while (current <= endObj) {
+      const mKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+      const shiftsArr = [...(newShifts[mKey] || [])];
+      const daysInM = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+      if (shiftsArr.length === 0) {
+        for (let i = 0; i < daysInM; i++) shiftsArr[i] = 'T';
+      }
+      for (let d = 1; d <= daysInM; d++) {
+        const dStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        if (dStr >= atestadoStartInput && dStr <= endDate) {
+          shiftsArr[d - 1] = 'AT';
+        } else if (shiftsArr[d - 1] === 'AT') {
+          shiftsArr[d - 1] = 'T';
+        }
+      }
+      newShifts[mKey] = shiftsArr;
+      current.setMonth(current.getMonth() + 1);
+    }
+
+    onUpdateEmployee(employee.id, {
+      atestadoStart: atestadoStartInput,
+      atestadoEnd: endDate,
+      shifts: newShifts
+    });
+
+    setAtestadoSaveFeedback(true);
+    setTimeout(() => setAtestadoSaveFeedback(false), 3000);
+  };
+
+  const handleClearAtestado = () => {
+    if (!onUpdateEmployee) return;
+    const newShifts = { ...(employee.shifts || {}) };
+    let hasChanges = false;
+    for (const [mKey, shiftArr] of Object.entries(newShifts)) {
+      if (Array.isArray(shiftArr) && shiftArr.includes('AT')) {
+        newShifts[mKey] = shiftArr.map(s => s === 'AT' ? 'T' : s);
+        hasChanges = true;
+      }
+    }
+    const updates: Partial<Employee> = { atestadoStart: '', atestadoEnd: '' };
+    if (hasChanges) updates.shifts = newShifts;
+    onUpdateEmployee(employee.id, updates);
+
+    setAtestadoStartInput('');
+    setAtestadoDurationInput(1);
+    setAtestadoSaveFeedback(true);
+    setTimeout(() => setAtestadoSaveFeedback(false), 3000);
+  };
 
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
@@ -90,6 +181,13 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
             className={`px-4 py-4 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${activeTab === 'pedidos' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
           >
             Solicitações
+          </button>
+          <button 
+            onClick={() => setActiveTab('atestado')}
+            className={`px-4 py-4 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'atestado' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+          >
+            <Icon name="medical_services" className="text-sm text-rose-500" />
+            Atestado Médico
           </button>
         </div>
 
@@ -687,6 +785,103 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
             </div>
           </div>
           </div>
+          )}
+
+          {activeTab === 'atestado' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 p-5 rounded-2xl flex items-start gap-3">
+                <Icon name="medical_services" className="text-rose-500 text-2xl shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-black text-rose-900 dark:text-rose-200 uppercase tracking-tight">Lançamento de Atestado Médico</h4>
+                  <p className="text-xs font-medium text-rose-700 dark:text-rose-300 mt-1">
+                    Ao salvar o atestado, os dias correspondentes serão automaticamente marcados como <strong className="font-bold uppercase">AT (Atestado)</strong> na escala do colaborador, justificando as ausências e interrompendo a contagem do limite 6x1.
+                  </p>
+                </div>
+              </div>
+
+              {employee.atestadoStart && employee.atestadoEnd && (
+                <div className="bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-4 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="w-3 h-3 rounded-full bg-rose-500 inline-block animate-pulse" />
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-slate-400">Atestado Ativo Cadastrado</p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                        {new Date(employee.atestadoStart + 'T00:00:00').toLocaleDateString('pt-BR')} até {new Date(employee.atestadoEnd + 'T00:00:00').toLocaleDateString('pt-BR')}
+                      </p>
+                      <p className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                        Retorno previsto ao trabalho: {new Date(addDaysStr(employee.atestadoEnd, 1) + 'T00:00:00').toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                  </div>
+                  {onUpdateEmployee && (
+                    <button
+                      onClick={handleClearAtestado}
+                      className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-950/60 dark:hover:bg-red-900 dark:text-red-300 text-xs font-extrabold rounded-xl transition-all"
+                    >
+                      Remover Atestado
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 rounded-2xl space-y-4 shadow-sm">
+                <h4 className="text-xs font-black uppercase text-slate-700 dark:text-slate-200 tracking-wider">Novo / Editar Atestado</h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Data de Início do Atestado</label>
+                    <input
+                      type="date"
+                      value={atestadoStartInput}
+                      onChange={(e) => setAtestadoStartInput(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Duração (Dias)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={180}
+                      value={atestadoDurationInput}
+                      onChange={(e) => setAtestadoDurationInput(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                </div>
+
+                {atestadoStartInput && atestadoDurationInput > 0 && (
+                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 p-3 rounded-xl text-xs font-medium text-amber-900 dark:text-amber-200 flex flex-col gap-1">
+                    <p>
+                      <strong>Período:</strong> {new Date(atestadoStartInput + 'T00:00:00').toLocaleDateString('pt-BR')} até {new Date(addDaysStr(atestadoStartInput, atestadoDurationInput - 1) + 'T00:00:00').toLocaleDateString('pt-BR')} ({atestadoDurationInput} dia{atestadoDurationInput > 1 ? 's' : ''})
+                    </p>
+                    <p className="text-emerald-700 dark:text-emerald-400 font-bold">
+                      Data de Retorno: {new Date(addDaysStr(atestadoStartInput, atestadoDurationInput) + 'T00:00:00').toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                )}
+
+                {onUpdateEmployee && (
+                  <div className="pt-2 flex items-center justify-between">
+                    {atestadoSaveFeedback ? (
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                        <Icon name="check_circle" className="text-sm" /> Atestado atualizado com sucesso na escala!
+                      </span>
+                    ) : <div />}
+
+                    <button
+                      onClick={handleSaveAtestado}
+                      disabled={!atestadoStartInput}
+                      className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-md flex items-center gap-2"
+                    >
+                      <Icon name="save" className="text-sm" />
+                      Salvar Atestado na Escala
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </div>
 

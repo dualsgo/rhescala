@@ -506,53 +506,28 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
 
                 {/* Atestado Médico */}
                 <div className="space-y-2 pt-3 border-t border-slate-100 mt-2">
-                  <div className="flex items-center gap-1.5 px-1">
-                    <Icon name="medical_services" className="text-rose-500 text-xs" />
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Atestado Médico</label>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <span className="text-[8px] font-bold text-slate-400 pl-1">Início / Entrega</span>
-                      <input
-                        type="date"
-                        value={emp.atestadoStart || ''}
-                        onChange={(e) => {
-                          const duration = emp.atestadoStart && emp.atestadoEnd ? (Math.round((new Date(emp.atestadoEnd + 'T00:00:00').getTime() - new Date(e.target.value + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24)) + 1) : 1;
-                          handleAtestadoChange(emp, e.target.value, Math.max(1, duration), onUpdateEmployee);
-                        }}
-                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-[10px] font-bold text-slate-700 outline-none focus:ring-2 focus:ring-rose-500/20 transition-all"
-                      />
+                  <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center gap-1.5">
+                      <Icon name="medical_services" className="text-rose-500 text-xs" />
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Atestado Médico</label>
                     </div>
-                    <div className="space-y-1">
-                      <span className="text-[8px] font-bold text-slate-400 pl-1">Duração (Dias)</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={emp.atestadoStart && emp.atestadoEnd ? (Math.round((new Date(emp.atestadoEnd + 'T00:00:00').getTime() - new Date(emp.atestadoStart + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24)) + 1) : 0}
-                        onChange={(e) => handleAtestadoChange(emp, emp.atestadoStart || '', parseInt(e.target.value) || 0, onUpdateEmployee)}
-                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-[10px] font-bold text-slate-700 outline-none focus:ring-2 focus:ring-rose-500/20 transition-all"
-                        placeholder="Ex: 3"
-                      />
-                    </div>
+                    {emp.atestadoStart && emp.atestadoEnd && (
+                      <span className="text-[8px] font-black uppercase text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-md">Ativo</span>
+                    )}
                   </div>
-                  {emp.atestadoEnd && (
-                    <div className="space-y-2">
-                      <div className="bg-rose-50 p-2 rounded-lg border border-rose-100 flex items-center justify-between">
-                         <span className="text-[8px] font-black text-rose-600 uppercase">Retorno previsto:</span>
-                         <span className="text-[9px] font-black text-rose-700 uppercase">
-                            {new Date(addDays(emp.atestadoEnd, 1) + 'T00:00:00').toLocaleDateString('pt-BR')}
-                         </span>
+                  {emp.atestadoStart && emp.atestadoEnd ? (
+                    <div className="bg-rose-50 p-2 rounded-xl border border-rose-100 flex items-center justify-between">
+                      <div>
+                        <p className="text-[9px] font-black text-rose-700">
+                          {new Date(emp.atestadoStart + 'T00:00:00').toLocaleDateString('pt-BR')} até {new Date(emp.atestadoEnd + 'T00:00:00').toLocaleDateString('pt-BR')}
+                        </p>
+                        <p className="text-[8px] font-bold text-rose-500 mt-0.5">
+                          Retorno: {new Date(addDays(emp.atestadoEnd, 1) + 'T00:00:00').toLocaleDateString('pt-BR')}
+                        </p>
                       </div>
-                      <button 
-                        onClick={() => {
-                          const duration = (Math.round((new Date(emp.atestadoEnd! + 'T00:00:00').getTime() - new Date(emp.atestadoStart! + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24)) + 1);
-                          handleAtestadoChange(emp, emp.atestadoStart!, duration, onUpdateEmployee);
-                        }}
-                        className="w-full py-2 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-xl text-[9px] font-black uppercase transition-all flex items-center justify-center gap-2"
-                      >
-                        <Icon name="sync" className="text-xs" /> Sincronizar com a Grade
-                      </button>
                     </div>
+                  ) : (
+                    <p className="text-[9px] font-bold text-slate-400 italic px-1">Nenhum atestado ativo.</p>
                   )}
                 </div>
 
