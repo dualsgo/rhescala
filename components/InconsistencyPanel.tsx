@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Employee, MonthYear, ShiftType } from '../types';
 import { Icon } from './Icon';
-import { getPrevMonthConsecutive, isWorkingShift } from '../hooks/useScheduleEngine';
+import { getPrevMonthConsecutive, getPrevMonthWorkStreak, isWorkingShift } from '../hooks/useScheduleEngine';
 
 
 interface InconsistencyPanelProps {
@@ -16,14 +16,14 @@ interface InconsistencyPanelProps {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Fix {
+export interface Fix {
   label:    string;   // e.g. "Dar folga no dia 15"
   empId:    string;
   dayIdx:   number;
   newShift: ShiftType;
 }
 
-interface Inconsistency {
+export interface Inconsistency {
   id:       string;
   empId:    string;    // '' for team-wide issues
   empName:  string;
@@ -59,7 +59,7 @@ function getEffectiveShift(emp: Employee, year: number, month: number, dayIdx: n
 
 // ─── Detection ────────────────────────────────────────────────────────────────
 
-function detectInconsistencies(
+export function detectInconsistencies(
   employees:  Employee[],
   year:       number,
   month:      number,    // 0-indexed
@@ -75,7 +75,8 @@ function detectInconsistencies(
 
   if (isPastMonth) return [];
 
-  // Previous month consecutive Sundays
+  // Previous month work streaks & consecutive Sundays
+  const prevWorkStreaks = getPrevMonthWorkStreak(employees, year, month);
   const prevMonthConsecs = getPrevMonthConsecutive(employees.filter(e => e.status === 'active' && !e.isYoungApprentice), year, month);
 
   // Build Sundays list for this month only
@@ -87,27 +88,33 @@ function detectInconsistencies(
     for (const emp of employees) {
       if (emp.status !== 'active' || emp.isYoungApprentice) continue;
 
-      // ── Rule 1: 6×1 — more than 6 consecutive working days ─────────────────
-      let workStreak    = 0;
+      // ── Rule 1: 6×1 — 7 or more consecutive working days (including cross-month) ──
+      const prevStreak  = prevWorkStreaks.get(emp.id) || 0;
+      let workStreak    = prevStreak;
+      let streakStartFromPrev = prevStreak > 0;
       let streakStart   = 0;
 
       for (let d = 0; d < daysInMonth; d++) {
         const s = getEffectiveShift(emp, year, month, d);
 
         if (isActivityShift(s)) {
-          if (workStreak === 0) { streakStart = d; }
+          if (workStreak === 0) { streakStart = d; streakStartFromPrev = false; }
           workStreak++;
 
           if (workStreak > 6) {
             const fixDay = d;
             const fixDayNum = fixDay + 1;
+            const detailMsg = streakStartFromPrev && streakStart === 0
+              ? `${workStreak} dias seguidos sem folga (${prevStreak} no mês anterior + ${d + 1} neste mês)`
+              : `${workStreak} dias seguidos sem folga (dia ${streakStart + 1} → dia ${d + 1})`;
+
             results.push({
-              id:       `${emp.id}-6x1-${streakStart}`,
+              id:       `${emp.id}-6x1-${streakStart}-${d}`,
               empId:    emp.id,
               empName:  emp.name,
               type:     'consecutive_work',
               severity: 'error',
-              detail:   `${workStreak}+ dias seguidos sem folga (${streakStart + 1} → ${d + 1})`,
+              detail:   detailMsg,
               dayIdx:   d,
               fix: {
                 label:    `Dar folga no dia ${fixDayNum}`,
@@ -118,9 +125,11 @@ function detectInconsistencies(
             });
             // Assume the fix is applied so we can keep checking the rest of the month!
             workStreak = 0;
+            streakStartFromPrev = false;
           }
         } else {
           workStreak    = 0;
+          streakStartFromPrev = false;
         }
       }
 
@@ -300,7 +309,7 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
       {/* Toggle button */}
       <button
         onClick={() => setOpen(o => !o)}
-        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-extrabold transition-all border ${}`}
+        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-extrabold transition-all border ${
           errors.length > 0
             ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100'
             : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
@@ -388,7 +397,7 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
                   >
                     <div className="flex items-start gap-3">
                       {/* Severity icon */}
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${}`}
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${
                         issue.severity === 'error' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
                       }`}>
                         <Icon

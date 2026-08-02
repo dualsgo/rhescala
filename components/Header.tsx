@@ -35,6 +35,8 @@ interface HeaderProps {
   isValidated: boolean;
   onToggleValidation: () => void;
   pendingRequestsCount: number;
+  inconsistencyCount?: number;
+  onOpenInconsistencyModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -59,7 +61,6 @@ export const Header: React.FC<HeaderProps> = ({
   onSortearDomingo,
   onDistributePositions,
   showNotes,
-
   onToggleNotes,
   canGoNext,
   sundayViolations,
@@ -69,6 +70,8 @@ export const Header: React.FC<HeaderProps> = ({
   isValidated,
   onToggleValidation,
   pendingRequestsCount,
+  inconsistencyCount = 0,
+  onOpenInconsistencyModal,
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);
   const [showPrintMenu, setShowPrintMenu] = useState(false);
@@ -201,6 +204,24 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="hidden sm:inline">{isValidated ? 'Oficializado' : 'Rascunho'}</span>
               </span>
             </button>
+
+            {/* Inconsistency Alert Badge */}
+            {onOpenInconsistencyModal && (
+              <button
+                onClick={onOpenInconsistencyModal}
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border transition-all hover:scale-105 active:scale-95 ${
+                  inconsistencyCount > 0
+                    ? 'bg-red-500 border-red-600 text-white shadow-sm animate-pulse-subtle'
+                    : 'bg-emerald-50 border-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-900/50 dark:text-emerald-400'
+                }`}
+                title="Central de Inconsistências e Alertas"
+              >
+                <Icon name={inconsistencyCount > 0 ? 'warning' : 'verified'} className="text-xs sm:text-sm" />
+                <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-tight">
+                  {inconsistencyCount > 0 ? `${inconsistencyCount} Alerta${inconsistencyCount > 1 ? 's' : ''}` : 'Sem Alertas'}
+                </span>
+              </button>
+            )}
           </div>
 
         </div>

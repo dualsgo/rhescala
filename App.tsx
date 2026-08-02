@@ -31,6 +31,8 @@ import { HelpCenter } from './components/HelpCenter';
 import { JornadaManager } from './components/JornadaManager';
 import { EmployeeScheduleCard } from './components/EmployeeScheduleCard';
 import { RequestManager } from './components/RequestManager';
+import { InconsistencyModal } from './components/InconsistencyModal';
+import { detectInconsistencies } from './components/InconsistencyPanel';
 
 const App: React.FC = () => {
   const [employees, setEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', [PLACEHOLDER_EMPLOYEE]);
@@ -48,6 +50,12 @@ const App: React.FC = () => {
   const [sectionAssignments, setSectionAssignments] = useLocalStorage<Record<string, any>>('riHappySectionAssignments', {});
   const [validatedMonths, setValidatedMonths] = useLocalStorage<Record<string, boolean>>('riHappyValidatedMonths', {});
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
+  const [showInconsistencyModal, setShowInconsistencyModal] = useState(false);
+
+  const activeInconsistencies = useMemo(
+    () => detectInconsistencies(employees, currentMY.year, currentMY.month, new Date()),
+    [employees, currentMY]
+  );
   const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
   const [isDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
   const { showDialog } = useDialog();
@@ -629,6 +637,8 @@ const App: React.FC = () => {
               isValidated={isValidated}
               onToggleValidation={onToggleValidation}
               pendingRequestsCount={pendingRequestsCount}
+              inconsistencyCount={activeInconsistencies.length}
+              onOpenInconsistencyModal={() => setShowInconsistencyModal(true)}
             />
 
        <main className="flex-1 overflow-hidden p-2 sm:p-4">
@@ -1072,14 +1082,47 @@ const App: React.FC = () => {
        )}
        </div>
 
-       <PrintableSchedule 
-         employees={employees} 
-         currentMY={currentMY} 
-         customHolidays={customHolidays} 
-         monthNotes={monthNotes[monthKey] || ''}
-       />
-     </>
-   );
+        <InconsistencyModal
+          isOpen={showInconsistencyModal}
+          onClose={() => setShowInconsistencyModal(false)}
+          employees={employees}
+          currentMY={currentMY}
+          today={new Date()}
+          onSelectDay={(idx) => {
+            setSelectedDayIdx(idx);
+            setCurrentView('grid');
+          }}
+          onApplyFix={(empId, dayIdx, shift) => {
+            const monthKeyStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+            setEmployees(prev => prev.map(emp => {
+              if (emp.id !== empId) return emp;
+              const sfs = [...(emp.shifts[monthKeyStr] || [])];
+              sfs[dayIdx] = shift;
+              return { ...emp, shifts: { ...emp.shifts, [monthKeyStr]: sfs } };
+            }));
+          }}
+          onApplyBulkFixes={(updates) => {
+            const monthKeyStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+            setEmployees(prev => prev.map(emp => {
+              const empUpdates = updates.filter(u => u.empId === emp.id);
+              if (empUpdates.length === 0) return emp;
+              const sfs = [...(emp.shifts[monthKeyStr] || [])];
+              empUpdates.forEach(u => {
+                sfs[u.dayIdx] = u.newShift;
+              });
+              return { ...emp, shifts: { ...emp.shifts, [monthKeyStr]: sfs } };
+            }));
+          }}
+        />
+
+        <PrintableSchedule 
+          employees={employees} 
+          currentMY={currentMY} 
+          customHolidays={customHolidays} 
+          monthNotes={monthNotes[monthKey] || ''}
+        />
+      </>
+    );
 };
 
 export default App;
