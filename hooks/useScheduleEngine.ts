@@ -807,7 +807,7 @@ export function applyMonthUpdate(
 
         for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
             const shift = newShifts[dayIdx];
-            if (shift === 'FE' || shift === 'F' || shift?.startsWith('FF') || shift === 'C' || shift === 'N/A' || shift === 'DO' || shift === 'AT') {
+            if (shift === 'FE' || shift === 'F' || shift?.startsWith('FF') || shift === 'N/A' || shift === 'DO' || shift === 'AT') {
                 currentStreak = 0;
                 continue;
             }
@@ -815,7 +815,7 @@ export function applyMonthUpdate(
             currentStreak++;
 
             if (currentStreak > maxStreak) {
-                // Force rest ONLY if they don't have another rest day coming in this legal window
+                // Force rest on or before maxStreak (e.g. 7th consecutive day for 6x1)
                 let hasFutureRest = false;
                 for (let lookAhead = 1; lookAhead <= 2; lookAhead++) {
                     const nextDay = dayIdx + lookAhead;

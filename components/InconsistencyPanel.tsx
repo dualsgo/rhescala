@@ -105,8 +105,8 @@ export function detectInconsistencies(
             const fixDay = d;
             const fixDayNum = fixDay + 1;
             const detailMsg = streakStartFromPrev && streakStart === 0
-              ? `${workStreak} dias seguidos sem folga (${prevStreak} no mês anterior + ${d + 1} neste mês)`
-              : `${workStreak} dias seguidos sem folga (dia ${streakStart + 1} → dia ${d + 1})`;
+              ? `7º dia consecutivo de trabalho sem folga (${prevStreak} dia(s) no mês anterior + ${d + 1} neste mês). Folga obrigatória no dia ${fixDayNum}!`
+              : `7º dia consecutivo de trabalho sem folga (dia ${streakStart + 1} → dia ${d + 1}). Folga obrigatória no dia ${fixDayNum}!`;
 
             results.push({
               id:       `${emp.id}-6x1-${streakStart}-${d}`,
@@ -117,7 +117,7 @@ export function detectInconsistencies(
               detail:   detailMsg,
               dayIdx:   d,
               fix: {
-                label:    `Dar folga no dia ${fixDayNum}`,
+                label:    `Dar folga no 7º dia (dia ${fixDayNum})`,
                 empId:    emp.id,
                 dayIdx:   fixDay,
                 newShift: 'F',
@@ -152,7 +152,7 @@ export function detectInconsistencies(
         if (currentStreak >= 3) {
           const domDays = streakIndices.map(d => d + 1).join(', ');
           const detailPrefix = initialStreak > 0 && streakIndices.length < currentStreak 
-            ? `Iniciou no mês anterior, totalizando ${currentStreak} domingos: ` 
+            ? `Iniciou no mês anterior (${initialStreak} dom. anterior${initialStreak > 1 ? 'es' : ''}), totalizando ${currentStreak} domingos seguidos: ` 
             : '';
 
           results.push({

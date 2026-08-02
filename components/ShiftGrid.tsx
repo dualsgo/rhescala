@@ -4,7 +4,7 @@ import { useDialog } from '../contexts/DialogContext';
 import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getDefaultHourForDay } from '../constants';
-import { getShiftClassification, isWorkingShift } from '../hooks/useScheduleEngine';
+import { getShiftClassification, isWorkingShift, getPrevMonthWorkStreak } from '../hooks/useScheduleEngine';
 import { OperationalGuideModal } from './OperationalGuideModal';
 
 import { HolidayCredit } from '../hooks/useHolidayCredits';
@@ -120,7 +120,12 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     { code: 'DO', label: 'Aniversário / Especial', color: 'bg-fuchsia-600' },
     { code: 'C', label: 'Curso / Treinamento', color: 'bg-slate-500' },
     { code: 'AT', label: 'Atestado Médico', color: 'bg-rose-400' },
+    { code: '7º', label: '7º Dia (Limite 6x1)', color: 'bg-rose-600' },
   ];
+
+  const prevWorkStreaks = useMemo(() => {
+    return getPrevMonthWorkStreak(employees, currentMY.year, currentMY.month);
+  }, [employees, currentMY.year, currentMY.month]);
 
   const allHolidays = useMemo(() => {
     return [...getNationalHolidays(currentMY.year), ...customHolidays]
@@ -528,13 +533,26 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               // Em visão de colaborador, oculta posições e mostra apenas 'T'
                               const shift = (isReadOnly && ['P1', 'P2', 'P3', 'P4', 'ESTQ'].includes(rawShift)) ? 'T' : rawShift;
                               
+                              const prevStreak = prevWorkStreaks.get(emp.id) || 0;
                               let streak = 0;
+                              let hitRest = false;
+
                               for (let i = d.num - 1; i >= 0; i--) {
-                                if (isWorkingShift(emp.shifts[monthKey]?.[i])) streak++;
-                                else break;
+                                const s = emp.shifts[monthKey]?.[i];
+                                if (isWorkingShift(s) || s === 'C') {
+                                  streak++;
+                                } else {
+                                  hitRest = true;
+                                  break;
+                                }
                               }
 
-                              const hasAlert = streak >= 7;
+                              if (!hitRest) {
+                                streak += prevStreak;
+                              }
+
+                              const is7thDay = streak === 7;
+                              const hasAlert = streak >= 7 && (isWorkingShift(shift) || shift === 'C');
                               const todayStr = new Date().toISOString().split('T')[0];
                               const isPast = d.dateStr < todayStr;
                               const dimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
@@ -543,8 +561,24 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const dayRequest = !isReadOnly ? (emp.requests || []).find(r => r.date === fullDate) : undefined;
 
                               return (
-                                <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all relative ${dimClass} ${selectedDayIdx === d.num - 1 ? 'ring-2 ring-inset ring-orange-400/50' : ''} ${hasAlert ? 'ring-2 ring-inset ring-rose-500' : ''}`}>
+                                <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all relative ${dimClass} ${selectedDayIdx === d.num - 1 ? 'ring-2 ring-inset ring-orange-400/50' : ''} ${hasAlert ? 'ring-2 ring-inset ring-rose-500 bg-rose-50/50 dark:bg-rose-950/30' : is7thDay ? 'ring-2 ring-inset ring-emerald-500/40 bg-emerald-50/20' : ''}`}>
                                   <div className="relative group flex flex-col items-center gap-1">
+                                    {is7thDay && (
+                                      <span
+                                        className={`absolute -top-1.5 -left-1.5 px-1 py-0.2 text-[8px] font-black rounded-full shadow-md z-30 transition-all ${
+                                          hasAlert
+                                            ? 'bg-rose-600 text-white ring-2 ring-white animate-pulse'
+                                            : 'bg-emerald-600 text-white ring-1 ring-white'
+                                        }`}
+                                        title={
+                                          hasAlert
+                                            ? `7º Dia Consecutivo: Trabalho sem folga! (${streak} dias seguidos)`
+                                            : `7º Dia Consecutivo: Folga Obrigatória Cumprida (Regra 6x1)`
+                                        }
+                                      >
+                                        7º
+                                      </span>
+                                    )}
                                     {dayRequest && (
                                       <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full z-10 border-2 border-white dark:border-slate-900 cursor-help flex items-center justify-center group/balloon">
                                         <div className={`w-full h-full rounded-full ${
