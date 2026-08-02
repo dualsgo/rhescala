@@ -68,7 +68,17 @@ function handleVacationStart(emp: Employee, startDate: string, onUpdate: (id: st
 /** When user sets atestado start and duration, compute end = start + days - 1 */
 function handleAtestadoChange(emp: Employee, startDate: string, duration: number, onUpdate: (id: string, data: Partial<Employee>) => void) {
   if (!startDate || duration <= 0) {
-    onUpdate(emp.id, { atestadoStart: '', atestadoEnd: '' });
+    const newShifts = { ...emp.shifts };
+    let hasChanges = false;
+    for (const [mKey, shiftArr] of Object.entries(newShifts)) {
+      if (Array.isArray(shiftArr) && shiftArr.includes('AT')) {
+        newShifts[mKey] = shiftArr.map(s => s === 'AT' ? 'T' : s);
+        hasChanges = true;
+      }
+    }
+    const updates: Partial<Employee> = { atestadoStart: '', atestadoEnd: '' };
+    if (hasChanges) updates.shifts = newShifts;
+    onUpdate(emp.id, updates);
     return;
   }
   

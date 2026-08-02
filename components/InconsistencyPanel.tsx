@@ -53,6 +53,9 @@ function getEffectiveShift(emp: Employee, year: number, month: number, dayIdx: n
         const end = emp.vacationEnd || d.toISOString().split('T')[0];
         if (dateStr >= start && dateStr <= end) return 'FE';
     }
+    if (emp.atestadoStart && emp.atestadoEnd) {
+        if (dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd) return 'AT';
+    }
     const shifts = (emp.shifts[monthKey] ?? []) as ShiftType[];
     return shifts[dayIdx] || 'F';
 }

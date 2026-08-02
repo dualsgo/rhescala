@@ -529,7 +529,14 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
                             {/* Shift Cells */}
                             {filteredDays.map(d => {
-                              const rawShift = emp.shifts[monthKey]?.[d.num - 1] || 'T';
+                              const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d.num).padStart(2, '0')}`;
+                              let rawShift = emp.shifts[monthKey]?.[d.num - 1] || 'T';
+                              if (emp.atestadoStart && emp.atestadoEnd && fullDate >= emp.atestadoStart && fullDate <= emp.atestadoEnd) {
+                                rawShift = 'AT';
+                              } else if (emp.vacationStart && emp.vacationEnd && fullDate >= emp.vacationStart && fullDate <= emp.vacationEnd) {
+                                rawShift = 'FE';
+                              }
+
                               // Em visão de colaborador, oculta posições e mostra apenas 'T'
                               const shift = (isReadOnly && ['P1', 'P2', 'P3', 'P4', 'ESTQ'].includes(rawShift)) ? 'T' : rawShift;
                               
@@ -538,7 +545,14 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               let hitRest = false;
 
                               for (let i = d.num - 1; i >= 0; i--) {
-                                const s = emp.shifts[monthKey]?.[i];
+                                const checkDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
+                                let s = emp.shifts[monthKey]?.[i];
+                                if (emp.atestadoStart && emp.atestadoEnd && checkDate >= emp.atestadoStart && checkDate <= emp.atestadoEnd) {
+                                  s = 'AT';
+                                } else if (emp.vacationStart && emp.vacationEnd && checkDate >= emp.vacationStart && checkDate <= emp.vacationEnd) {
+                                  s = 'FE';
+                                }
+
                                 if (isWorkingShift(s) || s === 'C') {
                                   streak++;
                                 } else {
@@ -556,8 +570,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const todayStr = new Date().toISOString().split('T')[0];
                               const isPast = d.dateStr < todayStr;
                               const dimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
-                              
-                              const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d.num).padStart(2, '0')}`;
                               const dayRequest = !isReadOnly ? (emp.requests || []).find(r => r.date === fullDate) : undefined;
 
                               return (

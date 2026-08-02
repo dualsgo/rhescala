@@ -763,6 +763,9 @@ export function applyMonthUpdate(
             if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
                 newShifts[dayIdx] = 'FE'; continue;
             }
+            if (emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd) {
+                newShifts[dayIdx] = 'AT'; continue;
+            }
             if (isBirthday(emp, dateStr)) {
                 newShifts[dayIdx] = 'DO'; continue;
             }

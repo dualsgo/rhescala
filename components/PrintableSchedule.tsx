@@ -28,16 +28,13 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
     return employees.filter(e => e.status === 'active' && !e.isHidden).sort((a, b) => a.name.localeCompare(b.name));
   }, [employees]);
 
+  const mStartStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-01`;
+  const mEndStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+
   // Atestados
   const onMedicalLeave = activeEmployees.filter(e => {
     if (!e.atestadoStart || !e.atestadoEnd) return false;
-    const start = new Date(e.atestadoStart + 'T00:00:00');
-    const end = new Date(e.atestadoEnd + 'T00:00:00');
-    const startM = start.getMonth();
-    const endM = end.getMonth();
-    const startY = start.getFullYear();
-    const endY = end.getFullYear();
-    return (currentMY.year === startY && currentMY.month === startM) || (currentMY.year === endY && currentMY.month === endM);
+    return e.atestadoStart <= mEndStr && e.atestadoEnd >= mStartStr;
   });
 
   // Férias
