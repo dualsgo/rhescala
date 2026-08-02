@@ -552,15 +552,14 @@ const IndividualWeeklyCalendar: React.FC<{
     }
 
     const shiftBg = (s: ShiftType) => {
-        if (s==='T') return 'bg-indigo-600 border-indigo-700 text-white shadow-sm';
-        if (['P1', 'P2', 'P3', 'P4', 'ESTQ'].includes(s as string)) return 'bg-emerald-600 border-emerald-700 text-white shadow-sm';
+        if (isWorkingShift(s)) return 'bg-indigo-600 border-indigo-700 text-white shadow-sm';
         if (s==='F') return 'bg-orange-50 border-orange-100 text-orange-600';
         if (s?.startsWith('FF')) return 'bg-red-50 border-red-100 text-red-600';
         if (s==='C') return 'bg-teal-500 border-teal-600 text-white shadow-sm';
         if (s==='FE') return 'bg-indigo-50 border-indigo-200 text-indigo-600';
         if (s==='DO') return 'bg-fuchsia-600 border-fuchsia-700 text-white shadow-sm';
+        if (s==='AT') return 'bg-rose-50 border-rose-200 text-rose-600';
         return 'bg-slate-50 border-slate-100 text-slate-400';
-
     };
 
     return (
@@ -576,16 +575,14 @@ const IndividualWeeklyCalendar: React.FC<{
                 {calendarDays.map((cell, idx) => {
                     if (cell.type === 'empty') return <div key={idx} className="aspect-square"></div>;
                     
-                    const shiftLabel = (cell.shift as string)?.split(' ')[0] || '-';
-                    
                     return (
                         <div 
                             key={idx}
                             title={cell.isVacation ? 'Férias' : (cell.shift as string)}
                             className={`aspect-square rounded-xl border flex flex-col items-center justify-center transition-all relative ${shiftBg(cell.shift)} ${canEdit ? 'hover:scale-105 hover:shadow-md cursor-pointer' : ''}`}
                         >
-                            <span className={`text-[8px] font-black absolute top-1 left-1 ${cell.shift === 'T' || cell.isCourse ? 'text-white/80' : 'text-slate-400'}`}>{cell.day}</span>
-                            <span className={`text-[11px] font-black mt-1 ${cell.isOff && !cell.isVacation && !cell.isBirthday ? 'opacity-40' : ''}`}>{isWorkingShift(cell.shift) ? shiftLabel : cell.isCourse ? 'C' : cell.isVacation ? 'FE' : cell.isBirthday ? 'DO' : (cell.shift?.startsWith('FF') ? 'FF' : 'F')}</span>
+                            <span className={`text-[8px] font-black absolute top-1 left-1 ${isWorkingShift(cell.shift) || cell.isCourse ? 'text-white/80' : 'text-slate-400'}`}>{cell.day}</span>
+                            <span className={`text-[11px] font-black mt-1 ${cell.isOff && !cell.isVacation && !cell.isBirthday ? 'opacity-40' : ''}`}>{isWorkingShift(cell.shift) ? 'T' : cell.isCourse ? 'C' : cell.isVacation ? 'FE' : cell.isBirthday ? 'DO' : (cell.shift?.startsWith('FF') ? 'FF' : 'F')}</span>
 
 
                             {canEdit && (
