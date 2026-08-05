@@ -33,6 +33,7 @@ import { EmployeeScheduleCard } from './components/EmployeeScheduleCard';
 import { RequestManager } from './components/RequestManager';
 import { InconsistencyModal } from './components/InconsistencyModal';
 import { detectInconsistencies } from './components/InconsistencyPanel';
+import { SyncBlockingOverlay } from './components/SyncBlockingOverlay';
 
 const App: React.FC = () => {
   const [employees, setEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', [PLACEHOLDER_EMPLOYEE]);
@@ -1121,6 +1122,8 @@ const App: React.FC = () => {
           customHolidays={customHolidays} 
           monthNotes={monthNotes[monthKey] || ''}
         />
+
+        <SyncBlockingOverlay syncStatus={syncStatus} />
       </>
     );
 };
