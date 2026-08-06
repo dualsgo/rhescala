@@ -436,10 +436,19 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
           
-          <div className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 bg-slate-50 dark:bg-zinc-900 rounded-lg border border-slate-100 dark:border-zinc-800">
-            <div className={`w-1.5 h-1.5 rounded-full ${syncStatus.state === 'synced' ? 'bg-emerald-500' : syncStatus.state === 'syncing' ? 'bg-blue-500 animate-pulse' : 'bg-rose-500'}`} />
-            <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">
-              {syncStatus.state === 'synced' ? 'Nuvem OK' : syncStatus.state === 'syncing' ? 'Salvando' : 'Erro'}
+          <div 
+            className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 bg-slate-50 dark:bg-zinc-900 rounded-lg border border-slate-100 dark:border-zinc-800 transition-all"
+            title={syncStatus.history?.[0]?.message || (syncStatus.lastSync ? `Última sinc: ${syncStatus.lastSync}` : 'Status de sincronização')}
+          >
+            <div className={`w-2 h-2 rounded-full transition-all ${
+              syncStatus.state === 'synced' 
+                ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' 
+                : syncStatus.state === 'syncing' 
+                ? 'bg-amber-500 animate-ping' 
+                : 'bg-rose-500 animate-pulse'
+            }`} />
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              {syncStatus.state === 'synced' ? 'Nuvem OK' : syncStatus.state === 'syncing' ? 'Salvando...' : 'Erro'}
             </span>
           </div>
         </div>

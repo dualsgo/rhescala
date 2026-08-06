@@ -11,7 +11,7 @@ export const SyncBlockingOverlay: React.FC<SyncBlockingOverlayProps> = ({ syncSt
   const [showOverlay, setShowOverlay] = useState(false);
   const [successPhase, setSuccessPhase] = useState(false);
 
-  const isSyncing = syncStatus.state === 'syncing';
+  const isSyncing = syncStatus.state === 'syncing' && !syncStatus.isSilent;
   const isError = syncStatus.state === 'error';
   const isSynced = syncStatus.state === 'synced';
 

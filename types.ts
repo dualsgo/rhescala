@@ -79,12 +79,14 @@ export interface SyncHistoryItem {
   state: SyncState;
   key: string;
   message?: string;
+  isSilent?: boolean;
 }
 
 export interface SyncStatus {
   state: SyncState;
   lastSync?: string;
   history: SyncHistoryItem[];
+  isSilent?: boolean;
 }
 export interface JornadaSettings {
   minSundayWorkers: number;
