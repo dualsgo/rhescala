@@ -684,6 +684,18 @@ const TeamMonthlyCalendar: React.FC<{
           </div>
         ))}
       </div>
+
+      {showIndividualModal && selectedEmployee && (
+        <IndividualEditModal
+          employee={selectedEmployee}
+          currentMY={currentMY}
+          customHolidays={customHolidays}
+          getEffectiveShift={getEffectiveShift}
+          onUpdateShift={onUpdateShift}
+          onUpdateHour={onUpdateHour}
+          onClose={() => setShowIndividualModal(false)}
+        />
+      )}
     </div>
   );
 };

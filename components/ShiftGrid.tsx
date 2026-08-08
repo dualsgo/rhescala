@@ -3,7 +3,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useDialog } from '../contexts/DialogContext';
 import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings } from '../types';
 import { Icon } from './Icon';
-import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getDefaultHourForDay } from '../constants';
+import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getDefaultHourForDay, getShortName } from '../constants';
 import { getShiftClassification, isWorkingShift, getPrevMonthWorkStreak } from '../hooks/useScheduleEngine';
 import { OperationalGuideModal } from './OperationalGuideModal';
 
@@ -306,15 +306,15 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           <table className="w-full border-separate border-spacing-0">
             <thead className="sticky top-0 z-40 bg-slate-50 dark:bg-zinc-900">
               <tr className="bg-slate-50 dark:bg-zinc-900/50">
-                <th className="sticky left-0 z-[50] bg-slate-50 dark:bg-zinc-900 border-b border-r border-slate-200 dark:border-zinc-800 py-2 px-2 sm:px-4 text-left min-w-[120px] sm:min-w-[180px] w-[120px] sm:w-[180px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]">
+                <th className="sticky left-0 z-[50] bg-slate-50 dark:bg-zinc-900 border-b border-r border-slate-200 dark:border-zinc-800 py-2 px-2 sm:px-3 text-left min-w-[110px] sm:min-w-[135px] w-[110px] sm:w-[135px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]">
                   <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</span>
                 </th>
                 {!isReadOnly && isEditable && (
                   <>
-                    <th className="hidden sm:table-cell sticky left-[180px] z-[50] bg-slate-50 dark:bg-zinc-900 border-b border-r border-slate-200 dark:border-zinc-800 py-2 px-4 text-left min-w-[125px] w-[125px]">
+                    <th className="hidden sm:table-cell sticky left-[110px] sm:left-[135px] z-[50] bg-slate-50 dark:bg-zinc-900 border-b border-r border-slate-200 dark:border-zinc-800 py-2 px-3 text-left min-w-[115px] w-[115px]">
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horário</span>
                     </th>
-                    <th className="hidden md:table-cell sticky left-[305px] z-[50] bg-slate-50 dark:bg-zinc-900 border-b border-r border-slate-200 dark:border-zinc-800 py-2 px-4 text-left min-w-[100px] w-[100px]">
+                    <th className="hidden md:table-cell sticky left-[225px] sm:left-[250px] z-[50] bg-slate-50 dark:bg-zinc-900 border-b border-r border-slate-200 dark:border-zinc-800 py-2 px-3 text-left min-w-[90px] w-[90px]">
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Posição</span>
                     </th>
                   </>
@@ -423,93 +423,94 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                         return (
                           <tr key={emp.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group/row">
                             {/* Name & Position */}
-                            <td className="sticky left-0 z-[10] bg-white dark:bg-black border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-1.5 sm:py-1.5 sm:px-2 min-w-[120px] sm:min-w-[180px] w-[120px] sm:w-[180px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]">
-                              <button 
-                                onClick={() => onOpenEmployeeCard(emp)}
-                                className="flex items-center gap-1.5 sm:gap-2 w-full text-left hover:bg-orange-50 dark:hover:bg-orange-950/20 p-0.5 sm:p-1 rounded-lg sm:rounded-xl transition-all group/name"
-                              >
-                                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-slate-100 dark:bg-zinc-900 flex items-center justify-center text-[8px] sm:text-[10px] font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-zinc-800 group-hover/name:bg-orange-100 group-hover/name:text-orange-600 group-hover/name:border-orange-200 transition-colors">
-                                  {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                                </div>
-                                <div className="flex flex-col min-w-0 flex-1">
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-[10px] sm:text-[11px] font-black text-slate-900 dark:text-slate-100 truncate group-hover/name:text-orange-600 transition-colors">{emp.name}</span>
-                                    {(() => {
-                                      if (isReadOnly) return null;
-                                      const reqs = emp.requests || [];
-                                      const hasAnswered = reqs.some(r => r.date?.startsWith(monthKey) && r.status !== 'pending');
-                                      const hasPending = reqs.some(r => r.date?.startsWith(monthKey) && r.status === 'pending');
-                                      
-                                      if (hasAnswered) {
-                                        return (
-                                          <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center shadow-md animate-pulse-subtle" title="Pedido respondido!">
-                                            <Icon name="notifications_active" className="text-[9px] text-white" />
-                                          </div>
-                                        );
-                                      }
-                                      if (hasPending) {
-                                        return (
-                                          <div className="w-3.5 h-3.5 bg-orange-500 rounded-full flex items-center justify-center animate-bounce-subtle" title="Tem pedidos pendentes">
-                                            <Icon name="chat_bubble" className="text-[8px] text-white" />
-                                          </div>
-                                        );
-                                      }
-                                      return null;
-                                    })()}
-                                  </div>
-                                  <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                                    <span className="text-[8px] sm:text-[9px] text-slate-400 font-bold uppercase truncate">{emp.cargo || 'Vendedor'}</span>
-                                    {emp.contractType === 'Sazonal' && (
-                                      <span className="text-[7px] px-1 rounded bg-amber-100 text-amber-600 font-bold uppercase tracking-widest">Sazonal</span>
-                                    )}
-                                    {emp.jornada === '5x2' && (
-                                      <span className="text-[7px] px-1 rounded bg-purple-100 text-purple-600 font-bold uppercase tracking-widest">5x2</span>
-                                    )}
-                                  </div>
-                                </div>
-                                <Icon name="chevron_right" className="hidden sm:block text-slate-300 group-hover/name:text-orange-500 opacity-0 group-hover/name:opacity-100 transition-all text-sm ml-auto" />
-                              </button>
-                            </td>
-                             {!isReadOnly && isEditable && (
-                               <>
-                                 {/* Hours Select */}
-                                 <td className="hidden sm:table-cell sticky left-[180px] z-10 bg-white dark:bg-black border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-2 min-w-[125px] w-[125px]">
-                                   <select
-                                     value={emp.dailyHours[monthKey]?.[selectedDayIdx] || ''}
-                                     onChange={(e) => onUpdateEmployeeDailyHour(emp.id, selectedDayIdx, e.target.value)}
-                                     className="w-full bg-transparent border-none p-0 text-[11px] font-black text-orange-600 focus:ring-0 uppercase"
-                                   >
+                             {/* Name & Position */}
+                             <td className="sticky left-0 z-[10] bg-white dark:bg-black border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-1.5 sm:py-1.5 sm:px-2 min-w-[110px] sm:min-w-[135px] w-[110px] sm:w-[135px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]">
+                               <button 
+                                 onClick={() => onOpenEmployeeCard(emp)}
+                                 className="flex items-center gap-1.5 sm:gap-2 w-full text-left hover:bg-orange-50 dark:hover:bg-orange-950/20 p-0.5 sm:p-1 rounded-lg sm:rounded-xl transition-all group/name"
+                               >
+                                 <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-slate-100 dark:bg-zinc-900 flex items-center justify-center text-[8px] sm:text-[10px] font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-zinc-800 group-hover/name:bg-orange-100 group-hover/name:text-orange-600 group-hover/name:border-orange-200 transition-colors shrink-0">
+                                   {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                                 </div>
+                                 <div className="flex flex-col min-w-0 flex-1">
+                                   <div className="flex items-center gap-1">
+                                     <span className="text-[10px] sm:text-[11px] font-black text-slate-900 dark:text-slate-100 truncate group-hover/name:text-orange-600 transition-colors" title={emp.name}>{getShortName(emp.name, employees)}</span>
                                      {(() => {
-                                       const date = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1);
-                                       const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`);
-                                       const isSun = date.getDay() === 0;
-   
-                                       let options = jornadaSettings.shiftHours.weekday;
-                                       if (isHol) options = [...jornadaSettings.shiftHours.holiday, ...(jornadaSettings.shiftHours.extended || [])];
-                                       else if (isSun) options = jornadaSettings.shiftHours.sunday;
-                                       else options = [...jornadaSettings.shiftHours.weekday, ...(jornadaSettings.shiftHours.extended || [])];
+                                       if (isReadOnly) return null;
+                                       const reqs = emp.requests || [];
+                                       const hasAnswered = reqs.some(r => r.date?.startsWith(monthKey) && r.status !== 'pending');
+                                       const hasPending = reqs.some(r => r.date?.startsWith(monthKey) && r.status === 'pending');
                                        
-                                       if (emp.isYoungApprentice) options = jornadaSettings.shiftHours.apprentice;
-                                       
-                                       const currentVal = emp.dailyHours[monthKey]?.[selectedDayIdx];
-                                       const finalOptions = [...new Set([...options])].filter(Boolean);
-   
-                                       return (
-                                         <>
-                                           <option value="" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">AUTO 🤖</option>
-                                           {finalOptions.map(h => (
-                                             <option key={h} value={h} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">{h}</option>
-                                           ))}
-                                           {currentVal && !finalOptions.includes(currentVal) && (
-                                             <option value={currentVal} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">{currentVal}</option>
-                                           )}
-                                         </>
-                                       );
+                                       if (hasAnswered) {
+                                         return (
+                                           <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center shadow-md animate-pulse-subtle shrink-0" title="Pedido respondido!">
+                                             <Icon name="notifications_active" className="text-[9px] text-white" />
+                                           </div>
+                                         );
+                                       }
+                                       if (hasPending) {
+                                         return (
+                                           <div className="w-3.5 h-3.5 bg-orange-500 rounded-full flex items-center justify-center animate-bounce-subtle shrink-0" title="Tem pedidos pendentes">
+                                             <Icon name="chat_bubble" className="text-[8px] text-white" />
+                                           </div>
+                                         );
+                                       }
+                                       return null;
                                      })()}
-                                   </select>
-                                 </td>
-                                 {/* Tactical Select */}
-                                 <td className="hidden md:table-cell sticky left-[305px] z-10 bg-white dark:bg-black border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-2 min-w-[100px] w-[100px]">
+                                   </div>
+                                   <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                                     <span className="text-[8px] sm:text-[9px] text-slate-400 font-bold uppercase truncate">{emp.cargo || 'Vendedor'}</span>
+                                     {emp.contractType === 'Sazonal' && (
+                                       <span className="text-[7px] px-1 rounded bg-amber-100 text-amber-600 font-bold uppercase tracking-widest">Sazonal</span>
+                                     )}
+                                     {emp.jornada === '5x2' && (
+                                       <span className="text-[7px] px-1 rounded bg-purple-100 text-purple-600 font-bold uppercase tracking-widest">5x2</span>
+                                     )}
+                                   </div>
+                                 </div>
+                                 <Icon name="chevron_right" className="hidden sm:block text-slate-300 group-hover/name:text-orange-500 opacity-0 group-hover/name:opacity-100 transition-all text-sm ml-auto shrink-0" />
+                               </button>
+                             </td>
+                              {!isReadOnly && isEditable && (
+                                <>
+                                  {/* Hours Select */}
+                                  <td className="hidden sm:table-cell sticky left-[110px] sm:left-[135px] z-10 bg-white dark:bg-black border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-2 min-w-[115px] w-[115px]">
+                                    <select
+                                      value={emp.dailyHours[monthKey]?.[selectedDayIdx] || ''}
+                                      onChange={(e) => onUpdateEmployeeDailyHour(emp.id, selectedDayIdx, e.target.value)}
+                                      className="w-full bg-transparent border-none p-0 text-[11px] font-black text-orange-600 focus:ring-0 uppercase"
+                                    >
+                                      {(() => {
+                                        const date = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1);
+                                        const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`);
+                                        const isSun = date.getDay() === 0;
+    
+                                        let options = jornadaSettings.shiftHours.weekday;
+                                        if (isHol) options = [...jornadaSettings.shiftHours.holiday, ...(jornadaSettings.shiftHours.extended || [])];
+                                        else if (isSun) options = jornadaSettings.shiftHours.sunday;
+                                        else options = [...jornadaSettings.shiftHours.weekday, ...(jornadaSettings.shiftHours.extended || [])];
+                                        
+                                        if (emp.isYoungApprentice) options = jornadaSettings.shiftHours.apprentice;
+                                        
+                                        const currentVal = emp.dailyHours[monthKey]?.[selectedDayIdx];
+                                        const finalOptions = [...new Set([...options])].filter(Boolean);
+    
+                                        return (
+                                          <>
+                                            <option value="" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">AUTO 🤖</option>
+                                            {finalOptions.map(h => (
+                                              <option key={h} value={h} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">{h}</option>
+                                            ))}
+                                            {currentVal && !finalOptions.includes(currentVal) && (
+                                              <option value={currentVal} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">{currentVal}</option>
+                                            )}
+                                          </>
+                                        );
+                                      })()}
+                                    </select>
+                                  </td>
+                                  {/* Tactical Select */}
+                                  <td className="hidden md:table-cell sticky left-[225px] sm:left-[250px] z-10 bg-white dark:bg-black border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-2 min-w-[90px] w-[90px]">
                                    <select
                                      value={emp.tacticalPositions?.[monthKey]?.[selectedDayIdx] || 'AUTO'}
                                      onChange={(e) => onUpdateTacticalPosition(emp.id, selectedDayIdx, e.target.value)}
