@@ -8,6 +8,7 @@ interface ActionToolbarProps {
   employees: Employee[];
   currentMY: MonthYear;
   onImportClick: () => void;
+  onOptimizePeakWeek?: () => void;
 }
 
 const WEEKDAY_ABBR = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
@@ -16,7 +17,7 @@ const MONTHS_NAMES = [
   'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro',
 ];
 
-export const ActionToolbar: React.FC<ActionToolbarProps> = ({ employees, currentMY, onImportClick }) => {
+export const ActionToolbar: React.FC<ActionToolbarProps> = ({ employees, currentMY, onImportClick, onOptimizePeakWeek }) => {
   const { showDialog } = useDialog();
 
   const monthKey = `${currentMY.year}-${currentMY.month.toString().padStart(2, '0')}`;
@@ -202,6 +203,7 @@ export const ActionToolbar: React.FC<ActionToolbarProps> = ({ employees, current
     { label: 'Exportar Excel', id: 'excel', icon: 'table_view',      color: 'text-green-600', bg: 'bg-green-50' },
     { label: 'Gerar PDF',      id: 'pdf',   icon: 'picture_as_pdf',  color: 'text-red-600',   bg: 'bg-red-50'   },
     { label: 'Backup Nuvem',   id: 'backup', icon: 'cloud_upload',   color: 'text-sky-600',   bg: 'bg-sky-50'   },
+    ...(onOptimizePeakWeek ? [{ label: 'Otimizar Natal (18-24)', id: 'natal', icon: 'auto_awesome', color: 'text-amber-600', bg: 'bg-amber-50' }] : []),
   ];
 
   return (
@@ -216,6 +218,7 @@ export const ActionToolbar: React.FC<ActionToolbarProps> = ({ employees, current
           key={idx}
           onClick={async () => {
             if (action.id === 'backup') { await handleBackup(); return; }
+            if (action.id === 'natal') { onOptimizePeakWeek?.(); return; }
             const confirmed = await showDialog({
               type: 'confirm',
               message: `Deseja iniciar a operação: ${action.label}?`,

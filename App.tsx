@@ -2,11 +2,12 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
-import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification, findSundayViolations, isWorkingShift, distributeTacticalPositions } from './hooks/useScheduleEngine';
+import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification, findSundayViolations, isWorkingShift, distributeTacticalPositions, optimizePeakWeek, getCleaningSchedule } from './hooks/useScheduleEngine';
 import { buildHolidaySet, getDefaultHourForDay, getShortName } from './constants';
 
 
 import { Header } from './components/Header';
+import { ActionToolbar } from './components/ActionToolbar';
 import { toPng } from 'html-to-image';
 
 import { ShiftGrid } from './components/ShiftGrid';
@@ -490,24 +491,11 @@ const App: React.FC = () => {
         text += `• Responsável: Não definido\n`;
       }
 
-      const excludeForLimpeza = [digital1?.id, digital2?.id, retirada1?.id, retirada2?.id].filter(Boolean) as string[];
-      let limpeza1 = pickDigital(turno1, excludeForLimpeza, 5);
-      let limpeza2 = pickDigital(turno2, excludeForLimpeza, 5);
-
-      if (!limpeza1 && turno2.length > 1) {
-        const remaining = turno2.filter(e => !excludeForLimpeza.includes(e.id));
-        limpeza1 = pickDigital(remaining, excludeForLimpeza, 5);
-      } else if (!limpeza2 && turno1.length > 1) {
-        const remaining = turno1.filter(e => !excludeForLimpeza.includes(e.id));
-        limpeza2 = pickDigital(remaining, excludeForLimpeza, 5);
-      }
-
       text += `\n🧹 *Limpeza da Copa*\n`;
-      const limpezas = [limpeza1, limpeza2].filter(Boolean);
-      if (limpezas.length > 0) {
-        limpezas.forEach(l => {
-          text += `• ${l.shiftName}: ${getShortName(l.name, activeEmps)}\n`;
-        });
+      const cleaningSchedule = getCleaningSchedule(employees, currentMY, customHolidays, deletedNationalHolidays);
+      const cleaningForDay = cleaningSchedule[dayIdx]?.empName;
+      if (cleaningForDay && cleaningForDay !== 'Ninguém Escalado') {
+        text += `• Responsável: ${cleaningForDay}\n`;
       } else {
         text += `• Responsável: Não definido\n`;
       }
@@ -615,6 +603,28 @@ const App: React.FC = () => {
     });
   };
 
+  const handleOptimizePeakWeek = () => {
+    showDialog({
+      title: '🎄 Otimização da Semana de Pico (Natal 18-24/12)',
+      message: 'Esta operação reorganiza as folgas entre os dias 18 e 24 de Dezembro para manter 100% da equipe trabalhando nos dias 22, 23 e 24, escalonando a folga semanal entre os dias 18 e 21 sem nenhuma violação da regra 6x1 da CLT. Deseja aplicar?',
+      type: 'confirm'
+    }).then(ok => {
+      if (ok) {
+        const peakResult = optimizePeakWeek(employees, monthKey, 18, 24, [22, 23, 24]);
+        setEmployees(prev => prev.map(emp => {
+          if (peakResult[emp.id]) {
+            return {
+              ...emp,
+              shifts: { ...emp.shifts, [monthKey]: peakResult[emp.id].shifts }
+            };
+          }
+          return emp;
+        }));
+        showDialog({ title: 'Sucesso', message: 'Semana de Natal otimizada com 100% da equipe presente nos dias 22, 23 e 24!', type: 'alert' });
+      }
+    });
+  };
+
 
   if (!auth.isAuthenticated) {
     return <Login onLogin={(role) => setAuth({ isAuthenticated: true, role })} />;
@@ -666,6 +676,14 @@ const App: React.FC = () => {
             />
 
        <main className="flex-1 overflow-hidden p-2 sm:p-4">
+         {auth.role === 'admin' && currentView === 'grid' && (
+           <ActionToolbar 
+             employees={employees} 
+             currentMY={currentMY} 
+             onImportClick={() => setCurrentView('data')}
+             onOptimizePeakWeek={handleOptimizePeakWeek}
+           />
+         )}
          {(() => {
            const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
            const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(dateStr);

@@ -1,8 +1,8 @@
 
 import React, { useMemo } from 'react';
 import { Employee, MonthYear, Holiday } from '../types';
-import { isWorkingShift } from '../hooks/useScheduleEngine';
-import { buildHolidaySet, getShortName } from '../constants';
+import { getCleaningSchedule } from '../hooks/useScheduleEngine';
+import { buildHolidaySet } from '../constants';
 import { Icon } from './Icon';
 import { toPng } from 'html-to-image';
 
@@ -17,66 +17,18 @@ const WEEKDAY_NAMES = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sext
 const MONTH_NAMES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
 export const CleaningSchedule: React.FC<CleaningScheduleProps> = ({ employees, currentMY, customHolidays, onClose }) => {
-  const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
-  const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
   const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
 
   const assignments = useMemo(() => {
-    const activeEmps = employees
-      .filter(e => !e.isHidden && e.status === 'active' && !e.isYoungApprentice)
-      .sort((a, b) => a.name.localeCompare(b.name));
-
-    if (activeEmps.length === 0) return [];
-
-    const schedule: { day: number, empName: string, isSunday: boolean, isHoliday: boolean }[] = [];
-    
-    // Simple rotation logic: 
-    // We want to distribute fairly. We'll keep track of how many times each person has cleaned.
-    const cleanCounts = new Map<string, number>();
-    activeEmps.forEach(e => cleanCounts.set(e.id, 0));
-
-    // Also keep track of the LAST day each person cleaned to avoid back-to-back if possible
-    const lastCleanDay = new Map<string, number>();
-    activeEmps.forEach(e => lastCleanDay.set(e.id, -10));
-
-    for (let d = 0; d < daysInMonth; d++) {
-      const date = new Date(currentMY.year, currentMY.month, d + 1);
+    const rawSchedule = getCleaningSchedule(employees, currentMY, customHolidays);
+    return rawSchedule.map(item => {
+      const date = new Date(currentMY.year, currentMY.month, item.day);
       const isSunday = date.getDay() === 0;
-      const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`;
+      const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(item.day).padStart(2, '0')}`;
       const isHoliday = holidaySet.has(dateStr);
-
-      // 1. Find everyone working today
-      const workingToday = activeEmps.filter(emp => {
-        const shift = (emp.shifts[monthKey] || [])[d] || 'T';
-        return isWorkingShift(shift);
-      });
-
-      if (workingToday.length === 0) {
-        schedule.push({ day: d + 1, empName: 'Ninguém Escalado', isSunday, isHoliday });
-        continue;
-      }
-
-      // 2. Pick the person who has cleaned the FEWEST times
-      // and hasn't cleaned for the longest time
-      workingToday.sort((a, b) => {
-        const countA = cleanCounts.get(a.id) || 0;
-        const countB = cleanCounts.get(b.id) || 0;
-        if (countA !== countB) return countA - countB;
-        
-        const lastA = lastCleanDay.get(a.id) || 0;
-        const lastB = lastCleanDay.get(b.id) || 0;
-        return lastA - lastB;
-      });
-
-      const selected = workingToday[0];
-      schedule.push({ day: d + 1, empName: getShortName(selected.name, employees), isSunday, isHoliday });
-      
-      cleanCounts.set(selected.id, (cleanCounts.get(selected.id) || 0) + 1);
-      lastCleanDay.set(selected.id, d);
-    }
-
-    return schedule;
-  }, [employees, currentMY, holidaySet, monthKey, daysInMonth]);
+      return { day: item.day, empName: item.empName, isSunday, isHoliday };
+    });
+  }, [employees, currentMY, customHolidays, holidaySet]);
 
   const handleDownload = async () => {
     const el = document.getElementById('cleaning-calendar-capture');
