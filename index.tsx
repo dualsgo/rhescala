@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { DialogProvider } from './contexts/DialogContext';
 import { SetupScreen } from './components/SetupScreen';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { getConfiguredApiUrl } from './src/gas-api';
 
 function Root() {
@@ -30,6 +31,8 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <Root />
+    <ErrorBoundary>
+      <Root />
+    </ErrorBoundary>
   </React.StrictMode>
 );

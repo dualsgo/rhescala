@@ -67,7 +67,12 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
         // Tenta carregar do localStorage primeiro (cache local)
         try {
             const localItem = window.localStorage.getItem(key);
-            return localItem ? JSON.parse(localItem) : initialValue;
+            if (!localItem) return initialValue;
+            const parsed = JSON.parse(localItem);
+            if (parsed === null || parsed === undefined) return initialValue;
+            if (Array.isArray(initialValue) && !Array.isArray(parsed)) return initialValue;
+            if (typeof initialValue === 'object' && initialValue !== null && !Array.isArray(initialValue) && (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))) return initialValue;
+            return parsed;
         } catch (e) {
             return initialValue;
         }
@@ -112,6 +117,11 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
 
             initialLoadSuccess.current = true;
             if (cloudData) {
+                if (Array.isArray(initialValue) && !Array.isArray(cloudData)) {
+                    console.warn(`[useLocalStorage] Ignorando cloudData inválido para ${key} (esperava Array)`);
+                    updateGlobalSync('synced', key, 'Salvo na Planilha', !force);
+                    return;
+                }
                 const dataStr = JSON.stringify(cloudData);
                 const localStr = JSON.stringify(storedValueRef.current);
 
