@@ -7,7 +7,6 @@ import { buildHolidaySet, getDefaultHourForDay, getShortName } from './constants
 
 
 import { Header } from './components/Header';
-import { ActionToolbar } from './components/ActionToolbar';
 import { toPng } from 'html-to-image';
 
 import { ShiftGrid } from './components/ShiftGrid';
@@ -676,14 +675,6 @@ const App: React.FC = () => {
             />
 
        <main className="flex-1 overflow-hidden p-2 sm:p-4">
-         {auth.role === 'admin' && currentView === 'grid' && (
-           <ActionToolbar 
-             employees={employees} 
-             currentMY={currentMY} 
-             onImportClick={() => setCurrentView('data')}
-             onOptimizePeakWeek={handleOptimizePeakWeek}
-           />
-         )}
          {(() => {
            const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
            const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(dateStr);
