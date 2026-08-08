@@ -53,8 +53,8 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
 
             // 3. Salvar URL e Configurar as senhas na planilha
             setConfiguredApiUrl(trimmed);
-            await api.updatePassword('admin', adminPass);
-            await api.updatePassword('viewer', viewerPass);
+            await apiStore.updatePassword('admin', adminPass);
+            await apiStore.updatePassword('viewer', viewerPass);
 
             onComplete();
         } catch (e) {
