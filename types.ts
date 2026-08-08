@@ -95,6 +95,7 @@ export interface JornadaSettings {
     sunday: string[];
     holiday: string[];
     apprentice: string[];
+    extended?: string[];
   };
   lunchRules: {
     holiday: string;

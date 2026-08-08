@@ -3,7 +3,7 @@ import { Employee, MonthYear, Holiday, ShiftType, JornadaSettings } from '../typ
 import { getShiftClassification, isWorkingShift } from '../hooks/useScheduleEngine';
 
 import { Icon } from './Icon';
-import { buildHolidaySet, SHIFT_HOURS, DEFAULT_JORNADA_SETTINGS } from '../constants';
+import { buildHolidaySet, SHIFT_HOURS, DEFAULT_JORNADA_SETTINGS, getShortName } from '../constants';
 import { toPng } from 'html-to-image';
 
 
@@ -642,7 +642,7 @@ const TeamMonthlyCalendar: React.FC<{
       const isOff = !isWorkingShift(shift) && shift !== 'C';
 
       return { 
-        name: emp.name.split(' ')[0], 
+        name: getShortName(emp.name, employees), 
         shift, 
         hours, 
         isOff, 

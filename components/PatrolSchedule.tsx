@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Employee, MonthYear, Holiday, JornadaSettings } from '../types';
 import { isWorkingShift, getShiftClassification } from '../hooks/useScheduleEngine';
-import { buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS } from '../constants';
+import { buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, getShortName } from '../constants';
 import { Icon } from './Icon';
 import { toPng } from 'html-to-image';
 
@@ -85,7 +85,7 @@ export const PatrolSchedule: React.FC<PatrolScheduleProps> = ({ employees, curre
           const selected = pool[0];
           patrolCounts.set(selected.id, (patrolCounts.get(selected.id) || 0) + 1);
           lastPatrolDay.set(selected.id, dayIdx);
-          return selected.name.split(' ')[0];
+          return getShortName(selected.name, employees);
       };
 
       const aberturaName = pickPerson(aberturaPool, d);

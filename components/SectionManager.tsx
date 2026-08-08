@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Employee, MonthYear, JornadaSettings } from '../types';
 import { getShiftClassification } from '../hooks/useScheduleEngine';
-import { DEFAULT_JORNADA_SETTINGS } from '../constants';
+import { DEFAULT_JORNADA_SETTINGS, getShortName } from '../constants';
 import { Icon } from './Icon';
 import { toPng } from 'html-to-image';
 
@@ -109,7 +109,7 @@ export const SectionManager: React.FC<SectionManagerProps> = ({
 
   const getEmpName = (id: string) => {
     const emp = employees.find(e => e.id === id);
-    return emp ? emp.name.split(' ')[0] : 'Desconhecido';
+    return emp ? getShortName(emp.name, employees) : 'Desconhecido';
   };
 
   const getEmpShiftColor = (id: string) => {
@@ -242,7 +242,7 @@ export const SectionManager: React.FC<SectionManagerProps> = ({
                           >
                               <option value="" disabled>+ Adicionar</option>
                               {unassignedEmps.map(emp => (
-                                  <option key={emp.id} value={emp.id}>{emp.name.split(' ')[0]}</option>
+                                  <option key={emp.id} value={emp.id}>{getShortName(emp.name, employees)}</option>
                               ))}
                           </select>
                       </div>

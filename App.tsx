@@ -3,6 +3,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
 import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification, findSundayViolations, isWorkingShift, distributeTacticalPositions } from './hooks/useScheduleEngine';
+import { buildHolidaySet, getDefaultHourForDay, getShortName } from './constants';
 
 
 import { Header } from './components/Header';
@@ -366,7 +367,7 @@ const App: React.FC = () => {
       const shift = e.shifts[monthKey]?.[dayIdx] || 'T';
       
       if (shift === 'F' || shift.startsWith('FF')) {
-        folgas.push(`${e.name.split(' ')[0]} (${shift})`);
+        folgas.push(`${getShortName(e.name, activeEmps)} (${shift})`);
         return;
       }
       
@@ -381,7 +382,7 @@ const App: React.FC = () => {
       const posEmoji = pos === 'P1' ? '🟥' : pos === 'P2' ? '🟨' : pos === 'P3' ? '🟩' : pos === 'P4' ? '🟦' : pos === 'ESTQ' ? '📦' : '🔹';
       
       if (!groups[hour]) groups[hour] = [];
-      groups[hour].push({ ...e, firstName: e.name.split(' ')[0], posEmoji, pos });
+      groups[hour].push({ ...e, firstName: getShortName(e.name, activeEmps), posEmoji, pos });
     });
 
     const hourOrder = isHoliday ? ['12h às 18h', '13h às 19h', '14h às 20h', '15h às 21h'] : 
@@ -461,7 +462,7 @@ const App: React.FC = () => {
       const digitals = [digital1, digital2].filter(Boolean);
       if (digitals.length > 0) {
         digitals.forEach(d => {
-          text += `• ${d.shiftName}: ${d.name.split(' ')[0]}\n`;
+          text += `• ${d.shiftName}: ${getShortName(d.name, activeEmps)}\n`;
         });
       } else {
         text += `• Responsável: Não definido\n`;
@@ -483,7 +484,29 @@ const App: React.FC = () => {
       const retiradas = [retirada1, retirada2].filter(Boolean);
       if (retiradas.length > 0) {
         retiradas.forEach(r => {
-          text += `• ${r.shiftName}: ${r.name.split(' ')[0]}\n`;
+          text += `• ${r.shiftName}: ${getShortName(r.name, activeEmps)}\n`;
+        });
+      } else {
+        text += `• Responsável: Não definido\n`;
+      }
+
+      const excludeForLimpeza = [digital1?.id, digital2?.id, retirada1?.id, retirada2?.id].filter(Boolean) as string[];
+      let limpeza1 = pickDigital(turno1, excludeForLimpeza, 5);
+      let limpeza2 = pickDigital(turno2, excludeForLimpeza, 5);
+
+      if (!limpeza1 && turno2.length > 1) {
+        const remaining = turno2.filter(e => !excludeForLimpeza.includes(e.id));
+        limpeza1 = pickDigital(remaining, excludeForLimpeza, 5);
+      } else if (!limpeza2 && turno1.length > 1) {
+        const remaining = turno1.filter(e => !excludeForLimpeza.includes(e.id));
+        limpeza2 = pickDigital(remaining, excludeForLimpeza, 5);
+      }
+
+      text += `\n🧹 *Limpeza da Copa*\n`;
+      const limpezas = [limpeza1, limpeza2].filter(Boolean);
+      if (limpezas.length > 0) {
+        limpezas.forEach(l => {
+          text += `• ${l.shiftName}: ${getShortName(l.name, activeEmps)}\n`;
         });
       } else {
         text += `• Responsável: Não definido\n`;
@@ -539,7 +562,7 @@ const App: React.FC = () => {
       if (!pos || pos === 'AUTO') {
         pos = (shift !== 'T') ? shift : resolvedPositions[e.id];
       }
-      allWorkingEmps.push({ ...e, firstName: e.name.split(' ')[0], pos, shiftName });
+      allWorkingEmps.push({ ...e, firstName: getShortName(e.name, activeEmps), pos, shiftName });
     });
 
     const p1Abertura = allWorkingEmps.find(m => m.pos === 'P1' && m.shiftName === 'Abertura');

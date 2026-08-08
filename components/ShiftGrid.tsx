@@ -485,10 +485,12 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                        const isSun = date.getDay() === 0;
    
                                        let options = jornadaSettings.shiftHours.weekday;
-                                       if (isHol) options = jornadaSettings.shiftHours.holiday;
+                                       if (isHol) options = [...jornadaSettings.shiftHours.holiday, ...(jornadaSettings.shiftHours.extended || [])];
                                        else if (isSun) options = jornadaSettings.shiftHours.sunday;
+                                       else options = [...jornadaSettings.shiftHours.weekday, ...(jornadaSettings.shiftHours.extended || [])];
+                                       
                                        if (emp.isYoungApprentice) options = jornadaSettings.shiftHours.apprentice;
-   
+                                       
                                        const currentVal = emp.dailyHours[monthKey]?.[selectedDayIdx];
                                        const finalOptions = [...new Set([...options])].filter(Boolean);
    

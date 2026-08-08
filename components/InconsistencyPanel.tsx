@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Employee, MonthYear, ShiftType } from '../types';
 import { Icon } from './Icon';
 import { getPrevMonthConsecutive, getPrevMonthWorkStreak, isWorkingShift } from '../hooks/useScheduleEngine';
+import { getShortName } from '../constants';
 
 
 interface InconsistencyPanelProps {
@@ -378,7 +379,7 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
             <div className="divide-y divide-slate-100  max-h-80 overflow-y-auto custom-scrollbar">
               {issues.map((issue) => {
                 const empObj = employees.find(e => e.id === issue.empId);
-                const displayName = (empObj?.name ?? issue.empName).split(' ').slice(0, 2).join(' ');
+                const displayName = getShortName(empObj?.name ?? issue.empName, employees);
                 return (
                   <div
                     key={issue.id}

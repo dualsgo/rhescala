@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { Icon } from './Icon';
 import { Employee, MonthYear, Holiday, JornadaSettings } from '../types';
-import { buildHolidaySet, DEFAULT_JORNADA_SETTINGS } from '../constants';
+import { buildHolidaySet, DEFAULT_JORNADA_SETTINGS, getShortName } from '../constants';
 import { isWorkingShift, calculateLunches } from '../hooks/useScheduleEngine';
 
 
@@ -125,14 +125,14 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
         } else {
           counts.total++;
           if (isHoliday) {
-            if (hForDay.includes('12h')) { counts.abertura++; names.abertura.push(e.name.split(' ')[0]); }
-            else if (hForDay.includes('13h')) { counts.interm1++; names.interm1.push(e.name.split(' ')[0]); }
-            else if (hForDay.includes('14h')) { counts.interm2++; names.interm2.push(e.name.split(' ')[0]); }
-            else if (hForDay.includes('15h')) { counts.fechamento++; names.fechamento.push(e.name.split(' ')[0]); }
+            if (hForDay.includes('12h')) { counts.abertura++; names.abertura.push(getShortName(e.name, employees)); }
+            else if (hForDay.includes('13h')) { counts.interm1++; names.interm1.push(getShortName(e.name, employees)); }
+            else if (hForDay.includes('14h')) { counts.interm2++; names.interm2.push(getShortName(e.name, employees)); }
+            else if (hForDay.includes('15h')) { counts.fechamento++; names.fechamento.push(getShortName(e.name, employees)); }
           } else {
-            if (hForDay.includes('10h')) { counts.abertura++; names.abertura.push(e.name.split(' ')[0]); }
-            else if (hForDay.includes('12h')) { counts.intermediario++; names.intermediario.push(e.name.split(' ')[0]); }
-            else if (hForDay.includes('13h40')) { counts.fechamento++; names.fechamento.push(e.name.split(' ')[0]); }
+            if (hForDay.includes('10h')) { counts.abertura++; names.abertura.push(getShortName(e.name, employees)); }
+            else if (hForDay.includes('12h')) { counts.intermediario++; names.intermediario.push(getShortName(e.name, employees)); }
+            else if (hForDay.includes('13h40')) { counts.fechamento++; names.fechamento.push(getShortName(e.name, employees)); }
           }
         }
       } else if (shift === 'F' || (shift && (shift.startsWith('FF') || shift === 'DO'))) {
@@ -160,7 +160,7 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
       const isSun = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1).getDay() === 0;
       const isOp = category === 'abertura';
       
-      const members = employees.filter(e => catNames.includes(e.name.split(' ')[0]));
+      const members = employees.filter(e => catNames.includes(getShortName(e.name, employees)));
       // Note: calculateLunches expects members with some extra fields but we just need it to run
       const times = calculateLunches(members, isHoliday, isSun, isOp, jornadaSettings);
       

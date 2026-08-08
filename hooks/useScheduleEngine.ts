@@ -493,13 +493,26 @@ export function generateYearSchedule(
                 );
             });
 
+            // Generate each apprentice
+            activeApprentices.forEach(emp => {
+                if (!result[emp.id]) result[emp.id] = {};
+                result[emp.id][monthKey] = generateMonthForEmployee(
+                    emp, year, month,
+                    new Set(), // apprentices always off on Sundays via the isYoungApprentice rule
+                    customHolidays,
+                    deletedNationalHolidays
+                );
+            });
+
+            const allActive = [...activeRegular, ...activeApprentices];
+
             // Pass: Tactical Positioning for the whole month
             for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
                 const isHoliday = buildHolidaySet(year, customHolidays, deletedNationalHolidays).has(dateStr);
                 const isSunday = new Date(year, month, dayIdx + 1).getDay() === 0;
 
-                const empsForDay = activeRegular.map(emp => ({
+                const empsForDay = allActive.map(emp => ({
                     ...emp,
                     shifts: {
                         ...emp.shifts,
@@ -513,23 +526,12 @@ export function generateYearSchedule(
 
                 const positions = resolveTacticalDay(empsForDay, monthKey, dayIdx, isHoliday, isSunday, settings);
                 
-                activeRegular.forEach(emp => {
+                allActive.forEach(emp => {
                     if (result[emp.id][monthKey].shifts[dayIdx] === 'T' && positions[emp.id]) {
                         result[emp.id][monthKey].shifts[dayIdx] = positions[emp.id] as ShiftType;
                     }
                 });
             }
-
-            // Generate each apprentice
-            activeApprentices.forEach(emp => {
-                if (!result[emp.id]) result[emp.id] = {};
-                result[emp.id][monthKey] = generateMonthForEmployee(
-                    emp, year, month,
-                    new Set(), // apprentices always off on Sundays via the isYoungApprentice rule
-                    customHolidays,
-                    deletedNationalHolidays
-                );
-            });
         }
     }
 
@@ -543,105 +545,120 @@ export function calculateLunches(
     isOpening: boolean,
     settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
 ): string[] {
-    // 1. Fixed Rules
-    if (isHoliday) return members.map(() => settings.lunchRules.holiday);
+    if (!members || members.length === 0) return [];
 
-    // Filter people who need slot allocation (CLT regular employees)
-    const allocatableIndices: number[] = [];
+    // 1. Feriados (Pausa flexível de 15 min escalonada de 15 em 15 min)
+    if (isHoliday) {
+        let holidayPauseIdx = 0;
+        return members.map(m => {
+            if (m?.isYoungApprentice || m?.cargo === 'Aprendiz') {
+                return settings.lunchRules.apprentice || '12h45';
+            }
+            if (m?.cargo === 'Estoquista') {
+                return 'Flexível';
+            }
+            // Exibe a pausa de 15 min de forma escalonada (ex: 14h30, 14h45, 15h00, 15h15...)
+            const startMins = 14 * 60 + 30 + (holidayPauseIdx % 6) * 15;
+            holidayPauseIdx++;
+            const h = Math.floor(startMins / 60);
+            const min = startMins % 60;
+            const timeStr = `${h}h${min === 0 ? '' : min}`;
+            return `${timeStr} (15 min)`;
+        });
+    }
+
     const results: string[] = Array(members.length).fill('');
+    const allocatable: { member: any; index: number; startHour: number; isIntermediario: boolean }[] = [];
 
+    // 2. Separar papéis especiais (Jovem Aprendiz = Fixo 12h45, Estoquista = Flexível)
     members.forEach((m, idx) => {
-        if (m.isYoungApprentice) {
-            results[idx] = settings.lunchRules.apprentice;
+        if (!m) return;
+        if (m.isYoungApprentice || m.cargo === 'Aprendiz') {
+            results[idx] = settings.lunchRules.apprentice || '12h45';
         } else if (m.cargo === 'Estoquista') {
             results[idx] = 'Flexível';
         } else {
-            allocatableIndices.push(idx);
+            const periodStr = m.workPeriod || m.dailyHours || m.hour || '';
+            const match = String(periodStr).match(/^(\d{1,2})[h:]/);
+            const startHour = match ? parseInt(match[1], 10) : (isOpening ? 10 : 13);
+            const isIntermediario = startHour >= 11 && startHour <= 12;
+            allocatable.push({ member: m, index: idx, startHour, isIntermediario });
         }
     });
 
-    const N = allocatableIndices.length;
+    const N = allocatable.length;
     if (N === 0) return results;
 
+    // 3. Domingos (Lógica Simplificada e Escalonada de Domingo)
     if (isSunday) {
-        // 4. Sunday Specific Logic
-        // Turno 1 (Abertura 12h-20h) -> All at 13h
-        // Turno 2 (13h-21h) -> Distributed in 14h, 15h, 16h, 17h
         if (isOpening) {
-            allocatableIndices.forEach(originalIdx => {
-                results[originalIdx] = settings.lunchRules.sundayOpening;
+            // Abertura no Domingo (12h às 20h):
+            // Abrem 2 pessoas às 12h e vão juntas almoçar às 13h (retornam às 14h).
+            // Para equipes sazonais (N > 2), agrupam em duplas (13h, 13h30).
+            allocatable.forEach((item, i) => {
+                const wave = Math.floor(i / 2);
+                results[item.index] = wave === 0 ? (settings.lunchRules.sundayOpening || '13h') : '13h30';
             });
         } else {
-            const sundayClosingSlots = settings.lunchRules.sundayClosing;
-            for (let i = 0; i < N; i++) {
-                results[allocatableIndices[i]] = sundayClosingSlots[i % 4];
-            }
-            // Optional: Sort for consistency if N > 4
-            if (N > 4) {
-               // The loop already handles i % 4, so it's distributed.
-            }
+            // Fechamento no Domingo (13h às 21h):
+            // Após retorno da Abertura às 14h, vão um de cada vez (14h, 15h, 16h, 17h).
+            // Com equipe sazonal maior (N > 4), evolui automaticamente para duplas (14h, 15h, 16h...).
+            const sundaySlots = ['14h', '15h', '16h', '17h'];
+            allocatable.forEach((item, i) => {
+                const maxPerSlot = N <= 4 ? 1 : 2;
+                const waveIndex = Math.floor(i / maxPerSlot);
+                results[item.index] = sundaySlots[Math.min(waveIndex, sundaySlots.length - 1)];
+            });
         }
         return results;
     }
 
+    // 4. Dias de Semana (Turno Abertura vs Fechamento)
     if (isOpening) {
-        // 2. Opening Logic (Abertura/Domingo)
-        // Slots: 13h, 13h30, 14h
-        // Priority: Preservation of presence before 13h40. 14h is favored as closing team arrives.
-        
-        const openingPlan: string[] = [];
-        const openingSlots = settings.lunchRules.weekdayOpening;
-        const OS = openingSlots.length;
+        // Abertura (10h às 18h20):
+        // Slots disponíveis: 13h, 13h45, 14h
+        allocatable.sort((a, b) => a.startHour - b.startHour);
 
-        if (N <= OS) {
-             // Fill from the end (later slots first)
-             for (let i = 0; i < N; i++) {
-                 openingPlan.push(openingSlots[OS - 1 - i]);
-             }
-             // Reverse to distribute evenly: e.g. for N=3 -> 13h, 13h30, 14h
-             openingPlan.reverse();
-        } else {
-            for (let i = 0; i < N; i++) {
-                if (i < OS) {
-                    openingPlan.push(openingSlots[i]);
-                } else {
-                    // Extra people go to the last slot (14h) because the afternoon shift has arrived.
-                    openingPlan.push(openingSlots[OS - 1]);
-                }
+        allocatable.forEach((item, i) => {
+            if (N === 1) {
+                results[item.index] = '14h';
+            } else if (N === 2) {
+                results[item.index] = (i === 0) ? '13h45' : '14h';
+            } else if (N === 3) {
+                if (i === 0) results[item.index] = '13h45';
+                else results[item.index] = '14h';
+            } else if (N === 4) {
+                if (i === 0) results[item.index] = '13h';
+                else if (i === 1) results[item.index] = '13h45';
+                else results[item.index] = '14h';
+            } else {
+                // Para N >= 5 (Equipe com Sazonais)
+                if (i < Math.ceil(N / 4)) results[item.index] = '13h';
+                else if (i < Math.ceil(N / 2)) results[item.index] = '13h45';
+                else results[item.index] = '14h';
             }
-        }
-        
-        allocatableIndices.forEach((originalIdx, i) => {
-            results[originalIdx] = openingPlan[i] || '14h';
+        });
+    } else {
+        // Fechamento / Intermediário (13h40 às 22h, 12h às 20h20):
+        // Entram às 13h40 -> almoçam a partir das 15h.
+        // Slots: 15h, 15h30, 16h, 16h30, 17h
+        allocatable.sort((a, b) => {
+            if (a.isIntermediario && !b.isIntermediario) return -1;
+            if (!a.isIntermediario && b.isIntermediario) return 1;
+            return a.startHour - b.startHour;
         });
 
-    } else {
-        // 3. Closing Logic (Fechamento)
-        // Slots: 15h, 16h, 16h30, 17h
-        // Priority: Spread as much as possible before doubling up. 
-        
-        const closingSlots = settings.lunchRules.weekdayClosing;
-        const closingPlan: string[] = [];
-        const CS = closingSlots.length;
+        const closingSlots = ['15h', '15h30', '16h', '16h30', '17h'];
 
-        if (N <= CS) {
-             for (let i = 0; i < N; i++) {
-                 closingPlan.push(closingSlots[i % CS]);
-             }
-        } else {
-            // N > CS: Fill all slots first, then double up
-            for (let i = 0; i < N; i++) {
-                closingPlan.push(closingSlots[i % CS]);
+        allocatable.forEach((item, i) => {
+            if (N <= 5) {
+                // 1 por slot para máxima cobertura sem sobreposição
+                results[item.index] = closingSlots[i];
+            } else {
+                // Equipe sazonal maior (N > 5): 2 por slot em ondas escalonadas
+                const waveIndex = Math.floor(i / 2);
+                results[item.index] = closingSlots[Math.min(waveIndex, closingSlots.length - 1)];
             }
-            // Sort plan to keep doubles together or ordered (optional, but consistent)
-            closingPlan.sort((a, b) => {
-                const order = { '15h': 0, '16h': 1, '16h30': 2, '17h': 3 };
-                return order[a as keyof typeof order] - order[b as keyof typeof order];
-            });
-        }
-
-        allocatableIndices.forEach((originalIdx, i) => {
-            results[originalIdx] = closingPlan[i] || '15h';
         });
     }
 
@@ -1111,11 +1128,11 @@ export function resolveTacticalDay(
     const result: Record<string, string> = {};
     const groups: Record<string, Employee[]> = {};
     
+    // Group working employees by shift classification (Abertura, Intermediário, Fechamento)
     activeEmps.forEach(e => {
         const shift = e.shifts[monthKey]?.[dayIdx] || 'T';
         if (!isWorkingShift(shift) && !shift.startsWith('FF')) return;
 
-        
         const hour = e.dailyHours[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
         const classification = getShiftClassification(hour, isSunday, settings);
         if (classification === 'N/A') return;
@@ -1126,8 +1143,7 @@ export function resolveTacticalDay(
 
     const POSITIONS = ['P1', 'P2', 'P3', 'P4', 'ESTQ'];
 
-    // Process each classification group (Abertura, Intermediário, Fechamento)
-    // Sorting groups ensures Abertura is processed first if needed
+    // Process each shift group (Abertura, Intermediário, Fechamento)
     const groupNames = Object.keys(groups).sort((a, b) => {
         const order = { 'Abertura': 0, 'Intermediário': 1, 'Fechamento': 2 };
         return (order[a as keyof typeof order] ?? 99) - (order[b as keyof typeof order] ?? 99);
@@ -1138,7 +1154,7 @@ export function resolveTacticalDay(
         const takenPositions = new Set<string>();
         const autoMembers: Employee[] = [];
 
-        // 1. Manual Assignments (Tactical overrides)
+        // 1. Manual Overrides (set in grid)
         members.forEach(m => {
             const pos = m.tacticalPositions?.[monthKey]?.[dayIdx];
             if (pos && pos !== 'AUTO') {
@@ -1149,91 +1165,95 @@ export function resolveTacticalDay(
             }
         });
 
-        // 1.5 Default Role Assignments (Estoquista -> ESTQ, Fiscal -> P2)
-        // Only if not already manually assigned and position is available
+        // 2. Default Role Assignment for Estoquista:
+        // Estoquista ALWAYS stays in 'ESTQ' by default and does NOT take P1, P2, P3, or P4.
         autoMembers.forEach(m => {
             if (result[m.id]) return;
-
-            if (m.cargo === 'Estoquista' && !takenPositions.has('ESTQ')) {
+            if (m.cargo === 'Estoquista') {
                 result[m.id] = 'ESTQ';
                 takenPositions.add('ESTQ');
-            } else if (m.cargo === 'Fiscal' && !takenPositions.has('P2')) {
-                result[m.id] = 'P2';
-                takenPositions.add('P2');
             }
         });
 
-        // Randomize the pool for "aleatorio" fallback behavior
-        for (let i = autoMembers.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [autoMembers[i], autoMembers[j]] = [autoMembers[j], autoMembers[i]];
+        // Remaining candidates eligible for tactical positions (P1, P2, P3, P4)
+        const eligibleForStorePositions = autoMembers.filter(m => !result[m.id] && m.cargo !== 'Estoquista');
+
+        const isFiscalOrAprendiz = (m: Employee) => 
+            m.cargo === 'Fiscal' || m.cargo === 'Aprendiz' || m.isYoungApprentice === true;
+
+        // 3. Fill Mandatory P1 (at least 1 per shift if eligible candidates exist)
+        if (!takenPositions.has('P1')) {
+            // Priority A: Candidate with preferredPosition1 === 'P1'
+            let p1Candidate = eligibleForStorePositions.find(m => !result[m.id] && m.preferredPosition1 === 'P1');
+            
+            // Priority B: Candidate with preferredPosition2 === 'P1'
+            if (!p1Candidate) {
+                p1Candidate = eligibleForStorePositions.find(m => !result[m.id] && m.preferredPosition2 === 'P1');
+            }
+
+            // Priority C: Avoid picking Fiscal/Aprendiz if possible (reserving them for P2)
+            if (!p1Candidate) {
+                p1Candidate = eligibleForStorePositions.find(m => !result[m.id] && !isFiscalOrAprendiz(m))
+                           || eligibleForStorePositions.find(m => !result[m.id]);
+            }
+
+            if (p1Candidate) {
+                result[p1Candidate.id] = 'P1';
+                takenPositions.add('P1');
+            }
         }
 
-        // 2. Define Hierarchy for Mandatory Positions (P1 and P2)
-        const mandatoryToFill = ['P1', 'P2'];
-        
-        mandatoryToFill.forEach(pos => {
-            if (!takenPositions.has(pos)) {
-                // Priority A: People with Primary Preference for this position
-                let candidate = autoMembers.find(m => !result[m.id] && m.preferredPosition1 === pos);
-                
-                // Priority B: People with Secondary Preference for this position
-                if (!candidate) {
-                    candidate = autoMembers.find(m => !result[m.id] && m.preferredPosition2 === pos);
-                }
-                
-                // Priority C: Necessity (pick someone who doesn't have a preference for other mandatory positions first)
-                if (!candidate) {
-                    // Try to avoid picking someone who prefers another mandatory position that isn't filled yet
-                    const otherMandatory = mandatoryToFill.filter(p => p !== pos && !takenPositions.has(p));
-                    candidate = autoMembers.find(m => 
-                        !result[m.id] && 
-                        !otherMandatory.includes(m.preferredPosition1 || '') && 
-                        !otherMandatory.includes(m.preferredPosition2 || '')
-                    ) || autoMembers.find(m => !result[m.id]);
-                }
+        // 4. Fill Mandatory P2 (at least 1 per shift if eligible candidates exist)
+        // Fiscal and Jovem Aprendiz HAVE PRIORITY for P2
+        if (!takenPositions.has('P2')) {
+            // Priority A: Fiscal or Jovem Aprendiz
+            let p2Candidate = eligibleForStorePositions.find(m => !result[m.id] && isFiscalOrAprendiz(m));
 
-                if (candidate) {
-                    result[candidate.id] = pos;
-                    takenPositions.add(pos);
-                }
+            // Priority B: Candidate with preferredPosition1 === 'P2'
+            if (!p2Candidate) {
+                p2Candidate = eligibleForStorePositions.find(m => !result[m.id] && m.preferredPosition1 === 'P2');
             }
-        });
 
-        // 3. Preferences for the rest (P3, P4, ESTQ)
-        // For remaining staff, try to satisfy preferences, else auto-fill
-        autoMembers.filter(m => !result[m.id]).forEach(m => {
+            // Priority C: Candidate with preferredPosition2 === 'P2'
+            if (!p2Candidate) {
+                p2Candidate = eligibleForStorePositions.find(m => !result[m.id] && m.preferredPosition2 === 'P2');
+            }
+
+            // Priority D: Any eligible candidate
+            if (!p2Candidate) {
+                p2Candidate = eligibleForStorePositions.find(m => !result[m.id]);
+            }
+
+            if (p2Candidate) {
+                result[p2Candidate.id] = 'P2';
+                takenPositions.add('P2');
+            }
+        }
+
+        // 5. Fill Remaining Eligible Staff
+        // Honor registered preferences first (P3, P4, ESTQ), else default all remaining non-estoquista staff to P3
+        eligibleForStorePositions.filter(m => !result[m.id]).forEach(m => {
             let assigned = false;
-            
-            // Check Preferred 1
+
+            // Check preferredPosition1
             if (m.preferredPosition1 && POSITIONS.includes(m.preferredPosition1)) {
-                // P1 and P2 are already filled or couldn't be filled by this person in step 2
-                // If they prefer P3, P4 or ESTQ, let them have it (multiples allowed)
-                if (!['P1', 'P2'].includes(m.preferredPosition1)) {
+                if (m.preferredPosition1 === 'P4' || m.preferredPosition1 === 'P3' || m.preferredPosition1 === 'ESTQ') {
                     result[m.id] = m.preferredPosition1;
                     assigned = true;
                 }
             }
-            
-            // Check Preferred 2
+
+            // Check preferredPosition2
             if (!assigned && m.preferredPosition2 && POSITIONS.includes(m.preferredPosition2)) {
-                if (!['P1', 'P2'].includes(m.preferredPosition2)) {
+                if (m.preferredPosition2 === 'P4' || m.preferredPosition2 === 'P3' || m.preferredPosition2 === 'ESTQ') {
                     result[m.id] = m.preferredPosition2;
                     assigned = true;
                 }
             }
 
-            // 4. Final Auto-Fill fallback (Random/Balanced)
+            // Default for all remaining non-Estoquista staff after P1 & P2 are filled: P3
             if (!assigned) {
-                // Order: P3 (max 2), P4 (max 2), ESTQ (max 1), then P3 again...
-                const p3Count = Object.values(result).filter(v => v === 'P3').length;
-                const p4Count = Object.values(result).filter(v => v === 'P4').length;
-                const estqCount = Object.values(result).filter(v => v === 'ESTQ').length;
-
-                if (p3Count < 2) result[m.id] = 'P3';
-                else if (p4Count < 2) result[m.id] = 'P4';
-                else if (estqCount < 1) result[m.id] = 'ESTQ';
-                else result[m.id] = 'P3'; 
+                result[m.id] = 'P3';
             }
         });
     });

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Employee, MonthYear, ShiftType } from '../types';
 import { Icon } from './Icon';
+import { getShortName } from '../constants';
 
 interface RequestManagerProps {
   employees: Employee[];
@@ -210,7 +211,7 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
                                       
                                       const updated = (employee.requests || []).map(r => 
                                         (r.createdAt === req.createdAt) 
-                                          ? { ...r, status: 'granted' as const, feedback: `Troca de turno com ${targetEmp.name.split(' ')[0]} efetuada na escala.` } : r
+                                          ? { ...r, status: 'granted' as const, feedback: `Troca de turno com ${getShortName(targetEmp.name, employees)} efetuada na escala.` } : r
                                       );
                                       onUpdateEmployee(employee.id, { 
                                         requests: updated, 

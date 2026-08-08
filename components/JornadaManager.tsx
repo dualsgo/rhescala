@@ -24,7 +24,8 @@ export const JornadaManager: React.FC<JornadaManagerProps> = ({
   };
 
   const updateShiftHour = (category: keyof JornadaSettings['shiftHours'], index: number, value: string) => {
-    const newHours = [...localSettings.shiftHours[category]];
+    const current = localSettings.shiftHours[category] || [];
+    const newHours = [...current];
     newHours[index] = value;
     setLocalSettings({
       ...localSettings,
@@ -36,7 +37,8 @@ export const JornadaManager: React.FC<JornadaManagerProps> = ({
   };
 
   const addShiftHour = (category: keyof JornadaSettings['shiftHours']) => {
-    const newHours = [...localSettings.shiftHours[category], '00h às 00h'];
+    const current = localSettings.shiftHours[category] || [];
+    const newHours = [...current, '09h às 17h20'];
     setLocalSettings({
       ...localSettings,
       shiftHours: {
@@ -47,7 +49,8 @@ export const JornadaManager: React.FC<JornadaManagerProps> = ({
   };
 
   const removeShiftHour = (category: keyof JornadaSettings['shiftHours'], index: number) => {
-    const newHours = localSettings.shiftHours[category].filter((_, i) => i !== index);
+    const current = localSettings.shiftHours[category] || [];
+    const newHours = current.filter((_, i) => i !== index);
     setLocalSettings({
       ...localSettings,
       shiftHours: {
@@ -165,11 +168,11 @@ export const JornadaManager: React.FC<JornadaManagerProps> = ({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {(['weekday', 'sunday', 'holiday', 'apprentice'] as const).map((cat) => (
+              {(['weekday', 'sunday', 'holiday', 'apprentice', 'extended'] as const).map((cat) => (
                 <div key={cat} className="space-y-4">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                      {cat === 'weekday' ? 'Dias de Semana' : cat === 'sunday' ? 'Domingos' : cat === 'holiday' ? 'Feriados' : 'Jovem Aprendiz'}
+                      {cat === 'weekday' ? 'Dias de Semana' : cat === 'sunday' ? 'Domingos' : cat === 'holiday' ? 'Feriados' : cat === 'apprentice' ? 'Jovem Aprendiz' : 'Horário Estendido / Sazonal'}
                     </label>
                     {!isReadOnly && (
                       <button 
@@ -181,7 +184,7 @@ export const JornadaManager: React.FC<JornadaManagerProps> = ({
                     )}
                   </div>
                   <div className="space-y-2">
-                    {localSettings.shiftHours[cat].map((hour, idx) => (
+                    {(localSettings.shiftHours[cat] || []).map((hour, idx) => (
                       <div key={idx} className="flex items-center gap-2">
                         <input 
                           type="text"
@@ -190,7 +193,7 @@ export const JornadaManager: React.FC<JornadaManagerProps> = ({
                           disabled={isReadOnly}
                           className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
                         />
-                        {!isReadOnly && localSettings.shiftHours[cat].length > 1 && (
+                        {!isReadOnly && (localSettings.shiftHours[cat] || []).length > 1 && (
                           <button 
                             onClick={() => removeShiftHour(cat, idx)}
                             className="p-2 text-slate-300 hover:text-red-500 transition-colors"

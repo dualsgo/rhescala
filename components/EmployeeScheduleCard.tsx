@@ -4,7 +4,7 @@ import { Employee, MonthYear, Holiday, ShiftType } from '../types';
 import { Icon } from './Icon';
 import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { isWorkingShift } from '../hooks/useScheduleEngine';
-import { buildHolidaySet } from '../constants';
+import { buildHolidaySet, getShortName } from '../constants';
 
 interface EmployeeScheduleCardProps {
   employees?: Employee[];
@@ -520,7 +520,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         ...(employee.requests || []).filter(r => r.date !== selectedRequestDate),
                         { 
                           date: selectedRequestDate, 
-                          text: requestType === 'troca_turno' ? `Gostaria de trocar meu turno com ${(employees || []).find(e => e.id === targetEmployeeId)?.name?.split(' ')[0]}.` : newRequest.trim(), 
+                          text: requestType === 'troca_turno' ? `Gostaria de trocar meu turno com ${getShortName((employees || []).find(e => e.id === targetEmployeeId)?.name, employees)}.` : newRequest.trim(), 
                           status: 'pending',
                           createdAt: new Date().toISOString(),
                           type: requestType,
@@ -688,7 +688,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                                   
                                   const updated = (employee.requests || []).map(r => 
                                     (r.createdAt === req.createdAt) 
-                                      ? { ...r, status: 'granted' as const, feedback: `Troca de turno com ${targetEmp.name.split(' ')[0]} efetuada na escala.` } : r
+                                      ? { ...r, status: 'granted' as const, feedback: `Troca de turno com ${getShortName(targetEmp.name, employees)} efetuada na escala.` } : r
                                   );
                                   onUpdateEmployee(employee.id, { 
                                     requests: updated, 

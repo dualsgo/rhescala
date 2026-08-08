@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Employee, MonthYear, Holiday } from '../types';
-import { buildHolidaySet, getNationalHolidays } from '../constants';
+import { buildHolidaySet, getNationalHolidays, getShortName } from '../constants';
 
 interface PrintableScheduleProps {
   employees: Employee[];
@@ -107,7 +107,7 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
           {activeEmployees.map(emp => (
             <tr key={emp.id}>
               <td className="border border-black px-1.5 py-1 truncate max-w-[120px] font-black uppercase">
-                {(emp.name || '').split(' ')[0]}
+                {getShortName(emp.name, activeEmployees)}
               </td>
               <td className="border border-black px-1 py-1 text-center font-black uppercase">
                 {emp.workPeriod || ''}
@@ -138,7 +138,7 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
                 {onVacation.length > 0 ? onVacation.map(e => {
                   const s = e.vacationStart!.split('-').reverse().join('/');
                   const end = e.vacationEnd!.split('-').reverse().join('/');
-                  return <div key={e.id} className="text-[7px] font-bold uppercase">{e.name.split(' ')[0]}: {s.substring(0,5)} A {end.substring(0,5)}</div>;
+                  return <div key={e.id} className="text-[7px] font-bold uppercase">{getShortName(e.name, employees)}: {s.substring(0,5)} A {end.substring(0,5)}</div>;
                 }) : <div className="text-[7px] font-medium text-center">Nenhuma Férias</div>}
               </div>
             </div>
@@ -149,7 +149,7 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
                   const retDate = new Date(e.atestadoEnd! + 'T00:00:00');
                   retDate.setDate(retDate.getDate() + 1);
                   const retStr = retDate.toLocaleDateString('pt-BR').substring(0,5);
-                  return <div key={e.id} className="text-[7px] font-bold uppercase">{e.name.split(' ')[0]}: RETORNO {retStr}</div>;
+                  return <div key={e.id} className="text-[7px] font-bold uppercase">{getShortName(e.name, employees)}: RETORNO {retStr}</div>;
                 }) : <div className="text-[7px] font-medium text-center">Nenhum Atestado</div>}
               </div>
             </div>
@@ -157,7 +157,7 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
               <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Aniversariantes</h4>
               <div className="space-y-0.5 flex-1">
                 {birthdaysInMonth.length > 0 ? birthdaysInMonth.map(e => (
-                  <div key={e.id} className="text-[8px] font-bold uppercase">Dia {e.birthday.split('-')[2]} - {e.name.split(' ')[0]}</div>
+                  <div key={e.id} className="text-[8px] font-bold uppercase">Dia {e.birthday.split('-')[2]} - {getShortName(e.name, employees)}</div>
                 )) : <div className="text-[8px] font-medium text-center">Nenhum no mês</div>}
               </div>
             </div>

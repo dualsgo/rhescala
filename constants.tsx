@@ -27,6 +27,7 @@ export const SHIFT_HOURS = {
   SUNDAY:  ['12h às 20h', '13h às 21h'],
   HOLIDAY: ['12h às 18h', '13h às 19h', '14h às 20h', '15h às 21h'],
   APPRENTICE: ['10h às 16h15'],
+  EXTENDED: ['09h às 17h20', '10h às 18h20', '12h às 20h20', '13h40 às 22h', '14h40 às 23h', '09h às 15h', '12h às 18h', '15h às 21h', '17h às 23h'],
 };
 
 
@@ -38,13 +39,14 @@ export const DEFAULT_JORNADA_SETTINGS: JornadaSettings = {
     sunday: SHIFT_HOURS.SUNDAY,
     holiday: SHIFT_HOURS.HOLIDAY,
     apprentice: SHIFT_HOURS.APPRENTICE,
+    extended: SHIFT_HOURS.EXTENDED,
   },
   lunchRules: {
     holiday: '15 min',
     sundayOpening: '13h',
     sundayClosing: ['14h', '15h', '16h', '17h'],
-    weekdayOpening: ['13h', '13h30', '14h'],
-    weekdayClosing: ['15h', '16h', '16h30', '17h'],
+    weekdayOpening: ['13h', '13h45', '14h'],
+    weekdayClosing: ['15h', '15h30', '16h', '16h30', '17h'],
     apprentice: '12h45',
   }
 };
@@ -68,7 +70,57 @@ export function getDefaultHourForDay(emp: Employee, isHoliday: boolean, isSunday
     return '13h às 21h';
   }
   
-  return emp.workPeriod;
+  return emp.workPeriod || SHIFT_HOURS.WEEKDAY[0];
+}
+
+/**
+ * Extrai o nome de exibição/curto de um colaborador para textos de escala, cartões e relatórios.
+ * Preserva abreviações e iniciais explícitas (ex: "Luiz C.", "Luiz H.") e realiza
+ * desambiguação automática adicionando a inicial do sobrenome se houver duplicidade do 1º nome.
+ */
+export function getShortName(fullName: string | undefined | null, allEmployees?: { name: string }[]): string {
+  if (!fullName) return '';
+  const trimmed = fullName.trim();
+  if (!trimmed) return '';
+
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) return parts[0];
+
+  const firstName = parts[0];
+  const secondPart = parts[1];
+
+  // Caso o usuário tenha colocado uma inicial explícita (ex: "Luiz C.", "Luiz H.", "Luiz C")
+  // ou o 2º termo seja curto (<= 2 caracteres) ou termine com ponto "."
+  const isShortOrInitial = secondPart.length <= 2 || secondPart.endsWith('.');
+
+  if (isShortOrInitial) {
+    return `${firstName} ${secondPart}`;
+  }
+
+  // Tratamento para preposições brasileiras ("de", "da", "do", "dos", "das")
+  const prepositions = new Set(['de', 'da', 'do', 'dos', 'das']);
+  let surnamePart = secondPart;
+  if (prepositions.has(secondPart.toLowerCase()) && parts.length > 2) {
+    surnamePart = parts[2];
+  }
+
+  // Se houver lista de colaboradores fornecida, verifica se há outro colaborador ativo/cadastrado com o mesmo 1º nome
+  if (allEmployees && allEmployees.length > 0) {
+    const hasDuplicateFirstName = allEmployees.some(emp => {
+      if (!emp.name || emp.name.trim() === trimmed) return false;
+      const otherFirst = emp.name.trim().split(/\s+/)[0];
+      return otherFirst.toLowerCase() === firstName.toLowerCase();
+    });
+
+    if (hasDuplicateFirstName) {
+      // Se houver duplicidade (ex: Luiz Carlos e Luiz Henrique), usa a inicial ("Luiz C.", "Luiz H.")
+      const initial = surnamePart.charAt(0).toUpperCase();
+      return `${firstName} ${initial}.`;
+    }
+  }
+
+  // Padrão: retorna apenas o primeiro nome
+  return firstName;
 }
 
 /**
