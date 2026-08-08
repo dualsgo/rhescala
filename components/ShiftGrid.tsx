@@ -1,9 +1,8 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { useDialog } from '../contexts/DialogContext';
 import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings } from '../types';
 import { Icon } from './Icon';
-import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getDefaultHourForDay, getShortName } from '../constants';
+import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName } from '../constants';
 import { getShiftClassification, isWorkingShift, getPrevMonthWorkStreak } from '../hooks/useScheduleEngine';
 import { OperationalGuideModal } from './OperationalGuideModal';
 
@@ -13,33 +12,34 @@ interface ShiftGridProps {
   employees: Employee[];
   currentMY: MonthYear;
   selectedDayIdx: number;
-  today: Date;
+  today?: Date;
   customHolidays: Holiday[];
-  holidayCredits: Record<string, HolidayCredit[]>;
+  holidayCredits?: Record<string, HolidayCredit[]>;
   filter: 'all' | 'sunday' | 'holiday' | 'week';
-  onSelectDay: (idx: number) => void;
-  onUpdateShift: (empId: string, dayIdx: number, newShift: ShiftType) => void;
-  onUpdateShifts: (updates: { empId: string, dayIdx: number, newShift: ShiftType }[]) => void;
+  onSelectDay?: (idx: number) => void;
+  onUpdateShift?: (empId: string, dayIdx: number, newShift: ShiftType) => void;
+  onUpdateShifts?: (updates: { empId: string, dayIdx: number, newShift: ShiftType }[]) => void;
   onUpdateEmployeeDailyHour: (empId: string, dayIdx: number, newHour: string) => void;
   onUpdateTacticalPosition: (empId: string, dayIdx: number, newPos: string | null) => void;
-  onShareWhatsApp: (dayIdx: number) => void;
-  onOpenDayDetail: (dayIdx: number) => void;
-  onResetMonth: () => void;
-  onApplyFolgas: () => void;
-  onSortearDomingo: () => void;
-  onOpenAnalysis: () => void;
-  onShowHolidayManager: () => void;
-  onNextMonth: () => void;
-  onPrevMonth: () => void;
-  monthNotes: string;
-  onUpdateMonthNotes: (text: string) => void;
+  onShareWhatsApp?: (dayIdx: number) => void;
+  onOpenDayDetail?: (dayIdx: number) => void;
+  onResetMonth?: () => void;
+  onApplyFolgas?: () => void;
+  onSortearDomingo?: () => void;
+  onOpenAnalysis?: () => void;
+  onShowHolidayManager?: () => void;
+  onNextMonth?: () => void;
+  onPrevMonth?: () => void;
+  monthNotes?: string;
+  onUpdateMonthNotes?: (text: string) => void;
   isReadOnly?: boolean;
   isEditable: boolean;
-  allowRetroactive: boolean;
-  showNotes: boolean;
-  onCloseNotes: () => void;
+  allowRetroactive?: boolean;
+  showNotes?: boolean;
+  onCloseNotes?: () => void;
   onFilterChange: (f: 'all' | 'sunday' | 'holiday' | 'week') => void;
   jornadaSettings: JornadaSettings;
+  resolvedPositions: Record<string, string>;
   onOpenEmployeeCard: (emp: Employee) => void;
 }
 
@@ -47,37 +47,16 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   employees,
   currentMY,
   selectedDayIdx,
-  today,
   customHolidays,
-  holidayCredits,
   filter,
-  onSelectDay,
-  onUpdateShift,
-  onUpdateShifts,
   onUpdateEmployeeDailyHour,
   onUpdateTacticalPosition,
-  onShareWhatsApp,
-  onOpenDayDetail,
-  onResetMonth,
-  onApplyFolgas,
-  onSortearDomingo,
-  onOpenAnalysis,
-  onShowHolidayManager,
-  onNextMonth,
-  onPrevMonth,
-  monthNotes,
-  onUpdateMonthNotes,
   isReadOnly = false,
   isEditable,
-  allowRetroactive,
-  showNotes,
-  onCloseNotes,
   resolvedPositions,
   jornadaSettings,
-  onFilterChange,
   onOpenEmployeeCard,
 }) => {
-  const { showDialog } = useDialog();
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
   const [hasScrolled, setHasScrolled] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);

@@ -67,7 +67,7 @@ export function detectInconsistencies(
   employees:  Employee[],
   year:       number,
   month:      number,    // 0-indexed
-  today:      Date
+  _today?:     Date
 ): Inconsistency[] {
   const results:    Inconsistency[] = [];
   const daysInMonth = new Date(year, month + 1, 0).getDate();
