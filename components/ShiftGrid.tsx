@@ -1,8 +1,7 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings } from '../types';
 import { Icon } from './Icon';
-import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName } from '../constants';
+import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, DEFAULT_JORNADA_SETTINGS } from '../constants';
 import { getShiftClassification, isWorkingShift, getPrevMonthWorkStreak } from '../hooks/useScheduleEngine';
 import { OperationalGuideModal } from './OperationalGuideModal';
 
@@ -38,7 +37,7 @@ interface ShiftGridProps {
   showNotes?: boolean;
   onCloseNotes?: () => void;
   onFilterChange: (f: 'all' | 'sunday' | 'holiday' | 'week') => void;
-  jornadaSettings: JornadaSettings;
+  jornadaSettings?: JornadaSettings;
   resolvedPositions: Record<string, string>;
   onOpenEmployeeCard: (emp: Employee) => void;
 }
@@ -65,7 +64,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   showNotes = false,
   onCloseNotes = () => {},
   onFilterChange,
-  jornadaSettings,
+  jornadaSettings = DEFAULT_JORNADA_SETTINGS,
   resolvedPositions,
   onOpenEmployeeCard,
 }) => {

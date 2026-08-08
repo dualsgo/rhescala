@@ -22,7 +22,7 @@ const WEEKDAY_NAMES = [
   'Quinta-feira', 'Sexta-feira', 'Sábado',
 ];
 
-export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, currentMY, customHolidays, onClose, onUpdateShift, onUpdateHour, jornadaSettings }) => {
+export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, currentMY, customHolidays, onClose, onUpdateShift, onUpdateHour, jornadaSettings = DEFAULT_JORNADA_SETTINGS }) => {
   const [viewMode, setViewMode] = useState<'insights' | 'team-calendar'>('insights');
   const [selectedEmpId, setSelectedEmpId] = useState<string | null>(employees.filter(e => !e.isHidden && e.status === 'active')[0]?.id || null);
   const [showIndividualModal, setShowIndividualModal] = useState(false);
@@ -202,6 +202,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                  onUpdateShift={onUpdateShift}
                  onUpdateHour={onUpdateHour}
                  onClose={() => setShowIndividualModal(false)}
+                 jornadaSettings={jornadaSettings}
                />
              )}
              <div className="bg-slate-100  p-1 rounded-2xl flex gap-1">
@@ -684,18 +685,6 @@ const TeamMonthlyCalendar: React.FC<{
           </div>
         ))}
       </div>
-
-      {showIndividualModal && selectedEmployee && (
-        <IndividualEditModal
-          employee={selectedEmployee}
-          currentMY={currentMY}
-          customHolidays={customHolidays}
-          getEffectiveShift={getEffectiveShift}
-          onUpdateShift={onUpdateShift}
-          onUpdateHour={onUpdateHour}
-          onClose={() => setShowIndividualModal(false)}
-        />
-      )}
     </div>
   );
 };
@@ -717,11 +706,12 @@ interface IndividualEditModalProps {
   onUpdateShift?: (empId: string, dayIdx: number, newShift: ShiftType) => void;
   onUpdateHour?: (empId: string, dayIdx: number, newHour: string) => void;
   onClose: () => void;
+  jornadaSettings?: JornadaSettings;
 }
 
 const IndividualEditModal: React.FC<IndividualEditModalProps> = ({
   employee, currentMY, customHolidays, getEffectiveShift,
-  onUpdateShift, onUpdateHour, onClose,
+  onUpdateShift, onUpdateHour, onClose, jornadaSettings,
 }) => {
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMY.year, currentMY.month, 1).getDay();

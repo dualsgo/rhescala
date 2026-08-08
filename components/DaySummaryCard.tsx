@@ -75,7 +75,7 @@ function buildLunchSlots(
     }));
 }
 
-export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selectedDayIdx, currentMY, customHolidays, jornadaSettings }) => {
+export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selectedDayIdx, currentMY, customHolidays, jornadaSettings = DEFAULT_JORNADA_SETTINGS }) => {
   const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
   const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
   const isHoliday = buildHolidaySet(currentMY.year, customHolidays).has(dateStr);
