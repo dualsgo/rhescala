@@ -67,6 +67,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   jornadaSettings = DEFAULT_JORNADA_SETTINGS,
   resolvedPositions,
   onOpenEmployeeCard,
+  onShareWhatsApp,
 }) => {
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
   const [hasScrolled, setHasScrolled] = useState(false);

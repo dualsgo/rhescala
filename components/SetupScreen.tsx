@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { setConfiguredApiUrl, apiStore } from '../src/gas-api';
 import { APPS_SCRIPT_CODE } from '../src/constants/appsScriptCode';
 import { Icon } from './Icon';
+import { copyToClipboard } from '../src/utils/clipboard';
 
 interface SetupScreenProps {
     onComplete: () => void;
@@ -17,10 +18,12 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
     const [showCode, setShowCode] = useState(false);
     const [copied, setCopied] = useState(false);
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(APPS_SCRIPT_CODE);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+    const handleCopy = async () => {
+        const success = await copyToClipboard(APPS_SCRIPT_CODE);
+        if (success) {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
     };
 
     async function handleConnect() {

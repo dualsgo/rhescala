@@ -7,6 +7,7 @@ import { buildHolidaySet, getDefaultHourForDay, getShortName } from './constants
 
 
 import { Header } from './components/Header';
+import { copyToClipboard } from './src/utils/clipboard';
 import { toPng } from 'html-to-image';
 
 import { ShiftGrid } from './components/ShiftGrid';
@@ -505,7 +506,7 @@ const App: React.FC = () => {
     }
 
     setWaModal({ show: true, text });
-  }, [currentMY, employees, monthKey, customHolidays]);
+  }, [currentMY, employees, monthKey, customHolidays, deletedNationalHolidays, jornadaSettings]);
 
   const handleShareApoioWhatsApp = useCallback((dayIdx: number) => {
     const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
@@ -564,7 +565,7 @@ const App: React.FC = () => {
     text += `*Tempo Ocioso:* P1 abastece o balcão/saquinhos. Se tiver muitos no P3, foquem em arrumar a seção e abastecer no baixo fluxo.\n`;
 
     setWaModal({ show: true, text });
-  }, [currentMY, employees, monthKey, customHolidays]);
+  }, [currentMY, employees, monthKey, customHolidays, deletedNationalHolidays, jornadaSettings]);
 
   const handleCreateMonth = () => {
     const nextDate = new Date(currentMY.year, currentMY.month + 1, 1);
@@ -1063,15 +1064,19 @@ const App: React.FC = () => {
                </button>
              </div>
              <textarea
-               readOnly
-               className="w-full h-80 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm font-medium focus:ring-0 resize-none whitespace-pre-wrap"
+               onChange={(e) => setWaModal(prev => ({ ...prev, text: e.target.value }))}
+               className="w-full h-80 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm font-medium focus:ring-2 focus:ring-green-500/50 resize-none whitespace-pre-wrap text-slate-900 dark:text-slate-100"
                value={waModal.text}
              />
              <div className="mt-6 flex gap-3">
                <button
                  onClick={async () => { 
-                   navigator.clipboard.writeText(waModal.text); 
-                   await showDialog({ message: 'Texto da escala copiado!' }); 
+                   const copied = await copyToClipboard(waModal.text); 
+                   if (copied) {
+                     await showDialog({ message: 'Texto da escala copiado com sucesso! Você já pode colar no WhatsApp.' }); 
+                   } else {
+                     await showDialog({ message: 'Não foi possível copiar automaticamente. Por favor, selecione e copie o texto no campo acima.', type: 'alert' }); 
+                   }
                    setWaModal({ show: false, text: '' });
                  }}
                  className="flex-1 bg-green-600 dark:bg-green-700 text-white font-extrabold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:bg-green-700 dark:hover:bg-green-800 transition-all active:scale-95"

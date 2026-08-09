@@ -50,7 +50,7 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
 
   };
 
-  const handleCopyPending = () => {
+  const handleCopyPending = async () => {
     let text = "*📋 COLABORADORES COM FOLGAS PENDENTES*\n\n";
     let found = false;
     
@@ -73,11 +73,15 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
       text = "Nenhuma folga pendente encontrada.";
     }
 
-    navigator.clipboard.writeText(text);
-    showDialog({ title: 'Copiado', message: 'A lista de pendentes foi copiada para a área de transferência!', type: 'info' });
+    const copied = await copyToClipboard(text);
+    if (copied) {
+      showDialog({ title: 'Copiado', message: 'A lista de pendentes foi copiada para a área de transferência!', type: 'info' });
+    } else {
+      showDialog({ title: 'Aviso', message: 'Não foi possível copiar automaticamente.', type: 'alert' });
+    }
   };
 
-  const handleCopyScheduled = () => {
+  const handleCopyScheduled = async () => {
     let text = "*📅 FOLGAS DE FERIADO AGENDADAS*\n\n";
     let found = false;
     
@@ -102,8 +106,12 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
       text = "Nenhuma folga agendada encontrada.";
     }
 
-    navigator.clipboard.writeText(text);
-    showDialog({ title: 'Copiado', message: 'A lista de agendadas foi copiada para a área de transferência!', type: 'info' });
+    const copied = await copyToClipboard(text);
+    if (copied) {
+      showDialog({ title: 'Copiado', message: 'A lista de agendadas foi copiada para a área de transferência!', type: 'info' });
+    } else {
+      showDialog({ title: 'Aviso', message: 'Não foi possível copiar automaticamente.', type: 'alert' });
+    }
   };
 
   return (
