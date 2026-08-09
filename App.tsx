@@ -505,11 +505,24 @@ const App: React.FC = () => {
           text += `• Responsável: Não definido\n`;
         }
 
+        const excludeForLimpeza = [digital1?.id, digital2?.id, retirada1?.id, retirada2?.id].filter(Boolean) as string[];
+        let limpeza1 = pickDigital(turno1, excludeForLimpeza, 5);
+        let limpeza2 = pickDigital(turno2, excludeForLimpeza, 5);
+
+        if (!limpeza1 && turno2.length > 1) {
+          const remaining = turno2.filter(e => !excludeForLimpeza.includes(e.id));
+          limpeza1 = pickDigital(remaining, excludeForLimpeza, 5);
+        } else if (!limpeza2 && turno1.length > 1) {
+          const remaining = turno1.filter(e => !excludeForLimpeza.includes(e.id));
+          limpeza2 = pickDigital(remaining, excludeForLimpeza, 5);
+        }
+
         text += `\n🧹 *Limpeza da Copa*\n`;
-        const cleaningSchedule = getCleaningSchedule(employees, currentMY, customHolidays, deletedNationalHolidays) || [];
-        const cleaningForDay = cleaningSchedule[dayIdx]?.empName;
-        if (cleaningForDay && cleaningForDay !== 'Ninguém Escalado') {
-          text += `• Responsável: ${cleaningForDay}\n`;
+        const limpezas = [limpeza1, limpeza2].filter(Boolean);
+        if (limpezas.length > 0) {
+          limpezas.forEach(l => {
+            text += `• ${l.shiftName}: ${getShortName(l.name, activeEmps)}\n`;
+          });
         } else {
           text += `• Responsável: Não definido\n`;
         }
