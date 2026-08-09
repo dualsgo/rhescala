@@ -41,6 +41,19 @@ const App: React.FC = () => {
   const [employees, setEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', [PLACEHOLDER_EMPLOYEE]);
   const [jornadaSettings, setJornadaSettings] = useLocalStorage<JornadaSettings>('riHappyJornadaSettings', DEFAULT_JORNADA_SETTINGS);
 
+  const activeJornadaSettings = useMemo(() => ({
+    ...DEFAULT_JORNADA_SETTINGS,
+    ...jornadaSettings,
+    shiftHours: {
+      ...DEFAULT_JORNADA_SETTINGS.shiftHours,
+      ...(jornadaSettings?.shiftHours || {}),
+    },
+    lunchRules: {
+      ...DEFAULT_JORNADA_SETTINGS.lunchRules,
+      ...(jornadaSettings?.lunchRules || {}),
+    }
+  }), [jornadaSettings]);
+
   const [customHolidays, setCustomHolidays] = useLocalStorage<Holiday[]>('riHappyCustomHolidays', []);
   const [deletedNationalHolidays, setDeletedNationalHolidays] = useLocalStorage<string[]>('riHappyDeletedNationalHolidays', []);
   const [monthNotes, setMonthNotes] = useLocalStorage<Record<string, string>>('riHappyMonthNotes', {});
@@ -363,7 +376,7 @@ const App: React.FC = () => {
       const folgas: string[] = [];
 
       const activeEmps = (employees || []).filter(e => e && !e.isHidden && e.status === 'active');
-      const resolvedPositions = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, jornadaSettings);
+      const resolvedPositions = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, activeJornadaSettings);
       
       activeEmps.forEach(e => {
         const shift = e.shifts?.[monthKey]?.[dayIdx] || 'T';
@@ -398,11 +411,11 @@ const App: React.FC = () => {
         return a.localeCompare(b);
       }).forEach(hour => {
         const members = groups[hour];
-        const shiftName = getShiftClassification(hour, isSunday, jornadaSettings);
+        const shiftName = getShiftClassification(hour, isSunday, activeJornadaSettings);
         const isOpening = shiftName === 'Abertura';
 
         text += `⏰ *${shiftName} ${hour}*\n`;
-        const lunches = calculateLunches(members, isHoliday, isSunday, isOpening, jornadaSettings) || [];
+        const lunches = calculateLunches(members, isHoliday, isSunday, isOpening, activeJornadaSettings) || [];
 
         members.forEach((m, idx) => {
           const lunchTime = lunches[idx] || '13h';
@@ -420,7 +433,7 @@ const App: React.FC = () => {
         const empsWithPos = workingEmps.map(e => {
           const shift = e.shifts?.[monthKey]?.[dayIdx] || 'T';
           const hour = e.dailyHours?.[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
-          const shiftName = getShiftClassification(hour, isSunday, jornadaSettings);
+          const shiftName = getShiftClassification(hour, isSunday, activeJornadaSettings);
           let pos = e.tacticalPositions?.[monthKey]?.[dayIdx];
           if (!pos || pos === 'AUTO') {
             if (shift !== 'T') pos = shift;
@@ -508,15 +521,15 @@ const App: React.FC = () => {
       }
 
       setWaModal({ show: true, text });
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao gerar escala para WhatsApp:', err);
       showDialog({
         title: 'Erro de Geração',
-        message: 'Ocorreu um erro ao gerar o texto da escala para WhatsApp.',
+        message: `Ocorreu um erro ao gerar o texto da escala para WhatsApp: ${err?.message || String(err)}`,
         type: 'alert'
       });
     }
-  }, [currentMY, employees, monthKey, customHolidays, deletedNationalHolidays, jornadaSettings, showDialog]);
+  }, [currentMY, employees, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, showDialog]);
 
   const handleShareApoioWhatsApp = useCallback((dayIdx: number) => {
     try {
@@ -549,14 +562,14 @@ const App: React.FC = () => {
       text += `• Retorno: P2 > P3 > P4.\n\n`;
 
       const activeEmps = (employees || []).filter(e => e && !e.isHidden && e.status === 'active');
-      const resolvedPositions = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, jornadaSettings);
+      const resolvedPositions = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, activeJornadaSettings);
       
       const allWorkingEmps: any[] = [];
       activeEmps.forEach(e => {
         const shift = e.shifts?.[monthKey]?.[dayIdx] || 'T';
         if (!isWorkingShift(shift)) return;
         const hour = e.dailyHours?.[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
-        const shiftName = getShiftClassification(hour, isSunday, jornadaSettings);
+        const shiftName = getShiftClassification(hour, isSunday, activeJornadaSettings);
         let pos = e.tacticalPositions?.[monthKey]?.[dayIdx];
         if (!pos || pos === 'AUTO') {
           pos = (shift !== 'T') ? shift : resolvedPositions[e.id];
@@ -576,15 +589,15 @@ const App: React.FC = () => {
       text += `*Tempo Ocioso:* P1 abastece o balcão/saquinhos. Se tiver muitos no P3, foquem em arrumar a seção e abastecer no baixo fluxo.\n`;
 
       setWaModal({ show: true, text });
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao gerar apoio para WhatsApp:', err);
       showDialog({
         title: 'Erro de Geração',
-        message: 'Ocorreu um erro ao gerar o texto de apoio.',
+        message: `Ocorreu um erro ao gerar o texto de apoio: ${err?.message || String(err)}`,
         type: 'alert'
       });
     }
-  }, [currentMY, employees, monthKey, customHolidays, deletedNationalHolidays, jornadaSettings, showDialog]);
+  }, [currentMY, employees, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, showDialog]);
 
   const handleCreateMonth = () => {
     const nextDate = new Date(currentMY.year, currentMY.month + 1, 1);

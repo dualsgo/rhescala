@@ -552,7 +552,7 @@ export function calculateLunches(
         let holidayPauseIdx = 0;
         return members.map(m => {
             if (m?.isYoungApprentice || m?.cargo === 'Aprendiz') {
-                return settings.lunchRules.apprentice || '12h45';
+                return settings?.lunchRules?.apprentice || '12h45';
             }
             if (m?.cargo === 'Estoquista') {
                 return 'Flexível';
@@ -574,7 +574,7 @@ export function calculateLunches(
     members.forEach((m, idx) => {
         if (!m) return;
         if (m.isYoungApprentice || m.cargo === 'Aprendiz') {
-            results[idx] = settings.lunchRules.apprentice || '12h45';
+            results[idx] = settings?.lunchRules?.apprentice || '12h45';
         } else if (m.cargo === 'Estoquista') {
             results[idx] = 'Flexível';
         } else {
@@ -597,7 +597,7 @@ export function calculateLunches(
             // Para equipes sazonais (N > 2), agrupam em duplas (13h, 13h30).
             allocatable.forEach((item, i) => {
                 const wave = Math.floor(i / 2);
-                results[item.index] = wave === 0 ? (settings.lunchRules.sundayOpening || '13h') : '13h30';
+                results[item.index] = wave === 0 ? (settings?.lunchRules?.sundayOpening || '13h') : '13h30';
             });
         } else {
             // Fechamento no Domingo (13h às 21h):
