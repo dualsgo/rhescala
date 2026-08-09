@@ -1140,10 +1140,10 @@ export function resolveTacticalDay(
     
     // Group working employees by shift classification (Abertura, Intermediário, Fechamento)
     activeEmps.forEach(e => {
-        const shift = e.shifts[monthKey]?.[dayIdx] || 'T';
-        if (!isWorkingShift(shift) && !shift.startsWith('FF')) return;
+        const shift = e.shifts?.[monthKey]?.[dayIdx] || 'T';
+        if (!isWorkingShift(shift) && !(typeof shift === 'string' && shift.startsWith('FF'))) return;
 
-        const hour = e.dailyHours[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
+        const hour = e.dailyHours?.[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
         const classification = getShiftClassification(hour, isSunday, settings);
         if (classification === 'N/A') return;
 
@@ -1433,7 +1433,7 @@ export function getCleaningSchedule(
 
     for (let d = 0; d < daysInMonth; d++) {
         const workingToday = activeEmps.filter(emp => {
-            const shift = (emp.shifts[monthKey] || [])[d] || 'T';
+            const shift = (emp.shifts?.[monthKey] || [])[d] || 'T';
             return isWorkingShift(shift);
         });
 
