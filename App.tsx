@@ -3,7 +3,6 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
 import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification, findSundayViolations, isWorkingShift, distributeTacticalPositions, optimizePeakWeek, getCleaningSchedule } from './hooks/useScheduleEngine';
-import { buildHolidaySet, getDefaultHourForDay, getShortName } from './constants';
 
 
 import { Header } from './components/Header';
@@ -27,7 +26,7 @@ import { Icon } from './components/Icon';
 import { Login } from './components/Login';
 import { PrintableSchedule } from './components/PrintableSchedule';
 import { useHolidayCredits } from './hooks/useHolidayCredits';
-import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay, getNationalHolidays, DEFAULT_JORNADA_SETTINGS } from './constants';
+import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay, getNationalHolidays, DEFAULT_JORNADA_SETTINGS, getShortName } from './constants';
 import { Employee, MonthYear, Holiday, JornadaSettings } from './types';
 import { HelpCenter } from './components/HelpCenter';
 import { JornadaManager } from './components/JornadaManager';
