@@ -1,6 +1,6 @@
 
 import { Employee, ShiftType, Holiday, JornadaSettings } from '../types';
-import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS } from '../constants';
+import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, getShortName } from '../constants';
 
 
 // ─── Shared weekday names ─────────────────────────────────────────────────────
