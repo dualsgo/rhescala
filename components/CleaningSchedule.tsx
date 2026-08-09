@@ -17,6 +17,8 @@ const WEEKDAY_NAMES = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sext
 const MONTH_NAMES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
 export const CleaningSchedule: React.FC<CleaningScheduleProps> = ({ employees, currentMY, customHolidays, onClose }) => {
+  const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+  const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
   const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
 
   const assignments = useMemo(() => {
