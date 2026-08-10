@@ -10,19 +10,20 @@ interface CleaningScheduleProps {
   employees: Employee[];
   currentMY: MonthYear;
   customHolidays: Holiday[];
+  deletedNationalHolidays?: string[];
   onClose: () => void;
 }
 
 const WEEKDAY_NAMES = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const MONTH_NAMES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-export const CleaningSchedule: React.FC<CleaningScheduleProps> = ({ employees, currentMY, customHolidays, onClose }) => {
+export const CleaningSchedule: React.FC<CleaningScheduleProps> = ({ employees, currentMY, customHolidays, deletedNationalHolidays = [], onClose }) => {
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
-  const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
+  const holidaySet = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays);
 
   const assignments = useMemo(() => {
-    const rawSchedule = getCleaningSchedule(employees, currentMY, customHolidays);
+    const rawSchedule = getCleaningSchedule(employees, currentMY, customHolidays, deletedNationalHolidays);
     return rawSchedule.map(item => {
       const date = new Date(currentMY.year, currentMY.month, item.day);
       const isSunday = date.getDay() === 0;
@@ -30,7 +31,7 @@ export const CleaningSchedule: React.FC<CleaningScheduleProps> = ({ employees, c
       const isHoliday = holidaySet.has(dateStr);
       return { day: item.day, empName: item.empName, isSunday, isHoliday };
     });
-  }, [employees, currentMY, customHolidays, holidaySet]);
+  }, [employees, currentMY, customHolidays, deletedNationalHolidays, holidaySet]);
 
   const handleDownload = async () => {
     const el = document.getElementById('cleaning-calendar-capture');
@@ -191,7 +192,7 @@ export const CleaningSchedule: React.FC<CleaningScheduleProps> = ({ employees, c
            <div className="flex gap-4">
               <div className="text-center">
                  <p className="text-[10px] font-black text-white/50 uppercase">Média por Colab.</p>
-                 <p className="text-2xl font-black">{(daysInMonth / Math.max(employees.filter(e => !e.isYoungApprentice).length, 1)).toFixed(1)}</p>
+                 <p className="text-2xl font-black">{(daysInMonth / Math.max(employees.filter(e => e.status === 'active' && !e.isHidden && !e.isYoungApprentice).length, 1)).toFixed(1)}</p>
               </div>
            </div>
         </div>

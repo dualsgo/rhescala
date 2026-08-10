@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
-import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification, findSundayViolations, isWorkingShift, distributeTacticalPositions, optimizePeakWeek, getCleaningSchedule } from './hooks/useScheduleEngine';
+import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification, findSundayViolations, isWorkingShift, distributeTacticalPositions, optimizePeakWeek } from './hooks/useScheduleEngine';
 
 
 import { Header } from './components/Header';
@@ -504,15 +504,6 @@ const App: React.FC = () => {
         } else {
           text += `• Responsável: Não definido\n`;
         }
-
-        text += `\n🧹 *Limpeza da Copa*\n`;
-        const cleaningSchedule = getCleaningSchedule(employees, currentMY, customHolidays, deletedNationalHolidays) || [];
-        const cleaningForDay = cleaningSchedule[dayIdx]?.empName;
-        if (cleaningForDay && cleaningForDay !== 'Ninguém Escalado') {
-          text += `• Responsável: ${cleaningForDay}\n`;
-        } else {
-          text += `• Responsável: Não definido\n`;
-        }
       }
 
       if (isHoliday) {
@@ -908,6 +899,7 @@ const App: React.FC = () => {
                    employees={employees}
                    currentMY={currentMY}
                    customHolidays={customHolidays}
+                   deletedNationalHolidays={deletedNationalHolidays}
                    onClose={() => setCurrentView('grid')}
                  />
                );
