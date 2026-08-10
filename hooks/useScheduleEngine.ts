@@ -1418,7 +1418,7 @@ export function getCleaningSchedule(
     customHolidays: Holiday[] = [],
     deletedNationalHolidays: string[] = []
 ): { day: number; empName: string; empId?: string }[] {
-    const activeEmps = employees.filter(e => e.status === 'active' && !e.isHidden && !e.isYoungApprentice);
+    const activeEmps = employees.filter(e => e.status === 'active' && !e.isHidden && !e.isYoungApprentice && e.cargo !== 'Aprendiz' && e.cargo !== 'Estoquista');
     const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
     const holidaySet = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays);
     const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
