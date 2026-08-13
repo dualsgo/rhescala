@@ -25,6 +25,17 @@ export const DataManager: React.FC<DataManagerProps> = ({ syncStatus, employees,
       employees,
       validatedMonths
     };
+    const dataStr = JSON.stringify(backupData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `rhescala_backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const handleExportSalesSchedule = () => {
     const escalas: Array<{ colaborador: string; data: string; posicao: string }> = [];
@@ -78,17 +89,6 @@ export const DataManager: React.FC<DataManagerProps> = ({ syncStatus, employees,
     const link = document.createElement('a');
     link.href = url;
     link.download = `escala_vendas_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-    const dataStr = JSON.stringify(backupData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `rhescala_backup_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
