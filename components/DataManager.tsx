@@ -25,6 +25,64 @@ export const DataManager: React.FC<DataManagerProps> = ({ syncStatus, employees,
       employees,
       validatedMonths
     };
+
+  const handleExportSalesSchedule = () => {
+    const escalas: Array<{ colaborador: string; data: string; posicao: string }> = [];
+
+    employees.forEach(emp => {
+      if (emp.status === 'inactive' || emp.isHidden) return;
+
+      const keysSet = new Set<string>();
+      if (emp.shifts) Object.keys(emp.shifts).forEach(k => keysSet.add(k));
+      if (emp.tacticalPositions) Object.keys(emp.tacticalPositions).forEach(k => keysSet.add(k));
+
+      keysSet.forEach(mKey => {
+        const parts = mKey.split('-');
+        if (parts.length !== 2) return;
+
+        const shiftsArr = emp.shifts?.[mKey] || [];
+        const tactArr = emp.tacticalPositions?.[mKey] || [];
+        const maxDays = Math.max(shiftsArr.length, tactArr.length);
+
+        for (let d = 1; d <= maxDays; d++) {
+          const idx = d - 1;
+          const dayStr = String(d).padStart(2, '0');
+          const fullDate = `${mKey}-${dayStr}`;
+
+          const tactPos = tactArr[idx];
+          const shiftVal = shiftsArr[idx];
+
+          let pos = (tactPos && typeof tactPos === 'string' && tactPos.trim()) 
+            ? tactPos.trim() 
+            : (shiftVal && typeof shiftVal === 'string' && shiftVal.trim() ? shiftVal.trim() : 'NONE');
+
+          escalas.push({
+            colaborador: emp.name,
+            data: fullDate,
+            posicao: pos
+          });
+        }
+      });
+    });
+
+    const exportData = {
+      system: "rhescala",
+      version: "1.0",
+      exportedAt: new Date().toISOString(),
+      escalas
+    };
+
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `escala_vendas_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
     const dataStr = JSON.stringify(backupData, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
@@ -195,6 +253,10 @@ export const DataManager: React.FC<DataManagerProps> = ({ syncStatus, employees,
               <button onClick={handleExportBackup} className="flex items-center justify-center gap-2 w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold uppercase text-[11px] tracking-widest transition-colors shadow-sm">
                 <Icon name="download" className="text-base" />
                 Backup Local (.json)
+              </button>
+              <button onClick={handleExportSalesSchedule} className="flex items-center justify-center gap-2 w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold uppercase text-[11px] tracking-widest transition-colors shadow-sm">
+                <Icon name="analytics" className="text-base" />
+                Exportar Escala para Vendas (.json)
               </button>
               
               <button onClick={() => fileInputRef.current?.click()} className="flex items-center justify-center gap-2 w-full py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-orange-500 text-slate-700 dark:text-slate-300 rounded-xl font-bold uppercase text-[11px] tracking-widest transition-all shadow-sm">
