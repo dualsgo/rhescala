@@ -58,9 +58,9 @@ function isSundayUnavailable(
     if (emp.hiredAt && dateStr < emp.hiredAt) return true;
     // 4. Already fired
     if (emp.firedAt && dateStr > emp.firedAt) return true;
-    // 5. Existing shift already FE (manually set vacation) or F or FF or AT
+    // 5. Existing shift already FF (folga feriado) or C (curso)
     const existing = (emp.shifts[monthKey] ?? [])[dayIdx] as string | undefined;
-    if (existing === 'FE' || existing === 'F' || existing?.startsWith('FF') || existing === 'C' || existing === 'DO' || existing === 'AT') return true;
+    if (existing?.startsWith('FF') || existing === 'C') return true;
     return false;
 }
 
@@ -771,19 +771,27 @@ export function applyMonthUpdate(
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
             const dow = new Date(year, month, dayIdx + 1).getDay();
 
-            // Start from existing shift (preserve manual edits as baseline)
-            if (existingShifts[dayIdx]) {
-                newShifts[dayIdx] = existingShifts[dayIdx];
-            }
+            // Validações reais de datas contratuais
+            const isOnVacation = !!(emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd);
+            const isOnAtestado = !!(emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd);
+            const isEmpBirthday = isBirthday(emp, dateStr);
+
+            // Se o turno existente tinha 'FE', 'AT' ou 'DO' mas o colaborador não está nessa condição nesta data, reverte para 'T'
+            let baselineShift = existingShifts[dayIdx] || 'T';
+            if (baselineShift === 'FE' && !isOnVacation) baselineShift = 'T';
+            if (baselineShift === 'AT' && !isOnAtestado) baselineShift = 'T';
+            if (baselineShift === 'DO' && !isEmpBirthday) baselineShift = 'T';
+
+            newShifts[dayIdx] = baselineShift;
 
             // Hard overrides (highest priority)
-            if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
+            if (isOnVacation) {
                 newShifts[dayIdx] = 'FE'; continue;
             }
-            if (emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd) {
+            if (isOnAtestado) {
                 newShifts[dayIdx] = 'AT'; continue;
             }
-            if (isBirthday(emp, dateStr)) {
+            if (isEmpBirthday) {
                 newShifts[dayIdx] = 'DO'; continue;
             }
             if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) {
@@ -792,9 +800,14 @@ export function applyMonthUpdate(
 
             // Sunday rotation logic
             if (dow === 0) {
-                const ex = existingShifts[dayIdx];
-                if (ex === 'FE' || ex?.startsWith('FF') || ex === 'F') {
-                    newShifts[dayIdx] = ex; // Respect manual time off on Sundays
+                if (isOnVacation) {
+                    newShifts[dayIdx] = 'FE';
+                } else if (isOnAtestado) {
+                    newShifts[dayIdx] = 'AT';
+                } else if (isEmpBirthday) {
+                    newShifts[dayIdx] = 'DO';
+                } else if (baselineShift?.startsWith('FF')) {
+                    newShifts[dayIdx] = baselineShift;
                 } else if (emp.preferredDayOff === 'Domingo' || restDays.has(dayIdx)) {
                     newShifts[dayIdx] = 'F';
                 } else {
@@ -974,42 +987,39 @@ export function applyMonthUpdate(
         });
 
         for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
-            if (existingShifts[dayIdx]) {
-                newShifts[dayIdx] = existingShifts[dayIdx];
-            }
-
             const dayNum = dayIdx + 1;
             const date = new Date(year, month, dayNum);
             const dow = date.getDay();
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
             const isHoliday = holidaySet.has(dateStr);
 
-            if (emp.vacationStart && emp.vacationEnd) {
-                if (dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
-                    newShifts[dayIdx] = 'FE'; continue;
-                }
+            const isOnVacation = !!(emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd);
+            const isEmpBirthday = isBirthday(emp, dateStr);
+
+            let baselineShift = existingShifts[dayIdx] || 'T';
+            if (baselineShift === 'FE' && !isOnVacation) baselineShift = 'T';
+            if (baselineShift === 'DO' && !isEmpBirthday) baselineShift = 'T';
+
+            newShifts[dayIdx] = baselineShift;
+
+            if (isOnVacation) {
+                newShifts[dayIdx] = 'FE'; continue;
             }
 
-            if (isBirthday(emp, dateStr)) {
+            if (isEmpBirthday) {
                 newShifts[dayIdx] = 'DO'; continue;
             }
 
             if (isHoliday) {
-                if (!existingShifts[dayIdx] || (!['FE', 'FF', 'T'].includes(existingShifts[dayIdx]))) {
-                    newShifts[dayIdx] = 'F';
-                }
+                newShifts[dayIdx] = 'F';
                 continue;
             }
             if (dow === 0 || dow === 6) {
-                if (!existingShifts[dayIdx] || (!['FE', 'FF', 'T'].includes(existingShifts[dayIdx]))) {
-                    newShifts[dayIdx] = 'F';
-                }
+                newShifts[dayIdx] = 'F';
                 continue;
             }
             if (WEEKDAY_NAMES[dow] === emp.courseDay) {
-                if (existingShifts[dayIdx] !== 'FE' && !existingShifts[dayIdx]?.startsWith('FF') && existingShifts[dayIdx] !== 'F') {
-                    newShifts[dayIdx] = 'C';
-                }
+                newShifts[dayIdx] = 'C';
                 continue;
             }
         }
@@ -1649,4 +1659,58 @@ export function detectScheduleDiffs(
     });
 
     return diffs;
+}
+
+/**
+ * Gera uma nova escala completa, limpa e inteligente para um mês-alvo.
+ * 
+ * Regras e validações automáticas aplicadas:
+ * 1. Retro-análise do mês anterior (consecutivos de domingos + dias seguidos de trabalho CLT).
+ * 2. Férias vigentes (aplica 'FE' APENAS nas datas reais e limpa férias antigas).
+ * 3. Atestados vigentes (aplica 'AT' apenas durante as datas do atestado).
+ * 4. Aniversário (aplica folga 'DO' no dia exato).
+ * 5. Jovens Aprendizes (folga fim de semana + curso teórico 'C').
+ * 6. Estoquistas (folga fixa domingo).
+ * 7. CLT 6x1 e 5x2 (folgas fixas e rotação equitativa de domingos com limite inegociável de 2 domingos).
+ * 8. Horários Diários (dailyHours baseados na jornada e workPeriod).
+ * 9. Posições Táticas automáticas (P1 a P4 e ESTQ para quem trabalha).
+ */
+export function generateCleanMonthSchedule(
+    employees: Employee[],
+    targetYear: number,
+    targetMonth: number,
+    customHolidays: Holiday[] = [],
+    deletedNationalHolidays: string[] = [],
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
+): Employee[] {
+    const targetKey = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
+    
+    // 1. Gera folgas e horários validados
+    const monthData = applyMonthUpdate(employees, targetYear, targetMonth, customHolidays, deletedNationalHolidays, settings);
+    
+    // 2. Aplica nos colaboradores
+    const updatedEmps = employees.map(emp => {
+        const d = monthData[emp.id];
+        if (d) {
+            return {
+                ...emp,
+                shifts: { ...emp.shifts, [targetKey]: d.shifts },
+                dailyHours: { ...emp.dailyHours, [targetKey]: d.hours }
+            };
+        }
+        return emp;
+    });
+
+    // 3. Distribui posições táticas automáticas (P1..P4 e ESTQ)
+    const tacticalMap = applyTacticalOnly(updatedEmps, targetYear, targetMonth, customHolidays, deletedNationalHolidays, settings);
+
+    return updatedEmps.map(emp => {
+        if (tacticalMap[emp.id]) {
+            return {
+                ...emp,
+                tacticalPositions: { ...emp.tacticalPositions, [targetKey]: tacticalMap[emp.id] }
+            };
+        }
+        return emp;
+    });
 }

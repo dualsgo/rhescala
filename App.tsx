@@ -8,6 +8,7 @@ import {
   applyHoursOnly,
   applyFolgasOnly,
   applyTacticalOnly,
+  generateCleanMonthSchedule,
   detectScheduleDiffs,
   resolveTacticalDay, 
   calculateLunches, 
@@ -707,18 +708,39 @@ const App: React.FC = () => {
     }
   }, [currentMY, employees, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, showDialog]);
 
-  const handleCreateMonth = () => {
+  const handleCreateMonth = async () => {
     const nextDate = new Date(currentMY.year, currentMY.month + 1, 1);
     const nextMY = { month: nextDate.getMonth(), year: nextDate.getFullYear() };
-    const nextKey = `${nextMY.year}-${String(nextMY.month + 1).padStart(2, '0')}`;
-    
-    setCurrentMY(nextMY);
-    
-    // Apply logic directly to next month parameters
-    handleApplyFolgas(nextMY, nextKey);
-    setTimeout(() => {
-      handleSortearDomingo(nextMY, nextKey, true); // Skip confirm for "Create Month" flow
-    }, 200);
+    const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const nextMonthName = monthNames[nextMY.month];
+
+    const confirmed = await showDialog({
+      title: `✨ Criar Escala de ${nextMonthName}/${nextMY.year}`,
+      message: `Deseja gerar a nova escala de ${nextMonthName}/${nextMY.year} de forma inteligente?\n\n` +
+               `✓ Analisa o mês anterior (carryover de domingos e streak de dias trabalhados CLT)\n` +
+               `✓ Valida férias e atestados ativos no novo mês (limpa férias antigas)\n` +
+               `✓ Distribui folgas fixas, regras de Jovem Aprendiz e aniversários\n` +
+               `✓ Aloca horários base e posições táticas (P1 a P4 / Estoque) automaticamente`,
+      type: 'confirm'
+    });
+
+    if (confirmed) {
+      const updatedEmployees = generateCleanMonthSchedule(
+        employees,
+        nextMY.year,
+        nextMY.month,
+        customHolidays,
+        deletedNationalHolidays,
+        activeJornadaSettings
+      );
+      setEmployees(updatedEmployees);
+      setCurrentMY(nextMY);
+      showDialog({
+        title: 'Sucesso!',
+        message: `Escala de ${nextMonthName}/${nextMY.year} criada com sucesso e validada contra todas as regras CLT.`,
+        type: 'alert'
+      });
+    }
   };
 
   const handleDistributePositions = () => {
