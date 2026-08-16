@@ -75,6 +75,9 @@ export const Header: React.FC<HeaderProps> = ({
   pendingRequestsCount,
   inconsistencyCount = 0,
   onOpenInconsistencyModal,
+  diffCount = 0,
+  onOpenDiffModal,
+  onOpenPresetModal,
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);
   const [showPrintMenu, setShowPrintMenu] = useState(false);
@@ -82,6 +85,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  const currentMonthName = months[currentMY.month];
 
   const navItems = [
     { id: 'grid', label: 'Grade', icon: 'grid_view' },
