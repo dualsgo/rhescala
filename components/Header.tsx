@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Icon } from './Icon';
 import { MonthYear, SyncStatus } from '../types';
@@ -14,7 +13,7 @@ interface HeaderProps {
   onShareApoioWhatsApp: () => void;
   syncStatus: SyncStatus;
   selectedDayIdx: number;
-  // New Action Props
+  // Action Props
   isReadOnly: boolean;
   isEditable: boolean;
   onToggleEdit: () => void;
@@ -80,10 +79,11 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenPresetModal,
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);
-  const [showPrintMenu, setShowPrintMenu] = useState(false);
-  const [showEditMenu, setShowEditMenu] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+
   const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
   const currentMonthName = months[currentMY.month];
 
@@ -94,62 +94,76 @@ export const Header: React.FC<HeaderProps> = ({
   ];
 
   const configItems = [
-    { id: 'team', label: 'Equipe', icon: 'groups' },
-    { id: 'jornada', label: 'Jornada', icon: 'schedule' },
-    { id: 'feriados', label: 'Feriados', icon: 'event_busy' },
+    { id: 'team', label: 'Equipe Operacional', icon: 'groups' },
+    { id: 'jornada', label: 'Parâmetros de Jornada', icon: 'schedule' },
+    { id: 'feriados', label: 'Feriados & Folgas', icon: 'event_busy' },
     { id: 'worked-holidays', label: 'Feriados Trabalhados', icon: 'list_alt' },
-    { id: 'cleaning', label: 'Limpeza Copa', icon: 'cleaning_services' },
+    { id: 'cleaning', label: 'Limpeza da Copa', icon: 'cleaning_services' },
     { id: 'patrol', label: 'Ronda da Loja', icon: 'local_police' },
     { id: 'sections', label: 'Donos de Seção', icon: 'category' },
-    /* 
-    { id: 'activities', label: 'Atividades', icon: 'assignment_turned_in' },
-    { id: 'routine', label: 'Rotina Diária', icon: 'event_repeat' },
-    { id: 'notices', label: 'Mural de Recados', icon: 'campaign' },
-    */
-    { id: 'data', label: 'Dados', icon: 'storage' },
+    { id: 'data', label: 'Banco de Dados & Backup', icon: 'storage' },
   ];
 
   return (
-    <header className="bg-white dark:bg-black border-b border-slate-200 dark:border-zinc-800 sticky top-0 z-50 shadow-md transition-colors h-14">
-      <div className="flex items-center justify-between px-4 h-full gap-4">
-        {/* Left: Mobile Menu Trigger & Logo */}
-        <div className="flex items-center gap-2 lg:gap-6">
+    <header className="bg-white dark:bg-black border-b border-slate-200 dark:border-zinc-800 sticky top-0 z-50 shadow-sm transition-colors h-14">
+      <div className="flex items-center justify-between px-3 sm:px-4 h-full gap-2 sm:gap-4 max-w-full">
+        
+        {/* Left: Mobile Menu Trigger & Main Navigation */}
+        <div className="flex items-center gap-2 lg:gap-4">
           <button 
             onClick={() => setShowMobileMenu(!showMobileMenu)}
-            className="lg:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-all z-[70] relative"
+            className="lg:hidden p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-all z-[70] relative"
+            title="Abrir Menu"
           >
             <Icon name={showMobileMenu ? 'close' : 'menu'} />
           </button>
 
           {!isReadOnly && (
-            <nav className="hidden lg:flex items-center gap-1 bg-slate-100 dark:bg-zinc-900 p-1 rounded-lg">
+            <nav className="hidden lg:flex items-center gap-1 bg-slate-100 dark:bg-zinc-900 p-1 rounded-xl border border-slate-200/50 dark:border-zinc-800">
               {navItems.map(item => (
                 <button
                   key={item.id}
                   onClick={() => onViewChange(item.id as any)}
-                  className={`relative px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all ${currentView === item.id ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`relative px-3.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                    currentView === item.id 
+                      ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600 dark:text-orange-400' 
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`}
                 >
-                  {item.label}
+                  <Icon name={item.icon} className="text-sm" />
+                  <span>{item.label}</span>
                   {item.id === 'requests' && pendingRequestsCount > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 items-center justify-center text-[8px] text-white shadow-sm">
+                    <span className="flex h-4 w-4 ml-0.5">
+                      <span className="animate-ping absolute inline-flex h-4 w-4 rounded-full bg-rose-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 items-center justify-center text-[8px] font-black text-white shadow-sm">
                         {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
                       </span>
                     </span>
                   )}
                 </button>
               ))}
+
+              {/* Config Menu Dropdown */}
               <div className="relative">
                 <button
                   onClick={() => setShowConfigMenu(!showConfigMenu)}
                   onBlur={() => setTimeout(() => setShowConfigMenu(false), 200)}
-                  className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all flex items-center gap-1.5 ${['team','jornada','data','feriados','worked-holidays'].includes(currentView) ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                    ['team','jornada','data','feriados','worked-holidays','cleaning','patrol','sections'].includes(currentView) 
+                      ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600 dark:text-orange-400' 
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`}
                 >
-                  Configurações <Icon name={showConfigMenu ? 'expand_less' : 'expand_more'} className="text-[14px]" />
+                  <Icon name="settings" className="text-sm" />
+                  <span>Configurações</span>
+                  <Icon name={showConfigMenu ? 'expand_less' : 'expand_more'} className="text-xs" />
                 </button>
+
                 {showConfigMenu && (
-                  <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 p-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="px-3 py-1.5 text-[9px] font-black uppercase text-slate-400 tracking-widest border-b border-slate-100 dark:border-zinc-800 mb-1">
+                      Parâmetros do Sistema
+                    </div>
                     {configItems.map(item => (
                       <button
                         key={item.id}
@@ -158,9 +172,14 @@ export const Header: React.FC<HeaderProps> = ({
                           onViewChange(item.id as any);
                           setShowConfigMenu(false);
                         }}
-                        className="w-full flex items-center gap-3 p-3 rounded-lg text-[11px] font-bold uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all text-left"
+                        className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold transition-all text-left ${
+                          currentView === item.id 
+                            ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400' 
+                            : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                        }`}
                       >
-                        <Icon name={item.icon} className="text-base" /> {item.label}
+                        <Icon name={item.icon} className="text-base text-slate-400" />
+                        <span>{item.label}</span>
                       </button>
                     ))}
                   </div>
@@ -170,443 +189,478 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-          {/* Center: Month Selector & Status */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5 sm:p-1 border border-slate-200/50 dark:border-slate-700/50">
-              <button
-                onClick={() => {
-                  let newMonth = currentMY.month - 1;
-                  let newYear = currentMY.year;
-                  if (newMonth < 0) {
-                    newMonth = 11;
-                    newYear--;
-                  }
-                  onMonthChange({ month: newMonth, year: newYear });
-                }}
-                className="p-1 sm:p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-500 transition-colors"
-                title="Mês Anterior"
-              >
-                <Icon name="chevron_left" className="text-sm sm:text-base" />
-              </button>
-
-              <div className="px-2 sm:px-3 text-center">
-                <span className="block text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
-                  {currentMonthName}
-                </span>
-                <span className="block text-[8px] sm:text-[9px] font-bold text-slate-400 tracking-widest">
-                  {currentMY.year}
-                </span>
-              </div>
-
-              <button
-                onClick={() => {
-                  if (!canGoNext) return;
-                  let newMonth = currentMY.month + 1;
-                  let newYear = currentMY.year;
-                  if (newMonth > 11) {
-                    newMonth = 0;
-                    newYear++;
-                  }
-                  onMonthChange({ month: newMonth, year: newYear });
-                }}
-                disabled={!canGoNext}
-                className={`p-1 sm:p-1.5 rounded-lg text-slate-500 transition-colors ${
-                  canGoNext ? 'hover:bg-white dark:hover:bg-slate-700 cursor-pointer' : 'opacity-30 cursor-not-allowed'
-                }`}
-                title={canGoNext ? 'Próximo Mês' : 'Avanço restrito'}
-              >
-                <Icon name="chevron_right" className="text-sm sm:text-base" />
-              </button>
-            </div>
-
-            {/* Validation Badge Button */}
+        {/* Center: Month Selector, Status & Audit Badges */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Month Selector Box */}
+          <div className="flex items-center bg-slate-100 dark:bg-zinc-900 rounded-xl p-0.5 sm:p-1 border border-slate-200/60 dark:border-zinc-800 shadow-inner">
             <button
-              onClick={isReadOnly ? undefined : onToggleValidation}
-              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border transition-all ${
-                isValidated
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300 shadow-sm'
-                  : 'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-950/30 dark:border-amber-900/50 dark:text-amber-400 animate-pulse-subtle'
-              } ${isReadOnly ? 'cursor-default' : 'hover:scale-105 active:scale-95'}`}
-              title={isReadOnly ? '' : (isValidated ? 'Clique para marcar como rascunho' : 'Clique para oficializar escala')}
+              onClick={() => {
+                let newMonth = currentMY.month - 1;
+                let newYear = currentMY.year;
+                if (newMonth < 0) {
+                  newMonth = 11;
+                  newYear--;
+                }
+                onMonthChange({ month: newMonth, year: newYear });
+              }}
+              className="p-1 sm:p-1.5 rounded-lg hover:bg-white dark:hover:bg-zinc-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-all"
+              title="Mês Anterior"
             >
-              <Icon name={isValidated ? 'verified' : 'edit_calendar'} className="text-xs sm:text-sm" />
-              <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-tighter sm:tracking-widest">
-                <span className="inline sm:hidden">{isValidated ? 'OK' : 'Edit'}</span>
-                <span className="hidden sm:inline">{isValidated ? 'Oficializado' : 'Rascunho'}</span>
-              </span>
+              <Icon name="chevron_left" className="text-sm sm:text-base" />
             </button>
 
-            {/* Audit / Diff Button (when validated) */}
-            {isValidated && onOpenDiffModal && (
-              <button
-                onClick={onOpenDiffModal}
-                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border transition-all hover:scale-105 active:scale-95 ${
-                  diffCount > 0
-                    ? 'bg-amber-500 border-amber-600 text-white shadow-sm animate-pulse-subtle'
-                    : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
-                }`}
-                title="Auditoria: Comparar alterações com a Versão Oficial Impressa"
-              >
-                <Icon name="history_toggle_off" className="text-xs sm:text-sm" />
-                <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-tight">
-                  {diffCount > 0 ? `${diffCount} Alteração${diffCount > 1 ? 's' : ''}` : 'Auditoria'}
-                </span>
-              </button>
-            )}
+            <div className="px-2 sm:px-3 text-center select-none">
+              <span className="block text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
+                {currentMonthName}
+              </span>
+              <span className="block text-[8px] sm:text-[9px] font-bold text-slate-400 tracking-widest">
+                {currentMY.year}
+              </span>
+            </div>
 
-            {/* Inconsistency Alert Badge */}
-            {onOpenInconsistencyModal && (
-              <button
-                onClick={onOpenInconsistencyModal}
-                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border transition-all hover:scale-105 active:scale-95 ${
-                  inconsistencyCount > 0
-                    ? 'bg-red-500 border-red-600 text-white shadow-sm animate-pulse-subtle'
-                    : 'bg-emerald-50 border-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-900/50 dark:text-emerald-400'
-                }`}
-                title="Central de Inconsistências e Alertas"
-              >
-                <Icon name={inconsistencyCount > 0 ? 'warning' : 'verified'} className="text-xs sm:text-sm" />
-                <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-tight">
-                  {inconsistencyCount > 0 ? `${inconsistencyCount} Alerta${inconsistencyCount > 1 ? 's' : ''}` : 'Sem Alertas'}
-                </span>
-              </button>
-            )}
+            <button
+              onClick={() => {
+                if (!canGoNext) return;
+                let newMonth = currentMY.month + 1;
+                let newYear = currentMY.year;
+                if (newMonth > 11) {
+                  newMonth = 0;
+                  newYear++;
+                }
+                onMonthChange({ month: newMonth, year: newYear });
+              }}
+              disabled={!canGoNext}
+              className={`p-1 sm:p-1.5 rounded-lg text-slate-500 transition-all ${
+                canGoNext ? 'hover:bg-white dark:hover:bg-zinc-800 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer' : 'opacity-30 cursor-not-allowed'
+              }`}
+              title={canGoNext ? 'Próximo Mês' : 'Avanço restrito pelo perfil'}
+            >
+              <Icon name="chevron_right" className="text-sm sm:text-base" />
+            </button>
           </div>
 
-        {/* Right: Actions & Status */}
-        <div className="flex items-center gap-2 lg:gap-3">
-          {/* Edit Group */}
-          {currentView === 'grid' && !isReadOnly && (
-            <div className="hidden lg:relative lg:block">
-              <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
-                <button
-                  onClick={() => {
-                    if (!isEditable) {
-                      onToggleEdit();
-                      setShowEditMenu(true);
-                    } else {
-                      onToggleEdit();
-                      setShowEditMenu(false);
-                    }
-                  }}
-                  className={`px-4 py-1.5 rounded-md text-[11px] font-black uppercase transition-all flex items-center gap-2 ${isEditable ? 'bg-white dark:bg-zinc-800 text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  <Icon name={isEditable ? 'save' : 'edit'} className="text-sm" />
-                  {isEditable ? 'Salvar' : 'Editar'}
-                </button>
-                
-                {isEditable && (
-                  <button 
-                    onClick={() => setShowEditMenu(!showEditMenu)}
-                    className={`px-2 py-1.5 rounded-md transition-all ${showEditMenu ? 'text-indigo-600' : 'text-slate-400'}`}
-                  >
-                    <Icon name={showEditMenu ? 'expand_less' : 'expand_more'} />
-                  </button>
-                )}
-              </div>
-              
-              {isEditable && showEditMenu && (
-                <div className="absolute top-full right-0 mt-2 w-60 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 p-1 flex flex-col gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <button 
-                    onClick={() => { onCreateMonth(); setShowEditMenu(false); }} 
-                    className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all text-left"
-                  >
-                    <Icon name="add_circle" className="text-lg" /> Criar Mês (Gerar Tudo)
-                  </button>
-                  <div className="h-px bg-slate-100 dark:bg-slate-800 mx-2" />
-                  <button 
-                    onClick={() => { 
-                      if (onOpenPresetModal) {
-                        onOpenPresetModal();
-                      } else {
-                        onApplyFolgas();
-                      }
-                      setShowEditMenu(false); 
-                    }} 
-                    className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all text-left"
-                  >
-                    <Icon name="tune" className="text-lg" /> Aplicar Pré-definições...
-                  </button>
-                  <button 
-                    onClick={() => { onSortearDomingo(); setShowEditMenu(false); }} 
-                    className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left"
-                  >
-                    <Icon name="casino" className="text-lg" /> Sortear Domingos
-                  </button>
-                  <button 
-                    onClick={() => { onDistributePositions(); setShowEditMenu(false); }} 
-                    className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all text-left"
-                  >
-                    <Icon name="strategy" className="text-lg" /> Distribuir Posições
-                  </button>
+          {/* Scale Status: Official vs Draft */}
+          <button
+            onClick={isReadOnly ? undefined : onToggleValidation}
+            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border font-black text-[10px] uppercase tracking-wider transition-all shadow-sm ${
+              isValidated
+                ? 'bg-emerald-500 text-white border-emerald-600 shadow-emerald-500/20'
+                : 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border-amber-300 dark:border-amber-800 animate-pulse-subtle'
+            } ${isReadOnly ? 'cursor-default' : 'hover:scale-[1.02] active:scale-95'}`}
+            title={isReadOnly ? 'Status da Escala' : (isValidated ? 'Oficializada! Clique para alternar para Rascunho' : 'Rascunho. Clique para oficializar escala')}
+          >
+            <Icon name={isValidated ? 'verified' : 'pending_actions'} className="text-xs sm:text-sm" />
+            <span className="hidden sm:inline">{isValidated ? 'Oficial' : 'Rascunho'}</span>
+          </button>
 
-                  <div className="h-px bg-slate-100 dark:bg-slate-800 mx-2" />
-                  <div className="flex items-center justify-between p-2.5">
-                    <span className="text-[9px] font-black text-slate-400 uppercase">Modo Retroativo</span>
-                    <button
-                      onClick={onToggleRetroactive}
-                      className={`w-8 h-4 rounded-full relative transition-colors ${allowRetroactive ? 'bg-indigo-500' : 'bg-slate-300'}`}
-                    >
-                      <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${allowRetroactive ? 'left-4.5' : 'left-0.5'}`} />
-                    </button>
-                  </div>
-                  <div className="h-px bg-slate-100 dark:bg-slate-800 mx-2" />
-                  <button 
-                    onClick={() => setShowEditMenu(false)}
-                    className="w-full flex items-center justify-center p-2 rounded-lg text-[9px] font-black uppercase text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
-                  >
-                    Fechar Menu
-                  </button>
-                </div>
-              )}
-            </div>
+          {/* Audit Diff Badge (when officialized and differences exist) */}
+          {isValidated && onOpenDiffModal && diffCount > 0 && (
+            <button
+              onClick={onOpenDiffModal}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border bg-amber-500 border-amber-600 text-white shadow-sm font-black text-[10px] uppercase tracking-wider animate-pulse hover:scale-105 transition-all"
+              title="Auditoria: Existem divergências em relação à versão oficial impressa"
+            >
+              <Icon name="difference" className="text-xs" />
+              <span>{diffCount} {diffCount === 1 ? 'Alt.' : 'Alts.'}</span>
+            </button>
           )}
 
-          {/* Print Group - Hidden for Viewers */}
-          {!isReadOnly && (
-            <div className="hidden lg:relative lg:block">
-              <button
-                onClick={() => setShowPrintMenu(!showPrintMenu)}
-                className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase transition-all flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 ${showPrintMenu ? 'ring-2 ring-indigo-500' : ''}`}
-              >
-                <Icon name="print" className="text-sm" /> Imprimir
-              </button>
-              {showPrintMenu && (
-                <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-1 flex flex-col gap-1">
-                  <button 
-                    onClick={() => { onPrint(); setShowPrintMenu(false); }}
-                    className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-slate-600 hover:bg-slate-50 transition-all"
-                  >
-                    <Icon name="picture_as_pdf" className="text-lg text-rose-500" /> Gerar PDF Escala
-                  </button>
-                  <button 
-                    onClick={() => { onToggleNotes(); setShowPrintMenu(false); }}
-                    className={`w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase transition-all ${showNotes ? 'text-indigo-600 bg-indigo-50' : 'text-slate-600 hover:bg-slate-50'}`}
-                  >
-                    <Icon name="edit_note" className="text-lg" />{showNotes ? 'Esconder Recados' : 'Editar Recados'}</button>
-                </div>
-              )}
-            </div>
+          {/* Inconsistency / Violation Badge */}
+          {onOpenInconsistencyModal && inconsistencyCount > 0 && (
+            <button
+              onClick={onOpenInconsistencyModal}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border bg-rose-500 border-rose-600 text-white shadow-sm font-black text-[10px] uppercase tracking-wider animate-pulse hover:scale-105 transition-all"
+              title="Central de Alertas e Regras CLT"
+            >
+              <Icon name="warning" className="text-xs" />
+              <span>{inconsistencyCount} {inconsistencyCount === 1 ? 'Alerta' : 'Alertas'}</span>
+            </button>
           )}
+        </div>
 
-          {/* Sunday Violations Alert - Only for Admin */}
-          {sundayViolations.length > 0 && !isReadOnly && (
-            <div className="relative group">
-              <div className="flex items-center justify-center w-8 h-8 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-full cursor-help animate-pulse transition-transform hover:scale-110">
-                <Icon name="error" className="text-xl" />
-              </div>
-              <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800 rounded-2xl shadow-2xl z-50 p-4 hidden group-hover:block animate-in fade-in slide-in-from-top-1">
-                <div className="flex items-center gap-2 mb-3 border-b border-rose-100 dark:border-rose-900 pb-2">
-                  <Icon name="warning" className="text-rose-500 text-lg" />
-                  <h5 className="text-[10px] font-black uppercase text-rose-600 tracking-wider">Atenção: 3 Domingos Seguidos</h5>
-                </div>
-                <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-2">
-                  {(() => {
-                    // Group by employee for better visualization
-                    const grouped = sundayViolations.reduce((acc, v) => {
-                      if (!acc[v.empName]) acc[v.empName] = [];
-                      acc[v.empName].push(v.date);
-                      return acc;
-                    }, {} as Record<string, string[]>);
-                    
-                    return Object.entries(grouped).map(([name, dates]) => (
-                      <div key={name} className="flex flex-col gap-0.5">
-                        <span className="text-[10px] font-black text-slate-800 dark:text-slate-100 uppercase">{name}</span>
-                        <div className="flex flex-wrap gap-1">
-                          {dates.map(d => (
-                            <span key={d} className="text-[8px] font-bold bg-rose-50 dark:bg-rose-900/20 text-rose-500 px-1.5 py-0.5 rounded">
-                              {d.split('-').reverse().join('/')}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ));
-                  })()}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {!isReadOnly && (
-            <>
-              <button
-                onClick={onShareWhatsApp}
-                className="hidden lg:flex bg-green-600 text-white px-4 py-1.5 rounded-lg text-[11px] font-black uppercase items-center gap-2 hover:bg-green-700 transition-all shadow-sm"
-              >
-                <Icon name="content_copy" className="text-sm" /> Copiar Escala
-              </button>
-
-              <button
-                onClick={onShareApoioWhatsApp}
-                className="hidden lg:flex bg-blue-600 text-white px-4 py-1.5 rounded-lg text-[11px] font-black uppercase items-center gap-2 hover:bg-blue-700 transition-all shadow-sm"
-              >
-                <Icon name="info" className="text-sm" /> Copiar Apoio
-              </button>
-              
-              <button 
-                onClick={onShowHelp}
-                className="hidden lg:flex w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 hover:text-orange-600 transition-all items-center justify-center border border-slate-200 dark:border-slate-700"
-                title="Ajuda e FAQs"
-              >
-                <Icon name="help_outline" className="text-xl" />
-              </button>
-            </>
-          )}
+        {/* Right: Segmented Actions, Share & Profile Menus */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
           
-          <div className="hidden sm:block relative">
+          {/* 1. Menu: Ações da Escala (Segmentado) */}
+          {!isReadOnly && currentView === 'grid' && (
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowActionsMenu(!showActionsMenu);
+                  setShowShareMenu(false);
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 border shadow-sm ${
+                  isEditable || showActionsMenu
+                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-orange-600 shadow-orange-500/20'
+                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-200 hover:border-orange-300'
+                }`}
+                title="Ações inteligentes e automações da escala"
+              >
+                <Icon name="auto_fix_high" className="text-sm" />
+                <span className="hidden md:inline">Ações da Escala</span>
+                <Icon name={showActionsMenu ? 'expand_less' : 'expand_more'} className="text-xs" />
+              </button>
+
+              {showActionsMenu && (
+                <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                  
+                  {/* Seção 1: Geração Inteligente */}
+                  <div>
+                    <div className="px-2.5 py-1 text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest flex items-center gap-1">
+                      <Icon name="psychology" className="text-xs text-orange-500" />
+                      <span>Automação & Geração</span>
+                    </div>
+
+                    <div className="space-y-1 mt-1">
+                      <button
+                        onClick={() => {
+                          onCreateMonth();
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-black uppercase text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/40 transition-all text-left"
+                      >
+                        <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-900/50 text-orange-600">
+                          <Icon name="add_circle" className="text-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span>Criar Próximo Mês</span>
+                          <span className="text-[9px] font-normal text-slate-400 lowercase">valida retro-análise, folgas e férias</span>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (onOpenPresetModal) onOpenPresetModal();
+                          else onApplyFolgas();
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-all text-left"
+                      >
+                        <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600">
+                          <Icon name="tune" className="text-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span>Aplicar Pré-definições</span>
+                          <span className="text-[9px] font-normal text-slate-400 lowercase">só horários, folgas ou posições</span>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          onSortearDomingo();
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold uppercase text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all text-left"
+                      >
+                        <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-600">
+                          <Icon name="casino" className="text-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span>Sortear Domingos CLT</span>
+                          <span className="text-[9px] font-normal text-slate-400 lowercase">máximo 2 domingos seguidos</span>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          onDistributePositions();
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold uppercase text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-all text-left"
+                      >
+                        <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600">
+                          <Icon name="view_in_ar" className="text-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span>Distribuir Posições Táticas</span>
+                          <span className="text-[9px] font-normal text-slate-400 lowercase">P1 a P4 e Estoque</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-slate-100 dark:border-zinc-800" />
+
+                  {/* Seção 2: Modos de Edição e Controles */}
+                  <div>
+                    <div className="px-2.5 py-1 text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest flex items-center gap-1">
+                      <Icon name="edit" className="text-xs text-indigo-500" />
+                      <span>Modos de Edição</span>
+                    </div>
+
+                    <div className="space-y-1.5 mt-1 px-1">
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/50 dark:border-zinc-700/50">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-black uppercase text-slate-800 dark:text-slate-200">Modo Edição</span>
+                          <span className="text-[9px] font-normal text-slate-400">permite alterar células da grade</span>
+                        </div>
+                        <button
+                          onClick={onToggleEdit}
+                          className={`w-9 h-5 rounded-full relative transition-colors ${isEditable ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-zinc-600'}`}
+                        >
+                          <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${isEditable ? 'left-4.5' : 'left-0.5'}`} />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/50 dark:border-zinc-700/50">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-black uppercase text-slate-800 dark:text-slate-200">Edição Retroativa</span>
+                          <span className="text-[9px] font-normal text-slate-400">permitir alterar dias passados</span>
+                        </div>
+                        <button
+                          onClick={onToggleRetroactive}
+                          className={`w-9 h-5 rounded-full relative transition-colors ${allowRetroactive ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-zinc-600'}`}
+                        >
+                          <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${allowRetroactive ? 'left-4.5' : 'left-0.5'}`} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 2. Menu: Compartilhar & Exportar (Segmentado) */}
+          {!isReadOnly && (
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowShareMenu(!showShareMenu);
+                  setShowActionsMenu(false);
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 border shadow-sm ${
+                  showShareMenu
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-200 hover:border-slate-300'
+                }`}
+                title="Opções de envio WhatsApp, impressão e PDF"
+              >
+                <Icon name="share" className="text-sm" />
+                <span className="hidden md:inline">Compartilhar</span>
+                <Icon name={showShareMenu ? 'expand_less' : 'expand_more'} className="text-xs" />
+              </button>
+
+              {showShareMenu && (
+                <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                  
+                  {/* WhatsApp */}
+                  <div>
+                    <div className="px-2.5 py-1 text-[9px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-widest flex items-center gap-1">
+                      <Icon name="chat" className="text-xs" />
+                      <span>WhatsApp da Loja</span>
+                    </div>
+
+                    <div className="space-y-1 mt-1">
+                      <button
+                        onClick={() => {
+                          onShareWhatsApp();
+                          setShowShareMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-all text-left"
+                      >
+                        <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600">
+                          <Icon name="send" className="text-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-black uppercase text-[11px]">Escala do Dia</span>
+                          <span className="text-[9px] text-slate-400">resumo diário para a equipe</span>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          onShareApoioWhatsApp();
+                          setShowShareMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all text-left"
+                      >
+                        <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/50 text-blue-600">
+                          <Icon name="assignment" className="text-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-black uppercase text-[11px]">Apoio Operacional</span>
+                          <span className="text-[9px] text-slate-400">postos P1 a P4 e cobertura</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-slate-100 dark:bg-zinc-800" />
+
+                  {/* Impressão e PDF */}
+                  <div>
+                    <div className="px-2.5 py-1 text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest flex items-center gap-1">
+                      <Icon name="print" className="text-xs" />
+                      <span>Documentos & Relatórios</span>
+                    </div>
+
+                    <div className="space-y-1 mt-1">
+                      <button
+                        onClick={() => {
+                          onPrint();
+                          setShowShareMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all text-left"
+                      >
+                        <div className="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-900/50 text-rose-600">
+                          <Icon name="picture_as_pdf" className="text-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-black uppercase text-[11px]">Imprimir / PDF</span>
+                          <span className="text-[9px] text-slate-400">escala mensal impressa</span>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          onToggleNotes();
+                          setShowShareMenu(false);
+                        }}
+                        className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold transition-all text-left ${
+                          showNotes ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                        }`}
+                      >
+                        <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600">
+                          <Icon name="edit_note" className="text-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-black uppercase text-[11px]">{showNotes ? 'Ocultar Recados' : 'Mural de Recados'}</span>
+                          <span className="text-[9px] text-slate-400">anotações no rodapé</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 3. Indicador de Nuvem / Sync */}
+          <div className="flex items-center px-2 py-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800/80 border border-slate-200/50 dark:border-zinc-700/50">
+            <div className={`w-2 h-2 rounded-full ${
+              syncStatus.state === 'idle' ? 'bg-emerald-500' :
+              syncStatus.state === 'saving' ? 'bg-amber-500 animate-pulse' :
+              syncStatus.state === 'error' ? 'bg-rose-500' : 'bg-slate-400'
+            }`} title={`Sincronização Nuvem: ${syncStatus.state}`} />
+          </div>
+
+          {/* 4. Menu do Usuário & Perfil */}
+          <div className="relative">
             <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               onBlur={() => setTimeout(() => setShowProfileMenu(false), 200)}
-              className="flex items-center gap-2 p-1 rounded-lg sm:p-1.5 sm:rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-all border border-slate-200 dark:border-slate-700"
+              className="flex items-center gap-1.5 p-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-all border border-slate-200 dark:border-zinc-700"
+              title="Conta e Sessão"
             >
-              <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md sm:rounded-lg flex items-center justify-center text-white ${isReadOnly ? 'bg-indigo-600' : 'bg-orange-500'}`}>
-                <Icon name={isReadOnly ? 'person' : 'admin_panel_settings'} className="text-xs sm:text-sm" />
+              <div className="w-6 h-6 rounded-lg bg-orange-500 text-white flex items-center justify-center font-black text-[10px] uppercase shadow-sm">
+                RH
               </div>
-              <div className="hidden lg:flex flex-col items-start pr-2">
-                <span className="text-[10px] font-black uppercase text-slate-800 dark:text-slate-200 leading-none">{isReadOnly ? 'Equipe' : 'Gerente'}</span>
-                <span className="text-[8px] font-bold text-slate-400 uppercase">Perfil</span>
-              </div>
+              <Icon name="expand_more" className="text-xs text-slate-400" />
             </button>
-            
+
             {showProfileMenu && (
-              <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-1 flex flex-col gap-1 animate-in fade-in slide-in-from-top-1">
-                 <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
-                   <p className="text-[9px] font-black text-slate-400 uppercase">Ações de Acesso</p>
-                 </div>
-                 <button 
-                  onMouseDown={(e) => { e.preventDefault(); onSwitchRole(); setShowProfileMenu(false); }}
-                  className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all text-left"
-                 >
-                  <Icon name={isReadOnly ? 'admin_panel_settings' : 'visibility'} className="text-lg" /> 
-                  {isReadOnly ? 'Acessar Gerência' : 'Ver como Equipe'}
-                 </button>
-                 <button 
-                  onMouseDown={(e) => { e.preventDefault(); onLogout(); setShowProfileMenu(false); }}
-                  className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-rose-500 hover:bg-rose-50 transition-all text-left"
-                 >
-                  <Icon name="logout" className="text-lg" /> Sair do Sistema
-                 </button>
+              <div className="absolute top-full right-0 mt-2 w-52 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="px-3 py-2 border-b border-slate-100 dark:border-zinc-800 mb-1">
+                  <span className="block text-xs font-black uppercase text-slate-800 dark:text-slate-200">Gestão Loja</span>
+                  <span className="block text-[10px] font-bold text-slate-400">{isReadOnly ? 'Visualizador' : 'Administrador'}</span>
+                </div>
+
+                <button
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onShowHelp();
+                    setShowProfileMenu(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all text-left"
+                >
+                  <Icon name="help_outline" className="text-base text-slate-400" />
+                  <span>Manual & Dicas</span>
+                </button>
+
+                <button
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onSwitchRole();
+                    setShowProfileMenu(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all text-left"
+                >
+                  <Icon name="swap_horiz" className="text-base text-slate-400" />
+                  <span>{isReadOnly ? 'Entrar como Admin' : 'Modo Visualizador'}</span>
+                </button>
+
+                <div className="h-px bg-slate-100 dark:bg-zinc-800 my-1" />
+
+                <button
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onLogout();
+                    setShowProfileMenu(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-black uppercase text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all text-left"
+                >
+                  <Icon name="logout" className="text-base text-rose-500" />
+                  <span>Sair da Conta</span>
+                </button>
               </div>
             )}
           </div>
-          
-          <div 
-            className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 bg-slate-50 dark:bg-zinc-900 rounded-lg border border-slate-100 dark:border-zinc-800 transition-all"
-            title={syncStatus.history?.[0]?.message || (syncStatus.lastSync ? `Última sinc: ${syncStatus.lastSync}` : 'Status de sincronização')}
-          >
-            <div className={`w-2 h-2 rounded-full transition-all ${
-              syncStatus.state === 'synced' 
-                ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' 
-                : syncStatus.state === 'syncing' 
-                ? 'bg-amber-500 animate-ping' 
-                : 'bg-rose-500 animate-pulse'
-            }`} />
-            <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-              {syncStatus.state === 'synced' ? 'Nuvem OK' : syncStatus.state === 'syncing' ? 'Salvando...' : 'Erro'}
-            </span>
-          </div>
+
         </div>
+
       </div>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Navigation Drawer Overlay */}
       {showMobileMenu && (
-        <div className="lg:hidden fixed inset-0 z-[60] bg-white dark:bg-black p-6 pt-20 animate-in slide-in-from-left duration-300 overflow-y-auto">
+        <div className="lg:hidden fixed inset-0 z-[60] bg-slate-950/60 backdrop-blur-sm animate-fade-in flex flex-col justify-end">
+          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl p-6 border-t border-slate-200 dark:border-zinc-800 max-h-[85vh] overflow-y-auto space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
+              <span className="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">Navegação Principal</span>
+              <button onClick={() => setShowMobileMenu(false)} className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-500">
+                <Icon name="close" />
+              </button>
+            </div>
 
-          <div className="flex flex-col gap-8">
-            {/* Nav Items */}
-            {!isReadOnly && (
-              <div className="flex flex-col gap-2">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-2">Navegação Principal</p>
-                {navItems.map(item => (
-                  <button
-                    key={item.id}
-                    onClick={() => { onViewChange(item.id as any); setShowMobileMenu(false); }}
-                    className={`relative w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase transition-all ${currentView === item.id ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900'}`}
-                  >
-                    <Icon name={item.icon} className="text-xl" />
-                    {item.label}
-                    {item.id === 'requests' && pendingRequestsCount > 0 && (
-                      <span className="ml-auto bg-rose-500 text-white px-2 py-0.5 rounded-full text-[10px]">
-                        {pendingRequestsCount} pendentes
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="grid grid-cols-3 gap-2">
+              {navItems.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    onViewChange(item.id as any);
+                    setShowMobileMenu(false);
+                  }}
+                  className={`p-3 rounded-2xl flex flex-col items-center gap-1.5 text-xs font-black uppercase transition-all ${
+                    currentView === item.id 
+                      ? 'bg-orange-500 text-white shadow-md' 
+                      : 'bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  <Icon name={item.icon} className="text-xl" />
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
 
-            {/* Config Items */}
-            {!isReadOnly && (
-              <div className="flex flex-col gap-2">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-2">Configurações e Dados</p>
+            <div className="space-y-1 pt-2">
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block px-1">Configurações & Dados</span>
+              <div className="grid grid-cols-2 gap-2">
                 {configItems.map(item => (
                   <button
                     key={item.id}
-                    onClick={() => { onViewChange(item.id as any); setShowMobileMenu(false); }}
-                    className={`w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase transition-all ${currentView === item.id ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900'}`}
+                    onClick={() => {
+                      onViewChange(item.id as any);
+                      setShowMobileMenu(false);
+                    }}
+                    className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 flex items-center gap-2 text-xs font-bold"
                   >
-                    <Icon name={item.icon} className="text-xl" />
-                    {item.label}
+                    <Icon name={item.icon} className="text-sm text-slate-400" />
+                    <span className="truncate">{item.label}</span>
                   </button>
                 ))}
               </div>
-            )}
-
-            {/* Actions for Admins */}
-            {!isReadOnly && currentView === 'grid' && (
-              <div className="flex flex-col gap-2">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-2">Ferramentas de Edição</p>
-                <button
-                  onClick={() => { onToggleEdit(); setShowMobileMenu(false); }}
-                  className={`w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase transition-all ${isEditable ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900'}`}
-                >
-                  <Icon name={isEditable ? 'save' : 'edit'} className="text-xl" />
-                  {isEditable ? 'Salvar Edição' : 'Habilitar Edição'}
-                </button>
-                {isEditable && (
-                  <>
-                    <button onClick={() => { onCreateMonth(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-slate-500 hover:bg-slate-50">
-                      <Icon name="add_circle" className="text-xl text-orange-500" /> Criar Mês
-                    </button>
-                    <button onClick={() => { onApplyFolgas(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-slate-500 hover:bg-slate-50">
-                      <Icon name="event_available" className="text-xl" /> Aplicar Pré-definições
-                    </button>
-                  </>
-                )}
-                <button onClick={() => { onPrint(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-slate-500 hover:bg-slate-50">
-                  <Icon name="print" className="text-xl" /> Imprimir / PDF
-                </button>
-              </div>
-            )}
-
-            {/* General Actions */}
-            <div className="flex flex-col gap-2">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-2">Outras Opções</p>
-              
-              <button 
-                onClick={() => { onSwitchRole(); setShowMobileMenu(false); }}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-slate-500 hover:bg-slate-50"
-               >
-                <Icon name={isReadOnly ? 'admin_panel_settings' : 'visibility'} className="text-xl" /> 
-                {isReadOnly ? 'Acessar Gerência' : 'Ver como Equipe'}
-              </button>
-
-              {!isReadOnly && (
-                <>
-                  <button onClick={() => { onShareWhatsApp(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10">
-                    <Icon name="content_copy" className="text-xl" /> Copiar Escala
-                  </button>
-                  <button onClick={() => { onShareApoioWhatsApp(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-blue-600 bg-blue-50 dark:bg-blue-900/10 mt-2">
-                    <Icon name="info" className="text-xl" /> Copiar Apoio
-                  </button>
-                </>
-              )}
-              <button onClick={() => { onShowHelp(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-slate-500 hover:bg-slate-50">
-                <Icon name="help_outline" className="text-xl" /> Ajuda e FAQs
-              </button>
-              <button onClick={() => { onLogout(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 p-4 rounded-2xl text-sm font-black uppercase text-rose-500 hover:bg-rose-50">
-                <Icon name="logout" className="text-xl" /> Sair do Sistema
-              </button>
             </div>
           </div>
         </div>

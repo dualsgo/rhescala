@@ -177,172 +177,178 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
   return (
     <div className="flex flex-col gap-4 relative h-full">
-      {/* Top Controls: Exibir + Group Filters + Legend */}
-      <div className="flex flex-col gap-2">
+      {/* Top Controls: 3 Clear Semantic Segmented Groups */}
+      <div className="flex flex-col gap-2.5">
         {isReadOnly && (
           <button 
             onClick={() => setShowGuideModal(true)}
-            className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-xl shadow-lg flex items-center justify-center gap-3 transition-transform hover:scale-[1.02] active:scale-95 animate-in fade-in"
+            className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white p-2.5 rounded-2xl shadow-md flex items-center justify-center gap-2.5 transition-transform hover:scale-[1.01] active:scale-95 animate-in fade-in"
           >
-            <Icon name="menu_book" className="text-xl animate-pulse" />
-            <span className="font-black uppercase tracking-widest text-sm text-center">📖 Manual de Boas Práticas da Loja</span>
+            <Icon name="menu_book" className="text-lg animate-pulse" />
+            <span className="font-black uppercase tracking-widest text-xs">📖 Manual de Boas Práticas da Loja</span>
           </button>
         )}
-        <div className="flex flex-wrap items-center gap-2">
-            {/* Period Filters */}
-            <div className="flex items-center bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 p-1 rounded-xl shadow-sm w-full md:w-auto">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2 hidden sm:block whitespace-nowrap">Exibir:</span>
-              <div className="flex items-center w-full md:w-auto">
-                {[
-                  { id: 'all', label: 'Mês' },
-                  { id: 'sunday', label: 'Domingos' },
-                  { id: 'holiday', label: 'Feriados' },
-                  { id: 'week', label: 'Semana', mobileHidden: true }
-                ].map(f => (
-                  <button
-                    key={f.id}
-                    onClick={() => onFilterChange(f.id as any)}
-                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all flex-1 md:flex-none text-center ${f.mobileHidden ? 'hidden sm:block' : ''} ${filter === f.id ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50/80 dark:bg-zinc-900/60 p-2 sm:p-2.5 rounded-2xl border border-slate-200/70 dark:border-zinc-800">
+          
+          {/* Grupo 1: Período & Foco */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2 hidden sm:inline">Período:</span>
+              {[
+                { id: 'all', label: 'Mês' },
+                { id: 'sunday', label: 'Domingos' },
+                { id: 'holiday', label: 'Feriados' }
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => onFilterChange(f.id as any)}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                    filter === f.id 
+                      ? 'bg-orange-500 text-white shadow-sm' 
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
             </div>
 
-            {/* Contract Filter */}
-            <div className="flex items-center bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 p-1 rounded-xl shadow-sm w-full md:w-auto">
-               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2 hidden sm:block whitespace-nowrap">Contrato:</span>
-               <div className="flex items-center w-full md:w-auto">
-                 {[
-                   { id: 'all', label: 'Todos' },
-                   { id: 'clt', label: 'Efetivos' },
-                   { id: 'sazonal', label: 'Sazonais' }
-                 ].map(f => (
-                   <button
-                     key={f.id}
-                     onClick={() => setContractFilter(f.id as any)}
-                     className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all flex-1 md:flex-none text-center ${contractFilter === f.id ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}
-                   >
-                     {f.label}
-                   </button>
-                 ))}
-               </div>
-            </div>
-
-            {/* Productivity Enhancement: Hide Past Days */}
             {isCurrentMonth && (
               <button
                 onClick={() => setHidePastDays(!hidePastDays)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-all shadow-sm ${
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${
                   hidePastDays 
                     ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-500/20' 
-                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50'
                 }`}
-                title={hidePastDays ? 'Clique para exibir todos os dias do mês' : 'Ocultar dias anteriores para focar no restante do mês'}
+                title={hidePastDays ? 'Exibir o mês inteiro' : 'Ocultar dias passados para focar no restante do mês'}
               >
                 <Icon name={hidePastDays ? 'fast_forward' : 'history_toggle_off'} className="text-xs" />
-                <span>{hidePastDays ? `Dias Restantes (${daysRemainingCount}d)` : 'Ocultar Concluídos'}</span>
+                <span>{hidePastDays ? `Restantes (${daysRemainingCount}d)` : 'Ocultar Passados'}</span>
               </button>
             )}
+          </div>
 
-            {/* Productivity Enhancement: Filter Only Working on Selected Day */}
+          {/* Grupo 2: Equipe & Contrato */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2 hidden sm:inline">Equipe:</span>
+              {[
+                { id: 'all', label: 'Todos' },
+                { id: 'clt', label: 'CLT' },
+                { id: 'sazonal', label: 'Sazonais' }
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setContractFilter(f.id as any)}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                    contractFilter === f.id 
+                      ? 'bg-orange-500 text-white shadow-sm' 
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
             <button
               onClick={() => setOnlyWorkingToday(!onlyWorkingToday)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-all shadow-sm ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${
                 onlyWorkingToday 
                   ? 'bg-emerald-600 border-emerald-600 text-white shadow-emerald-500/20' 
-                  : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                  : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50'
               }`}
-              title="Filtra a lista mostrando apenas quem está trabalhando no dia selecionado"
+              title="Filtrar apenas colaboradores escalados para trabalhar no dia selecionado"
             >
               <Icon name={onlyWorkingToday ? 'check_circle' : 'person_pin_circle'} className="text-xs" />
-              <span>{onlyWorkingToday ? 'Filtrando: Trabalhando' : 'Quem Trabalha'}</span>
+              <span>{onlyWorkingToday ? 'Escalados Hoje' : 'Quem Trabalha'}</span>
             </button>
+          </div>
 
-            {/* Productivity Enhancement: Compact Mode */}
+          {/* Grupo 3: Turnos & Densidade */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm">
+              <div className="hidden sm:flex items-center">
+                <button 
+                  onClick={() => setSelectedGroup(null)}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                    !selectedGroup ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Todos
+                </button>
+                {['Abertura', 'Intermediário', 'Fechamento', 'Folgas/Outros'].map(group => (
+                  <button 
+                    key={group}
+                    onClick={() => setSelectedGroup(group)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                      selectedGroup === group ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    {group.split('/')[0]}
+                  </button>
+                ))}
+              </div>
+              
+              <div className="flex sm:hidden items-center px-1">
+                <select 
+                  value={selectedGroup || ''} 
+                  onChange={(e) => setSelectedGroup(e.target.value || null)}
+                  className="bg-transparent border-none py-1 pl-1 pr-6 text-[10px] font-black uppercase tracking-wider outline-none text-slate-700 dark:text-slate-300"
+                >
+                  <option value="">Turno: Todos</option>
+                  <option value="Abertura">Abertura</option>
+                  <option value="Intermediário">Intermediário</option>
+                  <option value="Fechamento">Fechamento</option>
+                  <option value="Folgas/Outros">Folgas / Outros</option>
+                </select>
+              </div>
+            </div>
+
             <button
               onClick={() => setIsCompactMode(!isCompactMode)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-all shadow-sm ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${
                 isCompactMode 
                   ? 'bg-purple-600 border-purple-600 text-white shadow-purple-500/20' 
-                  : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                  : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50'
               }`}
               title="Alternar entre modo normal e modo denso para caber mais colaboradores na tela"
             >
               <Icon name={isCompactMode ? 'view_agenda' : 'view_headline'} className="text-xs" />
-              <span className="hidden sm:inline">{isCompactMode ? 'Denso' : 'Normal'}</span>
+              <span>{isCompactMode ? 'Denso' : 'Normal'}</span>
             </button>
+          </div>
+        </div>
 
-            {/* Group Filters */}
-            <div className="flex items-center bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 p-1 rounded-xl shadow-sm w-full md:w-auto">
-               <div className="hidden sm:flex items-center">
-                  <button 
-                    onClick={() => setSelectedGroup(null)}
-                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${!selectedGroup ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}
-                  >
-                    Todos
-                  </button>
-                  {['Abertura', 'Intermediário', 'Fechamento', 'Folgas/Outros'].map(group => (
-                    <button 
-                      key={group}
-                      onClick={() => setSelectedGroup(group)}
-                      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${selectedGroup === group ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}
-                    >
-                      {group}
-                    </button>
-                  ))}
-               </div>
-               
-               <div className="flex sm:hidden w-full items-center">
-                 <div className="relative w-full">
-                   <div className="absolute inset-y-0 left-2 flex items-center pointer-events-none text-orange-500">
-                     <Icon name="filter_list" className="text-sm" />
-                   </div>
-                   <select 
-                     value={selectedGroup || ''} 
-                     onChange={(e) => setSelectedGroup(e.target.value || null)}
-                     className="w-full bg-transparent border-none py-1.5 pl-8 pr-4 text-[10px] font-black uppercase tracking-widest outline-none focus:ring-0 appearance-none text-slate-700 dark:text-slate-300"
-                   >
-                     <option value="">Grupo: Todos</option>
-                     <option value="Abertura">Abertura</option>
-                     <option value="Intermediário">Intermediário</option>
-                     <option value="Fechamento">Fechamento</option>
-                     <option value="Folgas/Outros">Folgas / Outros</option>
-                   </select>
-                   <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none text-slate-400">
-                     <Icon name="expand_more" className="text-sm" />
-                   </div>
-                 </div>
-               </div>
-            </div>
-            
-            {/* Legend Component */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 px-3 py-1.5 rounded-xl shadow-sm w-full xl:w-auto">
-              <button 
-                onClick={() => setShowLegend(!showLegend)} 
-                className="flex items-center justify-between sm:justify-start w-full sm:w-auto sm:pr-3 sm:border-r border-slate-100 dark:border-zinc-800 py-0.5"
-              >
-                <div className="flex items-center gap-1.5">
-                  <Icon name="info" className="text-orange-500 text-[14px]" />
-                  <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Legenda</span>
-                </div>
-                <Icon name={showLegend ? 'expand_less' : 'expand_more'} className="text-slate-400 sm:hidden text-[14px]" />
-              </button>
-              
-              <div className={`${showLegend ? 'flex' : 'hidden'} sm:flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 sm:mt-0 pb-1 sm:pb-0 w-full sm:w-auto`}>
-                {legendItems.map(item => (
-                  <div key={item.code} className="flex items-center gap-1.5">
-                    <div className={`w-2 h-2 rounded-full ${item.color}`} />
-                    <span className="text-[8.5px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight whitespace-nowrap">{item.label}</span>
-                  </div>
-                ))}
+        {/* Legend & Helper Row */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 px-3 py-1.5 rounded-xl shadow-sm w-full sm:w-auto">
+            <button 
+              onClick={() => setShowLegend(!showLegend)} 
+              className="flex items-center justify-between sm:justify-start w-full sm:w-auto sm:pr-3 sm:border-r border-slate-100 dark:border-zinc-800 py-0.5"
+            >
+              <div className="flex items-center gap-1.5">
+                <Icon name="info" className="text-orange-500 text-[14px]" />
+                <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Legenda</span>
               </div>
+              <Icon name={showLegend ? 'expand_less' : 'expand_more'} className="text-slate-400 sm:hidden text-[14px]" />
+            </button>
+            
+            <div className={`${showLegend ? 'flex' : 'hidden'} sm:flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 sm:mt-0 pb-1 sm:pb-0 w-full sm:w-auto`}>
+              {legendItems.map(item => (
+                <div key={item.code} className="flex items-center gap-1.5">
+                  <div className={`w-2 h-2 rounded-full ${item.color}`} />
+                  <span className="text-[8.5px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight whitespace-nowrap">{item.label}</span>
+                </div>
+              ))}
             </div>
+          </div>
 
-            <div className="hidden xl:flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase bg-white dark:bg-black px-3 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm ml-auto">
-              <Icon name="mouse" className="text-orange-500 text-[12px]" /> Clique no nome p/ ver escala
-            </div>
+          <div className="hidden sm:flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase bg-white dark:bg-zinc-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm ml-auto">
+            <Icon name="touch_app" className="text-orange-500 text-xs" /> Clique no nome para abrir o cartão
+          </div>
         </div>
       </div>
 
