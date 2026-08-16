@@ -618,50 +618,111 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="lg:hidden fixed inset-0 z-[60] bg-slate-950/60 backdrop-blur-sm animate-fade-in flex flex-col justify-end">
           <div className="bg-white dark:bg-zinc-900 rounded-t-3xl p-6 border-t border-slate-200 dark:border-zinc-800 max-h-[85vh] overflow-y-auto space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
-              <span className="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">Navegação Principal</span>
+              <div>
+                <span className="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight block">
+                  {isReadOnly ? 'Painel do Colaborador' : 'Navegação Principal'}
+                </span>
+                <span className="text-[10px] font-bold text-slate-400">
+                  {isReadOnly ? 'Acesso rápido para consulta de escala' : 'Gestão de equipe e escalas'}
+                </span>
+              </div>
               <button onClick={() => setShowMobileMenu(false)} className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-500">
                 <Icon name="close" />
               </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              {navItems.map(item => (
+            {isReadOnly ? (
+              <div className="space-y-2 pt-2">
                 <button
-                  key={item.id}
                   onClick={() => {
-                    onViewChange(item.id as any);
+                    onShowHelp();
                     setShowMobileMenu(false);
                   }}
-                  className={`p-3 rounded-2xl flex flex-col items-center gap-1.5 text-xs font-black uppercase transition-all ${
-                    currentView === item.id 
-                      ? 'bg-orange-500 text-white shadow-md' 
-                      : 'bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-slate-300'
-                  }`}
+                  className="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-slate-200 flex items-center gap-3 text-xs font-black uppercase shadow-sm"
                 >
-                  <Icon name={item.icon} className="text-xl" />
-                  <span>{item.label}</span>
+                  <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600">
+                    <Icon name="menu_book" className="text-base" />
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span>Manual de Boas Práticas</span>
+                    <span className="text-[10px] font-normal text-slate-400 lowercase">diretrizes e dicas de convivência</span>
+                  </div>
                 </button>
-              ))}
-            </div>
 
-            <div className="space-y-1 pt-2">
-              <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block px-1">Configurações & Dados</span>
-              <div className="grid grid-cols-2 gap-2">
-                {configItems.map(item => (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      onViewChange(item.id as any);
-                      setShowMobileMenu(false);
-                    }}
-                    className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 flex items-center gap-2 text-xs font-bold"
-                  >
-                    <Icon name={item.icon} className="text-sm text-slate-400" />
-                    <span className="truncate">{item.label}</span>
-                  </button>
-                ))}
+                <button
+                  onClick={() => {
+                    onViewChange('feriados');
+                    setShowMobileMenu(false);
+                  }}
+                  className="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-slate-200 flex items-center gap-3 text-xs font-black uppercase shadow-sm"
+                >
+                  <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-600">
+                    <Icon name="event_busy" className="text-base" />
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span>Feriados & Folgas da Loja</span>
+                    <span className="text-[10px] font-normal text-slate-400 lowercase">calendário anual de feriados</span>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    onSwitchRole();
+                    setShowMobileMenu(false);
+                  }}
+                  className="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-slate-200 flex items-center gap-3 text-xs font-black uppercase shadow-sm"
+                >
+                  <div className="p-2 rounded-xl bg-orange-100 dark:bg-orange-950 text-orange-600">
+                    <Icon name="admin_panel_settings" className="text-base" />
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span>Entrar como Administrador</span>
+                    <span className="text-[10px] font-normal text-slate-400 lowercase">acesso de gestão para o gerente</span>
+                  </div>
+                </button>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-3 gap-2">
+                  {navItems.map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        onViewChange(item.id as any);
+                        setShowMobileMenu(false);
+                      }}
+                      className={`p-3 rounded-2xl flex flex-col items-center gap-1.5 text-xs font-black uppercase transition-all ${
+                        currentView === item.id 
+                          ? 'bg-orange-500 text-white shadow-md' 
+                          : 'bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      <Icon name={item.icon} className="text-xl" />
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-1 pt-2">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block px-1">Configurações & Dados</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {configItems.map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          onViewChange(item.id as any);
+                          setShowMobileMenu(false);
+                        }}
+                        className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 flex items-center gap-2 text-xs font-bold"
+                      >
+                        <Icon name={item.icon} className="text-sm text-slate-400" />
+                        <span className="truncate">{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
