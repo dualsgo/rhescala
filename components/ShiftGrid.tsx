@@ -83,7 +83,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   const [hidePastDays, setHidePastDays] = useState(false);
   const [onlyWorkingToday, setOnlyWorkingToday] = useState(false);
   const [isCompactMode, setIsCompactMode] = useState(false);
-  const [focusSelectedDay, setFocusSelectedDay] = useState(false);
+  const [focusSelectedDay, setFocusSelectedDay] = useState(true);
 
   const isCurrentMonth = currentMY.year === today.getFullYear() && currentMY.month === today.getMonth();
   const todayDayNum = today.getDate();
@@ -245,125 +245,131 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             )}
           </div>
 
-          {/* Grupo 2: Equipe & Contrato */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
-              {[
-                { id: 'all', label: 'Todos', short: 'Todos' },
-                { id: 'clt', label: 'CLT', short: 'CLT' },
-                { id: 'sazonal', label: 'Sazonais', short: 'Saz' }
-              ].map(f => (
-                <button
-                  key={f.id}
-                  onClick={() => setContractFilter(f.id as any)}
-                  className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                    contractFilter === f.id 
-                      ? 'bg-orange-500 text-white shadow-sm' 
-                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
-                  }`}
-                >
-                  <span className="hidden sm:inline">{f.label}</span>
-                  <span className="inline sm:hidden">{f.short}</span>
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setOnlyWorkingToday(!onlyWorkingToday)}
-              className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shrink-0 whitespace-nowrap ${
-                onlyWorkingToday 
-                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-emerald-500/20' 
-                  : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-              title="Filtrar apenas colaboradores escalados para trabalhar no dia selecionado"
-            >
-              <Icon name={onlyWorkingToday ? 'check_circle' : 'person_pin_circle'} className="text-xs" />
-              <span className="hidden sm:inline">{onlyWorkingToday ? 'Escalados' : 'Quem Trabalha'}</span>
-              <span className="inline sm:hidden">Hoje</span>
-            </button>
-          </div>
-
-          {/* Grupo 3: Turnos & Densidade */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
-              <div className="hidden md:flex items-center">
-                <button 
-                  onClick={() => setSelectedGroup(null)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                    !selectedGroup ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  Todos
-                </button>
-                {['Abertura', 'Intermediário', 'Fechamento', 'Folgas/Outros'].map(group => (
-                  <button 
-                    key={group}
-                    onClick={() => setSelectedGroup(group)}
-                    className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                      selectedGroup === group ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          {/* Grupo 2: Equipe & Contrato (Apenas Admin) */}
+          {!isReadOnly && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
+                {[
+                  { id: 'all', label: 'Todos', short: 'Todos' },
+                  { id: 'clt', label: 'CLT', short: 'CLT' },
+                  { id: 'sazonal', label: 'Sazonais', short: 'Saz' }
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setContractFilter(f.id as any)}
+                    className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                      contractFilter === f.id 
+                        ? 'bg-orange-500 text-white shadow-sm' 
+                        : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
                     }`}
                   >
-                    {group.split('/')[0]}
+                    <span className="hidden sm:inline">{f.label}</span>
+                    <span className="inline sm:hidden">{f.short}</span>
                   </button>
                 ))}
               </div>
-              
-              <div className="flex md:hidden items-center px-1">
-                <select 
-                  value={selectedGroup || ''} 
-                  onChange={(e) => setSelectedGroup(e.target.value || null)}
-                  className="bg-transparent border-none py-1 pl-1 pr-5 text-[10px] font-black uppercase tracking-wider outline-none text-slate-700 dark:text-slate-300"
-                >
-                  <option value="">Turno: Todos</option>
-                  <option value="Abertura">Abertura</option>
-                  <option value="Intermediário">Intermediário</option>
-                  <option value="Fechamento">Fechamento</option>
-                  <option value="Folgas/Outros">Folgas / Outros</option>
-                </select>
-              </div>
-            </div>
 
-            <button
-              onClick={() => setIsCompactMode(!isCompactMode)}
-              className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shrink-0 whitespace-nowrap ${
-                isCompactMode 
-                  ? 'bg-purple-600 border-purple-600 text-white shadow-purple-500/20' 
-                  : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-              title="Alternar entre modo normal e modo denso para caber mais colaboradores na tela"
-            >
-              <Icon name={isCompactMode ? 'view_agenda' : 'view_headline'} className="text-xs" />
-              <span className="hidden sm:inline">{isCompactMode ? 'Denso' : 'Normal'}</span>
-            </button>
-          </div>
+              <button
+                onClick={() => setOnlyWorkingToday(!onlyWorkingToday)}
+                className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shrink-0 whitespace-nowrap ${
+                  onlyWorkingToday 
+                    ? 'bg-emerald-600 border-emerald-600 text-white shadow-emerald-500/20' 
+                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+                title="Filtrar apenas colaboradores escalados para trabalhar no dia selecionado"
+              >
+                <Icon name={onlyWorkingToday ? 'check_circle' : 'person_pin_circle'} className="text-xs" />
+                <span className="hidden sm:inline">{onlyWorkingToday ? 'Escalados' : 'Quem Trabalha'}</span>
+                <span className="inline sm:hidden">Hoje</span>
+              </button>
+            </div>
+          )}
+
+          {/* Grupo 3: Turnos & Densidade (Apenas Admin) */}
+          {!isReadOnly && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
+                <div className="hidden md:flex items-center">
+                  <button 
+                    onClick={() => setSelectedGroup(null)}
+                    className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                      !selectedGroup ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    Todos
+                  </button>
+                  {['Abertura', 'Intermediário', 'Fechamento', 'Folgas/Outros'].map(group => (
+                    <button 
+                      key={group}
+                      onClick={() => setSelectedGroup(group)}
+                      className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                        selectedGroup === group ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      {group.split('/')[0]}
+                    </button>
+                  ))}
+                </div>
+                
+                <div className="flex md:hidden items-center px-1">
+                  <select 
+                    value={selectedGroup || ''} 
+                    onChange={(e) => setSelectedGroup(e.target.value || null)}
+                    className="bg-transparent border-none py-1 pl-1 pr-5 text-[10px] font-black uppercase tracking-wider outline-none text-slate-700 dark:text-slate-300"
+                  >
+                    <option value="">Turno: Todos</option>
+                    <option value="Abertura">Abertura</option>
+                    <option value="Intermediário">Intermediário</option>
+                    <option value="Fechamento">Fechamento</option>
+                    <option value="Folgas/Outros">Folgas / Outros</option>
+                  </select>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsCompactMode(!isCompactMode)}
+                className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shrink-0 whitespace-nowrap ${
+                  isCompactMode 
+                    ? 'bg-purple-600 border-purple-600 text-white shadow-purple-500/20' 
+                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+                title="Alternar entre modo normal e modo denso para caber mais colaboradores na tela"
+              >
+                <Icon name={isCompactMode ? 'view_agenda' : 'view_headline'} className="text-xs" />
+                <span className="hidden sm:inline">{isCompactMode ? 'Denso' : 'Normal'}</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Legend & Helper Row */}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 px-3 py-1.5 rounded-xl shadow-sm w-full sm:w-auto">
-            <button 
-              onClick={() => setShowLegend(!showLegend)} 
-              className="flex items-center justify-between sm:justify-start w-full sm:w-auto sm:pr-3 sm:border-r border-slate-100 dark:border-zinc-800 py-0.5"
-            >
-              <div className="flex items-center gap-1.5">
-                <Icon name="info" className="text-orange-500 text-[14px]" />
-                <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Legenda</span>
-              </div>
-              <Icon name={showLegend ? 'expand_less' : 'expand_more'} className="text-slate-400 sm:hidden text-[14px]" />
-            </button>
-            
-            <div className={`${showLegend ? 'flex' : 'hidden'} sm:flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 sm:mt-0 pb-1 sm:pb-0 w-full sm:w-auto`}>
-              {legendItems.map(item => (
-                <div key={item.code} className="flex items-center gap-1.5">
-                  <div className={`w-2 h-2 rounded-full ${item.color}`} />
-                  <span className="text-[8.5px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight whitespace-nowrap">{item.label}</span>
+          {!isReadOnly && (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 px-3 py-1.5 rounded-xl shadow-sm w-full sm:w-auto">
+              <button 
+                onClick={() => setShowLegend(!showLegend)} 
+                className="flex items-center justify-between sm:justify-start w-full sm:w-auto sm:pr-3 sm:border-r border-slate-100 dark:border-zinc-800 py-0.5"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Icon name="info" className="text-orange-500 text-[14px]" />
+                  <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Legenda</span>
                 </div>
-              ))}
+                <Icon name={showLegend ? 'expand_less' : 'expand_more'} className="text-slate-400 sm:hidden text-[14px]" />
+              </button>
+              
+              <div className={`${showLegend ? 'flex' : 'hidden'} sm:flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 sm:mt-0 pb-1 sm:pb-0 w-full sm:w-auto`}>
+                {legendItems.map(item => (
+                  <div key={item.code} className="flex items-center gap-1.5">
+                    <div className={`w-2 h-2 rounded-full ${item.color}`} />
+                    <span className="text-[8.5px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight whitespace-nowrap">{item.label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="hidden sm:flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase bg-white dark:bg-zinc-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm ml-auto">
-            <Icon name="touch_app" className="text-orange-500 text-xs" /> Clique no nome para abrir o cartão
+          <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase bg-white dark:bg-zinc-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm ml-auto">
+            <Icon name="touch_app" className="text-orange-500 text-xs" /> Clique no seu nome para abrir sua escala
           </div>
         </div>
       </div>
@@ -665,15 +671,15 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const focusHighlight = isSelectedCol && focusSelectedDay ? 'ring-2 ring-inset ring-orange-500 bg-orange-50/80 dark:bg-orange-950/40' : isSelectedCol ? 'ring-2 ring-inset ring-orange-400/50' : '';
 
                               return (
-                                <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all relative ${dimClass} ${blurClass} ${focusHighlight} ${hasAlert ? 'ring-2 ring-inset ring-rose-500 bg-rose-50/50 dark:bg-rose-950/30' : is7thDay ? 'ring-2 ring-inset ring-emerald-500/40 bg-emerald-50/20' : ''}`}>
+                                <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all relative ${dimClass} ${blurClass} ${focusHighlight} ${(!isReadOnly && hasAlert) ? 'ring-2 ring-inset ring-rose-500 bg-rose-50/50 dark:bg-rose-950/30' : (!isReadOnly && is7thDay) ? 'ring-2 ring-inset ring-emerald-500/40 bg-emerald-50/20' : ''}`}>
                                   <div className="relative group flex flex-col items-center gap-1">
-                                    {cellDiff && (
+                                    {!isReadOnly && cellDiff && (
                                         <span 
                                           className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-900 shadow-md z-30 cursor-help"
                                           title={`Alteração pós-oficialização (${cellDiff.type}): Oficial [${cellDiff.officialVal}] ➔ Atual [${cellDiff.currentVal}]`}
                                         />
                                     )}
-                                    {is7thDay && (
+                                    {!isReadOnly && is7thDay && (
                                       <span
                                         className={`absolute -top-1.5 -left-1.5 px-1 py-0.2 text-[8px] font-black rounded-full shadow-md z-30 transition-all ${
                                           hasAlert

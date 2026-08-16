@@ -88,7 +88,7 @@ const App: React.FC = () => {
   const [validatedMonths, setValidatedMonths] = useLocalStorage<Record<string, boolean>>('riHappyValidatedMonths', {});
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
   const [showInconsistencyModal, setShowInconsistencyModal] = useState(false);
-  const [viewerModeType, setViewerModeType] = useLocalStorage<'personal' | 'grid'>('rhescala_viewer_mode_type', 'personal');
+  const [viewerModeType, setViewerModeType] = useLocalStorage<'personal' | 'grid'>('rhescala_viewer_mode_type', 'grid');
   const [viewerSelectedEmpId, setViewerSelectedEmpId] = useLocalStorage<string>('rhescala_viewer_selected_emp_id', '');
 
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
@@ -917,24 +917,7 @@ const App: React.FC = () => {
                 }
 
                 return (
-                  <div className="flex flex-col h-full gap-2">
-                    {isReadOnly && (
-                      <div className="flex items-center justify-between bg-orange-500 text-white px-4 py-2 rounded-2xl shadow-md">
-                        <div className="flex items-center gap-2">
-                          <Icon name="grid_view" className="text-base" />
-                          <span className="text-xs font-black uppercase tracking-wider">Modo Grade Geral da Loja</span>
-                        </div>
-                        <button
-                          onClick={() => setViewerModeType('personal')}
-                          className="bg-white text-orange-600 px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5"
-                        >
-                          <Icon name="person" className="text-sm" />
-                          <span>Ver Minha Escala</span>
-                        </button>
-                      </div>
-                    )}
-                    <div className="flex-1 min-h-0">
-                      <ShiftGrid
+                  <ShiftGrid
                    employees={employees}
                    currentMY={currentMY}
                    selectedDayIdx={selectedDayIdx}
@@ -1020,8 +1003,6 @@ const App: React.FC = () => {
                      }
                    }}
                  />
-                    </div>
-                  </div>
                 );
              case 'analysis':
                return (
