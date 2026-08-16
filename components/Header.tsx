@@ -106,7 +106,20 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="bg-white dark:bg-black border-b border-slate-200 dark:border-zinc-800 sticky top-0 z-50 shadow-sm transition-colors h-14">
-      <div className="flex items-center justify-between px-3 sm:px-4 h-full gap-2 sm:gap-4 max-w-full">
+      {/* Backdrop overlay to prevent clicking behind open dropdowns */}
+      {(showConfigMenu || showActionsMenu || showShareMenu || showProfileMenu) && (
+        <div 
+          className="fixed inset-0 z-40 bg-transparent" 
+          onClick={() => {
+            setShowConfigMenu(false);
+            setShowActionsMenu(false);
+            setShowShareMenu(false);
+            setShowProfileMenu(false);
+          }}
+        />
+      )}
+
+      <div className="flex items-center justify-between px-3 sm:px-4 h-full gap-2 sm:gap-4 max-w-full relative z-50">
         
         {/* Left: Mobile Menu Trigger & Main Navigation */}
         <div className="flex items-center gap-2 lg:gap-4">
@@ -389,29 +402,57 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
 
                     <div className="space-y-1.5 mt-1 px-1">
-                      <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/50 dark:border-zinc-700/50">
+                      <div 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleEdit();
+                        }}
+                        className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none ${
+                          isEditable 
+                            ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-800' 
+                            : 'bg-slate-50 dark:bg-zinc-800/60 border-slate-200/50 dark:border-zinc-700/50 hover:bg-slate-100 dark:hover:bg-zinc-800'
+                        }`}
+                      >
                         <div className="flex flex-col">
                           <span className="text-xs font-black uppercase text-slate-800 dark:text-slate-200">Modo Edição</span>
                           <span className="text-[9px] font-normal text-slate-400">permite alterar células da grade</span>
                         </div>
                         <button
-                          onClick={onToggleEdit}
-                          className={`w-9 h-5 rounded-full relative transition-colors ${isEditable ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-zinc-600'}`}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleEdit();
+                          }}
+                          className={`w-10 h-6 rounded-full relative transition-colors shrink-0 ${isEditable ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-zinc-600'}`}
                         >
-                          <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${isEditable ? 'left-4.5' : 'left-0.5'}`} />
+                          <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${isEditable ? 'left-5' : 'left-1'}`} />
                         </button>
                       </div>
 
-                      <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/50 dark:border-zinc-700/50">
+                      <div 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleRetroactive();
+                        }}
+                        className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none ${
+                          allowRetroactive 
+                            ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-800' 
+                            : 'bg-slate-50 dark:bg-zinc-800/60 border-slate-200/50 dark:border-zinc-700/50 hover:bg-slate-100 dark:hover:bg-zinc-800'
+                        }`}
+                      >
                         <div className="flex flex-col">
                           <span className="text-xs font-black uppercase text-slate-800 dark:text-slate-200">Edição Retroativa</span>
                           <span className="text-[9px] font-normal text-slate-400">permitir alterar dias passados</span>
                         </div>
                         <button
-                          onClick={onToggleRetroactive}
-                          className={`w-9 h-5 rounded-full relative transition-colors ${allowRetroactive ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-zinc-600'}`}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleRetroactive();
+                          }}
+                          className={`w-10 h-6 rounded-full relative transition-colors shrink-0 ${allowRetroactive ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-zinc-600'}`}
                         >
-                          <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${allowRetroactive ? 'left-4.5' : 'left-0.5'}`} />
+                          <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${allowRetroactive ? 'left-5' : 'left-1'}`} />
                         </button>
                       </div>
                     </div>
