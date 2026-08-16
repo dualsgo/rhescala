@@ -17,7 +17,7 @@ interface MobileEmployerViewerProps {
   customHolidays: Holiday[];
   deletedNationalHolidays?: string[];
   jornadaSettings: JornadaSettings;
-  holidayCredits: HolidayCredit[];
+  holidayCredits?: Record<string, HolidayCredit[]> | HolidayCredit[];
   selectedEmployeeId?: string;
   onSelectEmployee: (empId: string) => void;
   onOpenEmployeeCard: (emp: Employee) => void;
@@ -92,11 +92,21 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     return { workDays, offDays, sundaysWorked, holidaysWorked };
   }, [currentEmp, monthKey, daysInMonth, currentMY, holidaySet]);
 
-  // Compute Holiday Credit balance for current employee
-  const empCredit = useMemo(() => {
-    if (!currentEmp) return null;
-    return holidayCredits.find(c => c.employeeId === currentEmp.id) || null;
+  // Compute Holiday Credit list for current employee
+  const empCreditsList = useMemo(() => {
+    if (!currentEmp || !holidayCredits) return [];
+    if (Array.isArray(holidayCredits)) {
+      return (holidayCredits as any[]).filter(c => c.employeeId === currentEmp.id);
+    }
+    if (typeof holidayCredits === 'object') {
+      return (holidayCredits as Record<string, HolidayCredit[]>)[currentEmp.id] || [];
+    }
+    return [];
   }, [currentEmp, holidayCredits]);
+
+  const pendingCreditsCount = useMemo(() => {
+    return empCreditsList.filter(c => c.status === 'pending').length;
+  }, [empCreditsList]);
 
   // Compute today's tactical position and schedule for current employee
   const todayDetails = useMemo(() => {
@@ -294,10 +304,10 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
           </div>
 
           {/* Holiday Credit Chip */}
-          {empCredit && (empCredit.netBalance > 0 || empCredit.workedCount > 0) && (
+          {pendingCreditsCount > 0 && (
             <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800 text-[10px] font-black">
               <Icon name="stars" className="text-xs text-amber-500" />
-              <span>Saldo Folgas: {empCredit.netBalance}d</span>
+              <span>Saldo Folgas: {pendingCreditsCount}d</span>
             </div>
           )}
         </div>
@@ -440,7 +450,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
                 <span className="text-[9px] font-black uppercase text-slate-400">Domingos</span>
               </div>
               <div className="bg-slate-50 dark:bg-zinc-800 p-2.5 rounded-xl">
-                <span className="text-lg font-black text-emerald-600 block">{empCredit?.netBalance || 0}</span>
+                <span className="text-lg font-black text-emerald-600 block">{pendingCreditsCount}</span>
                 <span className="text-[9px] font-black uppercase text-slate-400">Crédito</span>
               </div>
             </div>
