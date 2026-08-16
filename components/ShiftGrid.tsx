@@ -80,20 +80,24 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   const [showLegend, setShowLegend] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
   const [contractFilter, setContractFilter] = useState<'all' | 'clt' | 'sazonal'>('all');
+  const [hidePastDays, setHidePastDays] = useState(false);
+  const [onlyWorkingToday, setOnlyWorkingToday] = useState(false);
+  const [isCompactMode, setIsCompactMode] = useState(false);
+
+  const isCurrentMonth = currentMY.year === today.getFullYear() && currentMY.month === today.getMonth();
+  const todayDayNum = today.getDate();
 
   // Auto-scroll to today on mount or when month changes to current month
   useEffect(() => {
     const todayDate = new Date();
-    const isCurrentMonth = currentMY.year === todayDate.getFullYear() && currentMY.month === todayDate.getMonth();
+    const isCurrent = currentMY.year === todayDate.getFullYear() && currentMY.month === todayDate.getMonth();
     
-    if (isCurrentMonth && scrollContainerRef.current) {
+    if (isCurrent && scrollContainerRef.current && !hidePastDays) {
       const todayDay = todayDate.getDate();
       if (todayDay > 1) {
-        // Approximate day column width (min-w-60 is 60px) + some padding
-        const colWidth = 60;
+        const colWidth = isCompactMode ? 48 : 60;
         const scrollPos = (todayDay - 1) * colWidth;
         
-        // Use a small timeout to ensure layout is ready
         const timeout = setTimeout(() => {
           if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTo({
@@ -106,7 +110,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
         return () => clearTimeout(timeout);
       }
     }
-  }, [currentMY.month, currentMY.year]);
+  }, [currentMY.month, currentMY.year, hidePastDays, isCompactMode]);
 
   const legendItems = [
     { code: 'F', label: 'Folga Comum', color: 'bg-rose-500' },
@@ -129,12 +133,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [currentMY.year, customHolidays]);
 
-  const displayedEmployees = useMemo(() => {
-    return [...employees]
-      .filter(e => !e.isHidden && e.status === 'active')
-      .sort((a, b) => (a.workPeriod || '').localeCompare(b.workPeriod || '') || a.name.localeCompare(b.name));
-  }, [employees]);
-
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
   const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
 
@@ -148,11 +146,34 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     });
   }, [currentMY, daysInMonth, holidaySet]);
 
+  const daysRemainingCount = isCurrentMonth ? Math.max(0, daysInMonth - todayDayNum + 1) : 0;
+
   const filteredDays = useMemo(() => {
-    if (filter === 'sunday') return days.filter(d => d.isSunday);
-    if (filter === 'holiday') return days.filter(d => d.isHoliday);
-    return days;
-  }, [days, filter]);
+    let result = days;
+    if (filter === 'sunday') result = result.filter(d => d.isSunday);
+    else if (filter === 'holiday') result = result.filter(d => d.isHoliday);
+
+    if (hidePastDays && isCurrentMonth) {
+      const remaining = result.filter(d => d.num >= todayDayNum);
+      if (remaining.length > 0) return remaining;
+    }
+    return result;
+  }, [days, filter, hidePastDays, isCurrentMonth, todayDayNum]);
+
+  const displayedEmployees = useMemo(() => {
+    let list = [...employees].filter(e => !e.isHidden && e.status === 'active');
+    if (contractFilter === 'clt') list = list.filter(e => e.contractType !== 'Sazonal');
+    else if (contractFilter === 'sazonal') list = list.filter(e => e.contractType === 'Sazonal');
+
+    if (onlyWorkingToday) {
+      list = list.filter(emp => {
+        const currentShift = emp.shifts[monthKey]?.[selectedDayIdx];
+        return isWorkingShift(currentShift) || currentShift === 'C';
+      });
+    }
+
+    return list.sort((a, b) => (a.workPeriod || '').localeCompare(b.workPeriod || '') || a.name.localeCompare(b.name));
+  }, [employees, contractFilter, onlyWorkingToday, monthKey, selectedDayIdx]);
 
   return (
     <div className="flex flex-col gap-4 relative h-full">
@@ -208,6 +229,50 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                  ))}
                </div>
             </div>
+
+            {/* Productivity Enhancement: Hide Past Days */}
+            {isCurrentMonth && (
+              <button
+                onClick={() => setHidePastDays(!hidePastDays)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-all shadow-sm ${
+                  hidePastDays 
+                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-500/20' 
+                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                }`}
+                title={hidePastDays ? 'Clique para exibir todos os dias do mês' : 'Ocultar dias anteriores para focar no restante do mês'}
+              >
+                <Icon name={hidePastDays ? 'fast_forward' : 'history_toggle_off'} className="text-xs" />
+                <span>{hidePastDays ? `Dias Restantes (${daysRemainingCount}d)` : 'Ocultar Concluídos'}</span>
+              </button>
+            )}
+
+            {/* Productivity Enhancement: Filter Only Working on Selected Day */}
+            <button
+              onClick={() => setOnlyWorkingToday(!onlyWorkingToday)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-all shadow-sm ${
+                onlyWorkingToday 
+                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-emerald-500/20' 
+                  : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800'
+              }`}
+              title="Filtra a lista mostrando apenas quem está trabalhando no dia selecionado"
+            >
+              <Icon name={onlyWorkingToday ? 'check_circle' : 'person_pin_circle'} className="text-xs" />
+              <span>{onlyWorkingToday ? 'Filtrando: Trabalhando' : 'Quem Trabalha'}</span>
+            </button>
+
+            {/* Productivity Enhancement: Compact Mode */}
+            <button
+              onClick={() => setIsCompactMode(!isCompactMode)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-all shadow-sm ${
+                isCompactMode 
+                  ? 'bg-purple-600 border-purple-600 text-white shadow-purple-500/20' 
+                  : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800'
+              }`}
+              title="Alternar entre modo normal e modo denso para caber mais colaboradores na tela"
+            >
+              <Icon name={isCompactMode ? 'view_agenda' : 'view_headline'} className="text-xs" />
+              <span className="hidden sm:inline">{isCompactMode ? 'Denso' : 'Normal'}</span>
+            </button>
 
             {/* Group Filters */}
             <div className="flex items-center bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 p-1 rounded-xl shadow-sm w-full md:w-auto">
@@ -619,7 +684,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                     )}
                                     <button
                                       onClick={() => onSelectDay(d.num - 1)}
-                                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black transition-all shadow-sm relative ${
+                                      className={`${isCompactMode ? 'w-8 h-8 rounded-lg text-[9px]' : 'w-10 h-10 rounded-xl text-[10px]'} flex items-center justify-center font-black transition-all shadow-sm relative ${
                                         dayRequest ? (
                                           dayRequest.status === 'granted' ? 'ring-2 ring-emerald-500 bg-emerald-50' :
                                           dayRequest.status === 'refused' ? 'ring-2 ring-red-500 bg-red-50' :

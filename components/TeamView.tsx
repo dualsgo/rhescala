@@ -1,12 +1,12 @@
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useDialog } from '../contexts/DialogContext';
 import { Employee, EmployeeCargo } from '../types';
 import { Icon } from './Icon';
-import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, PLACEHOLDER_EMPLOYEE_ID } from '../constants';
+import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD } from '../constants';
 
 interface TeamViewProps {
   employees: Employee[];
+  isReadOnly?: boolean;
   onUpdateEmployee: (empId: string, data: Partial<Employee>) => void;
   onDeleteEmployee: (empId: string) => void;
   onAddEmployee: (name: string, isYoung: boolean, courseDay: string, cargo: EmployeeCargo, birthday: string, contractType?: 'CLT' | 'Sazonal', jornada?: '6x1' | '5x2') => void;
@@ -30,20 +30,17 @@ function handleVacationStart(emp: Employee, startDate: string, onUpdate: (id: st
   const endDate = addDays(startDate, 29);
   const updates: Partial<Employee> = { vacationStart: startDate, vacationEnd: endDate };
 
-  // Automatic sync: Update shifts in affected months
   const startObj = new Date(startDate + 'T00:00:00');
   const endObj = new Date(endDate + 'T00:00:00');
   
   const newShifts = { ...emp.shifts };
   
-  // Iterate through affected months
   let current = new Date(startObj.getFullYear(), startObj.getMonth(), 1);
   while (current <= endObj) {
     const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
     const shifts = [...(newShifts[monthKey] || [])];
     const daysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
     
-    // Ensure array is initialized
     if (shifts.length === 0) {
       for (let i = 0; i < daysInMonth; i++) shifts[i] = 'T';
     }
@@ -53,7 +50,6 @@ function handleVacationStart(emp: Employee, startDate: string, onUpdate: (id: st
       if (dStr >= startDate && dStr <= endDate) {
         shifts[d - 1] = 'FE';
       } else if (shifts[d - 1] === 'FE') {
-        // Clear old FE if they are now outside the range
         shifts[d - 1] = 'T';
       }
     }
@@ -65,62 +61,13 @@ function handleVacationStart(emp: Employee, startDate: string, onUpdate: (id: st
   onUpdate(emp.id, updates);
 }
 
-/** When user sets atestado start and duration, compute end = start + days - 1 */
-function handleAtestadoChange(emp: Employee, startDate: string, duration: number, onUpdate: (id: string, data: Partial<Employee>) => void) {
-  if (!startDate || duration <= 0) {
-    const newShifts = { ...emp.shifts };
-    let hasChanges = false;
-    for (const [mKey, shiftArr] of Object.entries(newShifts)) {
-      if (Array.isArray(shiftArr) && shiftArr.includes('AT')) {
-        newShifts[mKey] = shiftArr.map(s => s === 'AT' ? 'T' : s);
-        hasChanges = true;
-      }
-    }
-    const updates: Partial<Employee> = { atestadoStart: '', atestadoEnd: '' };
-    if (hasChanges) updates.shifts = newShifts;
-    onUpdate(emp.id, updates);
-    return;
-  }
-  
-  const endDate = addDays(startDate, duration - 1);
-  const updates: Partial<Employee> = { atestadoStart: startDate, atestadoEnd: endDate };
-
-  // Automatic sync: Update shifts in affected months
-  const startObj = new Date(startDate + 'T00:00:00');
-  const endObj = new Date(endDate + 'T00:00:00');
-  
-  const newShifts = { ...emp.shifts };
-  
-  // Iterate through affected months
-  let current = new Date(startObj.getFullYear(), startObj.getMonth(), 1);
-  while (current <= endObj) {
-    const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
-    const shifts = [...(newShifts[monthKey] || [])];
-    const daysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
-    
-    // Ensure array is initialized
-    if (shifts.length === 0) {
-      for (let i = 0; i < daysInMonth; i++) shifts[i] = 'T';
-    }
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      if (dStr >= startDate && dStr <= endDate) {
-        shifts[d - 1] = 'AT';
-      } else if (shifts[d - 1] === 'AT') {
-        // Clear old AT if they are now outside the range
-        shifts[d - 1] = 'T';
-      }
-    }
-    newShifts[monthKey] = shifts;
-    current.setMonth(current.getMonth() + 1);
-  }
-  
-  updates.shifts = newShifts;
-  onUpdate(emp.id, updates);
-}
-
-export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee, onDeleteEmployee, onAddEmployee }) => {
+export const TeamView: React.FC<TeamViewProps> = ({ 
+  employees, 
+  isReadOnly = false,
+  onUpdateEmployee, 
+  onDeleteEmployee, 
+  onAddEmployee 
+}) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [isYoung, setIsYoung] = useState(false);
@@ -130,7 +77,42 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
   const [newContractType, setNewContractType] = useState<'CLT' | 'Sazonal'>('CLT');
   const [newJornada, setNewJornada] = useState<'6x1' | '5x2'>('6x1');
 
+  // Accordion state: Set of employee IDs that are currently expanded
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [cargoFilter, setCargoFilter] = useState<string>('ALL');
+
   const { showDialog } = useDialog();
+
+  const toggleExpand = (empId: string) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(empId)) {
+        next.delete(empId);
+      } else {
+        next.add(empId);
+      }
+      return next;
+    });
+  };
+
+  const handleExpandAll = () => {
+    setExpandedIds(new Set(employees.map(e => e.id)));
+  };
+
+  const handleCollapseAll = () => {
+    setExpandedIds(new Set());
+  };
+
+  const filteredEmployees = useMemo(() => {
+    return employees.filter(emp => {
+      const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                            (emp.cargo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (emp.workPeriod || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCargo = cargoFilter === 'ALL' || (emp.cargo || 'Atendente') === cargoFilter;
+      return matchesSearch && matchesCargo;
+    });
+  }, [employees, searchTerm, cargoFilter]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,56 +135,118 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
   };
 
   return (
-    <div className="flex flex-col gap-8 animate-fade-in">
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+    <div className="flex flex-col gap-6 animate-fade-in pb-12">
+      {/* Top Banner & Action Controls */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm gap-4">
         <div>
-           <h3 className="text-2xl font-extrabold text-slate-900">Equipe Operacional</h3>
-           <p className="text-sm font-bold text-slate-400">Adicione, remova ou edite dados contratuais dos colaboradores.</p>
+           <div className="flex items-center gap-2">
+             <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100">Equipe Operacional</h3>
+             <span className="text-xs px-2.5 py-0.5 rounded-full font-black bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900">
+               {employees.length} {employees.length === 1 ? 'colaborador' : 'colaboradores'}
+             </span>
+           </div>
+           <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mt-0.5">
+             Clique no card do colaborador para expandir ou editar os detalhes completos.
+           </p>
         </div>
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="bg-orange-500 text-white px-6 py-2.5 rounded-xl font-extrabold text-sm shadow-md hover:bg-orange-600 transition-all flex items-center gap-2"
-        >
-          <Icon name="person_add" /> Novo Colaborador
-        </button>
+        
+        {!isReadOnly && (
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="w-full sm:w-auto bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider shadow-md shadow-orange-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              <Icon name="person_add" className="text-base" /> Novo Colaborador
+            </button>
+          </div>
+        )}
       </div>
 
+      {/* Filter and Accordion Global Controls Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 dark:bg-zinc-900/60 p-3 rounded-2xl border border-slate-200/60 dark:border-zinc-800">
+        {/* Left: Search & Cargo Filter */}
+        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[280px]">
+          <div className="relative flex-1 min-w-[180px] max-w-xs">
+            <Icon name="search" className="absolute left-3 top-2.5 text-slate-400 text-sm" />
+            <input 
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar colaborador..."
+              className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl pl-9 pr-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 placeholder-slate-400 outline-none focus:ring-2 focus:ring-orange-500/30 transition-all"
+            />
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm('')} 
+                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs"
+              >
+                <Icon name="close" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-0.5 rounded-xl">
+            {['ALL', ...CARGO_OPTIONS].map(c => (
+              <button
+                key={c}
+                onClick={() => setCargoFilter(c)}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${
+                  cargoFilter === c 
+                    ? 'bg-orange-500 text-white shadow-sm' 
+                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                }`}
+              >
+                {c === 'ALL' ? 'Todos' : c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Right: Expand All / Collapse All */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExpandAll}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-700 transition-all"
+            title="Expandir todos os cartões de colaboradores"
+          >
+            <Icon name="unfold_more" className="text-sm" />
+            <span>Expandir Todos</span>
+          </button>
+
+          <button
+            onClick={handleCollapseAll}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-700 transition-all"
+            title="Recolher todos os cartões de colaboradores"
+          >
+            <Icon name="unfold_less" className="text-sm" />
+            <span>Recolher Todos</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl overflow-y-auto max-h-[90vh]">
-            <h4 className="text-xl font-extrabold text-slate-900 mb-6">Cadastrar Colaborador</h4>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-y-auto max-h-[90vh]">
+            <h4 className="text-xl font-black text-slate-900 dark:text-slate-100 mb-6 flex items-center gap-2">
+              <Icon name="person_add" className="text-orange-500" /> Cadastrar Colaborador
+            </h4>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Nome Completo</label>
-                <input autoFocus type="text" value={newName} onChange={(e) => setNewName(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Nome do colaborador" />
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Nome Completo</label>
+                <input 
+                  autoFocus 
+                  type="text" 
+                  value={newName} 
+                  onChange={(e) => setNewName(e.target.value)} 
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-3 font-bold text-sm text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-orange-500 outline-none uppercase" 
+                  placeholder="Nome do colaborador" 
+                />
               </div>
 
               <div>
-                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Data de Nascimento (Aniversário)</label>
-                <input type="date" value={newBirthday} onChange={(e) => setNewBirthday(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold focus:ring-2 focus:ring-orange-500 outline-none" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Contrato</label>
-                  <select value={newContractType} onChange={(e) => setNewContractType(e.target.value as any)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold text-sm focus:ring-2 focus:ring-orange-500 outline-none text-slate-700">
-                    <option value="CLT">CLT</option>
-                    <option value="Sazonal">Sazonal</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Jornada</label>
-                  <select value={newJornada} onChange={(e) => setNewJornada(e.target.value as any)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold text-sm focus:ring-2 focus:ring-orange-500 outline-none text-slate-700">
-                    <option value="6x1">6x1</option>
-                    <option value="5x2">5x2</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Cargo */}
-              <div>
-                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">Cargo</label>
-                <div className="flex gap-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Cargo</label>
+                <div className="grid grid-cols-2 gap-2">
                   {CARGO_OPTIONS.map(c => (
                     <button
                       key={c}
@@ -211,18 +255,14 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                         setNewCargo(c);
                         if (c === 'Aprendiz') {
                           setIsYoung(true);
-                          // No App.tsx, a lógica de folga para aprendiz é tratada, 
-                          // mas aqui podemos sinalizar ou ajustar se necessário.
-                        } else if (c === 'Estoquista') {
-                          setIsYoung(false);
                         } else {
                           setIsYoung(false);
                         }
                       }}
-                      className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold border transition-all ${
+                      className={`py-2.5 rounded-xl text-xs font-black uppercase border transition-all ${
                         newCargo === c
-                          ? 'bg-orange-500 text-white border-orange-500 shadow'
-                          : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-orange-300'
+                          ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
+                          : 'bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-zinc-700 hover:border-orange-300'
                       }`}
                     >
                       {c}
@@ -230,334 +270,412 @@ export const TeamView: React.FC<TeamViewProps> = ({ employees, onUpdateEmployee,
                   ))}
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Contrato</label>
+                  <select 
+                    value={newContractType} 
+                    onChange={(e) => setNewContractType(e.target.value as any)}
+                    className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none"
+                  >
+                    <option value="CLT">CLT (Efetivo)</option>
+                    <option value="Sazonal">Sazonal / Temporário</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Jornada</label>
+                  <select 
+                    value={newJornada} 
+                    onChange={(e) => setNewJornada(e.target.value as any)}
+                    className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none"
+                  >
+                    <option value="6x1">6x1</option>
+                    <option value="5x2">5x2</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Data de Aniversário</label>
+                <input 
+                  type="date" 
+                  value={newBirthday} 
+                  onChange={(e) => setNewBirthday(e.target.value)} 
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none" 
+                />
+              </div>
               
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <input type="checkbox" id="isYoung" checked={isYoung} onChange={(e) => setIsYoung(e.target.checked)} className="w-5 h-5 accent-orange-500 rounded" />
-                <label htmlFor="isYoung" className="text-sm font-extrabold text-slate-700">Jovem Aprendiz</label>
+              <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-zinc-800 rounded-xl border border-slate-200 dark:border-zinc-700">
+                <input type="checkbox" id="isYoung" checked={isYoung} onChange={(e) => setIsYoung(e.target.checked)} className="w-4 h-4 accent-orange-500 rounded" />
+                <label htmlFor="isYoung" className="text-xs font-black text-slate-700 dark:text-slate-300">Jovem Aprendiz</label>
               </div>
 
               {isYoung && (
-                <div className="animate-fade-in p-4 bg-sky-50 border border-sky-100 rounded-xl space-y-3">
-                    <div>
-                      <label className="text-[10px] font-extrabold text-sky-600 uppercase tracking-widest block mb-1">Dia do Curso (Presencial/EAD)</label>
-                      <select value={courseDay} onChange={(e) => setCourseDay(e.target.value)} className="w-full bg-white border border-sky-200 rounded-xl p-3 font-bold text-sm outline-none text-sky-900">
-                          {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'].map(d => <option key={d}>{d}</option>)}
-                      </select>
-                      <p className="text-[9px] text-sky-400 mt-2 font-bold uppercase tracking-tight">Nota: Aprendizes terão folgas fixas aos Sábados e Domingos automaticamente.</p>
-                    </div>
+                <div className="p-3 bg-sky-50 dark:bg-sky-950/30 border border-sky-100 dark:border-sky-900/50 rounded-xl space-y-2">
+                  <label className="text-[10px] font-black text-sky-600 dark:text-sky-400 uppercase tracking-widest block">Dia do Curso Teórico</label>
+                  <select value={courseDay} onChange={(e) => setCourseDay(e.target.value)} className="w-full bg-white dark:bg-zinc-800 border border-sky-200 dark:border-sky-800 rounded-xl p-2 font-bold text-xs text-sky-900 dark:text-sky-200 outline-none">
+                    {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'].map(d => <option key={d}>{d}</option>)}
+                  </select>
+                  <p className="text-[9px] text-sky-500 font-bold uppercase tracking-tight">Nota: Aprendizes folgam aos Sábados e Domingos automaticamente.</p>
                 </div>
               )}
 
-              {newCargo === 'Estoquista' && !isYoung && (
-                <div className="animate-fade-in p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
-                  <p className="text-[9px] text-emerald-600 font-bold uppercase tracking-tight flex items-center gap-2">
-                    <Icon name="info" className="text-sm" /> Estoquistas possuem folga fixa aos Domingos por padrão.
-                  </p>
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-6">
-                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 px-6 py-3 border border-slate-200 rounded-xl font-extrabold text-slate-400 hover:bg-slate-50 transition-all">Cancelar</button>
-                <button type="submit" className="flex-1 px-6 py-3 bg-orange-500 text-white rounded-xl font-extrabold shadow-lg hover:bg-orange-600 transition-all">Cadastrar</button>
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-zinc-700 rounded-xl font-black text-xs uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all">Cancelar</button>
+                <button type="submit" className="flex-1 px-4 py-2.5 bg-orange-500 text-white rounded-xl font-black text-xs uppercase shadow-lg hover:bg-orange-600 transition-all">Cadastrar</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto max-h-[calc(100vh-260px)] custom-scrollbar pr-1">
-        {employees.map(emp => (
-          <div key={emp.id} className="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-            {/* Status indicator */}
-            <div className={`absolute top-0 right-0 w-16 h-16 -mr-8 -mt-8 rotate-45 ${emp.status === 'active' ? 'bg-green-500' : 'bg-slate-200'} opacity-10`}></div>
-            
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-black text-sm shadow-sm uppercase group-hover:scale-110 transition-transform">
-                {emp.name.substring(0, 2)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <input
-                  type="text"
-                  value={emp.name}
-                  onChange={(e) => onUpdateEmployee(emp.id, { name: e.target.value })}
-                  placeholder="Nome do Colaborador"
-                  className="w-full text-base font-black text-slate-900  bg-transparent border-none p-0 focus:ring-0 placeholder-slate-300  uppercase"
-                />
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{emp.cargo || 'Atendente'}</span>
-                   {emp.contractType === 'Sazonal' && (
-                     <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-600 font-bold uppercase tracking-wider">Sazonal</span>
-                   )}
-                   {emp.jornada === '5x2' && (
-                     <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-600 font-bold uppercase tracking-wider">5x2</span>
-                   )}
-                   <div className={`w-1.5 h-1.5 rounded-full ${emp.status === 'active' ? 'bg-green-500' : 'bg-slate-400'}`}></div>
-                </div>
-              </div>
-            </div>
+      {/* Employee Cards List with Accordion (Initially Compact) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {filteredEmployees.map(emp => {
+          const isExpanded = expandedIds.has(emp.id);
 
-            <div className="flex justify-end gap-2 mb-4">
-                <button 
-                  onClick={() => onUpdateEmployee(emp.id, { isHidden: !emp.isHidden })}
-                  className={`w-7 h-7 rounded-lg transition-all flex items-center justify-center border ${
-                    emp.isHidden 
-                      ? 'bg-slate-900 text-white border-slate-900' 
-                      : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'
-                  }`}
-                  title={emp.isHidden ? 'Mostrar na Escala' : 'Ocultar da Escala'}
-                >
-                  <Icon name={emp.isHidden ? 'visibility_off' : 'visibility'} className="text-sm" />
-                </button>
-                <button 
-                  onClick={async () => {
-                    const confirmed = await showDialog({
-                      type: 'confirm',
-                      message: `Excluir ${emp.name} permanentemente?`
-                    });
-                    if (confirmed) onDeleteEmployee(emp.id);
-                  }}
-                  className="w-8 h-8 rounded-lg transition-all flex items-center justify-center border bg-red-50  text-red-500  border-red-100  hover:bg-red-500 hover:text-white"
-                >
-                  <Icon name="delete" className="text-sm" />
-                </button>
-              </div>
+          return (
+            <div 
+              key={emp.id} 
+              className={`bg-white dark:bg-zinc-900 rounded-2xl border transition-all relative overflow-hidden flex flex-col ${
+                isExpanded 
+                  ? 'border-orange-400/60 dark:border-orange-500/40 shadow-lg ring-1 ring-orange-400/20' 
+                  : 'border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 shadow-sm hover:shadow-md'
+              }`}
+            >
+              {/* Top Accent Pill Indicator */}
+              <div className={`h-1 w-full ${emp.status === 'active' ? (emp.contractType === 'Sazonal' ? 'bg-amber-400' : 'bg-emerald-500') : 'bg-slate-300'}`} />
 
-              <div className="space-y-3 pt-2">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-400  uppercase tracking-widest pl-1">Horário Base</label>
-                  <select
-                    value={emp.workPeriod}
-                    onChange={(e) => onUpdateEmployee(emp.id, { workPeriod: e.target.value })}
-                    className="w-full bg-slate-50  border border-slate-100  rounded-xl px-3 py-2 text-[11px] font-bold text-slate-700  focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
-                  >
-                    {emp.isYoungApprentice ? (
-                      <option value={APPRENTICE_WORK_PERIOD}>{APPRENTICE_WORK_PERIOD}</option>
-                    ) : (
-                      SHIFT_HOURS.WEEKDAY.map(h => (
-                        <option key={h} value={h}>{h}</option>
-                      ))
-                    )}
-                    {/* Fallback: se o horário cadastrado não está na lista padrão, mostra ele mesmo */}
-                    {!emp.isYoungApprentice && !SHIFT_HOURS.WEEKDAY.includes(emp.workPeriod) && emp.workPeriod && (
-                      <option value={emp.workPeriod}>{emp.workPeriod}</option>
-                    )}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-400  uppercase tracking-widest pl-1">Folga Fixa</label>
-                  <select
-                    value={emp.preferredDayOff}
-                    onChange={(e) => onUpdateEmployee(emp.id, { preferredDayOff: e.target.value })}
-                    className="w-full bg-slate-50  border border-slate-100  rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700  focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
-                  >
-                    <option value="">Nenhuma</option>
-                    {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'].map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                 <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400  uppercase tracking-widest pl-1">Aniversário</label>
-                    <input
-                      type="date"
-                      value={emp.birthday}
-                      onChange={(e) => onUpdateEmployee(emp.id, { birthday: e.target.value })}
-                      className="w-full bg-slate-50  border border-slate-100  rounded-xl px-3 py-2 text-[11px] font-bold text-slate-700  focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
-                    />
-                 </div>
-                 <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400  uppercase tracking-widest pl-1">Cargo</label>
-                   <select
-                      value={emp.cargo}
-                      onChange={(e) => onUpdateEmployee(emp.id, { cargo: e.target.value as any })}
-                      className="w-full bg-slate-50  border border-slate-100  rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700  focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
-                    >
-                      <option value="Atendente">Atendente</option>
-                      <option value="Estoquista">Estoquista</option>
-                      <option value="Aprendiz">Aprendiz</option>
-                      <option value="Fiscal">Fiscal</option>
-                    </select>
-                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                 <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Contrato</label>
-                   <select
-                      value={emp.contractType || 'CLT'}
-                      onChange={(e) => onUpdateEmployee(emp.id, { contractType: e.target.value as any })}
-                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
-                    >
-                      <option value="CLT">CLT</option>
-                      <option value="Sazonal">Sazonal</option>
-                    </select>
-                 </div>
-                 <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Jornada</label>
-                   <select
-                      value={emp.jornada || '6x1'}
-                      onChange={(e) => onUpdateEmployee(emp.id, { jornada: e.target.value as any })}
-                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
-                    >
-                      <option value="6x1">6x1</option>
-                      <option value="5x2">5x2</option>
-                    </select>
-                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                 <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400  uppercase tracking-widest pl-1">Posição Pref. 1</label>
-                    <select
-                      value={emp.preferredPosition1 || ''}
-                      onChange={(e) => onUpdateEmployee(emp.id, { preferredPosition1: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
-                    >
-                      <option value="">Nenhuma</option>
-                      {['P1', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
-                        <option key={p} value={p}>{p}</option>
-                      ))}
-                    </select>
-                 </div>
-                 <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400  uppercase tracking-widest pl-1">Posição Pref. 2</label>
-                    <select
-                      value={emp.preferredPosition2 || ''}
-                      onChange={(e) => onUpdateEmployee(emp.id, { preferredPosition2: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
-                    >
-                      <option value="">Nenhuma</option>
-                      {['P1', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
-                        <option key={p} value={p}>{p}</option>
-                      ))}
-                    </select>
-                 </div>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 bg-slate-50  rounded-xl border border-dashed border-slate-200 ">
-                <div className="flex items-center gap-2">
-                   <div className={`p-1.5 rounded-lg ${emp.isYoungApprentice ? 'bg-sky-100 text-sky-600' : 'bg-slate-200 text-slate-400'}`}>
-                      <Icon name="child_care" className="text-sm" />
-                   </div>
-                   <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-slate-700  uppercase leading-none">Jovem Aprendiz</span>
-                      <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Dia do Curso:</span>
-                      {emp.isYoungApprentice && (
-                        <select
-                          value={emp.courseDay}
-                          onChange={(e) => onUpdateEmployee(emp.id, { courseDay: e.target.value })}
-                          className="bg-transparent border-none p-0 text-[10px] font-bold text-sky-600  focus:ring-0 outline-none"
-                        >
-                          <option value="">Sem Curso</option>
-                          {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira'].map(d => (
-                            <option key={d} value={d}>{d}</option>
-                          ))}
-                        </select>
-                      )}
+              {/* Compact Summary Header (Always Visible, Click to Toggle) */}
+              <div 
+                onClick={() => toggleExpand(emp.id)}
+                className="p-3 sm:p-4 cursor-pointer select-none transition-colors hover:bg-slate-50/70 dark:hover:bg-zinc-800/50 flex flex-col gap-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shadow-sm uppercase shrink-0 transition-transform ${
+                      emp.isYoungApprentice
+                        ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
+                        : emp.cargo === 'Estoquista'
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                        : 'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300'
+                    }`}>
+                      {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                     </div>
-                  </div>
-                  <button
-                    onClick={() => onUpdateEmployee(emp.id, { isYoungApprentice: !emp.isYoungApprentice })}
-                    className={`w-8 h-4 rounded-full transition-all relative ${emp.isYoungApprentice ? 'bg-sky-500' : 'bg-slate-300'}`}
-                  >
-                    <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${emp.isYoungApprentice ? 'left-4.5' : 'left-0.5'}`}></div>
-                  </button>
-                </div>
 
-                {!emp.isYoungApprentice && (
-                  <div className="space-y-2 pt-2">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Férias (Início)</label>
-                    <input
-                      type="date"
-                      value={emp.vacationStart || ''}
-                      onChange={(e) => handleVacationStart(emp, e.target.value, onUpdateEmployee)}
-                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[11px] font-bold text-slate-700 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
-                    />
-                    {emp.vacationStart && emp.vacationEnd && (
-                      <div className="bg-sky-50 p-2 rounded-lg border border-sky-100 flex items-center justify-between mt-1">
-                         <span className="text-[8px] font-black text-sky-600 uppercase">Fim das Férias:</span>
-                         <span className="text-[9px] font-black text-sky-700 uppercase">
-                            {new Date(emp.vacationEnd + 'T00:00:00').toLocaleDateString('pt-BR')}
-                         </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-black text-slate-900 dark:text-slate-100 truncate" title={emp.name}>
+                          {emp.name}
+                        </span>
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${emp.status === 'active' ? 'bg-emerald-500' : 'bg-slate-400'}`} title={emp.status === 'active' ? 'Ativo' : 'Inativo'} />
                       </div>
-                    )}
-                    {emp.vacationEnd && (
-                      <div className="bg-emerald-50 p-2 rounded-lg border border-emerald-100 flex items-center justify-between">
-                         <span className="text-[8px] font-black text-emerald-600 uppercase">Retorno Previsto:</span>
-                         <span className="text-[9px] font-black text-emerald-700 uppercase">
-                            {new Date(addDays(emp.vacationEnd, 1) + 'T00:00:00').toLocaleDateString('pt-BR')}
-                         </span>
-                      </div>
-                    )}
-                    {emp.vacationEnd && (
-                      <button 
-                        onClick={() => handleVacationStart(emp, emp.vacationStart!, onUpdateEmployee)}
-                        className="w-full py-2 bg-sky-100 hover:bg-sky-200 text-sky-600 rounded-xl text-[9px] font-black uppercase transition-all flex items-center justify-center gap-2 mt-1"
-                      >
-                        <Icon name="sync" className="text-xs" /> Sincronizar com a Grade
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Atestado Médico */}
-                <div className="space-y-2 pt-3 border-t border-slate-100 mt-2">
-                  <div className="flex items-center justify-between px-1">
-                    <div className="flex items-center gap-1.5">
-                      <Icon name="medical_services" className="text-rose-500 text-xs" />
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Atestado Médico</label>
-                    </div>
-                    {emp.atestadoStart && emp.atestadoEnd && (
-                      <span className="text-[8px] font-black uppercase text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-md">Ativo</span>
-                    )}
-                  </div>
-                  {emp.atestadoStart && emp.atestadoEnd ? (
-                    <div className="bg-rose-50 p-2 rounded-xl border border-rose-100 flex items-center justify-between">
-                      <div>
-                        <p className="text-[9px] font-black text-rose-700">
-                          {new Date(emp.atestadoStart + 'T00:00:00').toLocaleDateString('pt-BR')} até {new Date(emp.atestadoEnd + 'T00:00:00').toLocaleDateString('pt-BR')}
-                        </p>
-                        <p className="text-[8px] font-bold text-rose-500 mt-0.5">
-                          Retorno: {new Date(addDays(emp.atestadoEnd, 1) + 'T00:00:00').toLocaleDateString('pt-BR')}
-                        </p>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          {emp.cargo || 'Atendente'}
+                        </span>
+                        {emp.contractType === 'Sazonal' && (
+                          <span className="text-[8px] px-1.5 py-0.2 rounded font-black bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 uppercase">Sazonal</span>
+                        )}
+                        {emp.jornada === '5x2' && (
+                          <span className="text-[8px] px-1.5 py-0.2 rounded font-black bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-400 uppercase">5x2</span>
+                        )}
+                        {emp.isHidden && (
+                          <span className="text-[8px] px-1.5 py-0.2 rounded font-black bg-slate-100 dark:bg-zinc-800 text-slate-500 uppercase">Oculto</span>
+                        )}
                       </div>
                     </div>
-                  ) : (
-                    <p className="text-[9px] font-bold text-slate-400 italic px-1">Nenhum atestado ativo.</p>
+                  </div>
+
+                  {/* Expand Chevron Icon with 180-deg rotation */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleExpand(emp.id);
+                      }}
+                      className={`p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-all ${
+                        isExpanded ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 rotate-180' : ''
+                      }`}
+                      title={isExpanded ? 'Recolher detalhes' : 'Expandir detalhes'}
+                    >
+                      <Icon name="expand_more" className="text-lg transition-transform duration-200" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick details chips in compact mode */}
+                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 dark:text-slate-400 flex-wrap pt-1 border-t border-slate-100 dark:border-zinc-800/80">
+                  <div className="flex items-center gap-1">
+                    <Icon name="schedule" className="text-xs text-orange-500" />
+                    <span>{emp.workPeriod || '10h às 18h20'}</span>
+                  </div>
+                  {emp.preferredDayOff && (
+                    <div className="flex items-center gap-1 ml-auto text-[9px] text-slate-400">
+                      <Icon name="event_busy" className="text-xs text-slate-400" />
+                      <span>Folga: {emp.preferredDayOff.replace('-feira', '')}</span>
+                    </div>
                   )}
                 </div>
-
-                <div className="space-y-1 pt-2">
-                   <div className="flex justify-between items-center px-1">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Senha de Acesso</label>
-                      <button 
-                        onClick={() => onUpdateEmployee(emp.id, { password: '1234' })}
-                        className="text-[8px] font-black text-orange-500 uppercase"
-                      >
-                        Resetar (1234)
-                      </button>
-                   </div>
-                   <div className="relative">
-                      <input
-                        type="text"
-                        value={emp.password || ''}
-                        onChange={(e) => onUpdateEmployee(emp.id, { password: e.target.value })}
-                        placeholder="Sem senha definida"
-                        className="w-full bg-slate-900 text-white border border-slate-800 rounded-xl px-3 py-2 text-[11px] font-bold focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
-                      />
-                      <div className="absolute right-3 top-2.5">
-                         <Icon name="lock" className="text-slate-600 text-[10px]" />
-                      </div>
-                   </div>
-                </div>
               </div>
+
+              {/* Expandable Details Form (Shown only when isExpanded is true) */}
+              {isExpanded && (
+                <div className="p-4 pt-2 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/80 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                  {/* Action row (Visibility & Delete) */}
+                  {!isReadOnly && (
+                    <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200/60 dark:border-zinc-800">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Configurações Detalhadas</span>
+                      <div className="flex items-center gap-1.5">
+                        <button 
+                          onClick={() => onUpdateEmployee(emp.id, { isHidden: !emp.isHidden })}
+                          className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase transition-all flex items-center gap-1 border ${
+                            emp.isHidden 
+                              ? 'bg-slate-900 text-white border-slate-900' 
+                              : 'bg-white dark:bg-zinc-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-zinc-700 hover:border-slate-300'
+                          }`}
+                          title={emp.isHidden ? 'Mostrar na Escala' : 'Ocultar da Escala'}
+                        >
+                          <Icon name={emp.isHidden ? 'visibility_off' : 'visibility'} className="text-xs" />
+                          <span>{emp.isHidden ? 'Oculto' : 'Visível'}</span>
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            const confirmed = await showDialog({
+                              type: 'confirm',
+                              message: `Excluir ${emp.name} permanentemente?`
+                            });
+                            if (confirmed) onDeleteEmployee(emp.id);
+                          }}
+                          className="p-1 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-transparent hover:border-rose-200 transition-all"
+                          title="Excluir Colaborador"
+                        >
+                          <Icon name="delete" className="text-sm" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Name Edit */}
+                  <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1 block mb-1">Nome Completo</label>
+                    <input
+                      type="text"
+                      value={emp.name}
+                      disabled={isReadOnly}
+                      onChange={(e) => onUpdateEmployee(emp.id, { name: e.target.value })}
+                      placeholder="Nome do Colaborador"
+                      className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-black text-slate-900 dark:text-slate-100 uppercase outline-none focus:ring-2 focus:ring-orange-500/20"
+                    />
+                  </div>
+
+                  {/* Horário Base & Folga Fixa */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Horário Base</label>
+                      <select
+                        value={emp.workPeriod}
+                        disabled={isReadOnly}
+                        onChange={(e) => onUpdateEmployee(emp.id, { workPeriod: e.target.value })}
+                        className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-1 focus:ring-orange-500"
+                      >
+                        {emp.isYoungApprentice ? (
+                          <option value={APPRENTICE_WORK_PERIOD}>{APPRENTICE_WORK_PERIOD}</option>
+                        ) : (
+                          SHIFT_HOURS.WEEKDAY.map(h => (
+                            <option key={h} value={h}>{h}</option>
+                          ))
+                        )}
+                        {!emp.isYoungApprentice && !SHIFT_HOURS.WEEKDAY.includes(emp.workPeriod) && emp.workPeriod && (
+                          <option value={emp.workPeriod}>{emp.workPeriod}</option>
+                        )}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Folga Fixa</label>
+                      <select
+                        value={emp.preferredDayOff}
+                        disabled={isReadOnly}
+                        onChange={(e) => onUpdateEmployee(emp.id, { preferredDayOff: e.target.value })}
+                        className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-1 focus:ring-orange-500"
+                      >
+                        <option value="">Nenhuma</option>
+                        {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'].map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Aniversário & Cargo */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Aniversário</label>
+                      <input
+                        type="date"
+                        value={emp.birthday || ''}
+                        disabled={isReadOnly}
+                        onChange={(e) => onUpdateEmployee(emp.id, { birthday: e.target.value })}
+                        className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-200 outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Cargo</label>
+                      <select
+                        value={emp.cargo || 'Atendente'}
+                        disabled={isReadOnly}
+                        onChange={(e) => onUpdateEmployee(emp.id, { cargo: e.target.value as any })}
+                        className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-200 outline-none"
+                      >
+                        {CARGO_OPTIONS.map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Contrato & Jornada */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Contrato</label>
+                      <select
+                        value={emp.contractType || 'CLT'}
+                        disabled={isReadOnly}
+                        onChange={(e) => onUpdateEmployee(emp.id, { contractType: e.target.value as any })}
+                        className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-200 outline-none"
+                      >
+                        <option value="CLT">CLT</option>
+                        <option value="Sazonal">Sazonal</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Jornada</label>
+                      <select
+                        value={emp.jornada || '6x1'}
+                        disabled={isReadOnly}
+                        onChange={(e) => onUpdateEmployee(emp.id, { jornada: e.target.value as any })}
+                        className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-200 outline-none"
+                      >
+                        <option value="6x1">6x1</option>
+                        <option value="5x2">5x2</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Posições Táticas Preferenciais */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Posição Pref. 1</label>
+                      <select
+                        value={emp.preferredPosition1 || ''}
+                        disabled={isReadOnly}
+                        onChange={(e) => onUpdateEmployee(emp.id, { preferredPosition1: e.target.value })}
+                        className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-200 outline-none"
+                      >
+                        <option value="">Nenhuma</option>
+                        {['P1', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Posição Pref. 2</label>
+                      <select
+                        value={emp.preferredPosition2 || ''}
+                        disabled={isReadOnly}
+                        onChange={(e) => onUpdateEmployee(emp.id, { preferredPosition2: e.target.value })}
+                        className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-2 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-200 outline-none"
+                      >
+                        <option value="">Nenhuma</option>
+                        {['P1', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Jovem Aprendiz Toggle */}
+                  <div className="flex items-center justify-between p-2.5 bg-white dark:bg-zinc-800 rounded-xl border border-slate-200 dark:border-zinc-700">
+                    <div className="flex items-center gap-2">
+                      <div className={`p-1.5 rounded-lg ${emp.isYoungApprentice ? 'bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-300' : 'bg-slate-100 text-slate-400 dark:bg-zinc-700'}`}>
+                        <Icon name="child_care" className="text-sm" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase leading-none">Jovem Aprendiz</span>
+                        {emp.isYoungApprentice && (
+                          <span className="text-[9px] text-sky-600 dark:text-sky-400 font-bold uppercase mt-0.5">
+                            Curso: {emp.courseDay || 'Segunda-feira'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {!isReadOnly && (
+                      <button
+                        type="button"
+                        onClick={() => onUpdateEmployee(emp.id, { isYoungApprentice: !emp.isYoungApprentice })}
+                        className={`w-8 h-4 rounded-full transition-all relative ${emp.isYoungApprentice ? 'bg-sky-500' : 'bg-slate-300 dark:bg-zinc-600'}`}
+                      >
+                        <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${emp.isYoungApprentice ? 'left-4.5' : 'left-0.5'}`}></div>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Férias */}
+                  {!emp.isYoungApprentice && (
+                    <div className="space-y-1.5 pt-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Férias (Início)</label>
+                      <input
+                        type="date"
+                        value={emp.vacationStart || ''}
+                        disabled={isReadOnly}
+                        onChange={(e) => handleVacationStart(emp, e.target.value, onUpdateEmployee)}
+                        className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-200 outline-none"
+                      />
+                      {emp.vacationStart && emp.vacationEnd && (
+                        <div className="bg-sky-50 dark:bg-sky-950/40 p-2 rounded-lg border border-sky-100 dark:border-sky-900/50 flex items-center justify-between text-[9px] font-bold text-sky-700 dark:text-sky-300">
+                          <span>Fim: {new Date(emp.vacationEnd + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
+                          <span>Retorno: {new Date(addDays(emp.vacationEnd, 1) + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Senha Individual */}
+                  {!isReadOnly && (
+                    <div className="space-y-1 pt-1">
+                      <div className="flex justify-between items-center px-1">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Senha Individual</label>
+                        <button 
+                          type="button"
+                          onClick={() => onUpdateEmployee(emp.id, { password: '1234' })}
+                          className="text-[8px] font-black text-orange-500 hover:underline uppercase"
+                        >
+                          Resetar (1234)
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={emp.password || ''}
+                          onChange={(e) => onUpdateEmployee(emp.id, { password: e.target.value })}
+                          placeholder="Padrão: 1234"
+                          className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 outline-none"
+                        />
+                        <Icon name="lock" className="absolute right-3 top-2.5 text-slate-400 text-xs" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          )
-        )}
+          );
+        })}
       </div>
     </div>
   );
