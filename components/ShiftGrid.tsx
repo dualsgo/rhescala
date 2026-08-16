@@ -83,6 +83,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   const [hidePastDays, setHidePastDays] = useState(false);
   const [onlyWorkingToday, setOnlyWorkingToday] = useState(false);
   const [isCompactMode, setIsCompactMode] = useState(false);
+  const [focusSelectedDay, setFocusSelectedDay] = useState(false);
 
   const isCurrentMonth = currentMY.year === today.getFullYear() && currentMY.month === today.getMonth();
   const todayDayNum = today.getDate();
@@ -228,6 +229,19 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 <span>{hidePastDays ? `Restantes (${daysRemainingCount}d)` : 'Ocultar Passados'}</span>
               </button>
             )}
+
+            <button
+              onClick={() => setFocusSelectedDay(!focusSelectedDay)}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${
+                focusSelectedDay 
+                  ? 'bg-amber-500 border-amber-500 text-white shadow-amber-500/20' 
+                  : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+              title={focusSelectedDay ? 'Desativar efeito de foco no dia selecionado' : 'Ofuscar os outros dias com blur e destacar apenas o dia selecionado'}
+            >
+              <Icon name={focusSelectedDay ? 'filter_center_focus' : 'center_focus_weak'} className="text-xs" />
+              <span>{focusSelectedDay ? `Foco: Dia ${selectedDayIdx + 1}` : 'Foco no Dia'}</span>
+            </button>
           </div>
 
           {/* Grupo 2: Equipe & Contrato */}
@@ -405,12 +419,15 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   const todayStr = new Date().toISOString().split('T')[0];
                   const isPast = d.dateStr < todayStr;
                   const dimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale pointer-events-none select-none' : '';
+                  const isBlurred = focusSelectedDay && !isSelected;
+                  const blurClass = isBlurred ? 'opacity-25 blur-[0.6px] grayscale-[30%] hover:opacity-80 hover:blur-none transition-all duration-200' : '';
+                  const focusHighlight = isSelected && focusSelectedDay ? 'bg-orange-500/20 ring-2 ring-orange-500 shadow-md scale-[1.02] z-20' : isSelected ? 'bg-orange-500/10 ring-2 ring-inset ring-orange-500/30' : '';
 
                   return (
                     <th 
                       key={d.num} 
                       onClick={() => isSelected ? onOpenDayDetail(dayIdx) : onSelectDay(dayIdx)}
-                      className={`p-3 border-b border-slate-200 dark:border-zinc-800 min-w-[60px] cursor-pointer transition-all ${dimClass} ${isSelected ? 'bg-orange-500/10 ring-2 ring-inset ring-orange-500/30' : d.isSunday ? 'bg-rose-50 dark:bg-rose-950/40' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-950/40' : ''}`}
+                      className={`p-3 border-b border-slate-200 dark:border-zinc-800 min-w-[60px] cursor-pointer transition-all ${dimClass} ${blurClass} ${focusHighlight ? focusHighlight : d.isSunday ? 'bg-rose-50 dark:bg-rose-950/40' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-950/40' : ''}`}
                     >
                       <div className="flex flex-col items-center gap-1">
                         <span className="text-[9px] font-black text-slate-400 uppercase">{d.weekday}</span>
@@ -640,9 +657,13 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const dimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
                               const dayRequest = !isReadOnly ? (emp.requests || []).find(r => r.date === fullDate) : undefined;
                               const cellDiff = diffs?.find(diff => diff.empId === emp.id && diff.dayIdx === d.num - 1);
+                              const isSelectedCol = selectedDayIdx === d.num - 1;
+                              const isBlurredCol = focusSelectedDay && !isSelectedCol;
+                              const blurClass = isBlurredCol ? 'opacity-20 blur-[0.7px] grayscale-[40%] hover:opacity-90 hover:blur-none transition-all duration-200' : '';
+                              const focusHighlight = isSelectedCol && focusSelectedDay ? 'ring-2 ring-inset ring-orange-500 bg-orange-50/80 dark:bg-orange-950/40' : isSelectedCol ? 'ring-2 ring-inset ring-orange-400/50' : '';
 
                               return (
-                                <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all relative ${dimClass} ${selectedDayIdx === d.num - 1 ? 'ring-2 ring-inset ring-orange-400/50' : ''} ${hasAlert ? 'ring-2 ring-inset ring-rose-500 bg-rose-50/50 dark:bg-rose-950/30' : is7thDay ? 'ring-2 ring-inset ring-emerald-500/40 bg-emerald-50/20' : ''}`}>
+                                <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all relative ${dimClass} ${blurClass} ${focusHighlight} ${hasAlert ? 'ring-2 ring-inset ring-rose-500 bg-rose-50/50 dark:bg-rose-950/30' : is7thDay ? 'ring-2 ring-inset ring-emerald-500/40 bg-emerald-50/20' : ''}`}>
                                   <div className="relative group flex flex-col items-center gap-1">
                                     {cellDiff && (
                                         <span 
