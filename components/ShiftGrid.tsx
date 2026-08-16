@@ -190,49 +190,34 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           </button>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50/80 dark:bg-zinc-900/60 p-2 sm:p-2.5 rounded-2xl border border-slate-200/70 dark:border-zinc-800">
+        <div className="flex items-center justify-between gap-2 bg-slate-50/90 dark:bg-zinc-900/80 p-1.5 sm:p-2 rounded-2xl border border-slate-200/70 dark:border-zinc-800 overflow-x-auto custom-scrollbar w-full">
           
           {/* Grupo 1: Período & Foco */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2 hidden sm:inline">Período:</span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
               {[
-                { id: 'all', label: 'Mês' },
-                { id: 'sunday', label: 'Domingos' },
-                { id: 'holiday', label: 'Feriados' }
+                { id: 'all', label: 'Mês', short: 'Mês' },
+                { id: 'sunday', label: 'Domingos', short: 'Dom' },
+                { id: 'holiday', label: 'Feriados', short: 'Fer' }
               ].map(f => (
                 <button
                   key={f.id}
                   onClick={() => onFilterChange(f.id as any)}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                  className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
                     filter === f.id 
                       ? 'bg-orange-500 text-white shadow-sm' 
                       : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
                   }`}
                 >
-                  {f.label}
+                  <span className="hidden sm:inline">{f.label}</span>
+                  <span className="inline sm:hidden">{f.short}</span>
                 </button>
               ))}
             </div>
 
-            {isCurrentMonth && (
-              <button
-                onClick={() => setHidePastDays(!hidePastDays)}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${
-                  hidePastDays 
-                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-500/20' 
-                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50'
-                }`}
-                title={hidePastDays ? 'Exibir o mês inteiro' : 'Ocultar dias passados para focar no restante do mês'}
-              >
-                <Icon name={hidePastDays ? 'fast_forward' : 'history_toggle_off'} className="text-xs" />
-                <span>{hidePastDays ? `Restantes (${daysRemainingCount}d)` : 'Ocultar Passados'}</span>
-              </button>
-            )}
-
             <button
               onClick={() => setFocusSelectedDay(!focusSelectedDay)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${
+              className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shrink-0 whitespace-nowrap ${
                 focusSelectedDay 
                   ? 'bg-amber-500 border-amber-500 text-white shadow-amber-500/20' 
                   : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50'
@@ -240,36 +225,52 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               title={focusSelectedDay ? 'Desativar efeito de foco no dia selecionado' : 'Ofuscar os outros dias com blur e destacar apenas o dia selecionado'}
             >
               <Icon name={focusSelectedDay ? 'filter_center_focus' : 'center_focus_weak'} className="text-xs" />
-              <span>{focusSelectedDay ? `Foco: Dia ${selectedDayIdx + 1}` : 'Foco no Dia'}</span>
+              <span>{focusSelectedDay ? `Dia ${selectedDayIdx + 1}` : 'Foco'}</span>
             </button>
+
+            {isCurrentMonth && (
+              <button
+                onClick={() => setHidePastDays(!hidePastDays)}
+                className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shrink-0 whitespace-nowrap ${
+                  hidePastDays 
+                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-500/20' 
+                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+                title={hidePastDays ? 'Exibir o mês inteiro' : 'Ocultar dias passados para focar no restante do mês'}
+              >
+                <Icon name={hidePastDays ? 'fast_forward' : 'history_toggle_off'} className="text-xs" />
+                <span className="hidden sm:inline">{hidePastDays ? `Restantes (${daysRemainingCount}d)` : 'Restantes'}</span>
+                <span className="inline sm:hidden">{hidePastDays ? `${daysRemainingCount}d` : 'Rest.'}</span>
+              </button>
+            )}
           </div>
 
           {/* Grupo 2: Equipe & Contrato */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2 hidden sm:inline">Equipe:</span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
               {[
-                { id: 'all', label: 'Todos' },
-                { id: 'clt', label: 'CLT' },
-                { id: 'sazonal', label: 'Sazonais' }
+                { id: 'all', label: 'Todos', short: 'Todos' },
+                { id: 'clt', label: 'CLT', short: 'CLT' },
+                { id: 'sazonal', label: 'Sazonais', short: 'Saz' }
               ].map(f => (
                 <button
                   key={f.id}
                   onClick={() => setContractFilter(f.id as any)}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                  className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
                     contractFilter === f.id 
                       ? 'bg-orange-500 text-white shadow-sm' 
                       : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
                   }`}
                 >
-                  {f.label}
+                  <span className="hidden sm:inline">{f.label}</span>
+                  <span className="inline sm:hidden">{f.short}</span>
                 </button>
               ))}
             </div>
 
             <button
               onClick={() => setOnlyWorkingToday(!onlyWorkingToday)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${
+              className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shrink-0 whitespace-nowrap ${
                 onlyWorkingToday 
                   ? 'bg-emerald-600 border-emerald-600 text-white shadow-emerald-500/20' 
                   : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50'
@@ -277,17 +278,18 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               title="Filtrar apenas colaboradores escalados para trabalhar no dia selecionado"
             >
               <Icon name={onlyWorkingToday ? 'check_circle' : 'person_pin_circle'} className="text-xs" />
-              <span>{onlyWorkingToday ? 'Escalados Hoje' : 'Quem Trabalha'}</span>
+              <span className="hidden sm:inline">{onlyWorkingToday ? 'Escalados' : 'Quem Trabalha'}</span>
+              <span className="inline sm:hidden">Hoje</span>
             </button>
           </div>
 
           {/* Grupo 3: Turnos & Densidade */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm">
-              <div className="hidden sm:flex items-center">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
+              <div className="hidden md:flex items-center">
                 <button 
                   onClick={() => setSelectedGroup(null)}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                  className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
                     !selectedGroup ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
@@ -297,7 +299,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   <button 
                     key={group}
                     onClick={() => setSelectedGroup(group)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                    className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
                       selectedGroup === group ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
                     }`}
                   >
@@ -306,11 +308,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 ))}
               </div>
               
-              <div className="flex sm:hidden items-center px-1">
+              <div className="flex md:hidden items-center px-1">
                 <select 
                   value={selectedGroup || ''} 
                   onChange={(e) => setSelectedGroup(e.target.value || null)}
-                  className="bg-transparent border-none py-1 pl-1 pr-6 text-[10px] font-black uppercase tracking-wider outline-none text-slate-700 dark:text-slate-300"
+                  className="bg-transparent border-none py-1 pl-1 pr-5 text-[10px] font-black uppercase tracking-wider outline-none text-slate-700 dark:text-slate-300"
                 >
                   <option value="">Turno: Todos</option>
                   <option value="Abertura">Abertura</option>
@@ -323,7 +325,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
             <button
               onClick={() => setIsCompactMode(!isCompactMode)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${
+              className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shrink-0 whitespace-nowrap ${
                 isCompactMode 
                   ? 'bg-purple-600 border-purple-600 text-white shadow-purple-500/20' 
                   : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50'
@@ -331,7 +333,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               title="Alternar entre modo normal e modo denso para caber mais colaboradores na tela"
             >
               <Icon name={isCompactMode ? 'view_agenda' : 'view_headline'} className="text-xs" />
-              <span>{isCompactMode ? 'Denso' : 'Normal'}</span>
+              <span className="hidden sm:inline">{isCompactMode ? 'Denso' : 'Normal'}</span>
             </button>
           </div>
         </div>
