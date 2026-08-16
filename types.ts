@@ -106,3 +106,22 @@ export interface JornadaSettings {
     apprentice: string;
   };
 }
+
+export interface OfficialScheduleSnapshot {
+  validatedAt: string; // ISO string
+  monthKey: string;    // YYYY-MM
+  shifts: Record<string, ShiftType[]>;
+  dailyHours: Record<string, string[]>;
+  tacticalPositions: Record<string, (string | null)[]>;
+}
+
+export interface ScheduleDiffItem {
+  id: string;
+  empId: string;
+  empName: string;
+  dayIdx: number;
+  dateStr: string; // DD/MM/YYYY
+  type: 'shift' | 'hour' | 'position';
+  officialVal: string;
+  currentVal: string;
+}

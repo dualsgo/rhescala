@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { SyncStatus, Employee, Holiday, JornadaSettings } from '../types';
+import { SyncStatus, Employee, Holiday, JornadaSettings, OfficialScheduleSnapshot } from '../types';
 import { Icon } from './Icon';
 import { useDialog } from '../contexts/DialogContext';
 import { apiStore } from '../src/gas-api';
@@ -10,6 +10,8 @@ interface DataManagerProps {
   setEmployees: (val: Employee[] | ((prev: Employee[]) => Employee[])) => void;
   validatedMonths: Record<string, boolean>;
   setValidatedMonths: (val: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
+  officialSnapshots?: Record<string, OfficialScheduleSnapshot>;
+  setOfficialSnapshots?: (val: Record<string, OfficialScheduleSnapshot> | ((prev: Record<string, OfficialScheduleSnapshot>) => Record<string, OfficialScheduleSnapshot>)) => void;
   jornadaSettings?: JornadaSettings;
   setJornadaSettings?: (val: JornadaSettings | ((prev: JornadaSettings) => JornadaSettings)) => void;
   customHolidays?: Holiday[];
@@ -32,6 +34,8 @@ export const DataManager: React.FC<DataManagerProps> = ({
   setEmployees, 
   validatedMonths, 
   setValidatedMonths, 
+  officialSnapshots,
+  setOfficialSnapshots,
   jornadaSettings,
   setJornadaSettings,
   customHolidays,
@@ -55,10 +59,11 @@ export const DataManager: React.FC<DataManagerProps> = ({
   const handleExportBackup = () => {
     const backupData = {
       system: "rhescala",
-      version: "2.0",
+      version: "2.1",
       exportedAt: new Date().toISOString(),
       employees,
       validatedMonths,
+      officialSnapshots,
       jornadaSettings,
       customHolidays,
       deletedNationalHolidays,
@@ -158,6 +163,9 @@ export const DataManager: React.FC<DataManagerProps> = ({
               setEmployees(importedData.employees);
               if (importedData.validatedMonths && setValidatedMonths) {
                 setValidatedMonths(importedData.validatedMonths);
+              }
+              if (importedData.officialSnapshots && setOfficialSnapshots) {
+                setOfficialSnapshots(importedData.officialSnapshots);
               }
               if (importedData.jornadaSettings && setJornadaSettings) {
                 setJornadaSettings(importedData.jornadaSettings);

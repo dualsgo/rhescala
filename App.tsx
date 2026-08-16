@@ -2,8 +2,21 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
-import { generateYearSchedule, applyMonthUpdate, resolveTacticalDay, calculateLunches, getShiftClassification, findSundayViolations, isWorkingShift, distributeTacticalPositions, optimizePeakWeek } from './hooks/useScheduleEngine';
-
+import { 
+  generateYearSchedule, 
+  applyMonthUpdate, 
+  applyHoursOnly,
+  applyFolgasOnly,
+  applyTacticalOnly,
+  detectScheduleDiffs,
+  resolveTacticalDay, 
+  calculateLunches, 
+  getShiftClassification, 
+  findSundayViolations, 
+  isWorkingShift, 
+  distributeTacticalPositions, 
+  optimizePeakWeek 
+} from './hooks/useScheduleEngine';
 
 import { Header } from './components/Header';
 import { copyToClipboard } from './src/utils/clipboard';
@@ -27,7 +40,7 @@ import { Login } from './components/Login';
 import { PrintableSchedule } from './components/PrintableSchedule';
 import { useHolidayCredits } from './hooks/useHolidayCredits';
 import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay, getNationalHolidays, DEFAULT_JORNADA_SETTINGS, getShortName } from './constants';
-import { Employee, MonthYear, Holiday, JornadaSettings } from './types';
+import { Employee, MonthYear, Holiday, JornadaSettings, OfficialScheduleSnapshot, ScheduleDiffItem } from './types';
 import { HelpCenter } from './components/HelpCenter';
 import { JornadaManager } from './components/JornadaManager';
 import { EmployeeScheduleCard } from './components/EmployeeScheduleCard';
@@ -35,6 +48,8 @@ import { RequestManager } from './components/RequestManager';
 import { InconsistencyModal } from './components/InconsistencyModal';
 import { detectInconsistencies } from './components/InconsistencyPanel';
 import { SyncBlockingOverlay } from './components/SyncBlockingOverlay';
+import { PresetOptionsModal } from './components/PresetOptionsModal';
+import { ScheduleDiffModal } from './components/ScheduleDiffModal';
 
 const App: React.FC = () => {
   const [employees, setEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', [PLACEHOLDER_EMPLOYEE]);
@@ -57,15 +72,27 @@ const App: React.FC = () => {
   const [deletedNationalHolidays, setDeletedNationalHolidays] = useLocalStorage<string[]>('riHappyDeletedNationalHolidays', []);
   const [monthNotes, setMonthNotes] = useLocalStorage<Record<string, string>>('riHappyMonthNotes', {});
   const [trackingStartDate, setTrackingStartDate] = useLocalStorage<string>('riHappyTrackingStart', `${new Date().getFullYear()}-01-01`);
+  const [officialSnapshots, setOfficialSnapshots] = useLocalStorage<Record<string, OfficialScheduleSnapshot>>('riHappyOfficialSnapshots', {});
+  
   const syncStatus = useSyncStatus();
   const [showHolidayManager, setShowHolidayManager] = useState(false);
   const [showDayDetail, setShowDayDetail] = useState(false);
+  const [showPresetModal, setShowPresetModal] = useState(false);
+  const [presetInitialEmpId, setPresetInitialEmpId] = useState<string | null>(null);
+  const [showDiffModal, setShowDiffModal] = useState(false);
   const [currentView, setCurrentView] = useState<string>('grid');
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
   const [sectionAssignments, setSectionAssignments] = useLocalStorage<Record<string, any>>('riHappySectionAssignments', {});
   const [validatedMonths, setValidatedMonths] = useLocalStorage<Record<string, boolean>>('riHappyValidatedMonths', {});
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
   const [showInconsistencyModal, setShowInconsistencyModal] = useState(false);
+
+  const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+
+  const scheduleDiffs = useMemo(
+    () => detectScheduleDiffs(officialSnapshots[monthKey], employees, currentMY),
+    [officialSnapshots, employees, currentMY, monthKey]
+  );
 
   const activeInconsistencies = useMemo(
     () => detectInconsistencies(employees, currentMY.year, currentMY.month, new Date()),
@@ -80,24 +107,63 @@ const App: React.FC = () => {
   const [auth, setAuth] = useState<{ isAuthenticated: boolean, role: 'admin' | 'viewer' }>({ isAuthenticated: false, role: 'viewer' });
   const [authenticatedEmployeeId, setAuthenticatedEmployeeId] = useState<string | null>(null);
   
-  const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
-  
   const isReadOnly = auth.role === 'viewer';
   const isValidated = validatedMonths[monthKey] || false;
   
   const onToggleValidation = useCallback(async () => {
     const newVal = !isValidated;
-    const confirmed = await showDialog({
-      title: newVal ? 'Oficializar Escala' : 'Retornar para Rascunho',
-      message: newVal 
-        ? `Deseja oficializar a escala de ${new Date(currentMY.year, currentMY.month).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}? Ela ficará visível para toda a equipe.`
-        : 'A escala voltará ao modo rascunho e ficará oculta para a equipe. Continuar?',
-      type: 'confirm'
-    });
-    if (confirmed) {
-      setValidatedMonths(prev => ({ ...prev, [monthKey]: newVal }));
+    const monthName = new Date(currentMY.year, currentMY.month).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+    if (newVal) {
+      // Oficializar
+      const hasExistingSnapshot = !!officialSnapshots[monthKey];
+      let createSnapshot = true;
+
+      if (hasExistingSnapshot) {
+        const choice = await showDialog({
+          title: 'Oficializar Escala',
+          message: `A escala de ${monthName} já possui um registro oficial anterior gravado. Deseja atualizar a linha de base oficial (novo snapshot) ou manter o registro oficial anterior para histórico de auditoria?`,
+          type: 'confirm'
+        });
+        createSnapshot = choice;
+      } else {
+        const confirmed = await showDialog({
+          title: 'Oficializar Escala',
+          message: `Deseja oficializar a escala de ${monthName}? Ela ficará visível para toda a equipe e uma cópia oficial congelada será registrada para auditoria de alterações.`,
+          type: 'confirm'
+        });
+        if (!confirmed) return;
+      }
+
+      setValidatedMonths(prev => ({ ...prev, [monthKey]: true }));
+
+      if (createSnapshot) {
+        const newSnapshot: OfficialScheduleSnapshot = {
+          validatedAt: new Date().toISOString(),
+          monthKey,
+          shifts: {},
+          dailyHours: {},
+          tacticalPositions: {}
+        };
+        employees.forEach(emp => {
+          if (emp.shifts[monthKey]) newSnapshot.shifts[emp.id] = [...emp.shifts[monthKey]];
+          if (emp.dailyHours[monthKey]) newSnapshot.dailyHours[emp.id] = [...emp.dailyHours[monthKey]];
+          if (emp.tacticalPositions[monthKey]) newSnapshot.tacticalPositions[emp.id] = [...emp.tacticalPositions[monthKey]];
+        });
+        setOfficialSnapshots(prev => ({ ...prev, [monthKey]: newSnapshot }));
+      }
+    } else {
+      // Retornar para rascunho
+      const confirmed = await showDialog({
+        title: 'Retornar para Rascunho',
+        message: 'A escala voltará ao modo rascunho e ficará oculta para a equipe. O histórico oficial de auditoria será preservado. Continuar?',
+        type: 'confirm'
+      });
+      if (confirmed) {
+        setValidatedMonths(prev => ({ ...prev, [monthKey]: false }));
+      }
     }
-  }, [isValidated, monthKey, currentMY, setValidatedMonths, showDialog]);
+  }, [isValidated, monthKey, currentMY, setValidatedMonths, showDialog, officialSnapshots, setOfficialSnapshots, employees]);
 
   // Sync validatedMonths to GAS
   // We'll handle this in the useEffect that syncs all data, or add a specific one.
@@ -314,6 +380,58 @@ const App: React.FC = () => {
       });
     });
   }, [currentMY, customHolidays]);
+
+  const handleApplyGranularPresets = useCallback((options: {
+    scope: 'all' | 'single';
+    targetEmpId?: string;
+    applyMode: 'hours_only' | 'folgas_only' | 'tactical_only' | 'full';
+  }) => {
+    const { scope, targetEmpId, applyMode } = options;
+    const empId = scope === 'single' ? targetEmpId : undefined;
+
+    if (applyMode === 'hours_only') {
+      const updatedHours = applyHoursOnly(employees, currentMY.year, currentMY.month, empId, customHolidays, deletedNationalHolidays, activeJornadaSettings);
+      setEmployees(prev => prev.map(emp => {
+        if (updatedHours[emp.id]) {
+          return { ...emp, dailyHours: { ...emp.dailyHours, [monthKey]: updatedHours[emp.id] } };
+        }
+        return emp;
+      }));
+      showDialog({ title: 'Sucesso', message: 'Horários padrão recalculados com sucesso! Todas as folgas e turnos foram preservados.' });
+    } else if (applyMode === 'folgas_only') {
+      const updatedShifts = applyFolgasOnly(employees, currentMY.year, currentMY.month, empId, customHolidays, deletedNationalHolidays, activeJornadaSettings);
+      setEmployees(prev => prev.map(emp => {
+        if (updatedShifts[emp.id]) {
+          return { ...emp, shifts: { ...emp.shifts, [monthKey]: updatedShifts[emp.id] } };
+        }
+        return emp;
+      }));
+      showDialog({ title: 'Sucesso', message: 'Folgas e rotação de domingos recalculadas com sucesso! Horários customizados foram preservados.' });
+    } else if (applyMode === 'tactical_only') {
+      const updatedPositions = applyTacticalOnly(employees, currentMY.year, currentMY.month, customHolidays, deletedNationalHolidays, activeJornadaSettings);
+      setEmployees(prev => prev.map(emp => {
+        if (updatedPositions[emp.id]) {
+          return { ...emp, tacticalPositions: { ...emp.tacticalPositions, [monthKey]: updatedPositions[emp.id] } };
+        }
+        return emp;
+      }));
+      showDialog({ title: 'Sucesso', message: 'Posições táticas (P1 a P4 e Estoque) redistribuídas com sucesso!' });
+    } else if (applyMode === 'full') {
+      const updatedData = applyMonthUpdate(employees, currentMY.year, currentMY.month, customHolidays, deletedNationalHolidays, activeJornadaSettings);
+      setEmployees(prev => prev.map(emp => {
+        if (empId && emp.id !== empId) return emp;
+        if (updatedData[emp.id]) {
+          return {
+            ...emp,
+            shifts: { ...emp.shifts, [monthKey]: updatedData[emp.id].shifts },
+            dailyHours: { ...emp.dailyHours, [monthKey]: updatedData[emp.id].hours }
+          };
+        }
+        return emp;
+      }));
+      showDialog({ title: 'Sucesso', message: 'Redefinição geral completa aplicada com sucesso!' });
+    }
+  }, [employees, currentMY, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, setEmployees, showDialog]);
 
   const handleApplyFolgas = (targetMY = currentMY, targetKey = monthKey) => {
     // We now use applyMonthUpdate which does a full sweep of folgas and hours resetting.
@@ -695,6 +813,12 @@ const App: React.FC = () => {
               pendingRequestsCount={pendingRequestsCount}
               inconsistencyCount={activeInconsistencies.length}
               onOpenInconsistencyModal={() => setShowInconsistencyModal(true)}
+              diffCount={scheduleDiffs.length}
+              onOpenDiffModal={() => setShowDiffModal(true)}
+              onOpenPresetModal={() => {
+                setPresetInitialEmpId(null);
+                setShowPresetModal(true);
+              }}
             />
 
        <main className="flex-1 overflow-hidden p-2 sm:p-4">
@@ -792,6 +916,11 @@ const App: React.FC = () => {
                      setMonthNotes(prev => ({ ...prev, [monthKey]: text }));
                    }}
                    jornadaSettings={jornadaSettings}
+                   diffs={scheduleDiffs}
+                   onOpenPresetForEmployee={(empId) => {
+                     setPresetInitialEmpId(empId);
+                     setShowPresetModal(true);
+                   }}
                    onOpenEmployeeCard={async (emp) => {
                      if (auth.role === 'admin' || authenticatedEmployeeId === emp.id) {
                        setSelectedEmployeeForCard(emp);
@@ -859,6 +988,8 @@ const App: React.FC = () => {
                    setEmployees={setEmployees} 
                    validatedMonths={validatedMonths}
                    setValidatedMonths={setValidatedMonths}
+                   officialSnapshots={officialSnapshots}
+                   setOfficialSnapshots={setOfficialSnapshots}
                    jornadaSettings={jornadaSettings}
                    setJornadaSettings={setJornadaSettings}
                    customHolidays={customHolidays}
@@ -1185,6 +1316,27 @@ const App: React.FC = () => {
               });
               return { ...emp, shifts: { ...emp.shifts, [monthKeyStr]: sfs } };
             }));
+          }}
+        />
+
+        <PresetOptionsModal
+          isOpen={showPresetModal}
+          onClose={() => setShowPresetModal(false)}
+          employees={employees}
+          currentMY={currentMY}
+          initialEmployeeId={presetInitialEmpId}
+          onApply={handleApplyGranularPresets}
+        />
+
+        <ScheduleDiffModal
+          isOpen={showDiffModal}
+          onClose={() => setShowDiffModal(false)}
+          snapshot={officialSnapshots[monthKey]}
+          diffs={scheduleDiffs}
+          currentMY={currentMY}
+          onSelectDay={(idx) => {
+            setSelectedDayIdx(idx);
+            setCurrentView('grid');
           }}
         />
 

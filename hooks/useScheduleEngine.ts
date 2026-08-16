@@ -1,5 +1,5 @@
 
-import { Employee, ShiftType, Holiday, JornadaSettings } from '../types';
+import { Employee, ShiftType, Holiday, JornadaSettings, MonthYear, OfficialScheduleSnapshot, ScheduleDiffItem } from '../types';
 import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, getShortName } from '../constants';
 
 
@@ -1460,4 +1460,193 @@ export function getCleaningSchedule(
     }
 
     return schedule;
+}
+
+/**
+ * Aplica APENAS os horários padrão (diários, domingos e feriados)
+ * MANTENDO 100% dos turnos e folgas atuais inalterados.
+ * Pode ser aplicado para todos ou apenas para um colaborador (targetEmpId).
+ */
+export function applyHoursOnly(
+    employees: Employee[],
+    year: number,
+    month: number,
+    targetEmpId?: string,
+    customHolidays: Holiday[] = [],
+    deletedNationalHolidays: string[] = [],
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
+): Record<string, string[]> {
+    const result: Record<string, string[]> = {};
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const holidaySet = buildHolidaySet(year, customHolidays, deletedNationalHolidays);
+    const targetEmps = targetEmpId 
+        ? employees.filter(e => e.id === targetEmpId)
+        : employees.filter(e => e.status === 'active' && !e.isHidden);
+
+    targetEmps.forEach(emp => {
+        const hours: string[] = [];
+        for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
+            const date = new Date(year, month, dayIdx + 1);
+            const dow = date.getDay();
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+            const isHoliday = holidaySet.has(dateStr);
+            hours.push(getTargetHours(emp, dow, isHoliday, settings));
+        }
+        result[emp.id] = hours;
+    });
+
+    return result;
+}
+
+/**
+ * Aplica APENAS a rotação de folgas e domingos,
+ * MANTENDO os horários diários (dailyHours) atuais inalterados.
+ */
+export function applyFolgasOnly(
+    employees: Employee[],
+    year: number,
+    month: number,
+    targetEmpId?: string,
+    customHolidays: Holiday[] = [],
+    deletedNationalHolidays: string[] = [],
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
+): Record<string, ShiftType[]> {
+    const monthData = applyMonthUpdate(employees, year, month, customHolidays, deletedNationalHolidays, settings);
+    const result: Record<string, ShiftType[]> = {};
+
+    if (targetEmpId) {
+        if (monthData[targetEmpId]) {
+            result[targetEmpId] = monthData[targetEmpId].shifts;
+        }
+    } else {
+        Object.keys(monthData).forEach(empId => {
+            result[empId] = monthData[empId].shifts;
+        });
+    }
+
+    return result;
+}
+
+/**
+ * Aplica APENAS as posições táticas (P1, P2, P3, P4, ESTQ) para o mês.
+ */
+export function applyTacticalOnly(
+    employees: Employee[],
+    year: number,
+    month: number,
+    customHolidays: Holiday[] = [],
+    deletedNationalHolidays: string[] = [],
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
+): Record<string, (string | null)[]> {
+    const result: Record<string, (string | null)[]> = {};
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const holidaySet = buildHolidaySet(year, customHolidays, deletedNationalHolidays);
+    const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const activeEmps = employees.filter(e => e.status === 'active' && !e.isHidden);
+
+    activeEmps.forEach(e => {
+        result[e.id] = Array(daysInMonth).fill(null);
+    });
+
+    for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
+        const date = new Date(year, month, dayIdx + 1);
+        const dow = date.getDay();
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+        const isHoliday = holidaySet.has(dateStr);
+        const isSunday = dow === 0;
+
+        const resolved = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, settings);
+        Object.entries(resolved).forEach(([empId, pos]) => {
+            if (result[empId]) {
+                result[empId][dayIdx] = pos;
+            }
+        });
+    }
+
+    return result;
+}
+
+/**
+ * Detecta diferenças entre o Snapshot Oficial congelado e a escala atual do mês.
+ */
+export function detectScheduleDiffs(
+    snapshot: OfficialScheduleSnapshot | undefined,
+    employees: Employee[],
+    currentMY: MonthYear
+): ScheduleDiffItem[] {
+    if (!snapshot) return [];
+
+    const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+    if (snapshot.monthKey !== monthKey) return [];
+
+    const diffs: ScheduleDiffItem[] = [];
+    const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
+
+    employees.forEach(emp => {
+        if (emp.isHidden) return;
+
+        const officialShifts = snapshot.shifts?.[emp.id] || [];
+        const currentShifts = emp.shifts?.[monthKey] || [];
+
+        const officialHours = snapshot.dailyHours?.[emp.id] || [];
+        const currentHours = emp.dailyHours?.[monthKey] || [];
+
+        const officialPos = snapshot.tacticalPositions?.[emp.id] || [];
+        const currentPos = emp.tacticalPositions?.[monthKey] || [];
+
+        for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
+            const dateStr = `${String(dayIdx + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}`;
+
+            const offShift = officialShifts[dayIdx] || 'T';
+            const curShift = currentShifts[dayIdx] || 'T';
+
+            // 1. Mudança de Turno/Folga
+            if (offShift !== curShift) {
+                diffs.push({
+                    id: `${emp.id}-shift-${dayIdx}`,
+                    empId: emp.id,
+                    empName: emp.name,
+                    dayIdx,
+                    dateStr,
+                    type: 'shift',
+                    officialVal: offShift,
+                    currentVal: curShift
+                });
+            }
+
+            // 2. Mudança de Horário (quando ambos trabalham ou se horário foi alterado)
+            const offHour = officialHours[dayIdx] || emp.workPeriod || '';
+            const curHour = currentHours[dayIdx] || emp.workPeriod || '';
+            if (isWorkingShift(curShift) && offHour && curHour && offHour !== curHour) {
+                diffs.push({
+                    id: `${emp.id}-hour-${dayIdx}`,
+                    empId: emp.id,
+                    empName: emp.name,
+                    dayIdx,
+                    dateStr,
+                    type: 'hour',
+                    officialVal: offHour,
+                    currentVal: curHour
+                });
+            }
+
+            // 3. Mudança de Posição Tática
+            const offP = officialPos[dayIdx];
+            const curP = currentPos[dayIdx];
+            if (offP && curP && offP !== curP && isWorkingShift(curShift)) {
+                diffs.push({
+                    id: `${emp.id}-pos-${dayIdx}`,
+                    empId: emp.id,
+                    empName: emp.name,
+                    dayIdx,
+                    dateStr,
+                    type: 'position',
+                    officialVal: offP,
+                    currentVal: curP
+                });
+            }
+        }
+    });
+
+    return diffs;
 }

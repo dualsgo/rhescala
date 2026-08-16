@@ -40,6 +40,8 @@ interface ShiftGridProps {
   jornadaSettings?: JornadaSettings;
   resolvedPositions: Record<string, string>;
   onOpenEmployeeCard: (emp: Employee) => void;
+  diffs?: ScheduleDiffItem[];
+  onOpenPresetForEmployee?: (empId: string) => void;
 }
 
 export const ShiftGrid: React.FC<ShiftGridProps> = ({
@@ -68,6 +70,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   resolvedPositions,
   onOpenEmployeeCard,
   onShareWhatsApp,
+  diffs = [],
+  onOpenPresetForEmployee,
 }) => {
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
   const [hasScrolled, setHasScrolled] = useState(false);
@@ -531,7 +535,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                 rawShift = 'FE';
                               }
 
-                              // Em visão de colaborador, oculta posições e mostra apenas 'T'
                               const shift = (isReadOnly && ['P1', 'P2', 'P3', 'P4', 'ESTQ'].includes(rawShift)) ? 'T' : rawShift;
                               
                               const prevStreak = prevWorkStreaks.get(emp.id) || 0;
@@ -565,10 +568,17 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const isPast = d.dateStr < todayStr;
                               const dimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
                               const dayRequest = !isReadOnly ? (emp.requests || []).find(r => r.date === fullDate) : undefined;
+                              const cellDiff = diffs?.find(diff => diff.empId === emp.id && diff.dayIdx === d.num - 1);
 
                               return (
                                 <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all relative ${dimClass} ${selectedDayIdx === d.num - 1 ? 'ring-2 ring-inset ring-orange-400/50' : ''} ${hasAlert ? 'ring-2 ring-inset ring-rose-500 bg-rose-50/50 dark:bg-rose-950/30' : is7thDay ? 'ring-2 ring-inset ring-emerald-500/40 bg-emerald-50/20' : ''}`}>
                                   <div className="relative group flex flex-col items-center gap-1">
+                                    {cellDiff && (
+                                        <span 
+                                          className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-900 shadow-md z-30 cursor-help"
+                                          title={`Alteração pós-oficialização (${cellDiff.type}): Oficial [${cellDiff.officialVal}] ➔ Atual [${cellDiff.currentVal}]`}
+                                        />
+                                    )}
                                     {is7thDay && (
                                       <span
                                         className={`absolute -top-1.5 -left-1.5 px-1 py-0.2 text-[8px] font-black rounded-full shadow-md z-30 transition-all ${

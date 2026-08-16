@@ -37,6 +37,9 @@ interface HeaderProps {
   pendingRequestsCount: number;
   inconsistencyCount?: number;
   onOpenInconsistencyModal?: () => void;
+  diffCount?: number;
+  onOpenDiffModal?: () => void;
+  onOpenPresetModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -147,9 +150,9 @@ export const Header: React.FC<HeaderProps> = ({
                       <button
                         key={item.id}
                         onMouseDown={(e) => {
-                          e.preventDefault(); // Prevent onBlur from firing before click
-                          onViewChange(item.id as any); 
-                          setShowConfigMenu(false); 
+                          e.preventDefault();
+                          onViewChange(item.id as any);
+                          setShowConfigMenu(false);
                         }}
                         className="w-full flex items-center gap-3 p-3 rounded-lg text-[11px] font-bold uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all text-left"
                       >
@@ -163,37 +166,61 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Center/Right: Month & Filters */}
-        <div className="flex items-center gap-2 lg:gap-4 flex-1 justify-center lg:flex-none">
-          {/* Month Selector */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg p-0.5 sm:p-1">
-              <button onClick={() => {
-                const prev = new Date(currentMY.year, currentMY.month - 1);
-                onMonthChange({ month: prev.getMonth(), year: prev.getFullYear() });
-              }} className="p-1 hover:text-orange-500 transition-colors"><Icon name="chevron_left" className="text-sm sm:text-base" /></button>
-              <span className="px-1 sm:px-3 text-[10px] sm:text-[11px] font-black uppercase min-w-[80px] sm:min-w-[120px] text-center text-slate-700 dark:text-slate-300">
-                <span className="xs:hidden">{months[currentMY.month].substring(0, 3)}</span>
-                <span className="hidden xs:inline">{months[currentMY.month]}</span> {currentMY.year}
-              </span>
-              <button 
+          {/* Center: Month Selector & Status */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5 sm:p-1 border border-slate-200/50 dark:border-slate-700/50">
+              <button
                 onClick={() => {
-                  const next = new Date(currentMY.year, currentMY.month + 1);
-                  onMonthChange({ month: next.getMonth(), year: next.getFullYear() });
-                }} 
+                  let newMonth = currentMY.month - 1;
+                  let newYear = currentMY.year;
+                  if (newMonth < 0) {
+                    newMonth = 11;
+                    newYear--;
+                  }
+                  onMonthChange({ month: newMonth, year: newYear });
+                }}
+                className="p-1 sm:p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-500 transition-colors"
+                title="Mês Anterior"
+              >
+                <Icon name="chevron_left" className="text-sm sm:text-base" />
+              </button>
+
+              <div className="px-2 sm:px-3 text-center">
+                <span className="block text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
+                  {currentMonthName}
+                </span>
+                <span className="block text-[8px] sm:text-[9px] font-bold text-slate-400 tracking-widest">
+                  {currentMY.year}
+                </span>
+              </div>
+
+              <button
+                onClick={() => {
+                  if (!canGoNext) return;
+                  let newMonth = currentMY.month + 1;
+                  let newYear = currentMY.year;
+                  if (newMonth > 11) {
+                    newMonth = 0;
+                    newYear++;
+                  }
+                  onMonthChange({ month: newMonth, year: newYear });
+                }}
                 disabled={!canGoNext}
-                className={`p-1 transition-colors ${!canGoNext ? 'opacity-20 cursor-not-allowed' : 'hover:text-orange-500'}`}
+                className={`p-1 sm:p-1.5 rounded-lg text-slate-500 transition-colors ${
+                  canGoNext ? 'hover:bg-white dark:hover:bg-slate-700 cursor-pointer' : 'opacity-30 cursor-not-allowed'
+                }`}
+                title={canGoNext ? 'Próximo Mês' : 'Avanço restrito'}
               >
                 <Icon name="chevron_right" className="text-sm sm:text-base" />
               </button>
             </div>
 
-            {/* Validation Badge */}
+            {/* Validation Badge Button */}
             <button
-              onClick={() => !isReadOnly && onToggleValidation()}
-              className={`hidden sm:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border transition-all ${
-                isValidated 
-                  ? 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-950/30 dark:border-emerald-900/50 dark:text-emerald-400' 
+              onClick={isReadOnly ? undefined : onToggleValidation}
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border transition-all ${
+                isValidated
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300 shadow-sm'
                   : 'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-950/30 dark:border-amber-900/50 dark:text-amber-400 animate-pulse-subtle'
               } ${isReadOnly ? 'cursor-default' : 'hover:scale-105 active:scale-95'}`}
               title={isReadOnly ? '' : (isValidated ? 'Clique para marcar como rascunho' : 'Clique para oficializar escala')}
@@ -204,6 +231,24 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="hidden sm:inline">{isValidated ? 'Oficializado' : 'Rascunho'}</span>
               </span>
             </button>
+
+            {/* Audit / Diff Button (when validated) */}
+            {isValidated && onOpenDiffModal && (
+              <button
+                onClick={onOpenDiffModal}
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border transition-all hover:scale-105 active:scale-95 ${
+                  diffCount > 0
+                    ? 'bg-amber-500 border-amber-600 text-white shadow-sm animate-pulse-subtle'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
+                }`}
+                title="Auditoria: Comparar alterações com a Versão Oficial Impressa"
+              >
+                <Icon name="history_toggle_off" className="text-xs sm:text-sm" />
+                <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-tight">
+                  {diffCount > 0 ? `${diffCount} Alteração${diffCount > 1 ? 's' : ''}` : 'Auditoria'}
+                </span>
+              </button>
+            )}
 
             {/* Inconsistency Alert Badge */}
             {onOpenInconsistencyModal && (
@@ -223,8 +268,6 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
           </div>
-
-        </div>
 
         {/* Right: Actions & Status */}
         <div className="flex items-center gap-2 lg:gap-3">
@@ -259,19 +302,26 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
               
               {isEditable && showEditMenu && (
-                <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 p-1 flex flex-col gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="absolute top-full right-0 mt-2 w-60 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 p-1 flex flex-col gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
                   <button 
                     onClick={() => { onCreateMonth(); setShowEditMenu(false); }} 
                     className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all text-left"
                   >
-                    <Icon name="add_circle" className="text-lg" /> Criar Mês (Gerar)
+                    <Icon name="add_circle" className="text-lg" /> Criar Mês (Gerar Tudo)
                   </button>
                   <div className="h-px bg-slate-100 dark:bg-slate-800 mx-2" />
                   <button 
-                    onClick={() => { onApplyFolgas(); setShowEditMenu(false); }} 
-                    className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left"
+                    onClick={() => { 
+                      if (onOpenPresetModal) {
+                        onOpenPresetModal();
+                      } else {
+                        onApplyFolgas();
+                      }
+                      setShowEditMenu(false); 
+                    }} 
+                    className="w-full flex items-center gap-3 p-2.5 rounded-lg text-[10px] font-black uppercase text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all text-left"
                   >
-                    <Icon name="event_available" className="text-lg" /> Aplicar Pré-definições
+                    <Icon name="tune" className="text-lg" /> Aplicar Pré-definições...
                   </button>
                   <button 
                     onClick={() => { onSortearDomingo(); setShowEditMenu(false); }} 
