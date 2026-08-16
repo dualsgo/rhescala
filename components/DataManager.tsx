@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { SyncStatus, Employee } from '../types';
+import { SyncStatus, Employee, Holiday, JornadaSettings } from '../types';
 import { Icon } from './Icon';
 import { useDialog } from '../contexts/DialogContext';
 import { apiStore } from '../src/gas-api';
@@ -10,11 +10,43 @@ interface DataManagerProps {
   setEmployees: (val: Employee[] | ((prev: Employee[]) => Employee[])) => void;
   validatedMonths: Record<string, boolean>;
   setValidatedMonths: (val: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
+  jornadaSettings?: JornadaSettings;
+  setJornadaSettings?: (val: JornadaSettings | ((prev: JornadaSettings) => JornadaSettings)) => void;
+  customHolidays?: Holiday[];
+  setCustomHolidays?: (val: Holiday[] | ((prev: Holiday[]) => Holiday[])) => void;
+  deletedNationalHolidays?: string[];
+  setDeletedNationalHolidays?: (val: string[] | ((prev: string[]) => string[])) => void;
+  monthNotes?: Record<string, string>;
+  setMonthNotes?: (val: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void;
+  trackingStartDate?: string;
+  setTrackingStartDate?: (val: string | ((prev: string) => string)) => void;
+  sectionAssignments?: Record<string, any>;
+  setSectionAssignments?: (val: Record<string, any> | ((prev: Record<string, any>) => Record<string, any>)) => void;
   onClose: () => void;
   role: 'admin' | 'viewer';
 }
 
-export const DataManager: React.FC<DataManagerProps> = ({ syncStatus, employees, setEmployees, validatedMonths, setValidatedMonths, onClose, role }) => {
+export const DataManager: React.FC<DataManagerProps> = ({ 
+  syncStatus, 
+  employees, 
+  setEmployees, 
+  validatedMonths, 
+  setValidatedMonths, 
+  jornadaSettings,
+  setJornadaSettings,
+  customHolidays,
+  setCustomHolidays,
+  deletedNationalHolidays,
+  setDeletedNationalHolidays,
+  monthNotes,
+  setMonthNotes,
+  trackingStartDate,
+  setTrackingStartDate,
+  sectionAssignments,
+  setSectionAssignments,
+  onClose, 
+  role 
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showDialog } = useDialog();
   const [isUpdatingPass, setIsUpdatingPass] = useState(false);
@@ -22,8 +54,17 @@ export const DataManager: React.FC<DataManagerProps> = ({ syncStatus, employees,
 
   const handleExportBackup = () => {
     const backupData = {
+      system: "rhescala",
+      version: "2.0",
+      exportedAt: new Date().toISOString(),
       employees,
-      validatedMonths
+      validatedMonths,
+      jornadaSettings,
+      customHolidays,
+      deletedNationalHolidays,
+      monthNotes,
+      trackingStartDate,
+      sectionAssignments
     };
     const dataStr = JSON.stringify(backupData, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
@@ -103,18 +144,38 @@ export const DataManager: React.FC<DataManagerProps> = ({ syncStatus, employees,
     reader.onload = async (e) => {
       try {
         const importedData = JSON.parse(e.target?.result as string);
-        if (Array.isArray(importedData) || (importedData.employees && Array.isArray(importedData.employees))) {
+        const hasValidEmployees = Array.isArray(importedData) || (importedData.employees && Array.isArray(importedData.employees));
+
+        if (hasValidEmployees) {
           const confirm = await showDialog({
             title: 'Importar Backup',
-            message: 'Atenção: Isso irá substituir a escala atual pelos dados do arquivo. Deseja continuar?',
+            message: 'Atenção: Isso irá substituir a escala e configurações pelos dados do arquivo. Deseja continuar?',
             type: 'confirm'
           });
 
           if (confirm) {
             if (importedData.employees && Array.isArray(importedData.employees)) {
               setEmployees(importedData.employees);
-              if (importedData.validatedMonths) {
+              if (importedData.validatedMonths && setValidatedMonths) {
                 setValidatedMonths(importedData.validatedMonths);
+              }
+              if (importedData.jornadaSettings && setJornadaSettings) {
+                setJornadaSettings(importedData.jornadaSettings);
+              }
+              if (importedData.customHolidays && setCustomHolidays) {
+                setCustomHolidays(importedData.customHolidays);
+              }
+              if (importedData.deletedNationalHolidays && setDeletedNationalHolidays) {
+                setDeletedNationalHolidays(importedData.deletedNationalHolidays);
+              }
+              if (importedData.monthNotes && setMonthNotes) {
+                setMonthNotes(importedData.monthNotes);
+              }
+              if (importedData.trackingStartDate && setTrackingStartDate) {
+                setTrackingStartDate(importedData.trackingStartDate);
+              }
+              if (importedData.sectionAssignments && setSectionAssignments) {
+                setSectionAssignments(importedData.sectionAssignments);
               }
             } else if (Array.isArray(importedData)) {
               // Legacy support for older backups that only had the employees array

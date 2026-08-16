@@ -859,6 +859,18 @@ const App: React.FC = () => {
                    setEmployees={setEmployees} 
                    validatedMonths={validatedMonths}
                    setValidatedMonths={setValidatedMonths}
+                   jornadaSettings={jornadaSettings}
+                   setJornadaSettings={setJornadaSettings}
+                   customHolidays={customHolidays}
+                   setCustomHolidays={setCustomHolidays}
+                   deletedNationalHolidays={deletedNationalHolidays}
+                   setDeletedNationalHolidays={setDeletedNationalHolidays}
+                   monthNotes={monthNotes}
+                   setMonthNotes={setMonthNotes}
+                   trackingStartDate={trackingStartDate}
+                   setTrackingStartDate={setTrackingStartDate}
+                   sectionAssignments={sectionAssignments}
+                   setSectionAssignments={setSectionAssignments}
                    onClose={() => setCurrentView('grid')} 
                    role={auth.role}
                  />

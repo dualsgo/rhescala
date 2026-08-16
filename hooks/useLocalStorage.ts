@@ -97,14 +97,14 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
         channel.onmessage = (event) => {
             if (event.data && !isDirty.current) {
                 const dataStr = JSON.stringify(event.data);
-                if (dataStr !== JSON.stringify(storedValue)) {
+                if (dataStr !== JSON.stringify(storedValueRef.current)) {
                     setStoredValue(event.data);
                     lastCloudValue.current = dataStr;
                 }
             }
         };
         return () => channel.close();
-    }, [key, storedValue]);
+    }, [key]);
 
     const downloadFromCloud = async (force = false) => {
         if (syncInProgress.current) return;
@@ -177,16 +177,19 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
         }
     };
 
-    // 1. Polling (30s) e Carga Inicial
+    // 1. Polling Inteligente (60s) e Carga Inicial com pausa em background
     useEffect(() => {
         downloadFromCloud();
-        const interval = setInterval(() => downloadFromCloud(), 30000);
+        const interval = setInterval(() => {
+            if (typeof document !== 'undefined' && document.hidden) return;
+            downloadFromCloud();
+        }, 60000);
         return () => clearInterval(interval);
     }, [key]);
 
     // 2. Upload Automático (Debounced em 2.5s - Silencioso em segundo plano)
     useEffect(() => {
-        if (!isFirstLoadDone.current || !initialLoadSuccess.current) return;
+        if (!isFirstLoadDone.current) return;
 
         const currentValueStr = JSON.stringify(storedValue);
         if (currentValueStr === lastCloudValue.current) {
