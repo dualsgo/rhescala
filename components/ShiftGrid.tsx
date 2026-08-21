@@ -625,12 +625,15 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                             {filteredDays.map(d => {
                               const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d.num).padStart(2, '0')}`;
                               let rawShift = emp.shifts[monthKey]?.[d.num - 1] || 'T';
-                              if (emp.atestadoStart && emp.atestadoEnd && fullDate >= emp.atestadoStart && fullDate <= emp.atestadoEnd) {
+                              if (emp.hiredAt && fullDate < emp.hiredAt) {
+                                rawShift = 'N/A';
+                              } else if (emp.firedAt && fullDate > emp.firedAt) {
+                                rawShift = 'N/A';
+                              } else if (emp.atestadoStart && emp.atestadoEnd && fullDate >= emp.atestadoStart && fullDate <= emp.atestadoEnd) {
                                 rawShift = 'AT';
                               } else if (emp.vacationStart && emp.vacationEnd && fullDate >= emp.vacationStart && fullDate <= emp.vacationEnd) {
                                 rawShift = 'FE';
                               }
-
                               const shift = (isReadOnly && ['P1', 'P2', 'P3', 'P4', 'ESTQ'].includes(rawShift)) ? 'T' : rawShift;
                               
                               const prevStreak = prevWorkStreaks.get(emp.id) || 0;
@@ -640,7 +643,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               for (let i = d.num - 1; i >= 0; i--) {
                                 const checkDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
                                 let s = emp.shifts[monthKey]?.[i];
-                                if (emp.atestadoStart && emp.atestadoEnd && checkDate >= emp.atestadoStart && checkDate <= emp.atestadoEnd) {
+                                if (emp.hiredAt && checkDate < emp.hiredAt) {
+                                  s = 'N/A';
+                                } else if (emp.firedAt && checkDate > emp.firedAt) {
+                                  s = 'N/A';
+                                } else if (emp.atestadoStart && emp.atestadoEnd && checkDate >= emp.atestadoStart && checkDate <= emp.atestadoEnd) {
                                   s = 'AT';
                                 } else if (emp.vacationStart && emp.vacationEnd && checkDate >= emp.vacationStart && checkDate <= emp.vacationEnd) {
                                   s = 'FE';
@@ -719,6 +726,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                     )}
                                     <button
                                       onClick={() => onSelectDay(d.num - 1)}
+                                      title={shift === 'N/A' ? (emp.hiredAt ? `Não admitido nesta data (Início: ${emp.hiredAt.split('-').reverse().join('/')})` : 'Desconsiderado (N/A)') : undefined}
                                       className={`${isCompactMode ? 'w-8 h-8 rounded-lg text-[9px]' : 'w-10 h-10 rounded-xl text-[10px]'} flex items-center justify-center font-black transition-all shadow-sm relative ${
                                         dayRequest ? (
                                           dayRequest.status === 'granted' ? 'ring-2 ring-emerald-500 bg-emerald-50' :
@@ -727,6 +735,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                           'ring-4 ring-orange-500 bg-orange-50 animate-pulse z-20'
                                         ) : ''
                                       } ${
+                                        shift === 'N/A' ? 'bg-slate-100/70 dark:bg-zinc-800/40 text-slate-400 dark:text-zinc-600 border border-dashed border-slate-200 dark:border-zinc-800 opacity-60' :
                                         shift === 'F' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
                                         shift.startsWith('FF') ? 'bg-amber-100 text-amber-600' :
                                         shift === 'C' ? 'bg-indigo-100 text-indigo-600' :
@@ -770,7 +779,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                             return null;
                                           })()}
                                         </div>
-                                      ) : shift === 'C' ? <span className="text-[7px]">CURSO</span> : (shift === 'T' ? (d.isSunday ? 'DOM' : 'T') : (shift.startsWith('FF') ? 'FF' : shift))}
+                                      ) : shift === 'C' ? <span className="text-[7px]">CURSO</span> : shift === 'N/A' ? <span className="text-[9px] text-slate-400 dark:text-zinc-500 font-mono">-</span> : (shift === 'T' ? (d.isSunday ? 'DOM' : 'T') : (shift.startsWith('FF') ? 'FF' : shift))}
                                     </button>
 
                                     

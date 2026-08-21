@@ -392,7 +392,7 @@ export function generateMonthForEmployee(
             shifts.push('DO'); hours.push(getTargetHours(emp, dow, isHoliday, settings)); continue;
         }
         if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) {
-            shifts.push('F'); hours.push(getTargetHours(emp, dow, isHoliday, settings)); continue;
+            shifts.push('N/A'); hours.push(getTargetHours(emp, dow, isHoliday, settings)); continue;
         }
 
         // ── Jovem Aprendiz ────────────────────────────────────────────────
@@ -795,7 +795,7 @@ export function applyMonthUpdate(
                 newShifts[dayIdx] = 'DO'; continue;
             }
             if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) {
-                newShifts[dayIdx] = 'F'; continue;
+                newShifts[dayIdx] = 'N/A'; continue;
             }
 
             // Sunday rotation logic
@@ -1001,6 +1001,10 @@ export function applyMonthUpdate(
             if (baselineShift === 'DO' && !isEmpBirthday) baselineShift = 'T';
 
             newShifts[dayIdx] = baselineShift;
+
+            if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) {
+                newShifts[dayIdx] = 'N/A'; continue;
+            }
 
             if (isOnVacation) {
                 newShifts[dayIdx] = 'FE'; continue;

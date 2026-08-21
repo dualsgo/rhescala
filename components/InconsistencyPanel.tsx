@@ -47,6 +47,9 @@ function getEffectiveShift(emp: Employee, year: number, month: number, dayIdx: n
     const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
     
+    if (emp.hiredAt && dateStr < emp.hiredAt) return 'N/A';
+    if (emp.firedAt && dateStr > emp.firedAt) return 'N/A';
+
     if (emp.vacationStart) {
         const start = emp.vacationStart;
         const d = new Date(start + 'T00:00:00');
