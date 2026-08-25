@@ -736,6 +736,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                         ) : ''
                                       } ${
                                         shift === 'N/A' ? 'bg-slate-100/70 dark:bg-zinc-800/40 text-slate-400 dark:text-zinc-600 border border-dashed border-slate-200 dark:border-zinc-800 opacity-60' :
+                                        shift === 'AT' ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50' :
                                         shift === 'F' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
                                         shift.startsWith('FF') ? 'bg-amber-100 text-amber-600' :
                                         shift === 'C' ? 'bg-indigo-100 text-indigo-600' :
@@ -761,7 +762,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                               const cur = Math.round((c - s) / 86400000) + 1;
                                               return <span className="text-[6px] opacity-80 mt-0.5">{cur}/{total}</span>;
                                             }
-                                            return null;
+                                            return <span className="text-[7px] font-black uppercase mt-0.5">AT</span>;
                                           })()}
                                         </div>
                                       ) : shift === 'FE' ? (
@@ -793,6 +794,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                         >
                                           <option value="T">Trabalha (T)</option>
                                           <option value="F">Folga (F)</option>
+                                          <option value="AT">Atestado Médico (AT) 🩺</option>
                                           
                                           {/* Specific Pending Holidays */}
                                           {(holidayCredits[emp.id] || [])

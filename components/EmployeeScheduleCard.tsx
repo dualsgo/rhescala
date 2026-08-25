@@ -220,6 +220,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                     let borderClass = 'border-transparent';
                     
                     if (shift === 'F') bgClass = 'bg-rose-100 text-rose-600 dark:bg-rose-900/40';
+                    else if (shift === 'AT') bgClass = 'bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-300';
                     else if (shift.startsWith('FF')) bgClass = 'bg-amber-100 text-amber-600 dark:bg-amber-900/40';
                     else if (shift === 'FE') bgClass = 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40';
                     else if (shift === 'DO') bgClass = 'bg-fuchsia-600 text-white shadow-md';
@@ -245,15 +246,17 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                                return `FE ${cur}/${total}`;
                             }
                             return 'FE';
-                          })() : (shift === 'AT' && employee.atestadoStart && employee.atestadoEnd) ? (() => {
-                            const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                            if (fullDate >= employee.atestadoStart && fullDate <= employee.atestadoEnd) {
-                               const s = new Date(employee.atestadoStart + 'T00:00:00').getTime();
-                               const e = new Date(employee.atestadoEnd + 'T00:00:00').getTime();
-                               const c = new Date(fullDate + 'T00:00:00').getTime();
-                               const total = Math.round((e - s) / 86400000) + 1;
-                               const cur = Math.round((c - s) / 86400000) + 1;
-                               return `AT ${cur}/${total}`;
+                          })() : (shift === 'AT') ? (() => {
+                            if (employee.atestadoStart && employee.atestadoEnd) {
+                              const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                              if (fullDate >= employee.atestadoStart && fullDate <= employee.atestadoEnd) {
+                                 const s = new Date(employee.atestadoStart + 'T00:00:00').getTime();
+                                 const e = new Date(employee.atestadoEnd + 'T00:00:00').getTime();
+                                 const c = new Date(fullDate + 'T00:00:00').getTime();
+                                 const total = Math.round((e - s) / 86400000) + 1;
+                                 const cur = Math.round((c - s) / 86400000) + 1;
+                                 return `AT ${cur}/${total}`;
+                              }
                             }
                             return 'AT';
                           })() : (shift.startsWith('FF') ? 'FF' : shift)
@@ -273,6 +276,10 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                 <div className="flex items-center gap-1.5 px-2 py-1 bg-rose-50 dark:bg-rose-900/20 rounded-lg">
                   <div className="w-2 h-2 rounded-full bg-rose-500" />
                   <span className="text-[9px] font-bold text-rose-500 dark:text-rose-400 uppercase">Folga</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-rose-50 dark:bg-rose-950/40 rounded-lg">
+                  <div className="w-2 h-2 rounded-full bg-rose-400" />
+                  <span className="text-[9px] font-bold text-rose-600 dark:text-rose-400 uppercase">Atestado</span>
                 </div>
                 <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
                   <div className="w-2 h-2 rounded-full bg-amber-500" />

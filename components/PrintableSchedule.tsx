@@ -33,8 +33,9 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
 
   // Atestados
   const onMedicalLeave = activeEmployees.filter(e => {
-    if (!e.atestadoStart || !e.atestadoEnd) return false;
-    return e.atestadoStart <= mEndStr && e.atestadoEnd >= mStartStr;
+    if (e.atestadoStart && e.atestadoEnd && e.atestadoStart <= mEndStr && e.atestadoEnd >= mStartStr) return true;
+    const empShifts = e.shifts[monthKey] || [];
+    return empShifts.includes('AT');
   });
 
   // Férias
@@ -146,10 +147,14 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
               <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Atestados / Retornos</h4>
               <div className="space-y-0.5 flex-1">
                 {onMedicalLeave.length > 0 ? onMedicalLeave.map(e => {
-                  const retDate = new Date(e.atestadoEnd! + 'T00:00:00');
-                  retDate.setDate(retDate.getDate() + 1);
-                  const retStr = retDate.toLocaleDateString('pt-BR').substring(0,5);
-                  return <div key={e.id} className="text-[7px] font-bold uppercase">{getShortName(e.name, employees)}: RETORNO {retStr}</div>;
+                  if (e.atestadoStart && e.atestadoEnd) {
+                    const retDate = new Date(e.atestadoEnd + 'T00:00:00');
+                    retDate.setDate(retDate.getDate() + 1);
+                    const retStr = retDate.toLocaleDateString('pt-BR').substring(0,5);
+                    return <div key={e.id} className="text-[7px] font-bold uppercase">{getShortName(e.name, employees)}: RETORNO {retStr}</div>;
+                  }
+                  const atDays = (e.shifts[monthKey] || []).map((s, i) => s === 'AT' ? String(i + 1) : null).filter(Boolean);
+                  return <div key={e.id} className="text-[7px] font-bold uppercase">{getShortName(e.name, employees)}: DIA {atDays.join(', ')}</div>;
                 }) : <div className="text-[7px] font-medium text-center">Nenhum Atestado</div>}
               </div>
             </div>

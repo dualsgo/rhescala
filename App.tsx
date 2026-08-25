@@ -496,6 +496,7 @@ const App: React.FC = () => {
 
       const groups: Record<string, any[]> = {};
       const folgas: string[] = [];
+      const atestados: string[] = [];
 
       const activeEmps = (employees || []).filter(e => e && !e.isHidden && e.status === 'active');
       const resolvedPositions = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, activeJornadaSettings);
@@ -505,6 +506,11 @@ const App: React.FC = () => {
         
         if (shift === 'F' || (typeof shift === 'string' && shift.startsWith('FF'))) {
           folgas.push(`${getShortName(e.name, activeEmps)} (${shift})`);
+          return;
+        }
+
+        if (shift === 'AT') {
+          atestados.push(getShortName(e.name, activeEmps));
           return;
         }
         
@@ -548,6 +554,9 @@ const App: React.FC = () => {
 
       if (folgas.length > 0) {
         text += `Folgas: ${folgas.join(', ')}\n`;
+      }
+      if (atestados.length > 0) {
+        text += `🩺 Atestados: ${atestados.join(', ')}\n`;
       }
 
       const workingEmps = activeEmps.filter(e => isWorkingShift(e.shifts?.[monthKey]?.[dayIdx] || 'T'));

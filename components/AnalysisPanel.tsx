@@ -583,7 +583,7 @@ const IndividualWeeklyCalendar: React.FC<{
                             className={`aspect-square rounded-xl border flex flex-col items-center justify-center transition-all relative ${shiftBg(cell.shift)} ${canEdit ? 'hover:scale-105 hover:shadow-md cursor-pointer' : ''}`}
                         >
                             <span className={`text-[8px] font-black absolute top-1 left-1 ${isWorkingShift(cell.shift) || cell.isCourse ? 'text-white/80' : 'text-slate-400'}`}>{cell.day}</span>
-                            <span className={`text-[11px] font-black mt-1 ${cell.isOff && !cell.isVacation && !cell.isBirthday ? 'opacity-40' : ''}`}>{isWorkingShift(cell.shift) ? 'T' : cell.isCourse ? 'C' : cell.isVacation ? 'FE' : cell.isBirthday ? 'DO' : (cell.shift?.startsWith('FF') ? 'FF' : 'F')}</span>
+                            <span className={`text-[11px] font-black mt-1 ${cell.isOff && !cell.isVacation && !cell.isBirthday && cell.shift !== 'AT' ? 'opacity-40' : ''}`}>{isWorkingShift(cell.shift) ? 'T' : cell.isCourse ? 'C' : cell.isVacation ? 'FE' : cell.isBirthday ? 'DO' : cell.shift === 'AT' ? 'AT' : (cell.shift?.startsWith('FF') ? 'FF' : 'F')}</span>
 
 
                             {canEdit && (
@@ -594,6 +594,7 @@ const IndividualWeeklyCalendar: React.FC<{
                                 >
                                     <option value="T">Trabalha (T)</option>
                                     <option value="F">Folga (F)</option>
+                                    <option value="AT">Atestado (AT)</option>
                                     <option value="C">Curso (C)</option>
                                     <option value="FE">Férias (FE)</option>
                                 </select>
@@ -694,6 +695,7 @@ const TeamMonthlyCalendar: React.FC<{
 const SHIFT_OPTIONS_MODAL = [
   { value: 'T', label: 'T — Trabalho' },
   { value: 'F', label: 'F — Folga' },
+  { value: 'AT', label: 'AT — Atestado Médico' },
   { value: 'C', label: 'C — Curso' },
   { value: 'FE', label: 'FE — Férias' },
 ];

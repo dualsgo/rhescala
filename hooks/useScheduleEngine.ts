@@ -58,9 +58,9 @@ function isSundayUnavailable(
     if (emp.hiredAt && dateStr < emp.hiredAt) return true;
     // 4. Already fired
     if (emp.firedAt && dateStr > emp.firedAt) return true;
-    // 5. Existing shift already FF (folga feriado) or C (curso)
+    // 5. Existing shift already FF (folga feriado), C (curso) or AT (atestado)
     const existing = (emp.shifts[monthKey] ?? [])[dayIdx] as string | undefined;
-    if (existing?.startsWith('FF') || existing === 'C') return true;
+    if (existing?.startsWith('FF') || existing === 'C' || existing === 'AT') return true;
     return false;
 }
 
@@ -776,10 +776,9 @@ export function applyMonthUpdate(
             const isOnAtestado = !!(emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd);
             const isEmpBirthday = isBirthday(emp, dateStr);
 
-            // Se o turno existente tinha 'FE', 'AT' ou 'DO' mas o colaborador não está nessa condição nesta data, reverte para 'T'
+            // Se o turno existente tinha 'FE' ou 'DO' mas o colaborador não está nessa condição nesta data, reverte para 'T'
             let baselineShift = existingShifts[dayIdx] || 'T';
             if (baselineShift === 'FE' && !isOnVacation) baselineShift = 'T';
-            if (baselineShift === 'AT' && !isOnAtestado) baselineShift = 'T';
             if (baselineShift === 'DO' && !isEmpBirthday) baselineShift = 'T';
 
             newShifts[dayIdx] = baselineShift;
@@ -994,6 +993,7 @@ export function applyMonthUpdate(
             const isHoliday = holidaySet.has(dateStr);
 
             const isOnVacation = !!(emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd);
+            const isOnAtestado = !!(emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd);
             const isEmpBirthday = isBirthday(emp, dateStr);
 
             let baselineShift = existingShifts[dayIdx] || 'T';
@@ -1008,6 +1008,10 @@ export function applyMonthUpdate(
 
             if (isOnVacation) {
                 newShifts[dayIdx] = 'FE'; continue;
+            }
+
+            if (isOnAtestado) {
+                newShifts[dayIdx] = 'AT'; continue;
             }
 
             if (isEmpBirthday) {

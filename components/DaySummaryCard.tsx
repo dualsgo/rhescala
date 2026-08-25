@@ -106,11 +106,13 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
       const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
       let shift = (e.shifts[monthKey] || [])[selectedDayIdx];
 
-      // Override with hiredAt, firedAt, vacation or birthday if applicable
+      // Override with hiredAt, firedAt, vacation, atestado or birthday if applicable
       if (e.hiredAt && dateStr < e.hiredAt) {
         shift = 'N/A';
       } else if (e.firedAt && dateStr > e.firedAt) {
         shift = 'N/A';
+      } else if (e.atestadoStart && e.atestadoEnd && dateStr >= e.atestadoStart && dateStr <= e.atestadoEnd) {
+        shift = 'AT';
       } else if (e.vacationStart && e.vacationEnd && dateStr >= e.vacationStart && dateStr <= e.vacationEnd) {
         shift = 'FE';
       } else if (e.birthday) {
@@ -139,7 +141,7 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
             else if (hForDay.includes('13h40')) { counts.fechamento++; names.fechamento.push(getShortName(e.name, employees)); }
           }
         }
-      } else if (shift === 'F' || (shift && (shift.startsWith('FF') || shift === 'DO'))) {
+      } else if (shift === 'F' || (shift && (shift.startsWith('FF') || shift === 'DO' || shift === 'AT'))) {
         counts.folga++;
       } else if (shift === 'C') {
         counts.curso++;
