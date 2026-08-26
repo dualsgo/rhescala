@@ -43,7 +43,7 @@ import { Icon } from './components/Icon';
 import { Login } from './components/Login';
 import { PrintableSchedule } from './components/PrintableSchedule';
 import { useHolidayCredits } from './hooks/useHolidayCredits';
-import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay, getNationalHolidays, DEFAULT_JORNADA_SETTINGS, getShortName, getDefaultProtectedDays, isEmployeeActiveInMonth } from './constants';
+import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay, getNationalHolidays, DEFAULT_JORNADA_SETTINGS, getShortName, getDefaultProtectedDays, isEmployeeActiveInMonth, normalizeProtectedDaysConfig } from './constants';
 import { Employee, MonthYear, Holiday, JornadaSettings, OfficialScheduleSnapshot, ScheduleDiffItem } from './types';
 import { HelpCenter } from './components/HelpCenter';
 import { JornadaManager } from './components/JornadaManager';
@@ -55,6 +55,7 @@ import { SyncBlockingOverlay } from './components/SyncBlockingOverlay';
 import { PresetOptionsModal } from './components/PresetOptionsModal';
 import { ScheduleDiffModal } from './components/ScheduleDiffModal';
 import { MobileEmployerViewer } from './components/MobileEmployerViewer';
+import { ProtectedDaysModal } from './components/ProtectedDaysModal';
 
 const App: React.FC = () => {
   const [employees, setEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', [PLACEHOLDER_EMPLOYEE]);
@@ -78,7 +79,8 @@ const App: React.FC = () => {
   const [monthNotes, setMonthNotes] = useLocalStorage<Record<string, string>>('riHappyMonthNotes', {});
   const [trackingStartDate, setTrackingStartDate] = useLocalStorage<string>('riHappyTrackingStart', `${new Date().getFullYear()}-01-01`);
   const [officialSnapshots, setOfficialSnapshots] = useLocalStorage<Record<string, OfficialScheduleSnapshot>>('riHappyOfficialSnapshots', {});
-  const [protectedDaysMap, setProtectedDaysMap] = useLocalStorage<Record<string, number[]>>('riHappyProtectedDays', {});
+  const [protectedDaysMap, setProtectedDaysMap] = useLocalStorage<Record<string, Record<number, number>>>('riHappyProtectedDays', {});
+  const [showProtectedModal, setShowProtectedModal] = useState(false);
   
   const syncStatus = useSyncStatus();
   const [showHolidayManager, setShowHolidayManager] = useState(false);
@@ -108,18 +110,28 @@ const App: React.FC = () => {
   const isValidated = validatedMonths[monthKey] || false;
 
   const activeProtectedDays = useMemo(() => {
-    return protectedDaysMap[monthKey] ?? getDefaultProtectedDays(currentMY.month);
+    return normalizeProtectedDaysConfig(protectedDaysMap[monthKey] ?? getDefaultProtectedDays(currentMY.month));
   }, [protectedDaysMap, monthKey, currentMY.month]);
+
+  const handleSaveProtectedConfig = useCallback((newConfig: Record<number, number>) => {
+    if (auth.role === 'viewer') return;
+    setProtectedDaysMap(prev => ({
+      ...prev,
+      [monthKey]: newConfig
+    }));
+  }, [auth.role, monthKey, setProtectedDaysMap]);
 
   const handleToggleProtectDay = useCallback((dayNum: number) => {
     if (auth.role === 'viewer') return;
     setProtectedDaysMap(prev => {
-      const currentList = prev[monthKey] ?? getDefaultProtectedDays(currentMY.month);
-      const exists = currentList.includes(dayNum);
-      const updated = exists 
-        ? currentList.filter(d => d !== dayNum) 
-        : [...currentList, dayNum].sort((a, b) => a - b);
-      return { ...prev, [monthKey]: updated };
+      const currentConfig = normalizeProtectedDaysConfig(prev[monthKey] ?? getDefaultProtectedDays(currentMY.month));
+      const copy = { ...currentConfig };
+      if (copy[dayNum] !== undefined) {
+        delete copy[dayNum];
+      } else {
+        copy[dayNum] = 0; // Padrão: 0 folgas (100% presença)
+      }
+      return { ...prev, [monthKey]: copy };
     });
   }, [auth.role, monthKey, currentMY.month, setProtectedDaysMap]);
   
@@ -496,6 +508,37 @@ const App: React.FC = () => {
     }
   };
 
+  const handleOptimizeScheduleWithProtectedDays = useCallback((configToUse?: Record<number, number>) => {
+    const config = configToUse ?? activeProtectedDays;
+    const optimized = optimizeProtectedDays(
+      employees,
+      monthKey,
+      config,
+      customHolidays,
+      deletedNationalHolidays,
+      activeJornadaSettings
+    );
+
+    setEmployees(prev => prev.map(emp => {
+      if (optimized[emp.id]) {
+        return {
+          ...emp,
+          shifts: { ...emp.shifts, [monthKey]: optimized[emp.id].shifts }
+        };
+      }
+      return emp;
+    }));
+
+    showDialog({
+      title: 'Otimização Concluída',
+      message: 'Escala otimizada com sucesso para os dias protegidos e limites de folgas!'
+    });
+  }, [activeProtectedDays, employees, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, setEmployees, showDialog]);
+
+  const handleOptimizePeakWeek = useCallback(() => {
+    setShowProtectedModal(true);
+  }, []);
+
   const handleShareWhatsApp = useCallback((dayIdx: number) => {
     try {
       const weekdaysFull = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -797,68 +840,6 @@ const App: React.FC = () => {
     });
   };
 
-  const handleOptimizePeakWeek = async () => {
-    const isOctober = currentMY.month === 9;
-    const isDecember = currentMY.month === 11;
-    const monthName = new Date(currentMY.year, currentMY.month).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-
-    let title = 'Otimização de Semana de Pico';
-    let message = '';
-
-    if (isOctober) {
-      title = '🎈 Otimização Dia das Crianças (8 a 12/10)';
-      message = 'Esta operação reorganiza as folgas entre os dias 6 e 14 de Outubro para garantir 100% da equipe trabalhando nos dias 8, 9, 10, 11 e 12 (Semana do Dia das Crianças), escalonando as folgas antes e depois do pico sem nenhuma violação da regra 6x1 da CLT e sem conflitos de domingos. Deseja aplicar?';
-    } else if (isDecember) {
-      title = '🎄 Otimização da Semana de Natal (20 a 24/12)';
-      message = 'Esta operação reorganiza as folgas entre os dias 18 e 25 de Dezembro para manter 100% da equipe trabalhando nos dias 20, 21, 22, 23 e 24 de Dezembro (Pico de Natal), escalonando as folgas antes (dias 18 e 19) e no feriado de Natal (dia 25) sem nenhuma violação da regra 6x1 da CLT. Deseja aplicar?';
-    } else if (activeProtectedDays.length > 0) {
-      title = `🛡️ Otimizar Dias Protegidos — ${monthName}`;
-      message = `Esta operação reorganiza as folgas em torno dos dias protegidos (${activeProtectedDays.join(', ')}) para garantir 100% da equipe trabalhando nesses dias sem violar a regra 6x1 da CLT. Deseja aplicar?`;
-    } else {
-      title = `Otimização de Escala — ${monthName}`;
-      message = `Deseja otimizar as folgas de ${monthName} para concentrar a equipe mantendo total conformidade com a CLT?`;
-    }
-
-    const confirmed = await showDialog({
-      title,
-      message,
-      type: 'confirm'
-    });
-
-    if (confirmed) {
-      let peakResult: Record<string, { shifts: ShiftType[] }>;
-      if (isOctober) {
-        peakResult = optimizeOctoberPeak(employees, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings);
-      } else if (isDecember) {
-        peakResult = optimizeDecemberPeak(employees, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings);
-      } else if (activeProtectedDays.length > 0) {
-        peakResult = optimizeProtectedDays(employees, monthKey, activeProtectedDays, customHolidays, deletedNationalHolidays, activeJornadaSettings);
-      } else {
-        peakResult = optimizePeakWeek(employees, monthKey, 18, 24, [22, 23, 24]);
-      }
-
-      setEmployees(prev => prev.map(emp => {
-        if (peakResult[emp.id]) {
-          return {
-            ...emp,
-            shifts: { ...emp.shifts, [monthKey]: peakResult[emp.id].shifts }
-          };
-        }
-        return emp;
-      }));
-
-      showDialog({ 
-        title: 'Sucesso', 
-        message: isOctober 
-          ? 'Semana do Dia das Crianças otimizada com 100% da equipe presente nos dias 8, 9, 10, 11 e 12 de Outubro!' 
-          : isDecember
-          ? 'Semana de Natal otimizada com 100% da equipe presente nos dias 20, 21, 22, 23 e 24 de Dezembro!'
-          : 'Escala otimizada com sucesso e 100% conforme às regras CLT!', 
-        type: 'alert' 
-      });
-    }
-  };
-
 
   if (!auth.isAuthenticated) {
     return <Login onLogin={(role) => setAuth({ isAuthenticated: true, role })} />;
@@ -1050,6 +1031,7 @@ const App: React.FC = () => {
                    jornadaSettings={jornadaSettings}
                    diffs={scheduleDiffs}
                    protectedDays={activeProtectedDays}
+                   onOpenProtectedModal={() => setShowProtectedModal(true)}
                    onToggleProtectDay={handleToggleProtectDay}
                    onOpenPresetForEmployee={(empId) => {
                      setPresetInitialEmpId(empId);
@@ -1136,6 +1118,8 @@ const App: React.FC = () => {
                    setTrackingStartDate={setTrackingStartDate}
                    sectionAssignments={sectionAssignments}
                    setSectionAssignments={setSectionAssignments}
+                   protectedDaysMap={protectedDaysMap}
+                   setProtectedDaysMap={setProtectedDaysMap}
                    onClose={() => setCurrentView('grid')} 
                    role={auth.role}
                  />
@@ -1255,6 +1239,17 @@ const App: React.FC = () => {
        {/* Feriados Modal removed in favor of view */}
 
        {showHelp && <HelpCenter onClose={() => setShowHelp(false)} />}
+       {showProtectedModal && (
+         <ProtectedDaysModal
+           isOpen={showProtectedModal}
+           onClose={() => setShowProtectedModal(false)}
+           currentMY={currentMY}
+           protectedConfig={activeProtectedDays}
+           onSaveConfig={handleSaveProtectedConfig}
+           onOptimizeSchedule={handleOptimizeScheduleWithProtectedDays}
+           isReadOnly={isReadOnly}
+         />
+       )}
 
        {selectedEmployeeForCard && (
          <EmployeeScheduleCard 
@@ -1344,7 +1339,9 @@ const App: React.FC = () => {
                    currentMY={currentMY} 
                    customHolidays={customHolidays} 
                    jornadaSettings={jornadaSettings}
-                   isProtected={activeProtectedDays.includes(selectedDayIdx + 1)}
+                   isProtected={activeProtectedDays[selectedDayIdx + 1] !== undefined}
+                   maxFolgas={activeProtectedDays[selectedDayIdx + 1] ?? 0}
+                   onOpenProtectedModal={() => setShowProtectedModal(true)}
                    onToggleProtectDay={() => handleToggleProtectDay(selectedDayIdx + 1)}
                  />
                </div>

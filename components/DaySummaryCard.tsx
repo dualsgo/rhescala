@@ -13,6 +13,8 @@ interface DaySummaryCardProps {
   customHolidays: Holiday[];
   jornadaSettings?: JornadaSettings;
   isProtected?: boolean;
+  maxFolgas?: number;
+  onOpenProtectedModal?: () => void;
   onToggleProtectDay?: () => void;
 }
 
@@ -78,14 +80,16 @@ function buildLunchSlots(
     }));
 }
 
-export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ 
-  employees, 
-  selectedDayIdx, 
-  currentMY, 
-  customHolidays, 
+export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({
+  employees,
+  selectedDayIdx,
+  currentMY,
+  customHolidays,
   jornadaSettings = DEFAULT_JORNADA_SETTINGS,
   isProtected = false,
-  onToggleProtectDay
+  maxFolgas = 0,
+  onOpenProtectedModal,
+  onToggleProtectDay,
 }) => {
   const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
   const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
@@ -244,17 +248,18 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({
 
           {isProtected ? (
             <button
-              onClick={onToggleProtectDay}
-              title="Clique para desproteger este dia"
+              onClick={onOpenProtectedModal || onToggleProtectDay}
+              title="Configurar proteção e limite de folgas deste dia"
               className="flex items-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[8px] font-black uppercase ring-1 ring-inset ring-amber-300 transition-colors shadow-xs"
             >
-              <Icon name="shield" className="text-[10px] text-amber-600" /> PROTEGIDO (100%)
+              <Icon name="shield" className="text-[10px] text-amber-600" /> 
+              {maxFolgas === 0 ? 'PROTEGIDO (100%)' : `PROTEGIDO (MÁX ${maxFolgas}F)`}
             </button>
           ) : (
-            onToggleProtectDay && (
+            (onOpenProtectedModal || onToggleProtectDay) && (
               <button
-                onClick={onToggleProtectDay}
-                title="Clique para proteger este dia (100% de presença sem folgas)"
+                onClick={onOpenProtectedModal || onToggleProtectDay}
+                title="Clique para proteger este dia e definir limite de folgas"
                 className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full text-[8px] font-bold uppercase transition-colors"
               >
                 <Icon name="shield" className="text-[10px] text-slate-400" /> PROTEGER

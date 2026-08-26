@@ -52,15 +52,48 @@ export const DEFAULT_JORNADA_SETTINGS: JornadaSettings = {
 };
 
 /**
- * Retorna os dias protegidos padrão por mês (onde 100% da equipe trabalha):
- * - Outubro (mês 9): Dias 8 a 12 (Semana do Dia das Crianças)
- * - Dezembro (mês 11): Dias 20 a 24 (Semana de Natal)
- * - Outros meses: []
+ * Retorna os dias protegidos padrão por mês.
+ * Por padrão, retorna vazio ({}) para que o gestor tenha total liberdade de escolha.
  */
-export function getDefaultProtectedDays(month: number): number[] {
-  if (month === 9) return [8, 9, 10, 11, 12];
-  if (month === 11) return [20, 21, 22, 23, 24];
-  return [];
+export function getDefaultProtectedDays(_month?: number): Record<number, number> {
+  return {};
+}
+
+/**
+ * Retorna presets sazonais sugeridos para preenchimento rápido em 1 clique:
+ * - Outubro (mês 9): Dias 8 a 12 (0 folgas)
+ * - Dezembro (mês 11): Dias 20 a 24 (0 folgas)
+ */
+export function getSeasonalPresetProtectedDays(month: number): Record<number, number> {
+  if (month === 9) return { 8: 0, 9: 0, 10: 0, 11: 0, 12: 0 };
+  if (month === 11) return { 20: 0, 21: 0, 22: 0, 23: 0, 24: 0 };
+  return {};
+}
+
+/**
+ * Normaliza qualquer formato legado (array de números ou objeto) para Record<number, number> (dia -> maxFolgas).
+ */
+export function normalizeProtectedDaysConfig(val: any): Record<number, number> {
+  if (!val) return {};
+  if (Array.isArray(val)) {
+    const config: Record<number, number> = {};
+    val.forEach(d => {
+      if (typeof d === 'number' && d >= 1 && d <= 31) config[d] = 0;
+    });
+    return config;
+  }
+  if (typeof val === 'object') {
+    const config: Record<number, number> = {};
+    Object.entries(val).forEach(([k, v]) => {
+      const dayNum = parseInt(k, 10);
+      const maxFolgas = typeof v === 'number' ? Math.max(0, v) : 0;
+      if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31) {
+        config[dayNum] = maxFolgas;
+      }
+    });
+    return config;
+  }
+  return {};
 }
 
 

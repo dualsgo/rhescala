@@ -47,6 +47,7 @@ O **Rhescala** é um sistema web inteligente e responsivo desenvolvido em React,
 - [JornadaManager.tsx](file:///c:/Users/mdbsi/OneDrive/Documentos/GitHub/rhescala/components/JornadaManager.tsx) — Configuração de parâmetros de jornada, horários e refeição
 - [DataManager.tsx](file:///c:/Users/mdbsi/OneDrive/Documentos/GitHub/rhescala/components/DataManager.tsx) — Backup JSON, limpeza de banco (Vacuum) e troca de loja
 - [Header.tsx](file:///c:/Users/mdbsi/OneDrive/Documentos/GitHub/rhescala/components/Header.tsx) — Barra superior com navegação, busca, filtros e login
+- [ProtectedDaysModal.tsx](file:///c:/Users/mdbsi/OneDrive/Documentos/GitHub/rhescala/components/ProtectedDaysModal.tsx) — Modal interativo de escolha de dias protegidos e limite máximo customizável de folgas por dia
 - [ActionToolbar.tsx](file:///c:/Users/mdbsi/OneDrive/Documentos/GitHub/rhescala/components/ActionToolbar.tsx) — Barra de atalhos e ações da escala
 - [SyncBlockingOverlay.tsx](file:///c:/Users/mdbsi/OneDrive/Documentos/GitHub/rhescala/components/SyncBlockingOverlay.tsx) — Modal bloqueante de alerta com efeito blur durante sincronização/gravação na nuvem
 
@@ -84,10 +85,9 @@ O **Rhescala** é um sistema web inteligente e responsivo desenvolvido em React,
 6. **Otimização de Semanas de Pico Sazonal**:
    - **Outubro (Dia das Crianças - 8 a 12/10)**: 100% da equipe CLT e Sazonal trabalha nos 5 dias de pico crítico (8, 9, 10, 11 e 12). As folgas semanais são escalonadas cirurgicamente nos dias pré-pico (6 e 7) e pós-pico (13 e 14) sem violar a regra 6x1 (máximo 6 dias consecutivos trabalhados) e sem gerar conflitos de domingos ou 5x2. Aprendizes mantêm folga no feriado (12/10) e fins de semana.
    - **Dezembro (Natal - 20 a 24/12)**: 100% da equipe CLT e Sazonal trabalha nos 5 dias de pico crítico (20, 21, 22, 23 e 24). As folgas semanais são escalonadas cirurgicamente na janela pré-pico (18 e 19) e no feriado de Natal (25/12), mantendo conformidade 6x1 e descanso legal.
-7. **Sistema de Dias Protegidos (100% de Presença da Equipe)**:
-   - Permite que o gerente proteja qualquer dia ou período do ano (`protectedDays`).
-   - Nos dias protegidos, o sistema proíbe folgas simples (`F`), concentrando a equipe.
-   - O motor de escala (`optimizeProtectedDays`) redistribui automaticamente as folgas antes e depois dos dias protegidos, selecionando os colaboradores com melhor enquadramento de streak para folgar nos dias adjacentes sem violar o limite legal de 6 dias consecutivos da CLT (6x1) ou 5 dias (5x2).
+7. **Sistema de Escolha de Dias Protegidos e Limite de Folgas**:
+   - O gestor tem total liberdade para escolher quais dias proteger no mês e definir o **limite máximo de folgas permitidas** por dia (`maxFolgas`: 0 para 100% de presença, 1, 2, 3, etc.).
+   - O motor de escala (`optimizeProtectedDays`) redistribui automaticamente as folgas antes e depois dos dias protegidos, respeitando o teto de folgas definido e garantindo que o limite legal de 6 dias consecutivos da CLT (6x1) ou 5 dias (5x2) jamais seja quebrado.
 
 ---
 

@@ -24,6 +24,8 @@ interface DataManagerProps {
   setTrackingStartDate?: (val: string | ((prev: string) => string)) => void;
   sectionAssignments?: Record<string, any>;
   setSectionAssignments?: (val: Record<string, any> | ((prev: Record<string, any>) => Record<string, any>)) => void;
+  protectedDaysMap?: Record<string, Record<number, number>>;
+  setProtectedDaysMap?: (val: any) => void;
   onClose: () => void;
   role: 'admin' | 'viewer';
 }
@@ -48,6 +50,8 @@ export const DataManager: React.FC<DataManagerProps> = ({
   setTrackingStartDate,
   sectionAssignments,
   setSectionAssignments,
+  protectedDaysMap,
+  setProtectedDaysMap,
   onClose, 
   role 
 }) => {
@@ -69,7 +73,8 @@ export const DataManager: React.FC<DataManagerProps> = ({
       deletedNationalHolidays,
       monthNotes,
       trackingStartDate,
-      sectionAssignments
+      sectionAssignments,
+      protectedDaysMap
     };
     const dataStr = JSON.stringify(backupData, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
@@ -184,6 +189,9 @@ export const DataManager: React.FC<DataManagerProps> = ({
               }
               if (importedData.sectionAssignments && setSectionAssignments) {
                 setSectionAssignments(importedData.sectionAssignments);
+              }
+              if (importedData.protectedDaysMap && setProtectedDaysMap) {
+                setProtectedDaysMap(importedData.protectedDaysMap);
               }
             } else if (Array.isArray(importedData)) {
               // Legacy support for older backups that only had the employees array

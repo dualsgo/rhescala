@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings } from '../types';
 import { Icon } from './Icon';
-import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, DEFAULT_JORNADA_SETTINGS, isEmployeeActiveInMonth } from '../constants';
+import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, DEFAULT_JORNADA_SETTINGS, isEmployeeActiveInMonth, normalizeProtectedDaysConfig } from '../constants';
 import { getShiftClassification, isWorkingShift, getPrevMonthWorkStreak } from '../hooks/useScheduleEngine';
 import { OperationalGuideModal } from './OperationalGuideModal';
 
@@ -42,7 +42,8 @@ interface ShiftGridProps {
   onOpenEmployeeCard: (emp: Employee) => void;
   diffs?: ScheduleDiffItem[];
   onOpenPresetForEmployee?: (empId: string) => void;
-  protectedDays?: number[];
+  protectedDays?: Record<number, number> | number[];
+  onOpenProtectedModal?: () => void;
   onToggleProtectDay?: (dayNum: number) => void;
 }
 
@@ -60,7 +61,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onUpdateEmployeeDailyHour,
   onUpdateTacticalPosition,
   onOpenDayDetail = () => {},
-  protectedDays = [],
+  protectedDays = {},
+  onOpenProtectedModal,
   onToggleProtectDay,
   monthNotes = '',
   onUpdateMonthNotes = () => {},
@@ -88,6 +90,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   const [onlyWorkingToday, setOnlyWorkingToday] = useState(false);
   const [isCompactMode, setIsCompactMode] = useState(false);
   const [focusSelectedDay, setFocusSelectedDay] = useState(true);
+
+  const protectedConfig = useMemo(() => normalizeProtectedDaysConfig(protectedDays), [protectedDays]);
 
   const isCurrentMonth = currentMY.year === today.getFullYear() && currentMY.month === today.getMonth();
   const todayDayNum = today.getDate();
@@ -248,6 +252,24 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               </button>
             )}
           </div>
+
+          {/* Grupo: Dias Protegidos (Apenas Admin) */}
+          {!isReadOnly && onOpenProtectedModal && (
+            <button
+              onClick={onOpenProtectedModal}
+              className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800/60 hover:bg-amber-100 text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shrink-0 whitespace-nowrap"
+              title="Configurar dias protegidos e limite de folgas"
+            >
+              <Icon name="shield" className="text-xs text-amber-500" />
+              <span className="hidden sm:inline">Dias Protegidos</span>
+              <span className="inline sm:hidden">Protegidos</span>
+              {Object.keys(protectedConfig).length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 text-[9px] font-black">
+                  {Object.keys(protectedConfig).length}
+                </span>
+              )}
+            </button>
+          )}
 
           {/* Grupo 2: Equipe & Contrato (Apenas Admin) */}
           {!isReadOnly && (
@@ -435,7 +457,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   const blurClass = isBlurred ? 'opacity-25 blur-[0.6px] grayscale-[30%] hover:opacity-80 hover:blur-none transition-all duration-200' : '';
                   const focusHighlight = isSelected && focusSelectedDay ? 'bg-orange-500/20 ring-2 ring-orange-500 shadow-md scale-[1.02] z-20' : isSelected ? 'bg-orange-500/10 ring-2 ring-inset ring-orange-500/30' : '';
 
-                  const isDayProtected = protectedDays.includes(d.num);
+                  const isDayProtected = protectedConfig[d.num] !== undefined;
+                  const maxFolgas = isDayProtected ? protectedConfig[d.num] : 0;
 
                   return (
                     <th 
@@ -448,8 +471,18 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                         <div className="flex items-center gap-1">
                           <span className={`text-sm font-black ${d.isSunday ? 'text-rose-600' : isDayProtected ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-slate-100'}`}>{d.num}</span>
                           {isDayProtected && (
-                            <span title="Dia Protegido: 100% de Presença da Equipe (Sem Folgas)" className="text-amber-500 flex items-center">
+                            <span 
+                              onClick={(e) => {
+                                if (onOpenProtectedModal) {
+                                  e.stopPropagation();
+                                  onOpenProtectedModal();
+                                }
+                              }}
+                              title={`Dia Protegido: ${maxFolgas === 0 ? '100% da Equipe (0 Folgas)' : `Máximo de ${maxFolgas} folgas`}`} 
+                              className="text-amber-500 hover:text-amber-600 flex items-center gap-0.5"
+                            >
                               <Icon name="shield" className="text-xs" />
+                              {maxFolgas > 0 && <span className="text-[7px] font-black">{maxFolgas}F</span>}
                             </span>
                           )}
                         </div>

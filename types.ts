@@ -51,6 +51,9 @@ export interface Holiday {
   recurring: boolean; // true = happens every year on same MM-DD
 }
 
+export type ProtectedDaysConfig = Record<number, number>; // dayNum (1..31) -> maxFolgas (0, 1, 2, ...)
+export type ProtectedDaysMap = Record<string, ProtectedDaysConfig>; // monthKey ("YYYY-MM") -> { [dayNum]: maxFolgas }
+
 export interface ComplianceAlert {
   id: string;
   type: 'danger' | 'warning' | 'info';

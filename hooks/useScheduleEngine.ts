@@ -1,6 +1,6 @@
 
 import { Employee, ShiftType, Holiday, JornadaSettings, MonthYear, OfficialScheduleSnapshot, ScheduleDiffItem } from '../types';
-import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth } from '../constants';
+import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth, normalizeProtectedDaysConfig } from '../constants';
 
 
 // ─── Shared weekday names ─────────────────────────────────────────────────────
@@ -690,7 +690,7 @@ export function applyMonthUpdate(
     customHolidays: Holiday[] = [],
     deletedNationalHolidays: string[] = [],
     settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS,
-    protectedDays?: number[]
+    protectedDays?: Record<number, number> | number[]
 ): Record<string, { shifts: ShiftType[]; hours: string[] }> {
     const result: Record<string, { shifts: ShiftType[]; hours: string[] }> = {};
 
@@ -1021,26 +1021,25 @@ export function applyMonthUpdate(
     });
 
     // 2.5 Pass: Peak Week & Protected Days Optimization
-    const effectiveProtectedDays = protectedDays ?? (
-        month === 9 ? [8, 9, 10, 11, 12] : month === 11 ? [20, 21, 22, 23, 24] : []
-    );
+    const effectiveConfig = normalizeProtectedDaysConfig(protectedDays);
+    const configuredDays = Object.keys(effectiveConfig).map(Number);
 
-    if (month === 9 && effectiveProtectedDays.some(d => d >= 8 && d <= 12)) {
+    if (month === 9 && configuredDays.length > 0 && [8, 9, 10, 11, 12].every(d => effectiveConfig[d] === 0)) {
         const peakResult = optimizeOctoberPeak(employees, monthKey, customHolidays, deletedNationalHolidays, settings);
         activeRegular.forEach(emp => {
             if (peakResult[emp.id]) {
                 result[emp.id].shifts = peakResult[emp.id].shifts;
             }
         });
-    } else if (month === 11 && effectiveProtectedDays.some(d => d >= 20 && d <= 24)) {
+    } else if (month === 11 && configuredDays.length > 0 && [20, 21, 22, 23, 24].every(d => effectiveConfig[d] === 0)) {
         const peakResult = optimizeDecemberPeak(employees, monthKey, customHolidays, deletedNationalHolidays, settings);
         activeRegular.forEach(emp => {
             if (peakResult[emp.id]) {
                 result[emp.id].shifts = peakResult[emp.id].shifts;
             }
         });
-    } else if (effectiveProtectedDays.length > 0) {
-        const peakResult = optimizeProtectedDays(employees, monthKey, effectiveProtectedDays, customHolidays, deletedNationalHolidays, settings);
+    } else if (configuredDays.length > 0) {
+        const peakResult = optimizeProtectedDays(employees, monthKey, effectiveConfig, customHolidays, deletedNationalHolidays, settings);
         activeRegular.forEach(emp => {
             if (peakResult[emp.id]) {
                 result[emp.id].shifts = peakResult[emp.id].shifts;
@@ -1652,39 +1651,43 @@ export function optimizeDecemberPeak(
 export function optimizeProtectedDays(
     employees: Employee[],
     monthKey: string,
-    protectedDays: number[],
+    protectedDays: Record<number, number> | number[],
     customHolidays: Holiday[] = [],
     deletedNationalHolidays: string[] = [],
     settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
 ): Record<string, { shifts: ShiftType[] }> {
+    const config = normalizeProtectedDaysConfig(protectedDays);
     const [yearStr, monthStr] = monthKey.split('-');
+    const year = parseInt(yearStr);
     const month = parseInt(monthStr) - 1;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    // Se for Outubro com os dias 8-12, aplica a otimização cirúrgica de Outubro
-    if (month === 9 && [8, 9, 10, 11, 12].every(d => protectedDays.includes(d))) {
+    const protectedDaysList = Object.keys(config)
+        .map(Number)
+        .filter(d => d >= 1 && d <= daysInMonth)
+        .sort((a, b) => a - b);
+
+    // Se for Outubro com os dias 8-12 configurados com 0 folgas, aplica a otimização de Outubro
+    if (month === 9 && [8, 9, 10, 11, 12].every(d => config[d] === 0)) {
         return optimizeOctoberPeak(employees, monthKey, customHolidays, deletedNationalHolidays, settings);
     }
-    // Se for Dezembro com os dias 20-24, aplica a otimização cirúrgica do Natal
-    if (month === 11 && [20, 21, 22, 23, 24].every(d => protectedDays.includes(d))) {
+    // Se for Dezembro com os dias 20-24 configurados com 0 folgas, aplica a otimização de Natal
+    if (month === 11 && [20, 21, 22, 23, 24].every(d => config[d] === 0)) {
         return optimizeDecemberPeak(employees, monthKey, customHolidays, deletedNationalHolidays, settings);
     }
 
     const result: Record<string, { shifts: ShiftType[] }> = {};
-    const year = parseInt(yearStr);
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
     const activeRegular = employees.filter(e => e.status === 'active' && !e.isHidden && !e.isYoungApprentice);
     const prevStreaks = getPrevMonthWorkStreak(activeRegular, year, month);
 
-    const sortedDays = [...new Set(protectedDays.filter(d => d >= 1 && d <= daysInMonth))].sort((a, b) => a - b);
-    const protectedIndices = sortedDays.map(d => d - 1);
+    const protectedIndices = protectedDaysList.map(d => d - 1);
 
     // Agrupa dias protegidos em blocos contíguos (clusters)
     const clusters: { start: number; end: number; indices: number[] }[] = [];
     let currentCluster: number[] = [];
 
-    for (let i = 0; i < sortedDays.length; i++) {
-        const day = sortedDays[i];
+    for (let i = 0; i < protectedDaysList.length; i++) {
+        const day = protectedDaysList[i];
         if (currentCluster.length === 0 || day === currentCluster[currentCluster.length - 1] + 1) {
             currentCluster.push(day);
         } else {
@@ -1704,50 +1707,105 @@ export function optimizeProtectedDays(
         });
     }
 
-    activeRegular.forEach((emp, empIdx) => {
-        const shifts = [...(emp.shifts[monthKey] || Array(daysInMonth).fill('T'))];
+    // Inicializa a matriz de turnos para cada colaborador
+    const employeeShifts: Record<string, ShiftType[]> = {};
+    activeRegular.forEach(emp => {
+        employeeShifts[emp.id] = [...(emp.shifts[monthKey] || Array(daysInMonth).fill('T'))];
+    });
+
+    const isProtectedStatus = (shifts: ShiftType[], idx: number) => {
+        const s = shifts[idx];
+        return ['FE', 'AT', 'DO', 'N/A'].includes(s);
+    };
+
+    // 1. Para cada dia protegido, respeita o limite máximo de folgas (maxFolgas)
+    protectedDaysList.forEach(dayNum => {
+        const dayIdx = dayNum - 1;
+        const maxAllowed = config[dayNum] ?? 0;
+
+        // Identifica colaboradores que estão com Folga simples (F) neste dia
+        const empsWithF = activeRegular.filter(emp => {
+            const s = employeeShifts[emp.id][dayIdx];
+            return s === 'F';
+        });
+
+        // Se o número de folgas exceder o limite permitido (ex: maxAllowed = 0 ou 1)
+        if (empsWithF.length > maxAllowed) {
+            // Ordena os colaboradores: quem mais precisa folgar neste dia
+            empsWithF.sort((a, b) => {
+                const streakA = (prevStreaks.get(a.id) || 0) + dayIdx;
+                const streakB = (prevStreaks.get(b.id) || 0) + dayIdx;
+                return streakB - streakA;
+            });
+
+            // Os primeiros `maxAllowed` mantêm a folga. Os excedentes trocam para 'T'.
+            const excessEmps = empsWithF.slice(maxAllowed);
+            excessEmps.forEach((emp, excessIdx) => {
+                employeeShifts[emp.id][dayIdx] = 'T';
+
+                // Escalonar a folga necessária para um dia adjacente (antes ou depois)
+                const isGroupA = excessIdx % 2 === 0;
+                let scheduled = false;
+
+                if (isGroupA && dayIdx >= 1) {
+                    for (let b = dayIdx - 1; b >= Math.max(0, dayIdx - 3); b--) {
+                        if (!protectedIndices.includes(b) && !isProtectedStatus(employeeShifts[emp.id], b)) {
+                            employeeShifts[emp.id][b] = 'F';
+                            scheduled = true;
+                            break;
+                        }
+                    }
+                }
+                if (!scheduled && dayIdx + 1 < daysInMonth) {
+                    for (let f = dayIdx + 1; f <= Math.min(daysInMonth - 1, dayIdx + 3); f++) {
+                        if (!protectedIndices.includes(f) && !isProtectedStatus(employeeShifts[emp.id], f)) {
+                            employeeShifts[emp.id][f] = 'F';
+                            scheduled = true;
+                            break;
+                        }
+                    }
+                }
+            });
+        }
+    });
+
+    // 2. Para blocos com 0 folgas contíguos >= 2 dias, escalona folgas pré e pós-bloco
+    clusters.forEach(cluster => {
+        const clusterLen = cluster.indices.length;
+        const startIdx = cluster.indices[0];
+        const endIdx = cluster.indices[cluster.indices.length - 1];
+
+        const allZero = cluster.indices.every(idx => (config[idx + 1] ?? 0) === 0);
+
+        if (clusterLen >= 2 && allZero) {
+            activeRegular.forEach((emp, empIdx) => {
+                const isGroupA = empIdx % 2 === 0;
+
+                // Pré-pico
+                if (startIdx >= 1) {
+                    const preDay = isGroupA ? startIdx - 1 : (startIdx >= 2 ? startIdx - 2 : startIdx - 1);
+                    if (preDay >= 0 && !isProtectedStatus(employeeShifts[emp.id], preDay)) {
+                        employeeShifts[emp.id][preDay] = 'F';
+                    }
+                }
+
+                // Pós-pico
+                if (endIdx + 1 < daysInMonth) {
+                    const postDay = isGroupA ? endIdx + 1 : (endIdx + 2 < daysInMonth ? endIdx + 2 : endIdx + 1);
+                    if (postDay < daysInMonth && !isProtectedStatus(employeeShifts[emp.id], postDay)) {
+                        employeeShifts[emp.id][postDay] = 'F';
+                    }
+                }
+            });
+        }
+    });
+
+    // 3. Varredura completa com validação rigorosa da regra 6x1 / 5x2
+    activeRegular.forEach(emp => {
+        const shifts = employeeShifts[emp.id];
         const is5x2 = emp.jornada === '5x2';
         const maxStreak = is5x2 ? 5 : 6;
 
-        const isProtectedStatus = (idx: number) => {
-            const s = shifts[idx];
-            return ['FE', 'AT', 'DO', 'N/A'].includes(s);
-        };
-
-        // 1. Limpa todas as folgas comuns nos dias protegidos
-        protectedIndices.forEach(idx => {
-            if (shifts[idx] === 'F') shifts[idx] = 'T';
-        });
-
-        // 2. Para cada bloco contíguo de dias protegidos, escalona folga antes e depois
-        clusters.forEach(cluster => {
-            const clusterLen = cluster.indices.length;
-            const startIdx = cluster.indices[0];
-            const endIdx = cluster.indices[cluster.indices.length - 1];
-
-            // Se o bloco tiver 2 ou mais dias protegidos consecutivos
-            if (clusterLen >= 2) {
-                const isGroupA = empIdx % 2 === 0;
-
-                // Pré-pico (1 ou 2 dias antes do início do bloco)
-                if (startIdx >= 1) {
-                    const preDay = isGroupA ? startIdx - 1 : (startIdx >= 2 ? startIdx - 2 : startIdx - 1);
-                    if (preDay >= 0 && !isProtectedStatus(preDay)) {
-                        shifts[preDay] = 'F';
-                    }
-                }
-
-                // Pós-pico (1 ou 2 dias após o fim do bloco)
-                if (endIdx + 1 < daysInMonth) {
-                    const postDay = isGroupA ? endIdx + 1 : (endIdx + 2 < daysInMonth ? endIdx + 2 : endIdx + 1);
-                    if (postDay < daysInMonth && !isProtectedStatus(postDay)) {
-                        shifts[postDay] = 'F';
-                    }
-                }
-            }
-        });
-
-        // 3. Varredura completa no mês com validação 6x1 / 5x2
         const prevStreak = prevStreaks.get(emp.id) || 0;
         let streak = prevStreak;
 
@@ -1759,14 +1817,14 @@ export function optimizeProtectedDays(
                 streak++;
                 if (streak > maxStreak) {
                     if (!protectedIndices.includes(i)) {
-                        if (!isProtectedStatus(i)) {
+                        if (!isProtectedStatus(shifts, i)) {
                             shifts[i] = 'F';
                             streak = 0;
                         }
                     } else {
-                        // Encontra o dia livre mais próximo antes do bloco protegido
+                        // Se o dia é protegido, tenta colocar folga no dia anterior não-protegido
                         for (let b = i - 1; b >= 0; b--) {
-                            if (!protectedIndices.includes(b) && !isProtectedStatus(b)) {
+                            if (!protectedIndices.includes(b) && !isProtectedStatus(shifts, b)) {
                                 shifts[b] = 'F';
                                 streak = i - b;
                                 break;
