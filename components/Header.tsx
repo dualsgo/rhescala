@@ -39,6 +39,7 @@ interface HeaderProps {
   diffCount?: number;
   onOpenDiffModal?: () => void;
   onOpenPresetModal?: () => void;
+  onOptimizePeakWeek?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -62,6 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
   onApplyFolgas,
   onSortearDomingo,
   onDistributePositions,
+  onOptimizePeakWeek,
   showNotes,
   onToggleNotes,
   canGoNext,
@@ -389,6 +391,37 @@ export const Header: React.FC<HeaderProps> = ({
                           <span className="text-[9px] font-normal text-slate-400 lowercase">P1 a P4 e Estoque</span>
                         </div>
                       </button>
+
+                      {/* Otimização de Pico Contextual (Dia das Crianças / Natal) */}
+                      {onOptimizePeakWeek && (
+                        <button
+                          onClick={() => {
+                            onOptimizePeakWeek();
+                            setShowActionsMenu(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-black uppercase text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-all text-left"
+                        >
+                          <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600">
+                            <Icon name={currentMY.month === 9 ? 'celebration' : 'auto_awesome'} className="text-sm" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span>
+                              {currentMY.month === 9 
+                                ? 'Otimizar Dia das Crianças (8-12)' 
+                                : currentMY.month === 11 
+                                ? 'Otimizar Natal (18-24)' 
+                                : 'Otimizar Semana de Pico'}
+                            </span>
+                            <span className="text-[9px] font-normal text-slate-400 lowercase">
+                              {currentMY.month === 9 
+                                ? '100% da equipe nos 5 dias de pico' 
+                                : currentMY.month === 11 
+                                ? '100% da equipe nos dias 22, 23 e 24' 
+                                : 'concentrar equipe sem quebrar 6x1'}
+                            </span>
+                          </div>
+                        </button>
+                      )}
                     </div>
                   </div>
 

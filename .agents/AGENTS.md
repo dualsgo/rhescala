@@ -81,6 +81,9 @@ O **Rhescala** é um sistema web inteligente e responsivo desenvolvido em React,
 5. **Autenticação e Perfis**:
    - Perfis de acesso: `admin` (acesso total a edição e configurações) e `viewer` (visualização da equipe).
    - Login individual de colaboradores por senha própria para visualização do cartão pessoal.
+6. **Otimização de Semanas de Pico Sazonal**:
+   - **Outubro (Dia das Crianças - 8 a 12/10)**: 100% da equipe CLT e Sazonal trabalha nos 5 dias de pico crítico (8, 9, 10, 11 e 12). As folgas semanais são escalonadas cirurgicamente nos dias pré-pico (6 e 7) e pós-pico (13 e 14) sem violar a regra 6x1 (máximo 6 dias consecutivos trabalhados) e sem gerar conflitos de domingos ou 5x2. Aprendizes mantêm folga no feriado (12/10) e fins de semana.
+   - **Dezembro (Natal - 18 a 24/12)**: 100% da equipe presente nos dias 22, 23 e 24, com folgas distribuídas entre 18 e 21 de Dezembro.
 
 ---
 

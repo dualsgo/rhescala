@@ -16,7 +16,8 @@ import {
   findSundayViolations, 
   isWorkingShift, 
   distributeTacticalPositions, 
-  optimizePeakWeek 
+  optimizePeakWeek,
+  optimizeOctoberPeak 
 } from './hooks/useScheduleEngine';
 
 import { Header } from './components/Header';
@@ -778,26 +779,57 @@ const App: React.FC = () => {
     });
   };
 
-  const handleOptimizePeakWeek = () => {
-    showDialog({
-      title: '🎄 Otimização da Semana de Pico (Natal 18-24/12)',
-      message: 'Esta operação reorganiza as folgas entre os dias 18 e 24 de Dezembro para manter 100% da equipe trabalhando nos dias 22, 23 e 24, escalonando a folga semanal entre os dias 18 e 21 sem nenhuma violação da regra 6x1 da CLT. Deseja aplicar?',
+  const handleOptimizePeakWeek = async () => {
+    const isOctober = currentMY.month === 9;
+    const isDecember = currentMY.month === 11;
+    const monthName = new Date(currentMY.year, currentMY.month).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+    let title = 'Otimização de Semana de Pico';
+    let message = '';
+
+    if (isOctober) {
+      title = '🎈 Otimização Dia das Crianças (8 a 12/10)';
+      message = 'Esta operação reorganiza as folgas entre os dias 6 e 14 de Outubro para garantir 100% da equipe trabalhando nos dias 8, 9, 10, 11 e 12 (Semana do Dia das Crianças), escalonando as folgas antes e depois do pico sem nenhuma violação da regra 6x1 da CLT e sem conflitos de domingos. Deseja aplicar?';
+    } else if (isDecember) {
+      title = '🎄 Otimização da Semana de Natal (18 a 24/12)';
+      message = 'Esta operação reorganiza as folgas entre os dias 18 e 24 de Dezembro para manter 100% da equipe trabalhando nos dias 22, 23 e 24, escalonando a folga semanal entre os dias 18 e 21 sem nenhuma violação da regra 6x1 da CLT. Deseja aplicar?';
+    } else {
+      title = `Otimização de Escala — ${monthName}`;
+      message = `Deseja otimizar as folgas de ${monthName} para concentrar a equipe mantendo total conformidade com a CLT?`;
+    }
+
+    const confirmed = await showDialog({
+      title,
+      message,
       type: 'confirm'
-    }).then(ok => {
-      if (ok) {
-        const peakResult = optimizePeakWeek(employees, monthKey, 18, 24, [22, 23, 24]);
-        setEmployees(prev => prev.map(emp => {
-          if (peakResult[emp.id]) {
-            return {
-              ...emp,
-              shifts: { ...emp.shifts, [monthKey]: peakResult[emp.id].shifts }
-            };
-          }
-          return emp;
-        }));
-        showDialog({ title: 'Sucesso', message: 'Semana de Natal otimizada com 100% da equipe presente nos dias 22, 23 e 24!', type: 'alert' });
-      }
     });
+
+    if (confirmed) {
+      let peakResult: Record<string, { shifts: ShiftType[] }>;
+      if (isOctober) {
+        peakResult = optimizeOctoberPeak(employees, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings);
+      } else {
+        peakResult = optimizePeakWeek(employees, monthKey, 18, 24, [22, 23, 24]);
+      }
+
+      setEmployees(prev => prev.map(emp => {
+        if (peakResult[emp.id]) {
+          return {
+            ...emp,
+            shifts: { ...emp.shifts, [monthKey]: peakResult[emp.id].shifts }
+          };
+        }
+        return emp;
+      }));
+
+      showDialog({ 
+        title: 'Sucesso', 
+        message: isOctober 
+          ? 'Semana do Dia das Crianças otimizada com 100% da equipe presente nos dias 8, 9, 10, 11 e 12 de Outubro!' 
+          : 'Semana de pico otimizada com sucesso e 100% conforme às regras CLT!', 
+        type: 'alert' 
+      });
+    }
   };
 
 
@@ -829,6 +861,7 @@ const App: React.FC = () => {
               onApplyFolgas={handleApplyFolgas}
               onSortearDomingo={handleSortearDomingo}
               onDistributePositions={handleDistributePositions}
+              onOptimizePeakWeek={handleOptimizePeakWeek}
               showNotes={showNotes}
               onToggleNotes={() => setShowNotes(!showNotes)}
               onLogout={() => setAuth({ isAuthenticated: false, role: 'viewer' })}

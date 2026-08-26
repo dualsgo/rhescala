@@ -1035,8 +1035,15 @@ export function applyMonthUpdate(
         result[emp.id] = { shifts: newShifts, hours: newHours };
     });
 
-    // 2.5 Pass: Peak Week Optimization for December (Natal - 18 a 24 de Dezembro)
-    if (month === 11) {
+    // 2.5 Pass: Peak Week Optimization for October (Dia das Crianças - 8 a 12) & December (Natal - 18 a 24)
+    if (month === 9) {
+        const peakResult = optimizeOctoberPeak(employees, monthKey, customHolidays, deletedNationalHolidays, settings);
+        activeRegular.forEach(emp => {
+            if (peakResult[emp.id]) {
+                result[emp.id].shifts = peakResult[emp.id].shifts;
+            }
+        });
+    } else if (month === 11) {
         const peakResult = optimizePeakWeek(employees, monthKey, 18, 24, [22, 23, 24]);
         activeRegular.forEach(emp => {
             if (peakResult[emp.id]) {
@@ -1348,6 +1355,153 @@ export function findSundayViolations(employees: Employee[], currentMY: { month: 
     });
 
     return violations;
+}
+
+/**
+ * Otimiza a semana de pico do Dia das Crianças (8 a 12 de Outubro) para concentrar
+ * 100% da equipe disponível trabalhando nos dias 8, 9, 10, 11 e 12.
+ * 
+ * Regras e Engenharia CLT 6x1 / 5x2:
+ * 1. Dias Críticos (8 a 12 de Outubro): Nenhum colaborador CLT regular folga nestes 5 dias.
+ *    (Férias 'FE', Atestado 'AT', Aniversário 'DO' e 'N/A' são rigorosamente preservados).
+ * 2. Janela Pré-Pico (Dias 6 e 7): Escalonamento estratégico das folgas:
+ *    - Grupo A (empIdx % 2 === 0): Folga no Dia 6 (Oct 6), trabalha 7..12 (6 dias consecutivos).
+ *    - Grupo B (empIdx % 2 === 1): Folga no Dia 7 (Oct 7), trabalha 8..13 (6 dias consecutivos).
+ * 3. Janela Pós-Pico (Dias 13 e 14):
+ *    - Grupo A: Folga OBRIGATÓRIA no Dia 13 (Oct 13), após 6 dias trabalhados (7..12).
+ *    - Grupo B: Folga OBRIGATÓRIA no Dia 14 (Oct 14) (ou Dia 13 se não trabalhou dia 7).
+ * 4. Validação Geral 6x1 e 5x2 no Mês (1..31):
+ *    - Semanas 1, 3, 4 e 5: Mantém folgas semanais alinhadas às preferências e rotação de domingos,
+ *      garantindo que em nenhum momento do mês ocorram mais de 6 dias seguidos de trabalho (CLT 6x1)
+ *      ou 5 dias (5x2).
+ * 5. Jovem Aprendiz:
+ *    - Folga obrigatória aos sábados, domingos e no feriado de 12/10, além do dia de curso teórico.
+ */
+export function optimizeOctoberPeak(
+    employees: Employee[],
+    monthKey: string,
+    customHolidays: Holiday[] = [],
+    deletedNationalHolidays: string[] = [],
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
+): Record<string, { shifts: ShiftType[] }> {
+    const result: Record<string, { shifts: ShiftType[] }> = {};
+    const [yearStr, monthStr] = monthKey.split('-');
+    const year = parseInt(yearStr);
+    const month = parseInt(monthStr) - 1;
+    const daysInMonth = new Date(year, month + 1, 0).getDate(); // 31
+
+    const activeRegular = employees.filter(e => e.status === 'active' && !e.isHidden && !e.isYoungApprentice);
+    const prevStreaks = getPrevMonthWorkStreak(activeRegular, year, month);
+
+    // Dias Críticos de Pico do Dia das Crianças: 8, 9, 10, 11, 12
+    const criticalDays = [8, 9, 10, 11, 12];
+    const criticalIndices = criticalDays.map(d => d - 1); // 7, 8, 9, 10, 11 (0-indexed)
+
+    activeRegular.forEach((emp, empIdx) => {
+        const shifts = [...(emp.shifts[monthKey] || Array(daysInMonth).fill('T'))];
+        const is5x2 = emp.jornada === '5x2';
+        const maxStreak = is5x2 ? 5 : 6;
+
+        // Status protegidos que nunca são sobrescritos (Férias, Atestado, Aniversário, Não-admitido)
+        const isProtected = (idx: number) => {
+            const s = shifts[idx];
+            return ['FE', 'AT', 'DO', 'N/A'].includes(s);
+        };
+
+        // 1. Limpa folgas comuns 'F' nos 5 dias de pico (8 a 12) -> presença 100%!
+        criticalIndices.forEach(idx => {
+            if (shifts[idx] === 'F') {
+                shifts[idx] = 'T';
+            }
+        });
+
+        // 2. Escalonamento cirúrgico de folgas Pré-Pico (dias 6 e 7) e Pós-Pico (dias 13 e 14)
+        const isGroupA = empIdx % 2 === 0;
+
+        if (isGroupA) {
+            // Grupo A: Folga dia 6, trabalha 7..12 (6 dias), folga dia 13
+            if (!isProtected(5)) shifts[5] = 'F';  // Dia 6
+            if (!isProtected(6)) shifts[6] = 'T';  // Dia 7
+            if (!isProtected(12)) shifts[12] = 'F'; // Dia 13
+            if (!isProtected(13)) shifts[13] = 'T'; // Dia 14
+        } else {
+            // Grupo B: Folga dia 7, trabalha 8..13 (6 dias), folga dia 14
+            if (!isProtected(5)) shifts[5] = 'T';  // Dia 6
+            if (!isProtected(6)) shifts[6] = 'F';  // Dia 7
+            if (!isProtected(12)) shifts[12] = 'T'; // Dia 13
+            if (!isProtected(13)) shifts[13] = 'F'; // Dia 14
+        }
+
+        // 3. Validação do Início do Mês (Dias 1 a 5) para prevenir estouro de 6x1 antes do Dia 6/7
+        const prevStreak = prevStreaks.get(emp.id) || 0;
+        let streak = prevStreak;
+        for (let i = 0; i < 5; i++) {
+            if (['F', 'FE', 'AT', 'DO', 'N/A'].includes(shifts[i]) || shifts[i]?.startsWith('FF')) {
+                streak = 0;
+            } else {
+                streak++;
+                if (streak > maxStreak) {
+                    if (!isProtected(i)) {
+                        shifts[i] = 'F';
+                        streak = 0;
+                    }
+                }
+            }
+        }
+
+        // 4. Suporte a jornada 5x2 (2 folgas semanais)
+        if (is5x2) {
+            const w1Rests = [0, 1, 2, 3, 4, 5, 6].filter(i => ['F', 'FE', 'AT', 'DO'].includes(shifts[i]));
+            if (w1Rests.length < 2) {
+                const addIdx = isGroupA ? 1 : 2;
+                if (!isProtected(addIdx) && shifts[addIdx] === 'T') {
+                    shifts[addIdx] = 'F';
+                }
+            }
+        }
+
+        // 5. Varredura completa do mês (dias 1 a 31) garantindo 0 violações 6x1 / 5x2
+        streak = prevStreak;
+        for (let i = 0; i < daysInMonth; i++) {
+            const s = shifts[i];
+            if (['F', 'FE', 'AT', 'DO', 'N/A'].includes(s) || s?.startsWith('FF')) {
+                streak = 0;
+            } else {
+                streak++;
+                if (streak > maxStreak) {
+                    if (!criticalIndices.includes(i)) {
+                        if (!isProtected(i)) {
+                            shifts[i] = 'F';
+                            streak = 0;
+                        }
+                    } else {
+                        // Se atingir limite no pico, insere folga imediatamente antes nos dias permitidos
+                        for (let b = i - 1; b >= 0; b--) {
+                            if (!criticalIndices.includes(b) && !isProtected(b)) {
+                                shifts[b] = 'F';
+                                streak = i - b;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 6. Otimização de cobertura fora do pico (remove folgas 'F' duplicadas consecutivas desnecessárias)
+        for (let i = 1; i < daysInMonth; i++) {
+            if (!is5x2 && shifts[i] === 'F' && shifts[i - 1] === 'F' && i !== 5 && i !== 6 && i !== 12 && i !== 13) {
+                const nextRest = shifts.slice(i + 1).findIndex(x => ['F', 'FE', 'AT', 'DO', 'N/A'].includes(x));
+                if (nextRest !== -1 && nextRest <= 5) {
+                    shifts[i] = 'T';
+                }
+            }
+        }
+
+        result[emp.id] = { shifts };
+    });
+
+    return result;
 }
 
 /**

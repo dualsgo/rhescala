@@ -203,7 +203,13 @@ export const ActionToolbar: React.FC<ActionToolbarProps> = ({ employees, current
     { label: 'Exportar Excel', id: 'excel', icon: 'table_view',      color: 'text-green-600', bg: 'bg-green-50' },
     { label: 'Gerar PDF',      id: 'pdf',   icon: 'picture_as_pdf',  color: 'text-red-600',   bg: 'bg-red-50'   },
     { label: 'Backup Nuvem',   id: 'backup', icon: 'cloud_upload',   color: 'text-sky-600',   bg: 'bg-sky-50'   },
-    ...(onOptimizePeakWeek ? [{ label: 'Otimizar Natal (18-24)', id: 'natal', icon: 'auto_awesome', color: 'text-amber-600', bg: 'bg-amber-50' }] : []),
+    ...(onOptimizePeakWeek ? [{ 
+      label: currentMY.month === 9 ? 'Otimizar Crianças (8-12)' : currentMY.month === 11 ? 'Otimizar Natal (18-24)' : 'Otimizar Pico', 
+      id: 'peak', 
+      icon: currentMY.month === 9 ? 'celebration' : 'auto_awesome', 
+      color: 'text-amber-600', 
+      bg: 'bg-amber-50' 
+    }] : []),
   ];
 
   return (
@@ -218,7 +224,7 @@ export const ActionToolbar: React.FC<ActionToolbarProps> = ({ employees, current
           key={idx}
           onClick={async () => {
             if (action.id === 'backup') { await handleBackup(); return; }
-            if (action.id === 'natal') { onOptimizePeakWeek?.(); return; }
+            if (action.id === 'peak' || action.id === 'natal') { onOptimizePeakWeek?.(); return; }
             const confirmed = await showDialog({
               type: 'confirm',
               message: `Deseja iniciar a operação: ${action.label}?`,
