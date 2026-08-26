@@ -51,6 +51,18 @@ export const DEFAULT_JORNADA_SETTINGS: JornadaSettings = {
   }
 };
 
+/**
+ * Retorna os dias protegidos padrão por mês (onde 100% da equipe trabalha):
+ * - Outubro (mês 9): Dias 8 a 12 (Semana do Dia das Crianças)
+ * - Dezembro (mês 11): Dias 20 a 24 (Semana de Natal)
+ * - Outros meses: []
+ */
+export function getDefaultProtectedDays(month: number): number[] {
+  if (month === 9) return [8, 9, 10, 11, 12];
+  if (month === 11) return [20, 21, 22, 23, 24];
+  return [];
+}
+
 
 /**
  * Mapeia o horário padrão do colaborador para o horário equivalente de domingo ou feriado.

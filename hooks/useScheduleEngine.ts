@@ -653,7 +653,7 @@ export function calculateLunches(
         allocatable.forEach((item, i) => {
             if (N <= 5) {
                 // 1 por slot para máxima cobertura sem sobreposição
-                results[item.index] = closingSlots[i];
+                results[item.index] = closingSlots[i] || closingSlots[closingSlots.length - 1];
             } else {
                 // Equipe sazonal maior (N > 5): 2 por slot em ondas escalonadas
                 const waveIndex = Math.floor(i / 2);
@@ -676,6 +676,7 @@ export function calculateLunches(
  *  - Feriados (FF) on holiday days
  *  - Vacation (FE) from employee data
  *  - Apprentice weekend/course/holiday rules
+ *  - Protected Days & Seasonal Peaks (Oct 8-12, Dec 20-24)
  *
  * What is PRESERVED (not overwritten):
  *  - All other manually-edited shifts on regular weekdays
@@ -688,7 +689,8 @@ export function applyMonthUpdate(
     month: number,
     customHolidays: Holiday[] = [],
     deletedNationalHolidays: string[] = [],
-    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS,
+    protectedDays?: number[]
 ): Record<string, { shifts: ShiftType[]; hours: string[] }> {
     const result: Record<string, { shifts: ShiftType[]; hours: string[] }> = {};
 
@@ -748,10 +750,6 @@ export function applyMonthUpdate(
         const newShifts: ShiftType[] = Array(daysInMonth).fill('T');
 
         // Build hours: preserve truly manual overrides; recompute everything else.
-        // A value is considered auto-generated (safe to overwrite) when it matches
-        // the employee's workPeriod OR any value from the standard system slot lists.
-        // Only hours that are NOT in those lists (e.g. a custom "11h30 às 19h50")
-        // are treated as manual and preserved.
         const newHours: string[] = Array.from({ length: daysInMonth }, (_, i) => {
             const dow = new Date(year, month, i + 1).getDay();
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
@@ -776,7 +774,6 @@ export function applyMonthUpdate(
             const isOnAtestado = !!(emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd);
             const isEmpBirthday = isBirthday(emp, dateStr);
 
-            // Se o turno existente tinha 'FE' ou 'DO' mas o colaborador não está nessa condição nesta data, reverte para 'T'
             let baselineShift = existingShifts[dayIdx] || 'T';
             if (baselineShift === 'FE' && !isOnVacation) baselineShift = 'T';
             if (baselineShift === 'DO' && !isEmpBirthday) baselineShift = 'T';
@@ -793,6 +790,7 @@ export function applyMonthUpdate(
             if (isEmpBirthday) {
                 newShifts[dayIdx] = 'DO'; continue;
             }
+
             if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) {
                 newShifts[dayIdx] = 'N/A'; continue;
             }
@@ -827,7 +825,7 @@ export function applyMonthUpdate(
                 continue;
             }
 
-            // All remaining regular weekdays default to T (or keep existing if not overridden)
+            // All remaining regular weekdays default to T
             if (!existingShifts[dayIdx] || existingShifts[dayIdx] === 'T') {
                 newShifts[dayIdx] = 'T';
             }
@@ -847,7 +845,6 @@ export function applyMonthUpdate(
             currentStreak++;
 
             if (currentStreak > maxStreak) {
-                // Force rest on or before maxStreak (e.g. 7th consecutive day for 6x1)
                 let hasFutureRest = false;
                 for (let lookAhead = 1; lookAhead <= 2; lookAhead++) {
                     const nextDay = dayIdx + lookAhead;
@@ -868,16 +865,12 @@ export function applyMonthUpdate(
         }
 
         // 3. Pass: Clean Redundant Common Off-Days and Guarantee 5x2
-        // Iterate by calendar week (Mon–Sun), but also handle the partial first week
-        // if the month doesn't start on a Monday (so streak-forced 'F' days in that
-        // first partial week are also cleaned up).
         const processWeek = (weekIndices: number[]) => {
             if (weekIndices.length === 0) return;
 
             const offIndices = weekIndices.filter(idx => newShifts[idx] === 'F' || newShifts[idx]?.startsWith('FF') || newShifts[idx] === 'FE' || newShifts[idx] === 'DO' || newShifts[idx] === 'AT');
 
             if (emp.jornada !== '5x2') {
-                // 6x1 cleanup: if more than 1 plain 'F' on Mon-Fri, keep only the preferred.
                 const monFriIndices = weekIndices.filter(idx => {
                     const d = new Date(year, month, idx + 1).getDay();
                     return d >= 1 && d <= 5;
@@ -894,14 +887,10 @@ export function applyMonthUpdate(
                     });
 
                     if (preferredIdx !== undefined) {
-                        // Keep only the preferred day; convert extras back to work
                         commonOffIndices.forEach(idx => {
                             if (idx !== preferredIdx) newShifts[idx] = 'T';
                         });
                     } else {
-                        // Preferred day is not in this (partial) week — keep the latest
-                        // 'F' only (the one closest to the end of the week) so the
-                        // streak stays legal, and revert the others.
                         const lastF = commonOffIndices[commonOffIndices.length - 1];
                         commonOffIndices.forEach(idx => {
                             if (idx !== lastF) newShifts[idx] = 'T';
@@ -909,7 +898,6 @@ export function applyMonthUpdate(
                     }
                 }
             } else {
-                // 5x2 logic — unchanged
                 if (offIndices.length < 2) {
                     const workingIndices = weekIndices.filter(idx => {
                         const d = new Date(year, month, idx + 1).getDay();
@@ -947,23 +935,20 @@ export function applyMonthUpdate(
             }
         };
 
-        // Handle partial first week (day 0 up to the first Sunday or end of month)
-        const firstDow = new Date(year, month, 1).getDay(); // 0=Sun, 1=Mon…
+        const firstDow = new Date(year, month, 1).getDay();
         if (firstDow !== 1) {
-            // Month doesn't start on Monday — collect days before the first Monday
             const partialFirst: number[] = [];
             for (let idx = 0; idx < daysInMonth; idx++) {
                 const d = new Date(year, month, idx + 1).getDay();
-                if (d === 1 && idx > 0) break; // stop at first Monday (skip day 0 if it's Mon)
+                if (d === 1 && idx > 0) break;
                 partialFirst.push(idx);
             }
             if (partialFirst.length > 0) processWeek(partialFirst);
         }
 
-        // Full weeks starting on Monday
         for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
             const date = new Date(year, month, dayIdx + 1);
-            if (date.getDay() === 1) { // Monday
+            if (date.getDay() === 1) {
                 const weekIndices: number[] = [];
                 for (let i = 0; i < 7; i++) {
                     if (dayIdx + i < daysInMonth) weekIndices.push(dayIdx + i);
@@ -1035,16 +1020,27 @@ export function applyMonthUpdate(
         result[emp.id] = { shifts: newShifts, hours: newHours };
     });
 
-    // 2.5 Pass: Peak Week Optimization for October (Dia das Crianças - 8 a 12) & December (Natal - 18 a 24)
-    if (month === 9) {
+    // 2.5 Pass: Peak Week & Protected Days Optimization
+    const effectiveProtectedDays = protectedDays ?? (
+        month === 9 ? [8, 9, 10, 11, 12] : month === 11 ? [20, 21, 22, 23, 24] : []
+    );
+
+    if (month === 9 && effectiveProtectedDays.some(d => d >= 8 && d <= 12)) {
         const peakResult = optimizeOctoberPeak(employees, monthKey, customHolidays, deletedNationalHolidays, settings);
         activeRegular.forEach(emp => {
             if (peakResult[emp.id]) {
                 result[emp.id].shifts = peakResult[emp.id].shifts;
             }
         });
-    } else if (month === 11) {
-        const peakResult = optimizePeakWeek(employees, monthKey, 18, 24, [22, 23, 24]);
+    } else if (month === 11 && effectiveProtectedDays.some(d => d >= 20 && d <= 24)) {
+        const peakResult = optimizeDecemberPeak(employees, monthKey, customHolidays, deletedNationalHolidays, settings);
+        activeRegular.forEach(emp => {
+            if (peakResult[emp.id]) {
+                result[emp.id].shifts = peakResult[emp.id].shifts;
+            }
+        });
+    } else if (effectiveProtectedDays.length > 0) {
+        const peakResult = optimizeProtectedDays(employees, monthKey, effectiveProtectedDays, customHolidays, deletedNationalHolidays, settings);
         activeRegular.forEach(emp => {
             if (peakResult[emp.id]) {
                 result[emp.id].shifts = peakResult[emp.id].shifts;
@@ -1494,6 +1490,289 @@ export function optimizeOctoberPeak(
                 const nextRest = shifts.slice(i + 1).findIndex(x => ['F', 'FE', 'AT', 'DO', 'N/A'].includes(x));
                 if (nextRest !== -1 && nextRest <= 5) {
                     shifts[i] = 'T';
+                }
+            }
+        }
+
+        result[emp.id] = { shifts };
+    });
+
+    return result;
+}
+
+/**
+ * Otimiza a semana de pico do Natal (20 a 24 de Dezembro) para concentrar
+ * 100% da equipe disponível trabalhando nos dias 20, 21, 22, 23 e 24.
+ * 
+ * Regras e Engenharia CLT 6x1 / 5x2:
+ * 1. Dias Críticos (20 a 24 de Dezembro): Nenhum colaborador CLT regular folga nestes 5 dias.
+ *    (Férias 'FE', Atestado 'AT', Aniversário 'DO' e 'N/A' são rigorosamente preservados).
+ * 2. Janela Pré-Pico (Dias 18 e 19): Escalonamento estratégico das folgas:
+ *    - Grupo A (empIdx % 2 === 0): Folga no Dia 18 (Dec 18), trabalha 19..24 (6 dias consecutivos).
+ *    - Grupo B (empIdx % 2 === 1): Folga no Dia 19 (Dec 19), trabalha 20..24 (5 dias consecutivos).
+ * 3. Janela Pós-Pico (Dia 25 - Feriado de Natal):
+ *    - Dia 25 de Dezembro é feriado nacional de Natal. As lojas em geral operam com escala mínima ou fechadas.
+ *    - Folga no Dia 25 zera o streak de 6x1 do Grupo A (trabalhou 19..24 = 6 dias) e do Grupo B (trabalhou 20..24 = 5 dias).
+ * 4. Validação Geral 6x1 e 5x2 no Mês (1..31):
+ *    - Semanas 1 e 2 (Dias 1 a 17): Mantém folgas semanais alinhadas às preferências e rotação de domingos.
+ *    - Dias 26 a 31: Retoma a rotação regular de folgas com 0 violações 6x1/5x2.
+ * 5. Jovem Aprendiz:
+ *    - Folga obrigatória aos sábados, domingos e no feriado de Natal (25/12), além do dia de curso teórico.
+ */
+export function optimizeDecemberPeak(
+    employees: Employee[],
+    monthKey: string,
+    customHolidays: Holiday[] = [],
+    deletedNationalHolidays: string[] = [],
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
+): Record<string, { shifts: ShiftType[] }> {
+    const result: Record<string, { shifts: ShiftType[] }> = {};
+    const [yearStr, monthStr] = monthKey.split('-');
+    const year = parseInt(yearStr);
+    const month = parseInt(monthStr) - 1;
+    const daysInMonth = new Date(year, month + 1, 0).getDate(); // 31
+
+    const activeRegular = employees.filter(e => e.status === 'active' && !e.isHidden && !e.isYoungApprentice);
+    const prevStreaks = getPrevMonthWorkStreak(activeRegular, year, month);
+
+    // Dias Críticos de Pico do Natal: 20, 21, 22, 23, 24
+    const criticalDays = [20, 21, 22, 23, 24];
+    const criticalIndices = criticalDays.map(d => d - 1); // 19, 20, 21, 22, 23 (0-indexed)
+
+    activeRegular.forEach((emp, empIdx) => {
+        const shifts = [...(emp.shifts[monthKey] || Array(daysInMonth).fill('T'))];
+        const is5x2 = emp.jornada === '5x2';
+        const maxStreak = is5x2 ? 5 : 6;
+
+        const isProtected = (idx: number) => {
+            const s = shifts[idx];
+            return ['FE', 'AT', 'DO', 'N/A'].includes(s);
+        };
+
+        // 1. Limpa folgas comuns 'F' nos 5 dias de pico do Natal (20 a 24)
+        criticalIndices.forEach(idx => {
+            if (shifts[idx] === 'F') {
+                shifts[idx] = 'T';
+            }
+        });
+
+        // 2. Escalonamento cirúrgico de folgas Pré-Pico (dias 18 e 19) e Pós-Pico (dia 25)
+        const isGroupA = empIdx % 2 === 0;
+
+        if (isGroupA) {
+            // Grupo A: Folga dia 18, trabalha 19..24 (6 dias), folga dia 25 (Natal)
+            if (!isProtected(17)) shifts[17] = 'F'; // Dia 18
+            if (!isProtected(18)) shifts[18] = 'T'; // Dia 19
+            if (!isProtected(24)) shifts[24] = 'F'; // Dia 25
+        } else {
+            // Grupo B: Folga dia 19, trabalha 20..24 (5 dias), folga dia 25 (Natal)
+            if (!isProtected(17)) shifts[17] = 'T'; // Dia 18
+            if (!isProtected(18)) shifts[18] = 'F'; // Dia 19
+            if (!isProtected(24)) shifts[24] = 'F'; // Dia 25
+        }
+
+        // 3. Validação do Período Anterior (Dias 1 a 17) para prevenir estouro 6x1 antes do Dia 18/19
+        const prevStreak = prevStreaks.get(emp.id) || 0;
+        let streak = prevStreak;
+        for (let i = 0; i < 17; i++) {
+            if (['F', 'FE', 'AT', 'DO', 'N/A'].includes(shifts[i]) || shifts[i]?.startsWith('FF')) {
+                streak = 0;
+            } else {
+                streak++;
+                if (streak > maxStreak) {
+                    if (!isProtected(i)) {
+                        shifts[i] = 'F';
+                        streak = 0;
+                    }
+                }
+            }
+        }
+
+        // 4. Suporte a jornada 5x2
+        if (is5x2) {
+            const wRests = [10, 11, 12, 13, 14, 15, 16].filter(i => ['F', 'FE', 'AT', 'DO'].includes(shifts[i]));
+            if (wRests.length < 2) {
+                const addIdx = isGroupA ? 12 : 13;
+                if (!isProtected(addIdx) && shifts[addIdx] === 'T') {
+                    shifts[addIdx] = 'F';
+                }
+            }
+        }
+
+        // 5. Varredura completa do mês garantindo 0 violações 6x1 / 5x2
+        streak = prevStreak;
+        for (let i = 0; i < daysInMonth; i++) {
+            const s = shifts[i];
+            if (['F', 'FE', 'AT', 'DO', 'N/A'].includes(s) || s?.startsWith('FF')) {
+                streak = 0;
+            } else {
+                streak++;
+                if (streak > maxStreak) {
+                    if (!criticalIndices.includes(i)) {
+                        if (!isProtected(i)) {
+                            shifts[i] = 'F';
+                            streak = 0;
+                        }
+                    } else {
+                        // Se atingir limite no pico, insere folga imediatamente antes (dias 18/19)
+                        for (let b = i - 1; b >= 0; b--) {
+                            if (!criticalIndices.includes(b) && !isProtected(b)) {
+                                shifts[b] = 'F';
+                                streak = i - b;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 6. Otimização de cobertura fora do pico (remove folgas 'F' duplicadas consecutivas desnecessárias)
+        for (let i = 1; i < daysInMonth; i++) {
+            if (!is5x2 && shifts[i] === 'F' && shifts[i - 1] === 'F' && i !== 17 && i !== 18 && i !== 24 && i !== 25) {
+                const nextRest = shifts.slice(i + 1).findIndex(x => ['F', 'FE', 'AT', 'DO', 'N/A'].includes(x));
+                if (nextRest !== -1 && nextRest <= 5) {
+                    shifts[i] = 'T';
+                }
+            }
+        }
+
+        result[emp.id] = { shifts };
+    });
+
+    return result;
+}
+
+/**
+ * Otimiza a escala para QUALQUER conjunto customizado de Dias Protegidos (100% de Presença da Equipe).
+ * Identifica os blocos de alta demanda, elimina folgas comuns nos dias protegidos e escalona
+ * as folgas pré e pós-pico de forma inteligente (quem melhor se enquadra de acordo com seu streak)
+ * sem violar a regra 6x1 da CLT ou regras de domingos e 5x2.
+ */
+export function optimizeProtectedDays(
+    employees: Employee[],
+    monthKey: string,
+    protectedDays: number[],
+    customHolidays: Holiday[] = [],
+    deletedNationalHolidays: string[] = [],
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
+): Record<string, { shifts: ShiftType[] }> {
+    const [yearStr, monthStr] = monthKey.split('-');
+    const month = parseInt(monthStr) - 1;
+
+    // Se for Outubro com os dias 8-12, aplica a otimização cirúrgica de Outubro
+    if (month === 9 && [8, 9, 10, 11, 12].every(d => protectedDays.includes(d))) {
+        return optimizeOctoberPeak(employees, monthKey, customHolidays, deletedNationalHolidays, settings);
+    }
+    // Se for Dezembro com os dias 20-24, aplica a otimização cirúrgica do Natal
+    if (month === 11 && [20, 21, 22, 23, 24].every(d => protectedDays.includes(d))) {
+        return optimizeDecemberPeak(employees, monthKey, customHolidays, deletedNationalHolidays, settings);
+    }
+
+    const result: Record<string, { shifts: ShiftType[] }> = {};
+    const year = parseInt(yearStr);
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const activeRegular = employees.filter(e => e.status === 'active' && !e.isHidden && !e.isYoungApprentice);
+    const prevStreaks = getPrevMonthWorkStreak(activeRegular, year, month);
+
+    const sortedDays = [...new Set(protectedDays.filter(d => d >= 1 && d <= daysInMonth))].sort((a, b) => a - b);
+    const protectedIndices = sortedDays.map(d => d - 1);
+
+    // Agrupa dias protegidos em blocos contíguos (clusters)
+    const clusters: { start: number; end: number; indices: number[] }[] = [];
+    let currentCluster: number[] = [];
+
+    for (let i = 0; i < sortedDays.length; i++) {
+        const day = sortedDays[i];
+        if (currentCluster.length === 0 || day === currentCluster[currentCluster.length - 1] + 1) {
+            currentCluster.push(day);
+        } else {
+            clusters.push({
+                start: currentCluster[0],
+                end: currentCluster[currentCluster.length - 1],
+                indices: currentCluster.map(d => d - 1)
+            });
+            currentCluster = [day];
+        }
+    }
+    if (currentCluster.length > 0) {
+        clusters.push({
+            start: currentCluster[0],
+            end: currentCluster[currentCluster.length - 1],
+            indices: currentCluster.map(d => d - 1)
+        });
+    }
+
+    activeRegular.forEach((emp, empIdx) => {
+        const shifts = [...(emp.shifts[monthKey] || Array(daysInMonth).fill('T'))];
+        const is5x2 = emp.jornada === '5x2';
+        const maxStreak = is5x2 ? 5 : 6;
+
+        const isProtectedStatus = (idx: number) => {
+            const s = shifts[idx];
+            return ['FE', 'AT', 'DO', 'N/A'].includes(s);
+        };
+
+        // 1. Limpa todas as folgas comuns nos dias protegidos
+        protectedIndices.forEach(idx => {
+            if (shifts[idx] === 'F') shifts[idx] = 'T';
+        });
+
+        // 2. Para cada bloco contíguo de dias protegidos, escalona folga antes e depois
+        clusters.forEach(cluster => {
+            const clusterLen = cluster.indices.length;
+            const startIdx = cluster.indices[0];
+            const endIdx = cluster.indices[cluster.indices.length - 1];
+
+            // Se o bloco tiver 2 ou mais dias protegidos consecutivos
+            if (clusterLen >= 2) {
+                const isGroupA = empIdx % 2 === 0;
+
+                // Pré-pico (1 ou 2 dias antes do início do bloco)
+                if (startIdx >= 1) {
+                    const preDay = isGroupA ? startIdx - 1 : (startIdx >= 2 ? startIdx - 2 : startIdx - 1);
+                    if (preDay >= 0 && !isProtectedStatus(preDay)) {
+                        shifts[preDay] = 'F';
+                    }
+                }
+
+                // Pós-pico (1 ou 2 dias após o fim do bloco)
+                if (endIdx + 1 < daysInMonth) {
+                    const postDay = isGroupA ? endIdx + 1 : (endIdx + 2 < daysInMonth ? endIdx + 2 : endIdx + 1);
+                    if (postDay < daysInMonth && !isProtectedStatus(postDay)) {
+                        shifts[postDay] = 'F';
+                    }
+                }
+            }
+        });
+
+        // 3. Varredura completa no mês com validação 6x1 / 5x2
+        const prevStreak = prevStreaks.get(emp.id) || 0;
+        let streak = prevStreak;
+
+        for (let i = 0; i < daysInMonth; i++) {
+            const s = shifts[i];
+            if (['F', 'FE', 'AT', 'DO', 'N/A'].includes(s) || s?.startsWith('FF')) {
+                streak = 0;
+            } else {
+                streak++;
+                if (streak > maxStreak) {
+                    if (!protectedIndices.includes(i)) {
+                        if (!isProtectedStatus(i)) {
+                            shifts[i] = 'F';
+                            streak = 0;
+                        }
+                    } else {
+                        // Encontra o dia livre mais próximo antes do bloco protegido
+                        for (let b = i - 1; b >= 0; b--) {
+                            if (!protectedIndices.includes(b) && !isProtectedStatus(b)) {
+                                shifts[b] = 'F';
+                                streak = i - b;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
         }

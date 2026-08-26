@@ -9,8 +9,11 @@ import { isWorkingShift, calculateLunches } from '../hooks/useScheduleEngine';
 interface DaySummaryCardProps {
   employees: Employee[];
   selectedDayIdx: number;
+  currentMY: MonthYear;
   customHolidays: Holiday[];
-  jornadaSettings: JornadaSettings;
+  jornadaSettings?: JornadaSettings;
+  isProtected?: boolean;
+  onToggleProtectDay?: () => void;
 }
 
 // ─── Lunch interval definitions ───────────────────────────────────────────────
@@ -75,7 +78,15 @@ function buildLunchSlots(
     }));
 }
 
-export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selectedDayIdx, currentMY, customHolidays, jornadaSettings = DEFAULT_JORNADA_SETTINGS }) => {
+export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ 
+  employees, 
+  selectedDayIdx, 
+  currentMY, 
+  customHolidays, 
+  jornadaSettings = DEFAULT_JORNADA_SETTINGS,
+  isProtected = false,
+  onToggleProtectDay
+}) => {
   const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
   const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
   const isHoliday = buildHolidaySet(currentMY.year, customHolidays).has(dateStr);
@@ -220,15 +231,37 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({ employees, selec
       {/* Mini-header: Dia e Data */}
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-2xl font-black text-slate-900  tracking-tighter">{dateNum}</span>
-          <span className="text-[10px] font-extrabold text-slate-400  uppercase tracking-widest">{weekdayName}</span>
+          <span className="text-2xl font-black text-slate-900 tracking-tighter">{dateNum}</span>
+          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">{weekdayName}</span>
         </div>
         
-        {isHoliday && (
-          <div className="flex items-center gap-1 bg-red-50  text-red-600  px-2 py-0.5 rounded-full text-[8px] font-black uppercase ring-1 ring-inset ring-red-200 ">
-             <Icon name="event_busy" className="text-[10px]" /> FERIADO
-          </div>
-        )}
+        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          {isHoliday && (
+            <div className="flex items-center gap-1 bg-red-50 text-red-600 px-2 py-0.5 rounded-full text-[8px] font-black uppercase ring-1 ring-inset ring-red-200">
+               <Icon name="event_busy" className="text-[10px]" /> FERIADO
+            </div>
+          )}
+
+          {isProtected ? (
+            <button
+              onClick={onToggleProtectDay}
+              title="Clique para desproteger este dia"
+              className="flex items-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[8px] font-black uppercase ring-1 ring-inset ring-amber-300 transition-colors shadow-xs"
+            >
+              <Icon name="shield" className="text-[10px] text-amber-600" /> PROTEGIDO (100%)
+            </button>
+          ) : (
+            onToggleProtectDay && (
+              <button
+                onClick={onToggleProtectDay}
+                title="Clique para proteger este dia (100% de presença sem folgas)"
+                className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full text-[8px] font-bold uppercase transition-colors"
+              >
+                <Icon name="shield" className="text-[10px] text-slate-400" /> PROTEGER
+              </button>
+            )
+          )}
+        </div>
       </div>
 
       {/* Stats Quickbar */}

@@ -204,7 +204,7 @@ export const ActionToolbar: React.FC<ActionToolbarProps> = ({ employees, current
     { label: 'Gerar PDF',      id: 'pdf',   icon: 'picture_as_pdf',  color: 'text-red-600',   bg: 'bg-red-50'   },
     { label: 'Backup Nuvem',   id: 'backup', icon: 'cloud_upload',   color: 'text-sky-600',   bg: 'bg-sky-50'   },
     ...(onOptimizePeakWeek ? [{ 
-      label: currentMY.month === 9 ? 'Otimizar Crianças (8-12)' : currentMY.month === 11 ? 'Otimizar Natal (18-24)' : 'Otimizar Pico', 
+      label: currentMY.month === 9 ? 'Otimizar Crianças (8-12)' : currentMY.month === 11 ? 'Otimizar Natal (20-24)' : 'Otimizar Dias Protegidos', 
       id: 'peak', 
       icon: currentMY.month === 9 ? 'celebration' : 'auto_awesome', 
       color: 'text-amber-600', 

@@ -42,6 +42,8 @@ interface ShiftGridProps {
   onOpenEmployeeCard: (emp: Employee) => void;
   diffs?: ScheduleDiffItem[];
   onOpenPresetForEmployee?: (empId: string) => void;
+  protectedDays?: number[];
+  onToggleProtectDay?: (dayNum: number) => void;
 }
 
 export const ShiftGrid: React.FC<ShiftGridProps> = ({
@@ -58,6 +60,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onUpdateEmployeeDailyHour,
   onUpdateTacticalPosition,
   onOpenDayDetail = () => {},
+  protectedDays = [],
+  onToggleProtectDay,
   monthNotes = '',
   onUpdateMonthNotes = () => {},
   isReadOnly = false,
@@ -431,17 +435,26 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   const blurClass = isBlurred ? 'opacity-25 blur-[0.6px] grayscale-[30%] hover:opacity-80 hover:blur-none transition-all duration-200' : '';
                   const focusHighlight = isSelected && focusSelectedDay ? 'bg-orange-500/20 ring-2 ring-orange-500 shadow-md scale-[1.02] z-20' : isSelected ? 'bg-orange-500/10 ring-2 ring-inset ring-orange-500/30' : '';
 
+                  const isDayProtected = protectedDays.includes(d.num);
+
                   return (
                     <th 
                       key={d.num} 
                       onClick={() => isSelected ? onOpenDayDetail(dayIdx) : onSelectDay(dayIdx)}
-                      className={`p-3 border-b border-slate-200 dark:border-zinc-800 min-w-[60px] cursor-pointer transition-all ${dimClass} ${blurClass} ${focusHighlight ? focusHighlight : d.isSunday ? 'bg-rose-50 dark:bg-rose-950/40' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-950/40' : ''}`}
+                      className={`p-3 border-b border-slate-200 dark:border-zinc-800 min-w-[60px] cursor-pointer transition-all ${dimClass} ${blurClass} ${focusHighlight ? focusHighlight : d.isSunday ? 'bg-rose-50 dark:bg-rose-950/40' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-950/40' : isDayProtected ? 'bg-amber-50/50 dark:bg-amber-950/30' : ''}`}
                     >
-                      <div className="flex flex-col items-center gap-1">
+                      <div className="flex flex-col items-center gap-1 relative">
                         <span className="text-[9px] font-black text-slate-400 uppercase">{d.weekday}</span>
-                        <span className={`text-sm font-black ${d.isSunday ? 'text-rose-600' : 'text-slate-900 dark:text-slate-100'}`}>{d.num}</span>
-                        <div className="mt-1 text-[8px] font-bold text-slate-400">
-                           T:{stats.total}
+                        <div className="flex items-center gap-1">
+                          <span className={`text-sm font-black ${d.isSunday ? 'text-rose-600' : isDayProtected ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-slate-100'}`}>{d.num}</span>
+                          {isDayProtected && (
+                            <span title="Dia Protegido: 100% de Presença da Equipe (Sem Folgas)" className="text-amber-500 flex items-center">
+                              <Icon name="shield" className="text-xs" />
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-1 text-[8px] font-bold text-slate-400 flex items-center gap-1">
+                           <span>T:{stats.total}</span>
                         </div>
                       </div>
                     </th>

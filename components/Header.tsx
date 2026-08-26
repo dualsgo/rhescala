@@ -409,14 +409,14 @@ export const Header: React.FC<HeaderProps> = ({
                               {currentMY.month === 9 
                                 ? 'Otimizar Dia das Crianças (8-12)' 
                                 : currentMY.month === 11 
-                                ? 'Otimizar Natal (18-24)' 
-                                : 'Otimizar Semana de Pico'}
+                                ? 'Otimizar Natal (20-24)' 
+                                : 'Otimizar Dias Protegidos'}
                             </span>
                             <span className="text-[9px] font-normal text-slate-400 lowercase">
                               {currentMY.month === 9 
                                 ? '100% da equipe nos 5 dias de pico' 
                                 : currentMY.month === 11 
-                                ? '100% da equipe nos dias 22, 23 e 24' 
+                                ? '100% da equipe nos dias 20 a 24' 
                                 : 'concentrar equipe sem quebrar 6x1'}
                             </span>
                           </div>
