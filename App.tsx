@@ -94,8 +94,18 @@ const App: React.FC = () => {
   const [showInconsistencyModal, setShowInconsistencyModal] = useState(false);
   const [viewerModeType, setViewerModeType] = useLocalStorage<'personal' | 'grid'>('rhescala_viewer_mode_type', 'grid');
   const [viewerSelectedEmpId, setViewerSelectedEmpId] = useLocalStorage<string>('rhescala_viewer_selected_emp_id', '');
+  const [auth, setAuth] = useState<{ isAuthenticated: boolean, role: 'admin' | 'viewer' }>({ isAuthenticated: false, role: 'viewer' });
+  const [authenticatedEmployeeId, setAuthenticatedEmployeeId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
+  const [isDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
+  const { showDialog } = useDialog();
+  const [waModal, setWaModal] = useState<{ show: boolean, text: string }>({ show: false, text: '' });
+  const [showHelp, setShowHelp] = useState(false);
+  const [selectedEmployeeForCard, setSelectedEmployeeForCard] = useState<Employee | null>(null);
 
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+  const isReadOnly = auth.role === 'viewer';
+  const isValidated = validatedMonths[monthKey] || false;
 
   const activeProtectedDays = useMemo(() => {
     return protectedDaysMap[monthKey] ?? getDefaultProtectedDays(currentMY.month);
@@ -112,7 +122,7 @@ const App: React.FC = () => {
       return { ...prev, [monthKey]: updated };
     });
   }, [auth.role, monthKey, currentMY.month, setProtectedDaysMap]);
-
+  
   const scheduleDiffs = useMemo(
     () => detectScheduleDiffs(officialSnapshots[monthKey], employees, currentMY),
     [officialSnapshots, employees, currentMY, monthKey]
@@ -122,17 +132,6 @@ const App: React.FC = () => {
     () => detectInconsistencies(employees, currentMY.year, currentMY.month, new Date()),
     [employees, currentMY]
   );
-  const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
-  const [isDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
-  const { showDialog } = useDialog();
-  const [waModal, setWaModal] = useState<{ show: boolean, text: string }>({ show: false, text: '' });
-  const [showHelp, setShowHelp] = useState(false);
-  const [selectedEmployeeForCard, setSelectedEmployeeForCard] = useState<Employee | null>(null);
-  const [auth, setAuth] = useState<{ isAuthenticated: boolean, role: 'admin' | 'viewer' }>({ isAuthenticated: false, role: 'viewer' });
-  const [authenticatedEmployeeId, setAuthenticatedEmployeeId] = useState<string | null>(null);
-  
-  const isReadOnly = auth.role === 'viewer';
-  const isValidated = validatedMonths[monthKey] || false;
   
   const onToggleValidation = useCallback(async () => {
     const newVal = !isValidated;
