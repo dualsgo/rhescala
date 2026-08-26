@@ -253,7 +253,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-3 max-w-lg mx-auto pb-16 animate-fade-in">
+    <div className="h-full flex flex-col gap-3 max-w-lg mx-auto pb-20 animate-fade-in overflow-y-auto custom-scrollbar pr-1">
       
       {/* Top Header Card for Collaborator */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3">

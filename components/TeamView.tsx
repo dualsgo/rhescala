@@ -149,7 +149,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-in pb-12">
+    <div className="h-full flex flex-col gap-6 animate-fade-in overflow-y-auto custom-scrollbar pr-1 pb-20">
       {/* Top Banner & Action Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm gap-4">
         <div>
@@ -243,7 +243,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
             </div>
 
             {/* Modal Form Body */}
-            <form onSubmit={handleAddSubmit} className="overflow-y-auto p-5 sm:p-6 space-y-4 flex-1">
+            <form onSubmit={handleAddSubmit} className="overflow-y-auto custom-scrollbar p-5 sm:p-6 space-y-4 flex-1">
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Nome Completo *</label>
                 <input 
