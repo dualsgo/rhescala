@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Employee, MonthYear, Holiday } from '../types';
-import { buildHolidaySet, getNationalHolidays, getShortName } from '../constants';
+import { buildHolidaySet, getNationalHolidays, getShortName, isEmployeeActiveInMonth } from '../constants';
 
 interface PrintableScheduleProps {
   employees: Employee[];
@@ -25,8 +25,8 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
   const monthName = monthNames[currentMY.month];
 
   const activeEmployees = useMemo(() => {
-    return employees.filter(e => e.status === 'active' && !e.isHidden).sort((a, b) => a.name.localeCompare(b.name));
-  }, [employees]);
+    return employees.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month)).sort((a, b) => a.name.localeCompare(b.name));
+  }, [employees, currentMY]);
 
   const mStartStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-01`;
   const mEndStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;

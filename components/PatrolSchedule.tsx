@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Employee, MonthYear, Holiday, JornadaSettings } from '../types';
 import { isWorkingShift, getShiftClassification } from '../hooks/useScheduleEngine';
-import { buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, getShortName } from '../constants';
+import { buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth } from '../constants';
 import { Icon } from './Icon';
 import { toPng } from 'html-to-image';
 
@@ -23,7 +23,7 @@ export const PatrolSchedule: React.FC<PatrolScheduleProps> = ({ employees, curre
 
   const assignments = useMemo(() => {
     const activeEmps = employees
-      .filter(e => !e.isHidden && e.status === 'active' && !e.isYoungApprentice)
+      .filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month) && !e.isYoungApprentice)
       .sort((a, b) => a.name.localeCompare(b.name));
 
     if (activeEmps.length === 0) return [];

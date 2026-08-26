@@ -404,7 +404,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">
+                    <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 uppercase">
                       {editingEmployee.name}
                     </h4>
                     <span className={`w-2 h-2 rounded-full ${editingEmployee.status === 'active' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
@@ -839,7 +839,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-black text-slate-900 dark:text-slate-100 truncate group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors" title={emp.name}>
+                        <span className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase truncate group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors" title={emp.name.toUpperCase()}>
                           {emp.name}
                         </span>
                         <div className={`w-2 h-2 rounded-full shrink-0 ${emp.status === 'active' ? 'bg-emerald-500' : 'bg-slate-400'}`} />

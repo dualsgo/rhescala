@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { Icon } from './Icon';
 import { Employee, MonthYear, Holiday, JornadaSettings } from '../types';
-import { buildHolidaySet, DEFAULT_JORNADA_SETTINGS, getShortName } from '../constants';
+import { buildHolidaySet, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth } from '../constants';
 import { isWorkingShift, calculateLunches } from '../hooks/useScheduleEngine';
 
 
@@ -113,7 +113,7 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({
       fechamento: [] as string[],
     };
 
-    employees.filter(e => !e.isHidden).forEach(e => {
+    employees.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month)).forEach(e => {
       const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
       let shift = (e.shifts[monthKey] || [])[selectedDayIdx];
 

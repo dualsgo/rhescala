@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings } from '../types';
 import { Icon } from './Icon';
-import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, DEFAULT_JORNADA_SETTINGS } from '../constants';
+import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, DEFAULT_JORNADA_SETTINGS, isEmployeeActiveInMonth } from '../constants';
 import { getShiftClassification, isWorkingShift, getPrevMonthWorkStreak } from '../hooks/useScheduleEngine';
 import { OperationalGuideModal } from './OperationalGuideModal';
 
@@ -414,7 +414,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 {filteredDays.map(d => {
                   const dayIdx = d.num - 1;
                   const stats = employees.reduce((acc, emp) => {
-                    if (emp.isHidden || emp.status !== 'active') return acc;
+                    if (!isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month)) return acc;
                     const shift = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
                     const hour = (emp.dailyHours[monthKey] || [])[dayIdx] || emp.workPeriod;
                     const shiftClass = getShiftClassification(hour, d.isSunday, jornadaSettings);
@@ -473,7 +473,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 };
 
                 employees.forEach(emp => {
-                  if (emp.isHidden || emp.status !== 'active') return;
+                  if (!isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month)) return;
                   
                   if (contractFilter === 'clt' && emp.contractType === 'Sazonal') return;
                   if (contractFilter === 'sazonal' && emp.contractType !== 'Sazonal') return;
@@ -538,7 +538,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                  </div>
                                  <div className="flex flex-col min-w-0 flex-1">
                                    <div className="flex items-center gap-1">
-                                     <span className="text-[10px] sm:text-[11px] font-black text-slate-900 dark:text-slate-100 truncate group-hover/name:text-orange-600 transition-colors" title={emp.name}>{getShortName(emp.name, employees)}</span>
+                                     <span className="text-[10px] sm:text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase truncate group-hover/name:text-orange-600 transition-colors" title={emp.name.toUpperCase()}>{getShortName(emp.name, employees)}</span>
                                      {(() => {
                                        if (isReadOnly) return null;
                                        const reqs = emp.requests || [];

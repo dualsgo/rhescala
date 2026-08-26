@@ -3,7 +3,7 @@ import { Employee, MonthYear, Holiday, ShiftType, JornadaSettings } from '../typ
 import { getShiftClassification, isWorkingShift } from '../hooks/useScheduleEngine';
 
 import { Icon } from './Icon';
-import { buildHolidaySet, SHIFT_HOURS, DEFAULT_JORNADA_SETTINGS, getShortName } from '../constants';
+import { buildHolidaySet, SHIFT_HOURS, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth } from '../constants';
 import { toPng } from 'html-to-image';
 
 
@@ -24,7 +24,7 @@ const WEEKDAY_NAMES = [
 
 export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, currentMY, customHolidays, onClose, onUpdateShift, onUpdateHour, jornadaSettings = DEFAULT_JORNADA_SETTINGS }) => {
   const [viewMode, setViewMode] = useState<'insights' | 'team-calendar'>('insights');
-  const [selectedEmpId, setSelectedEmpId] = useState<string | null>(employees.filter(e => !e.isHidden && e.status === 'active')[0]?.id || null);
+  const [selectedEmpId, setSelectedEmpId] = useState<string | null>(employees.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month))[0]?.id || null);
   const [showIndividualModal, setShowIndividualModal] = useState(false);
   const [showMiniCalendar, setShowMiniCalendar] = useState(true);
   
@@ -66,7 +66,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
   const dailyCoverage = useMemo(() => {
     const coverage = [];
     for (let d = 0; d < daysInMonth; d++) {
-      const activeEmps = employees.filter(e => !e.isHidden && e.status === 'active');
+      const activeEmps = employees.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
       const working = activeEmps.filter(e => {
         const s = getEffectiveShift(e, d);
         return isWorkingShift(s); // Conta como presença na LOJA
@@ -95,7 +95,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
     const sundaysCount = dailyCoverage.filter(d => d.isSunday).length;
     const baseWorkableDays = daysInMonth - sundaysCount;
     
-    return employees.filter(e => !e.isHidden && e.status === 'active').map(emp => {
+    return employees.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month)).map(emp => {
       let worked = 0;
       let totalHours = 0;
       let maxStreak = 0;

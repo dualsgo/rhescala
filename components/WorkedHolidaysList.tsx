@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Employee, MonthYear, Holiday } from '../types';
-import { buildHolidaySet, getNationalHolidays } from '../constants';
+import { buildHolidaySet, getNationalHolidays, isEmployeeActiveInMonth } from '../constants';
 import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { Icon } from './Icon';
 import { useDialog } from '../contexts/DialogContext';
@@ -45,7 +45,7 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
       const shift = (emp.shifts[targetMonthKey] || [])[dayIdx];
       // Only count as worked if it's a working shift (T or P1-P4)
       const hasWorked = isWorkingShift(shift);
-      return hasWorked && !emp.isHidden && emp.status === 'active';
+      return hasWorked && isEmployeeActiveInMonth(emp, parseInt(year, 10), parseInt(month, 10) - 1);
     });
 
   };

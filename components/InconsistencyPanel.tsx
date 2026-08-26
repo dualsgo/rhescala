@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Employee, MonthYear, ShiftType } from '../types';
 import { Icon } from './Icon';
 import { getPrevMonthConsecutive, getPrevMonthWorkStreak, isWorkingShift } from '../hooks/useScheduleEngine';
-import { getShortName } from '../constants';
+import { getShortName, isEmployeeActiveInMonth } from '../constants';
 
 
 interface InconsistencyPanelProps {
@@ -86,7 +86,7 @@ export function detectInconsistencies(
   }
 
   for (const emp of employees) {
-    if (emp.status !== 'active' || emp.isYoungApprentice) continue;
+    if (!isEmployeeActiveInMonth(emp, year, month) || emp.isYoungApprentice) continue;
 
     // ── Rule 1: 6×1 — 7 or more consecutive working days (including cross-month) ──
     const prevStreak  = prevWorkStreaks.get(emp.id) || 0;

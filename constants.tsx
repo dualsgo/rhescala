@@ -89,8 +89,8 @@ export function getDefaultHourForDay(emp: Employee, isHoliday: boolean, isSunday
 }
 
 /**
- * Extrai o nome de exibição/curto de um colaborador para textos de escala, cartões e relatórios.
- * Preserva abreviações e iniciais explícitas (ex: "Luiz C.", "Luiz H.") e realiza
+ * Extrai o nome de exibição/curto de um colaborador em CAIXA ALTA para textos de escala, cartões e relatórios.
+ * Preserva abreviações e iniciais explícitas (ex: "LUIZ C.", "LUIZ H.") e realiza
  * desambiguação automática adicionando a inicial do sobrenome se houver duplicidade do 1º nome.
  */
 export function getShortName(fullName: string | undefined | null, allEmployees?: { name: string }[]): string {
@@ -99,7 +99,7 @@ export function getShortName(fullName: string | undefined | null, allEmployees?:
   if (!trimmed) return '';
 
   const parts = trimmed.split(/\s+/);
-  if (parts.length === 1) return parts[0];
+  if (parts.length === 1) return parts[0].toUpperCase();
 
   const firstName = parts[0];
   const secondPart = parts[1];
@@ -109,7 +109,7 @@ export function getShortName(fullName: string | undefined | null, allEmployees?:
   const isShortOrInitial = secondPart.length <= 2 || secondPart.endsWith('.');
 
   if (isShortOrInitial) {
-    return `${firstName} ${secondPart}`;
+    return `${firstName} ${secondPart}`.toUpperCase();
   }
 
   // Tratamento para preposições brasileiras ("de", "da", "do", "dos", "das")
@@ -128,15 +128,64 @@ export function getShortName(fullName: string | undefined | null, allEmployees?:
     });
 
     if (hasDuplicateFirstName) {
-      // Se houver duplicidade (ex: Luiz Carlos e Luiz Henrique), usa a inicial ("Luiz C.", "Luiz H.")
+      // Se houver duplicidade (ex: Luiz Carlos e Luiz Henrique), usa a inicial ("LUIZ C.", "LUIZ H.")
       const initial = surnamePart.charAt(0).toUpperCase();
-      return `${firstName} ${initial}.`;
+      return `${firstName} ${initial}.`.toUpperCase();
     }
   }
 
-  // Padrão: retorna apenas o primeiro nome
-  return firstName;
+  // Padrão: retorna apenas o primeiro nome em caixa alta
+  return firstName.toUpperCase();
 }
+
+/**
+ * Verifica se o colaborador está ativo e já iniciou no mês de referência.
+ * Oculta automaticamente colaboradores cuja data de início (hiredAt) seja posterior ao mês,
+ * ou cuja data de desligamento (firedAt) seja anterior ao mês,
+ * ou que tenham todos os turnos do mês como '-' / 'N/A'.
+ */
+export function isEmployeeActiveInMonth(emp: Employee | undefined | null, year: number, month: number): boolean {
+  if (!emp || emp.isHidden || emp.status !== 'active') return false;
+
+  const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const firstDayStr = `${monthKey}-01`;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const lastDayStr = `${monthKey}-${String(daysInMonth).padStart(2, '0')}`;
+
+  // Não iniciou ainda (data de início é posterior ao último dia do mês)
+  if (emp.hiredAt && emp.hiredAt > lastDayStr) {
+    return false;
+  }
+
+  // Já foi desligado antes do início do mês
+  if (emp.firedAt && emp.firedAt < firstDayStr) {
+    return false;
+  }
+
+  // Se houver turnos cadastrados para o mês e TODOS forem 'N/A', o colaborador não iniciou
+  const monthShifts = emp.shifts?.[monthKey];
+  if (monthShifts && monthShifts.length > 0) {
+    const hasRealShift = monthShifts.some(s => s && s !== 'N/A');
+    if (!hasRealShift) return false;
+  }
+
+  return true;
+}
+
+/**
+ * Verifica se o colaborador está ativo e já iniciou em um dia específico.
+ */
+export function isEmployeeActiveOnDay(emp: Employee | undefined | null, dateStr: string, monthKey?: string, dayIdx?: number): boolean {
+  if (!emp || emp.isHidden || emp.status !== 'active') return false;
+  if (emp.hiredAt && dateStr < emp.hiredAt) return false;
+  if (emp.firedAt && dateStr > emp.firedAt) return false;
+  if (monthKey !== undefined && dayIdx !== undefined) {
+    const shift = emp.shifts?.[monthKey]?.[dayIdx];
+    if (shift === 'N/A') return false;
+  }
+  return true;
+}
+
 
 /**
  * Returns all fixed Brazilian national holidays for a given year.

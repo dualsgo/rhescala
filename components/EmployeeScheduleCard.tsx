@@ -4,7 +4,7 @@ import { Employee, MonthYear, Holiday, ShiftType } from '../types';
 import { Icon } from './Icon';
 import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { isWorkingShift } from '../hooks/useScheduleEngine';
-import { buildHolidaySet, getShortName } from '../constants';
+import { buildHolidaySet, getShortName, isEmployeeActiveInMonth } from '../constants';
 
 interface EmployeeScheduleCardProps {
   employees?: Employee[];
@@ -505,9 +505,9 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         >
                           <option value="">-- Selecione o Colega --</option>
                           {(employees || [])
-                            .filter(e => e.id !== employee.id && !e.isHidden && e.status === 'active')
+                            .filter(e => e.id !== employee.id && isEmployeeActiveInMonth(e, currentMY.year, currentMY.month))
                             .map(e => (
-                              <option key={e.id} value={e.id}>{e.name}</option>
+                              <option key={e.id} value={e.id}>{e.name.toUpperCase()}</option>
                           ))}
                         </select>
                      </div>

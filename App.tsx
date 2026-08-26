@@ -43,7 +43,7 @@ import { Icon } from './components/Icon';
 import { Login } from './components/Login';
 import { PrintableSchedule } from './components/PrintableSchedule';
 import { useHolidayCredits } from './hooks/useHolidayCredits';
-import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay, getNationalHolidays, DEFAULT_JORNADA_SETTINGS, getShortName, getDefaultProtectedDays } from './constants';
+import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay, getNationalHolidays, DEFAULT_JORNADA_SETTINGS, getShortName, getDefaultProtectedDays, isEmployeeActiveInMonth } from './constants';
 import { Employee, MonthYear, Holiday, JornadaSettings, OfficialScheduleSnapshot, ScheduleDiffItem } from './types';
 import { HelpCenter } from './components/HelpCenter';
 import { JornadaManager } from './components/JornadaManager';
@@ -361,7 +361,7 @@ const App: React.FC = () => {
   const onUpdateTacticalPosition = useCallback((empId: string, dayIdx: number, newPos: string | null) => {
     setEmployees(prev => {
       const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
-      const activeEmps = prev.filter(e => !e.isHidden && e.status === 'active');
+      const activeEmps = prev.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
       
       // 1. Identify target employee and their group
       const targetEmp = prev.find(e => e.id === empId);
@@ -517,7 +517,7 @@ const App: React.FC = () => {
       const folgas: string[] = [];
       const atestados: string[] = [];
 
-      const activeEmps = (employees || []).filter(e => e && !e.isHidden && e.status === 'active');
+      const activeEmps = (employees || []).filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
       const resolvedPositions = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, activeJornadaSettings);
       
       activeEmps.forEach(e => {

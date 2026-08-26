@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Employee, MonthYear, JornadaSettings } from '../types';
 import { getShiftClassification } from '../hooks/useScheduleEngine';
-import { DEFAULT_JORNADA_SETTINGS, getShortName } from '../constants';
+import { DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth } from '../constants';
 import { Icon } from './Icon';
 import { toPng } from 'html-to-image';
 
@@ -43,8 +43,8 @@ export const SectionManager: React.FC<SectionManagerProps> = ({
   const currentData = assignments[activeTab] || {};
 
   const activeEmps = useMemo(() => {
-    return employees.filter(e => !e.isHidden && e.status === 'active');
-  }, [employees]);
+    return employees.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
+  }, [employees, currentMY]);
 
   const handleSortear = () => {
     const byShift: Record<string, Employee[]> = { Abertura: [], Intermediário: [], Fechamento: [] };

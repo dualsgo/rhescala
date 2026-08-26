@@ -8,7 +8,7 @@ import {
   calculateLunches, 
   resolveTacticalDay 
 } from '../hooks/useScheduleEngine';
-import { buildHolidaySet, getShortName } from '../constants';
+import { buildHolidaySet, getShortName, isEmployeeActiveInMonth } from '../constants';
 import { useDialog } from '../contexts/DialogContext';
 
 interface MobileEmployerViewerProps {
@@ -48,8 +48,8 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
   const { showDialog } = useDialog();
 
   const activeEmployees = useMemo(() => {
-    return employees.filter(e => !e.isHidden && e.status === 'active');
-  }, [employees]);
+    return employees.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
+  }, [employees, currentMY]);
 
   // Current selected employee
   const currentEmp = useMemo(() => {
@@ -270,7 +270,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
             
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1">
-                <span className="text-base font-black text-slate-900 dark:text-slate-100 truncate">
+                <span className="text-base font-black text-slate-900 dark:text-slate-100 uppercase truncate">
                   {currentEmp ? currentEmp.name : 'Selecionar Colaborador'}
                 </span>
                 <Icon name="unfold_more" className="text-sm text-slate-400 shrink-0" />
@@ -559,7 +559,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
                             {emp.name.substring(0, 2)}
                           </div>
                           <div className="min-w-0">
-                            <span className="text-xs font-black text-slate-800 dark:text-slate-200 truncate block">
+                            <span className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase truncate block">
                               {emp.name} {isMe && '(Você)'}
                             </span>
                             <span className="text-[10px] font-bold text-slate-400 block">
@@ -692,7 +692,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
                           {emp.name.substring(0, 2)}
                         </div>
                         <div className="min-w-0">
-                          <span className="text-xs font-black block truncate">{emp.name}</span>
+                          <span className="text-xs font-black uppercase block truncate">{emp.name}</span>
                           <span className={`text-[10px] font-bold block ${isSelected ? 'text-white/80' : 'text-slate-400'}`}>
                             {emp.cargo || 'Atendente'} • {emp.workPeriod || '10h às 18h20'}
                           </span>

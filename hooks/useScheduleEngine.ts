@@ -1,6 +1,6 @@
 
 import { Employee, ShiftType, Holiday, JornadaSettings, MonthYear, OfficialScheduleSnapshot, ScheduleDiffItem } from '../types';
-import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, getShortName } from '../constants';
+import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth } from '../constants';
 
 
 // ─── Shared weekday names ─────────────────────────────────────────────────────
@@ -1869,7 +1869,7 @@ export function getCleaningSchedule(
     customHolidays: Holiday[] = [],
     deletedNationalHolidays: string[] = []
 ): { day: number; empName: string; empId?: string }[] {
-    const activeEmps = employees.filter(e => e.status === 'active' && !e.isHidden && !e.isYoungApprentice && e.cargo !== 'Aprendiz' && e.cargo !== 'Estoquista');
+    const activeEmps = employees.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month) && !e.isYoungApprentice && e.cargo !== 'Aprendiz' && e.cargo !== 'Estoquista');
     const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
     const holidaySet = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays);
     const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;

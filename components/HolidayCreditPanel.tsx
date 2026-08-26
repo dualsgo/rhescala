@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { Employee, MonthYear, ShiftType, Holiday } from '../types';
 import { Icon } from './Icon';
-import { buildHolidaySet } from '../constants';
+import { buildHolidaySet, isEmployeeActiveInMonth } from '../constants';
 import { isWorkingShift } from '../hooks/useScheduleEngine';
 
 
@@ -55,9 +55,8 @@ export const HolidayCreditPanel: React.FC<HolidayCreditPanelProps> = ({
 
     if (holidaysInMonth.length === 0) return [];
 
-    // For each employee working on a holiday
     employees.forEach(emp => {
-      if (emp.status !== 'active' || emp.isYoungApprentice) return;
+      if (!isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month) || emp.isYoungApprentice) return;
 
       const shifts = emp.shifts[monthKey] || [];
       

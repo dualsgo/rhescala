@@ -224,7 +224,7 @@ export const InconsistencyModal: React.FC<InconsistencyModalProps> = ({
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-black text-slate-900 dark:text-white">
+                        <span className="text-sm font-black text-slate-900 dark:text-white uppercase">
                           {displayName}
                         </span>
                         <span
