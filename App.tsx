@@ -1430,59 +1430,65 @@ const App: React.FC = () => {
        )}
        </div>
 
-        <InconsistencyModal
-          isOpen={showInconsistencyModal}
-          onClose={() => setShowInconsistencyModal(false)}
-          employees={employees}
-          currentMY={currentMY}
-          today={new Date()}
-          onSelectDay={(idx) => {
-            setSelectedDayIdx(idx);
-            setCurrentView('grid');
-          }}
-          onApplyFix={(empId, dayIdx, shift) => {
-            const monthKeyStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
-            setEmployees(prev => prev.map(emp => {
-              if (emp.id !== empId) return emp;
-              const sfs = [...(emp.shifts[monthKeyStr] || [])];
-              sfs[dayIdx] = shift;
-              return { ...emp, shifts: { ...emp.shifts, [monthKeyStr]: sfs } };
-            }));
-          }}
-          onApplyBulkFixes={(updates) => {
-            const monthKeyStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
-            setEmployees(prev => prev.map(emp => {
-              const empUpdates = updates.filter(u => u.empId === emp.id);
-              if (empUpdates.length === 0) return emp;
-              const sfs = [...(emp.shifts[monthKeyStr] || [])];
-              empUpdates.forEach(u => {
-                sfs[u.dayIdx] = u.newShift;
-              });
-              return { ...emp, shifts: { ...emp.shifts, [monthKeyStr]: sfs } };
-            }));
-          }}
-        />
+        {showInconsistencyModal && (
+          <InconsistencyModal
+            isOpen={showInconsistencyModal}
+            onClose={() => setShowInconsistencyModal(false)}
+            employees={employees}
+            currentMY={currentMY}
+            today={new Date()}
+            onSelectDay={(idx) => {
+              setSelectedDayIdx(idx);
+              setCurrentView('grid');
+            }}
+            onApplyFix={(empId, dayIdx, shift) => {
+              const monthKeyStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+              setEmployees(prev => prev.map(emp => {
+                if (emp.id !== empId) return emp;
+                const sfs = [...(emp.shifts[monthKeyStr] || [])];
+                sfs[dayIdx] = shift;
+                return { ...emp, shifts: { ...emp.shifts, [monthKeyStr]: sfs } };
+              }));
+            }}
+            onApplyBulkFixes={(updates) => {
+              const monthKeyStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+              setEmployees(prev => prev.map(emp => {
+                const empUpdates = updates.filter(u => u.empId === emp.id);
+                if (empUpdates.length === 0) return emp;
+                const sfs = [...(emp.shifts[monthKeyStr] || [])];
+                empUpdates.forEach(u => {
+                  sfs[u.dayIdx] = u.newShift;
+                });
+                return { ...emp, shifts: { ...emp.shifts, [monthKeyStr]: sfs } };
+              }));
+            }}
+          />
+        )}
 
-        <PresetOptionsModal
-          isOpen={showPresetModal}
-          onClose={() => setShowPresetModal(false)}
-          employees={employees}
-          currentMY={currentMY}
-          initialEmployeeId={presetInitialEmpId}
-          onApply={handleApplyGranularPresets}
-        />
+        {showPresetModal && (
+          <PresetOptionsModal
+            isOpen={showPresetModal}
+            onClose={() => setShowPresetModal(false)}
+            employees={employees}
+            currentMY={currentMY}
+            initialEmployeeId={presetInitialEmpId}
+            onApply={handleApplyGranularPresets}
+          />
+        )}
 
-        <ScheduleDiffModal
-          isOpen={showDiffModal}
-          onClose={() => setShowDiffModal(false)}
-          snapshot={officialSnapshots[monthKey]}
-          diffs={scheduleDiffs}
-          currentMY={currentMY}
-          onSelectDay={(idx) => {
-            setSelectedDayIdx(idx);
-            setCurrentView('grid');
-          }}
-        />
+        {showDiffModal && (
+          <ScheduleDiffModal
+            isOpen={showDiffModal}
+            onClose={() => setShowDiffModal(false)}
+            snapshot={officialSnapshots[monthKey]}
+            diffs={scheduleDiffs}
+            currentMY={currentMY}
+            onSelectDay={(idx) => {
+              setSelectedDayIdx(idx);
+              setCurrentView('grid');
+            }}
+          />
+        )}
 
         <PrintableSchedule 
           employees={employees} 

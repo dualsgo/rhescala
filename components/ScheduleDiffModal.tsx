@@ -25,13 +25,6 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
   const [selectedEmpId, setSelectedEmpId] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'shift' | 'hour' | 'position'>('all');
 
-  if (!isOpen) return null;
-
-  const monthName = new Date(currentMY.year, currentMY.month).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-  const validatedDateStr = snapshot?.validatedAt
-    ? new Date(snapshot.validatedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
-    : 'Desconhecida';
-
   const filteredDiffs = useMemo(() => {
     return diffs.filter(d => {
       if (selectedEmpId !== 'all' && d.empId !== selectedEmpId) return false;
@@ -53,6 +46,13 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
     diffs.forEach(d => map.set(d.empId, d.empName));
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [diffs]);
+
+  if (!isOpen) return null;
+
+  const monthName = new Date(currentMY.year, currentMY.month).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const validatedDateStr = snapshot?.validatedAt
+    ? new Date(snapshot.validatedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+    : 'Desconhecida';
 
   const handleCopyReport = async () => {
     if (diffs.length === 0) {
