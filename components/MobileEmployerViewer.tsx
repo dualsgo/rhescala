@@ -20,7 +20,7 @@ interface MobileEmployerViewerProps {
   holidayCredits?: Record<string, HolidayCredit[]> | HolidayCredit[];
   selectedEmployeeId?: string;
   onSelectEmployee: (empId: string) => void;
-  onOpenEmployeeCard: (emp: Employee) => void;
+  onOpenEmployeeCard: (emp: Employee, tab?: 'mes' | 'atual' | 'pedidos' | 'atestado', initialDate?: string) => void;
   onSwitchToFullGrid: () => void;
   onMonthChange: (my: MonthYear) => void;
   onUpdateEmployee?: (empId: string, data: Partial<Employee>) => void;

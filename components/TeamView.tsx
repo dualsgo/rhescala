@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useDialog } from '../contexts/DialogContext';
 import { Employee, EmployeeCargo } from '../types';
 import { Icon } from './Icon';
