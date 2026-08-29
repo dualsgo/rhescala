@@ -602,11 +602,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                      {emp.jornada === '5x2' && (
                                        <span className="text-[7px] px-1 rounded bg-purple-100 text-purple-600 font-bold uppercase tracking-widest">5x2</span>
                                      )}
-                                     {emp.atestadoStart && emp.atestadoEnd && (
-                                       <span className="text-[7px] px-1 rounded bg-rose-100 text-rose-600 font-bold uppercase tracking-widest" title={`Atestado ativo: ${emp.atestadoStart.split('-').reverse().join('/')} até ${emp.atestadoEnd.split('-').reverse().join('/')}`}>
-                                         🩺 AT
-                                       </span>
-                                     )}
                                    </div>
                                  </div>
                                  <Icon name="chevron_right" className="hidden sm:block text-slate-300 group-hover/name:text-orange-500 opacity-0 group-hover/name:opacity-100 transition-all text-sm ml-auto shrink-0" />
