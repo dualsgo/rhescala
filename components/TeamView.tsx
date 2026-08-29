@@ -78,6 +78,59 @@ function handleVacationStart(emp: Employee, startDate: string, onUpdate: (id: st
   onUpdate(emp.id, updates);
 }
 
+function handleAtestadoSave(emp: Employee, startDate: string, durationDays: number, onUpdate: (id: string, data: Partial<Employee>) => void) {
+  if (!startDate || durationDays <= 0) {
+    handleAtestadoClear(emp, onUpdate);
+    return;
+  }
+  const endDate = addDays(startDate, durationDays - 1);
+  const startObj = new Date(startDate + 'T00:00:00');
+  const endObj = new Date(endDate + 'T00:00:00');
+  
+  const newShifts = { ...emp.shifts };
+  let current = new Date(startObj.getFullYear(), startObj.getMonth(), 1);
+  while (current <= endObj) {
+    const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+    const shifts = [...(newShifts[monthKey] || [])];
+    const daysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+    
+    if (shifts.length === 0) {
+      for (let i = 0; i < daysInMonth; i++) shifts[i] = 'T';
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      if (dStr >= startDate && dStr <= endDate) {
+        shifts[d - 1] = 'AT';
+      } else if (shifts[d - 1] === 'AT') {
+        shifts[d - 1] = 'T';
+      }
+    }
+    newShifts[monthKey] = shifts;
+    current.setMonth(current.getMonth() + 1);
+  }
+
+  onUpdate(emp.id, {
+    atestadoStart: startDate,
+    atestadoEnd: endDate,
+    shifts: newShifts
+  });
+}
+
+function handleAtestadoClear(emp: Employee, onUpdate: (id: string, data: Partial<Employee>) => void) {
+  const newShifts = { ...emp.shifts };
+  let hasChanges = false;
+  for (const [mKey, shiftArr] of Object.entries(newShifts)) {
+    if (Array.isArray(shiftArr) && shiftArr.includes('AT')) {
+      newShifts[mKey] = shiftArr.map(s => s === 'AT' ? 'T' : s);
+      hasChanges = true;
+    }
+  }
+  const updates: Partial<Employee> = { atestadoStart: '', atestadoEnd: '' };
+  if (hasChanges) updates.shifts = newShifts;
+  onUpdate(emp.id, updates);
+}
+
 export const TeamView: React.FC<TeamViewProps> = ({ 
   employees, 
   isReadOnly = false,
@@ -101,12 +154,28 @@ export const TeamView: React.FC<TeamViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [cargoFilter, setCargoFilter] = useState<string>('ALL');
 
+  const [atestadoStartEdit, setAtestadoStartEdit] = useState('');
+  const [atestadoDurationEdit, setAtestadoDurationEdit] = useState(1);
+
   const { showDialog } = useDialog();
 
   const editingEmployee = useMemo(() => {
     if (!editingEmpId) return null;
     return employees.find(e => e.id === editingEmpId) || null;
   }, [employees, editingEmpId]);
+
+  useEffect(() => {
+    if (editingEmployee) {
+      setAtestadoStartEdit(editingEmployee.atestadoStart || '');
+      if (editingEmployee.atestadoStart && editingEmployee.atestadoEnd) {
+        const s = new Date(editingEmployee.atestadoStart + 'T00:00:00').getTime();
+        const e = new Date(editingEmployee.atestadoEnd + 'T00:00:00').getTime();
+        setAtestadoDurationEdit(Math.max(1, Math.round((e - s) / 86400000) + 1));
+      } else {
+        setAtestadoDurationEdit(1);
+      }
+    }
+  }, [editingEmployee]);
 
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => {
@@ -705,6 +774,68 @@ export const TeamView: React.FC<TeamViewProps> = ({
                     )}
                   </div>
                 )}
+
+                {/* Atestado Médico */}
+                <div className="p-3.5 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Icon name="medical_services" className="text-rose-500 text-sm" />
+                      Atestado Médico (Lançar por Período)
+                    </label>
+                    {editingEmployee.atestadoStart && editingEmployee.atestadoEnd && (
+                      <button
+                        type="button"
+                        disabled={isReadOnly}
+                        onClick={() => handleAtestadoClear(editingEmployee, onUpdateEmployee)}
+                        className="text-[9px] font-black text-rose-500 hover:underline uppercase"
+                      >
+                        Limpar Atestado
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Data Início</span>
+                      <input
+                        type="date"
+                        disabled={isReadOnly}
+                        value={atestadoStartEdit}
+                        onChange={(e) => setAtestadoStartEdit(e.target.value)}
+                        className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Duração (Dias)</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={180}
+                        disabled={isReadOnly}
+                        value={atestadoDurationEdit}
+                        onChange={(e) => setAtestadoDurationEdit(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                      />
+                    </div>
+                  </div>
+                  {atestadoStartEdit && (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-zinc-700/60">
+                      <div className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                        <span>Fim: {formatDateBR(addDays(atestadoStartEdit, atestadoDurationEdit - 1))}</span>
+                        <span className="ml-2 text-emerald-600 dark:text-emerald-400">Retorno: {formatDateBR(addDays(atestadoStartEdit, atestadoDurationEdit))}</span>
+                      </div>
+                      {!isReadOnly && (
+                        <button
+                          type="button"
+                          onClick={() => handleAtestadoSave(editingEmployee, atestadoStartEdit, atestadoDurationEdit, onUpdateEmployee)}
+                          className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-1"
+                        >
+                          <Icon name="save" className="text-xs" />
+                          Salvar Atestado
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Section 5: Acesso & Visibilidade */}
@@ -901,6 +1032,14 @@ export const TeamView: React.FC<TeamViewProps> = ({
                     <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-[10px] bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-lg w-fit">
                       <Icon name="beach_access" className="text-xs shrink-0" />
                       <span>Férias: {formatDateBR(emp.vacationStart).substring(0, 5)} a {formatDateBR(emp.vacationEnd).substring(0, 5)}</span>
+                    </div>
+                  )}
+
+                  {/* Atestado */}
+                  {emp.atestadoStart && emp.atestadoEnd && (
+                    <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 text-[10px] bg-rose-50 dark:bg-rose-950/30 px-2 py-0.5 rounded-lg w-fit">
+                      <Icon name="medical_services" className="text-xs shrink-0" />
+                      <span>Atestado: {formatDateBR(emp.atestadoStart).substring(0, 5)} a {formatDateBR(emp.atestadoEnd).substring(0, 5)}</span>
                     </div>
                   )}
                 </div>

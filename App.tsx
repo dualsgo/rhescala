@@ -104,6 +104,8 @@ const App: React.FC = () => {
   const [waModal, setWaModal] = useState<{ show: boolean, text: string }>({ show: false, text: '' });
   const [showHelp, setShowHelp] = useState(false);
   const [selectedEmployeeForCard, setSelectedEmployeeForCard] = useState<Employee | null>(null);
+  const [employeeCardInitialTab, setEmployeeCardInitialTab] = useState<'mes' | 'atual' | 'pedidos' | 'atestado'>('mes');
+  const [employeeCardInitialDate, setEmployeeCardInitialDate] = useState<string | undefined>(undefined);
 
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
   const isReadOnly = auth.role === 'viewer';
@@ -942,8 +944,10 @@ const App: React.FC = () => {
                       holidayCredits={holidayCredits}
                       selectedEmployeeId={viewerSelectedEmpId || (employees.find(e => !e.isHidden && e.status === 'active')?.id)}
                       onSelectEmployee={(empId) => setViewerSelectedEmpId(empId)}
-                      onOpenEmployeeCard={async (emp) => {
+                      onOpenEmployeeCard={async (emp, tab = 'mes', initialDate) => {
                         if (auth.role === 'admin' || authenticatedEmployeeId === emp.id) {
+                          setEmployeeCardInitialTab(tab);
+                          setEmployeeCardInitialDate(initialDate);
                           setSelectedEmployeeForCard(emp);
                         } else {
                           const password = await showDialog({
@@ -954,6 +958,8 @@ const App: React.FC = () => {
 
                           if (password === emp.password || (!emp.password && password === '1234')) {
                             setAuthenticatedEmployeeId(emp.id);
+                            setEmployeeCardInitialTab(tab);
+                            setEmployeeCardInitialDate(initialDate);
                             setSelectedEmployeeForCard(emp);
                           } else if (password !== null) {
                             showDialog({ title: 'Erro', message: 'Senha individual incorreta.', type: 'alert' });
@@ -1037,11 +1043,12 @@ const App: React.FC = () => {
                      setPresetInitialEmpId(empId);
                      setShowPresetModal(true);
                    }}
-                   onOpenEmployeeCard={async (emp) => {
+                   onOpenEmployeeCard={async (emp, tab = 'mes', initialDate) => {
                      if (auth.role === 'admin' || authenticatedEmployeeId === emp.id) {
+                       setEmployeeCardInitialTab(tab);
+                       setEmployeeCardInitialDate(initialDate);
                        setSelectedEmployeeForCard(emp);
                      } else {
-                       // Request employee password
                        const password = await showDialog({
                          type: 'prompt',
                          title: `Acesso Individual: ${emp.name}`,
@@ -1050,6 +1057,8 @@ const App: React.FC = () => {
 
                        if (password === emp.password || (!emp.password && password === '1234')) {
                          setAuthenticatedEmployeeId(emp.id);
+                         setEmployeeCardInitialTab(tab);
+                         setEmployeeCardInitialDate(initialDate);
                          setSelectedEmployeeForCard(emp);
                        } else if (password !== null) {
                          showDialog({ title: 'Erro', message: 'Senha individual incorreta.', type: 'alert' });
@@ -1261,6 +1270,8 @@ const App: React.FC = () => {
            onUpdateEmployee={onUpdateEmployee}
            isAdmin={auth.role === 'admin'}
            isValidated={isReadOnly}
+           initialTab={employeeCardInitialTab}
+           initialDate={employeeCardInitialDate}
            onClose={() => setSelectedEmployeeForCard(null)}
          />
        )}

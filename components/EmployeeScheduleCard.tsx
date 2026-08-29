@@ -16,6 +16,8 @@ interface EmployeeScheduleCardProps {
   isAdmin?: boolean;
   isValidated?: boolean;
   onClose: () => void;
+  initialTab?: 'mes' | 'atual' | 'pedidos' | 'atestado';
+  initialDate?: string;
 }
 
 export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
@@ -27,16 +29,18 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   onUpdateEmployee,
   isAdmin,
   isValidated,
-  onClose
+  onClose,
+  initialTab = 'mes',
+  initialDate
 }) => {
   const [newRequest, setNewRequest] = React.useState('');
   const [selectedRequestDate, setSelectedRequestDate] = React.useState('');
   const [showSubmitFeedback, setShowSubmitFeedback] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState<'mes' | 'atual' | 'pedidos' | 'atestado'>('mes');
+  const [activeTab, setActiveTab] = React.useState<'mes' | 'atual' | 'pedidos' | 'atestado'>(initialTab);
   const [requestType, setRequestType] = React.useState<'folga_aviso' | 'troca_turno'>('folga_aviso');
   const [targetEmployeeId, setTargetEmployeeId] = React.useState('');
 
-  const [atestadoStartInput, setAtestadoStartInput] = React.useState(employee.atestadoStart || '');
+  const [atestadoStartInput, setAtestadoStartInput] = React.useState(initialDate || employee.atestadoStart || '');
   const [atestadoDurationInput, setAtestadoDurationInput] = React.useState<number>(() => {
     if (employee.atestadoStart && employee.atestadoEnd) {
       const s = new Date(employee.atestadoStart + 'T00:00:00').getTime();
@@ -48,7 +52,13 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   const [atestadoSaveFeedback, setAtestadoSaveFeedback] = React.useState(false);
 
   React.useEffect(() => {
-    setAtestadoStartInput(employee.atestadoStart || '');
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  React.useEffect(() => {
+    setAtestadoStartInput(initialDate || employee.atestadoStart || '');
     if (employee.atestadoStart && employee.atestadoEnd) {
       const s = new Date(employee.atestadoStart + 'T00:00:00').getTime();
       const e = new Date(employee.atestadoEnd + 'T00:00:00').getTime();
@@ -56,7 +66,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
     } else {
       setAtestadoDurationInput(1);
     }
-  }, [employee.id, employee.atestadoStart, employee.atestadoEnd]);
+  }, [employee.id, employee.atestadoStart, employee.atestadoEnd, initialDate]);
 
   const addDaysStr = (dateStr: string, days: number): string => {
     if (!dateStr) return '';

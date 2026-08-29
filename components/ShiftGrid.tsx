@@ -39,7 +39,7 @@ interface ShiftGridProps {
   onFilterChange: (f: 'all' | 'sunday' | 'holiday' | 'week') => void;
   jornadaSettings?: JornadaSettings;
   resolvedPositions: Record<string, string>;
-  onOpenEmployeeCard: (emp: Employee) => void;
+  onOpenEmployeeCard: (emp: Employee, tab?: 'mes' | 'atual' | 'pedidos' | 'atestado', initialDate?: string) => void;
   diffs?: ScheduleDiffItem[];
   onOpenPresetForEmployee?: (empId: string) => void;
   protectedDays?: Record<number, number> | number[];
@@ -559,11 +559,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                       {emps.map(emp => {
                         return (
                           <tr key={emp.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group/row">
-                            {/* Name & Position */}
-                             {/* Name & Position */}
                              <td className="sticky left-0 z-[10] bg-white dark:bg-black border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-1.5 sm:py-1.5 sm:px-2 min-w-[110px] sm:min-w-[135px] w-[110px] sm:w-[135px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]">
                                <button 
                                  onClick={() => onOpenEmployeeCard(emp)}
+                                 title={`${emp.name.toUpperCase()} • Clique para ver escala completa, solicitações ou lançar atestado médico por período`}
                                  className="flex items-center gap-1.5 sm:gap-2 w-full text-left hover:bg-orange-50 dark:hover:bg-orange-950/20 p-0.5 sm:p-1 rounded-lg sm:rounded-xl transition-all group/name"
                                >
                                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-slate-100 dark:bg-zinc-900 flex items-center justify-center text-[8px] sm:text-[10px] font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-zinc-800 group-hover/name:bg-orange-100 group-hover/name:text-orange-600 group-hover/name:border-orange-200 transition-colors shrink-0">
@@ -602,6 +601,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                      )}
                                      {emp.jornada === '5x2' && (
                                        <span className="text-[7px] px-1 rounded bg-purple-100 text-purple-600 font-bold uppercase tracking-widest">5x2</span>
+                                     )}
+                                     {emp.atestadoStart && emp.atestadoEnd && (
+                                       <span className="text-[7px] px-1 rounded bg-rose-100 text-rose-600 font-bold uppercase tracking-widest" title={`Atestado ativo: ${emp.atestadoStart.split('-').reverse().join('/')} até ${emp.atestadoEnd.split('-').reverse().join('/')}`}>
+                                         🩺 AT
+                                       </span>
                                      )}
                                    </div>
                                  </div>
@@ -835,12 +839,20 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                       return (
                                         <select
                                           value={shift}
-                                          onChange={(e) => onUpdateShift(emp.id, d.num - 1, e.target.value as ShiftType)}
+                                          onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val === 'AT_PERIOD') {
+                                              onOpenEmployeeCard(emp, 'atestado', fullDate);
+                                              return;
+                                            }
+                                            onUpdateShift(emp.id, d.num - 1, val as ShiftType);
+                                          }}
                                           className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-50"
                                         >
                                           <option value="T">Trabalha (T)</option>
                                           <option value="F">Folga (F)</option>
-                                          <option value="AT">Atestado Médico (AT) 🩺</option>
+                                          <option value="AT">Atestado Médico (Apenas este dia) 🩺</option>
+                                          <option value="AT_PERIOD">🩺 Lançar Atestado por Período / Intervalo...</option>
                                           
                                           {/* Specific Pending Holidays */}
                                           {(holidayCredits[emp.id] || [])
