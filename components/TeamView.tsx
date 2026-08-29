@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useDialog } from '../contexts/DialogContext';
 import { Employee, EmployeeCargo } from '../types';
 import { Icon } from './Icon';
@@ -131,17 +131,22 @@ function handleAtestadoClear(emp: Employee, onUpdate: (id: string, data: Partial
   onUpdate(emp.id, updates);
 }
 
-export const TeamView: React.FC<TeamViewProps> = ({ 
-  employees, 
-  isReadOnly = false,
-  onUpdateEmployee, 
-  onDeleteEmployee, 
-  onAddEmployee 
-}) => {
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingEmpId, setEditingEmpId] = useState<string | null>(null);
+/** Componente Modal para Cadastro de Novo Colaborador */
+interface AddEmployeeModalProps {
+  onClose: () => void;
+  onAddEmployee: (
+    name: string, 
+    isYoung: boolean, 
+    courseDay: string, 
+    cargo: EmployeeCargo, 
+    birthday: string, 
+    contractType?: 'CLT' | 'Sazonal', 
+    jornada?: '6x1' | '5x2',
+    hiredAt?: string
+  ) => void;
+}
 
-  // Add modal state
+const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmployee }) => {
   const [newName, setNewName] = useState('');
   const [isYoung, setIsYoung] = useState(false);
   const [courseDay, setCourseDay] = useState('Segunda-feira');
@@ -150,42 +155,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
   const [newHiredAt, setNewHiredAt] = useState('');
   const [newContractType, setNewContractType] = useState<'CLT' | 'Sazonal'>('CLT');
   const [newJornada, setNewJornada] = useState<'6x1' | '5x2'>('6x1');
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [cargoFilter, setCargoFilter] = useState<string>('ALL');
-
-  const [atestadoStartEdit, setAtestadoStartEdit] = useState('');
-  const [atestadoDurationEdit, setAtestadoDurationEdit] = useState(1);
-
   const { showDialog } = useDialog();
-
-  const editingEmployee = useMemo(() => {
-    if (!editingEmpId) return null;
-    return employees.find(e => e.id === editingEmpId) || null;
-  }, [employees, editingEmpId]);
-
-  useEffect(() => {
-    if (editingEmployee) {
-      setAtestadoStartEdit(editingEmployee.atestadoStart || '');
-      if (editingEmployee.atestadoStart && editingEmployee.atestadoEnd) {
-        const s = new Date(editingEmployee.atestadoStart + 'T00:00:00').getTime();
-        const e = new Date(editingEmployee.atestadoEnd + 'T00:00:00').getTime();
-        setAtestadoDurationEdit(Math.max(1, Math.round((e - s) / 86400000) + 1));
-      } else {
-        setAtestadoDurationEdit(1);
-      }
-    }
-  }, [editingEmployee]);
-
-  const filteredEmployees = useMemo(() => {
-    return employees.filter(emp => {
-      const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            (emp.cargo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            (emp.workPeriod || '').toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCargo = cargoFilter === 'ALL' || (emp.cargo || 'Atendente') === cargoFilter;
-      return matchesSearch && matchesCargo;
-    });
-  }, [employees, searchTerm, cargoFilter]);
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,17 +175,720 @@ export const TeamView: React.FC<TeamViewProps> = ({
           newJornada,
           newHiredAt || undefined
         );
-        setNewName('');
-        setIsYoung(false);
-        setNewCargo('Atendente');
-        setNewBirthday('');
-        setNewHiredAt('');
-        setNewContractType('CLT');
-        setNewJornada('6x1');
-        setShowAddModal(false);
+        onClose();
       }
     }
   };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]">
+        {/* Modal Header */}
+        <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
+          <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-orange-100 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+              <Icon name="person_add" className="text-xl" />
+            </div>
+            Cadastrar Colaborador
+          </h4>
+          <button 
+            type="button" 
+            onClick={onClose}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all"
+          >
+            <Icon name="close" className="text-lg" />
+          </button>
+        </div>
+
+        {/* Modal Form Body */}
+        <form onSubmit={handleAddSubmit} className="overflow-y-auto custom-scrollbar p-5 sm:p-6 space-y-4 flex-1">
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Nome Completo *</label>
+            <input 
+              autoFocus 
+              required
+              type="text" 
+              value={newName} 
+              onChange={(e) => setNewName(e.target.value)} 
+              className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-3 font-bold text-sm text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-orange-500 outline-none uppercase" 
+              placeholder="Ex: João da Silva" 
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Cargo</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {CARGO_OPTIONS.map(c => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => {
+                    setNewCargo(c);
+                    if (c === 'Aprendiz') {
+                      setIsYoung(true);
+                    } else {
+                      setIsYoung(false);
+                    }
+                  }}
+                  className={`py-2 rounded-xl text-xs font-black uppercase border transition-all ${
+                    newCargo === c
+                      ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
+                      : 'bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-zinc-700 hover:border-orange-300'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Data de Início (Admissão) */}
+          <div className="p-3.5 bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200/60 dark:border-orange-900/40 rounded-2xl space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <Icon name="event" className="text-orange-500 text-sm" />
+              <label className="text-[10px] font-black text-orange-900 dark:text-orange-300 uppercase tracking-wider">
+                Data de Início / Admissão
+              </label>
+            </div>
+            <input 
+              type="date" 
+              value={newHiredAt} 
+              onChange={(e) => setNewHiredAt(e.target.value)} 
+              className="w-full bg-white dark:bg-zinc-800 border border-orange-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-orange-500" 
+            />
+            <p className="text-[10px] text-orange-700 dark:text-orange-400/90 font-medium">
+              Antes desta data, o colaborador é desconsiderado na escala (marcado como N/A). Deixe em branco se já atua desde o início.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Contrato</label>
+              <select 
+                value={newContractType} 
+                onChange={(e) => setNewContractType(e.target.value as any)}
+                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none"
+              >
+                <option value="CLT">CLT (Efetivo)</option>
+                <option value="Sazonal">Sazonal / Temporário</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Jornada</label>
+              <select 
+                value={newJornada} 
+                onChange={(e) => setNewJornada(e.target.value as any)}
+                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none"
+              >
+                <option value="6x1">6x1</option>
+                <option value="5x2">5x2</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Data de Aniversário</label>
+            <input 
+              type="date" 
+              value={newBirthday} 
+              onChange={(e) => setNewBirthday(e.target.value)} 
+              className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none" 
+            />
+          </div>
+          
+          <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-zinc-800 rounded-xl border border-slate-200 dark:border-zinc-700">
+            <input 
+              type="checkbox" 
+              id="isYoung" 
+              checked={isYoung} 
+              onChange={(e) => setIsYoung(e.target.checked)} 
+              className="w-4 h-4 accent-orange-500 rounded cursor-pointer" 
+            />
+            <label htmlFor="isYoung" className="text-xs font-black text-slate-700 dark:text-slate-300 cursor-pointer">
+              Jovem Aprendiz
+            </label>
+          </div>
+
+          {isYoung && (
+            <div className="p-3 bg-sky-50 dark:bg-sky-950/30 border border-sky-100 dark:border-sky-900/50 rounded-xl space-y-2">
+              <label className="text-[10px] font-black text-sky-600 dark:text-sky-400 uppercase tracking-widest block">Dia do Curso Teórico</label>
+              <select 
+                value={courseDay} 
+                onChange={(e) => setCourseDay(e.target.value)} 
+                className="w-full bg-white dark:bg-zinc-800 border border-sky-200 dark:border-sky-800 rounded-xl p-2 font-bold text-xs text-sky-900 dark:text-sky-200 outline-none"
+              >
+                {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'].map(d => <option key={d}>{d}</option>)}
+              </select>
+              <p className="text-[9px] text-sky-600 dark:text-sky-400 font-bold uppercase tracking-tight">Nota: Aprendizes folgam aos Sábados e Domingos automaticamente.</p>
+            </div>
+          )}
+
+          {/* Modal Actions */}
+          <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-zinc-700 rounded-xl font-black text-xs uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit" 
+              className="flex-1 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl font-black text-xs uppercase shadow-md shadow-orange-500/20 transition-all"
+            >
+              Cadastrar Colaborador
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+/** Componente Modal para Edição Completa de Colaborador */
+interface EditEmployeeModalProps {
+  employee: Employee;
+  isReadOnly: boolean;
+  onUpdateEmployee: (empId: string, data: Partial<Employee>) => void;
+  onDeleteEmployee: (empId: string) => void;
+  onClose: () => void;
+}
+
+const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
+  employee,
+  isReadOnly,
+  onUpdateEmployee,
+  onDeleteEmployee,
+  onClose,
+}) => {
+  const { showDialog } = useDialog();
+
+  const [atestadoStartEdit, setAtestadoStartEdit] = useState(employee.atestadoStart || '');
+  const [atestadoDurationEdit, setAtestadoDurationEdit] = useState<number>(() => {
+    if (employee.atestadoStart && employee.atestadoEnd) {
+      const s = new Date(employee.atestadoStart + 'T00:00:00').getTime();
+      const e = new Date(employee.atestadoEnd + 'T00:00:00').getTime();
+      return Math.max(1, Math.round((e - s) / 86400000) + 1);
+    }
+    return 1;
+  });
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/80">
+          <div className="flex items-center gap-3">
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm uppercase shadow-sm ${
+              employee.isYoungApprentice
+                ? 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300'
+                : employee.cargo === 'Estoquista'
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                : 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300'
+            }`}>
+              {employee.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 uppercase">
+                  {employee.name}
+                </h4>
+                <span className={`w-2 h-2 rounded-full ${employee.status === 'active' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+              </div>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400">
+                  {employee.cargo || 'Atendente'}
+                </span>
+                <span className="text-[10px] text-slate-400">•</span>
+                <span className="text-[10px] font-bold text-slate-400">
+                  ID: {employee.id}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <button 
+            type="button"
+            onClick={onClose}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all"
+          >
+            <Icon name="close" className="text-xl" />
+          </button>
+        </div>
+
+        {/* Scrollable Body */}
+        <div className="overflow-y-auto p-5 sm:p-7 space-y-6 flex-1 custom-scrollbar">
+          {/* Section 1: Identificação & Cargo */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+              <Icon name="badge" className="text-orange-500 text-base" />
+              <span>Identificação & Cargo</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Nome Completo</label>
+                <input
+                  type="text"
+                  disabled={isReadOnly}
+                  value={employee.name}
+                  onChange={(e) => onUpdateEmployee(employee.id, { name: e.target.value })}
+                  placeholder="Nome do colaborador"
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 text-xs font-black text-slate-900 dark:text-slate-100 uppercase outline-none focus:ring-2 focus:ring-orange-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Cargo</label>
+                <select
+                  disabled={isReadOnly}
+                  value={employee.cargo || 'Atendente'}
+                  onChange={(e) => {
+                    const newCargo = e.target.value as EmployeeCargo;
+                    const isApprentice = newCargo === 'Aprendiz';
+                    onUpdateEmployee(employee.id, { 
+                      cargo: newCargo,
+                      isYoungApprentice: isApprentice
+                    });
+                  }}
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-orange-500"
+                >
+                  {CARGO_OPTIONS.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Data de Início (Admissão) & Contrato */}
+          <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
+            <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+              <Icon name="event_available" className="text-orange-500 text-base" />
+              <span>Data de Início (Admissão) & Contrato</span>
+            </div>
+
+            <div className="p-4 bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200/70 dark:border-orange-900/40 rounded-2xl space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <label className="text-[10px] font-black text-orange-950 dark:text-orange-200 uppercase tracking-wider flex items-center gap-1.5">
+                  <Icon name="calendar_month" className="text-orange-500 text-sm" />
+                  Data de Início / Admissão
+                </label>
+                {employee.hiredAt && (
+                  <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400">
+                    Início: {formatDateBR(employee.hiredAt)}
+                  </span>
+                )}
+              </div>
+              <input
+                type="date"
+                disabled={isReadOnly}
+                value={employee.hiredAt || ''}
+                onChange={(e) => onUpdateEmployee(employee.id, { hiredAt: e.target.value })}
+                className="w-full bg-white dark:bg-zinc-800 border border-orange-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-orange-500"
+              />
+              <p className="text-[10px] text-orange-800 dark:text-orange-300/90 font-medium leading-relaxed">
+                💡 <strong>Como funciona:</strong> Nos dias e meses anteriores a esta data, o colaborador é automaticamente desconsiderado (marcado como <strong>N/A</strong>), não interferindo em folgas, escalas e relatórios.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Contrato</label>
+                <select
+                  disabled={isReadOnly}
+                  value={employee.contractType || 'CLT'}
+                  onChange={(e) => onUpdateEmployee(employee.id, { contractType: e.target.value as any })}
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                >
+                  <option value="CLT">CLT (Efetivo)</option>
+                  <option value="Sazonal">Sazonal / Temporário</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Jornada</label>
+                <select
+                  disabled={isReadOnly}
+                  value={employee.jornada || '6x1'}
+                  onChange={(e) => onUpdateEmployee(employee.id, { jornada: e.target.value as any })}
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                >
+                  <option value="6x1">6x1</option>
+                  <option value="5x2">5x2</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Data de Aniversário</label>
+                <input
+                  type="date"
+                  disabled={isReadOnly}
+                  value={employee.birthday || ''}
+                  onChange={(e) => onUpdateEmployee(employee.id, { birthday: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Escala Base & Folgas */}
+          <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
+            <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+              <Icon name="schedule" className="text-orange-500 text-base" />
+              <span>Escala Base & Folga Semanal</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Horário Base</label>
+                <select
+                  disabled={isReadOnly}
+                  value={employee.workPeriod}
+                  onChange={(e) => onUpdateEmployee(employee.id, { workPeriod: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-orange-500"
+                >
+                  {employee.isYoungApprentice ? (
+                    <option value={APPRENTICE_WORK_PERIOD}>{APPRENTICE_WORK_PERIOD}</option>
+                  ) : (
+                    SHIFT_HOURS.WEEKDAY.map(h => (
+                      <option key={h} value={h}>{h}</option>
+                    ))
+                  )}
+                  {!employee.isYoungApprentice && !SHIFT_HOURS.WEEKDAY.includes(employee.workPeriod) && employee.workPeriod && (
+                    <option value={employee.workPeriod}>{employee.workPeriod}</option>
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Folga Fixa Semanal</label>
+                <select
+                  disabled={isReadOnly}
+                  value={employee.preferredDayOff}
+                  onChange={(e) => onUpdateEmployee(employee.id, { preferredDayOff: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-orange-500"
+                >
+                  <option value="">Nenhuma folga fixa</option>
+                  {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'].map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Tactical Positions */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Posição Preferencial 1</label>
+                <select
+                  disabled={isReadOnly}
+                  value={employee.preferredPosition1 || ''}
+                  onChange={(e) => onUpdateEmployee(employee.id, { preferredPosition1: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                >
+                  <option value="">Nenhuma</option>
+                  {['P1', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Posição Preferencial 2</label>
+                <select
+                  disabled={isReadOnly}
+                  value={employee.preferredPosition2 || ''}
+                  onChange={(e) => onUpdateEmployee(employee.id, { preferredPosition2: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                >
+                  <option value="">Nenhuma</option>
+                  {['P1', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Condições Especiais (Aprendiz, Férias & Atestado) */}
+          <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
+            <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+              <Icon name="verified_user" className="text-orange-500 text-base" />
+              <span>Condições Especiais & Afastamentos</span>
+            </div>
+
+            {/* Jovem Aprendiz */}
+            <div className="p-3.5 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={`p-2 rounded-xl ${employee.isYoungApprentice ? 'bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-300' : 'bg-slate-200/70 text-slate-400 dark:bg-zinc-700'}`}>
+                    <Icon name="child_care" className="text-base" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase">Jovem Aprendiz</span>
+                    <p className="text-[10px] text-slate-400">Folga automática aos Sábados, Domingos e Feriados</p>
+                  </div>
+                </div>
+
+                {!isReadOnly && (
+                  <button
+                    type="button"
+                    onClick={() => onUpdateEmployee(employee.id, { isYoungApprentice: !employee.isYoungApprentice })}
+                    className={`w-10 h-5 rounded-full transition-all relative ${employee.isYoungApprentice ? 'bg-sky-500' : 'bg-slate-300 dark:bg-zinc-600'}`}
+                  >
+                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${employee.isYoungApprentice ? 'left-5.5' : 'left-0.5'}`}></div>
+                  </button>
+                )}
+              </div>
+
+              {employee.isYoungApprentice && (
+                <div className="pt-2 border-t border-slate-200 dark:border-zinc-700">
+                  <label className="text-[10px] font-black text-sky-600 dark:text-sky-400 uppercase tracking-widest block mb-1">Dia do Curso Teórico</label>
+                  <select
+                    disabled={isReadOnly}
+                    value={employee.courseDay || 'Segunda-feira'}
+                    onChange={(e) => onUpdateEmployee(employee.id, { courseDay: e.target.value })}
+                    className="w-full bg-white dark:bg-zinc-900 border border-sky-200 dark:border-sky-800 rounded-xl p-2 text-xs font-bold text-sky-900 dark:text-sky-200 outline-none"
+                  >
+                    {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'].map(d => <option key={d}>{d}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Férias */}
+            {!employee.isYoungApprentice && (
+              <div className="p-3.5 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <Icon name="beach_access" className="text-emerald-500 text-sm" />
+                    Férias (Início)
+                  </label>
+                  {employee.vacationStart && (
+                    <button
+                      type="button"
+                      disabled={isReadOnly}
+                      onClick={() => handleVacationStart(employee, '', onUpdateEmployee)}
+                      className="text-[9px] font-black text-rose-500 hover:underline uppercase"
+                    >
+                      Limpar Férias
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="date"
+                  disabled={isReadOnly}
+                  value={employee.vacationStart || ''}
+                  onChange={(e) => handleVacationStart(employee, e.target.value, onUpdateEmployee)}
+                  className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                />
+                {employee.vacationStart && employee.vacationEnd && (
+                  <div className="bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-900/50 flex items-center justify-between text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                    <span>Fim: {formatDateBR(employee.vacationEnd)}</span>
+                    <span>Retorno: {formatDateBR(addDays(employee.vacationEnd, 1))}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Atestado Médico */}
+            <div className="p-3.5 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Icon name="medical_services" className="text-rose-500 text-sm" />
+                  Atestado Médico (Lançar por Período)
+                </label>
+                {employee.atestadoStart && employee.atestadoEnd && (
+                  <button
+                    type="button"
+                    disabled={isReadOnly}
+                    onClick={() => {
+                      handleAtestadoClear(employee, onUpdateEmployee);
+                      setAtestadoStartEdit('');
+                      setAtestadoDurationEdit(1);
+                    }}
+                    className="text-[9px] font-black text-rose-500 hover:underline uppercase"
+                  >
+                    Limpar Atestado
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Data Início</span>
+                  <input
+                    type="date"
+                    disabled={isReadOnly}
+                    value={atestadoStartEdit}
+                    onChange={(e) => setAtestadoStartEdit(e.target.value)}
+                    className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                  />
+                </div>
+                <div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Duração (Dias)</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={180}
+                    disabled={isReadOnly}
+                    value={atestadoDurationEdit}
+                    onChange={(e) => setAtestadoDurationEdit(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                  />
+                </div>
+              </div>
+              {atestadoStartEdit && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-zinc-700/60">
+                  <div className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                    <span>Fim: {formatDateBR(addDays(atestadoStartEdit, atestadoDurationEdit - 1))}</span>
+                    <span className="ml-2 text-emerald-600 dark:text-emerald-400">Retorno: {formatDateBR(addDays(atestadoStartEdit, atestadoDurationEdit))}</span>
+                  </div>
+                  {!isReadOnly && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleAtestadoSave(employee, atestadoStartEdit, atestadoDurationEdit, onUpdateEmployee);
+                      }}
+                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-1"
+                    >
+                      <Icon name="save" className="text-xs" />
+                      Salvar Atestado
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Section 5: Acesso & Visibilidade */}
+          <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
+            <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+              <Icon name="lock" className="text-orange-500 text-base" />
+              <span>Acesso & Visibilidade</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Senha */}
+              <div className="p-3 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Senha Individual</label>
+                  {!isReadOnly && (
+                    <button 
+                      type="button"
+                      onClick={() => onUpdateEmployee(employee.id, { password: '1234' })}
+                      className="text-[9px] font-black text-orange-500 hover:underline uppercase"
+                    >
+                      Resetar (1234)
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    disabled={isReadOnly}
+                    value={employee.password || ''}
+                    onChange={(e) => onUpdateEmployee(employee.id, { password: e.target.value })}
+                    placeholder="Padrão: 1234"
+                    className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 outline-none"
+                  />
+                  <Icon name="key" className="absolute right-3 top-2 text-slate-400 text-xs" />
+                </div>
+              </div>
+
+              {/* Visibilidade */}
+              <div className="p-3 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 flex flex-col justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Visibilidade na Grade</span>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    {employee.isHidden ? 'Oculto na escala principal' : 'Visível na escala principal'}
+                  </p>
+                </div>
+                {!isReadOnly && (
+                  <button
+                    type="button"
+                    onClick={() => onUpdateEmployee(employee.id, { isHidden: !employee.isHidden })}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 border transition-all ${
+                      employee.isHidden
+                        ? 'bg-slate-900 text-white border-slate-900 dark:bg-zinc-700'
+                        : 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-zinc-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <Icon name={employee.isHidden ? 'visibility_off' : 'visibility'} className="text-sm" />
+                    <span>{employee.isHidden ? 'Colaborador Oculto' : 'Colaborador Visível'}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/80">
+          {!isReadOnly && (
+            <button
+              type="button"
+              onClick={async () => {
+                const confirmed = await showDialog({
+                  type: 'confirm',
+                  message: `Excluir o colaborador ${employee.name} permanentemente?`
+                });
+                if (confirmed) {
+                  onDeleteEmployee(employee.id);
+                  onClose();
+                }
+              }}
+              className="px-3.5 py-2 rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 font-black text-xs uppercase transition-all flex items-center gap-1.5 border border-transparent hover:border-rose-200"
+            >
+              <Icon name="delete" className="text-sm" />
+              <span>Excluir</span>
+            </button>
+          )}
+
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl font-black text-xs uppercase shadow-md shadow-orange-500/20 transition-all flex items-center gap-1.5"
+            >
+              <Icon name="check" className="text-base" />
+              <span>Concluir & Fechar</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const TeamView: React.FC<TeamViewProps> = ({ 
+  employees, 
+  isReadOnly = false,
+  onUpdateEmployee, 
+  onDeleteEmployee, 
+  onAddEmployee 
+}) => {
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingEmpId, setEditingEmpId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [cargoFilter, setCargoFilter] = useState<string>('ALL');
+
+  const { showDialog } = useDialog();
+
+  const editingEmployee = useMemo(() => {
+    if (!editingEmpId) return null;
+    return employees.find(e => e.id === editingEmpId) || null;
+  }, [employees, editingEmpId]);
+
+  const filteredEmployees = useMemo(() => {
+    return employees.filter(emp => {
+      const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                            (emp.cargo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (emp.workPeriod || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCargo = cargoFilter === 'ALL' || (emp.cargo || 'Atendente') === cargoFilter;
+      return matchesSearch && matchesCargo;
+    });
+  }, [employees, searchTerm, cargoFilter]);
 
   return (
     <div className="h-full flex flex-col gap-6 animate-fade-in overflow-y-auto custom-scrollbar pr-1 pb-20">
@@ -292,649 +965,21 @@ export const TeamView: React.FC<TeamViewProps> = ({
 
       {/* Add Employee Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
-            <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
-              <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-orange-100 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 flex items-center justify-center">
-                  <Icon name="person_add" className="text-xl" />
-                </div>
-                Cadastrar Colaborador
-              </h4>
-              <button 
-                type="button" 
-                onClick={() => setShowAddModal(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all"
-              >
-                <Icon name="close" className="text-lg" />
-              </button>
-            </div>
-
-            {/* Modal Form Body */}
-            <form onSubmit={handleAddSubmit} className="overflow-y-auto custom-scrollbar p-5 sm:p-6 space-y-4 flex-1">
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Nome Completo *</label>
-                <input 
-                  autoFocus 
-                  required
-                  type="text" 
-                  value={newName} 
-                  onChange={(e) => setNewName(e.target.value)} 
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-3 font-bold text-sm text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-orange-500 outline-none uppercase" 
-                  placeholder="Ex: João da Silva" 
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Cargo</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {CARGO_OPTIONS.map(c => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => {
-                        setNewCargo(c);
-                        if (c === 'Aprendiz') {
-                          setIsYoung(true);
-                        } else {
-                          setIsYoung(false);
-                        }
-                      }}
-                      className={`py-2 rounded-xl text-xs font-black uppercase border transition-all ${
-                        newCargo === c
-                          ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
-                          : 'bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-zinc-700 hover:border-orange-300'
-                      }`}
-                    >
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Data de Início (Admissão) */}
-              <div className="p-3.5 bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200/60 dark:border-orange-900/40 rounded-2xl space-y-1.5">
-                <div className="flex items-center gap-1.5">
-                  <Icon name="event" className="text-orange-500 text-sm" />
-                  <label className="text-[10px] font-black text-orange-900 dark:text-orange-300 uppercase tracking-wider">
-                    Data de Início / Admissão
-                  </label>
-                </div>
-                <input 
-                  type="date" 
-                  value={newHiredAt} 
-                  onChange={(e) => setNewHiredAt(e.target.value)} 
-                  className="w-full bg-white dark:bg-zinc-800 border border-orange-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-orange-500" 
-                />
-                <p className="text-[10px] text-orange-700 dark:text-orange-400/90 font-medium">
-                  Antes desta data, o colaborador é desconsiderado na escala (marcado como N/A). Deixe em branco se já atua desde o início.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Contrato</label>
-                  <select 
-                    value={newContractType} 
-                    onChange={(e) => setNewContractType(e.target.value as any)}
-                    className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none"
-                  >
-                    <option value="CLT">CLT (Efetivo)</option>
-                    <option value="Sazonal">Sazonal / Temporário</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Jornada</label>
-                  <select 
-                    value={newJornada} 
-                    onChange={(e) => setNewJornada(e.target.value as any)}
-                    className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none"
-                  >
-                    <option value="6x1">6x1</option>
-                    <option value="5x2">5x2</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Data de Aniversário</label>
-                <input 
-                  type="date" 
-                  value={newBirthday} 
-                  onChange={(e) => setNewBirthday(e.target.value)} 
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none" 
-                />
-              </div>
-              
-              <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-zinc-800 rounded-xl border border-slate-200 dark:border-zinc-700">
-                <input 
-                  type="checkbox" 
-                  id="isYoung" 
-                  checked={isYoung} 
-                  onChange={(e) => setIsYoung(e.target.checked)} 
-                  className="w-4 h-4 accent-orange-500 rounded cursor-pointer" 
-                />
-                <label htmlFor="isYoung" className="text-xs font-black text-slate-700 dark:text-slate-300 cursor-pointer">
-                  Jovem Aprendiz
-                </label>
-              </div>
-
-              {isYoung && (
-                <div className="p-3 bg-sky-50 dark:bg-sky-950/30 border border-sky-100 dark:border-sky-900/50 rounded-xl space-y-2">
-                  <label className="text-[10px] font-black text-sky-600 dark:text-sky-400 uppercase tracking-widest block">Dia do Curso Teórico</label>
-                  <select 
-                    value={courseDay} 
-                    onChange={(e) => setCourseDay(e.target.value)} 
-                    className="w-full bg-white dark:bg-zinc-800 border border-sky-200 dark:border-sky-800 rounded-xl p-2 font-bold text-xs text-sky-900 dark:text-sky-200 outline-none"
-                  >
-                    {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'].map(d => <option key={d}>{d}</option>)}
-                  </select>
-                  <p className="text-[9px] text-sky-600 dark:text-sky-400 font-bold uppercase tracking-tight">Nota: Aprendizes folgam aos Sábados e Domingos automaticamente.</p>
-                </div>
-              )}
-
-              {/* Modal Actions */}
-              <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
-                <button 
-                  type="button" 
-                  onClick={() => setShowAddModal(false)} 
-                  className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-zinc-700 rounded-xl font-black text-xs uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  type="submit" 
-                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl font-black text-xs uppercase shadow-md shadow-orange-500/20 transition-all"
-                >
-                  Cadastrar Colaborador
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <AddEmployeeModal
+          onClose={() => setShowAddModal(false)}
+          onAddEmployee={onAddEmployee}
+        />
       )}
 
       {/* Edit Employee Modal */}
       {editingEmployee && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Header */}
-            <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/80">
-              <div className="flex items-center gap-3">
-                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm uppercase shadow-sm ${
-                  editingEmployee.isYoungApprentice
-                    ? 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300'
-                    : editingEmployee.cargo === 'Estoquista'
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-                    : 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300'
-                }`}>
-                  {editingEmployee.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 uppercase">
-                      {editingEmployee.name}
-                    </h4>
-                    <span className={`w-2 h-2 rounded-full ${editingEmployee.status === 'active' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400">
-                      {editingEmployee.cargo || 'Atendente'}
-                    </span>
-                    <span className="text-[10px] text-slate-400">•</span>
-                    <span className="text-[10px] font-bold text-slate-400">
-                      ID: {editingEmployee.id}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <button 
-                type="button"
-                onClick={() => setEditingEmpId(null)}
-                className="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all"
-              >
-                <Icon name="close" className="text-xl" />
-              </button>
-            </div>
-
-            {/* Scrollable Body */}
-            <div className="overflow-y-auto p-5 sm:p-7 space-y-6 flex-1 custom-scrollbar">
-              {/* Section 1: Identificação & Cargo */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-                  <Icon name="badge" className="text-orange-500 text-base" />
-                  <span>Identificação & Cargo</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Nome Completo</label>
-                    <input
-                      type="text"
-                      disabled={isReadOnly}
-                      value={editingEmployee.name}
-                      onChange={(e) => onUpdateEmployee(editingEmployee.id, { name: e.target.value })}
-                      placeholder="Nome do colaborador"
-                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 text-xs font-black text-slate-900 dark:text-slate-100 uppercase outline-none focus:ring-2 focus:ring-orange-500/20"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Cargo</label>
-                    <select
-                      disabled={isReadOnly}
-                      value={editingEmployee.cargo || 'Atendente'}
-                      onChange={(e) => {
-                        const newCargo = e.target.value as EmployeeCargo;
-                        const isApprentice = newCargo === 'Aprendiz';
-                        onUpdateEmployee(editingEmployee.id, { 
-                          cargo: newCargo,
-                          isYoungApprentice: isApprentice
-                        });
-                      }}
-                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-orange-500"
-                    >
-                      {CARGO_OPTIONS.map(c => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 2: Data de Início (Admissão) & Contrato */}
-              <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
-                <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-                  <Icon name="event_available" className="text-orange-500 text-base" />
-                  <span>Data de Início (Admissão) & Contrato</span>
-                </div>
-
-                <div className="p-4 bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200/70 dark:border-orange-900/40 rounded-2xl space-y-2">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <label className="text-[10px] font-black text-orange-950 dark:text-orange-200 uppercase tracking-wider flex items-center gap-1.5">
-                      <Icon name="calendar_month" className="text-orange-500 text-sm" />
-                      Data de Início / Admissão
-                    </label>
-                    {editingEmployee.hiredAt && (
-                      <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400">
-                        Início: {formatDateBR(editingEmployee.hiredAt)}
-                      </span>
-                    )}
-                  </div>
-                  <input
-                    type="date"
-                    disabled={isReadOnly}
-                    value={editingEmployee.hiredAt || ''}
-                    onChange={(e) => onUpdateEmployee(editingEmployee.id, { hiredAt: e.target.value })}
-                    className="w-full bg-white dark:bg-zinc-800 border border-orange-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-orange-500"
-                  />
-                  <p className="text-[10px] text-orange-800 dark:text-orange-300/90 font-medium leading-relaxed">
-                    💡 <strong>Como funciona:</strong> Nos dias e meses anteriores a esta data, o colaborador é automaticamente desconsiderado (marcado como <strong>N/A</strong>), não interferindo em folgas, escalas e relatórios.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Contrato</label>
-                    <select
-                      disabled={isReadOnly}
-                      value={editingEmployee.contractType || 'CLT'}
-                      onChange={(e) => onUpdateEmployee(editingEmployee.id, { contractType: e.target.value as any })}
-                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
-                    >
-                      <option value="CLT">CLT (Efetivo)</option>
-                      <option value="Sazonal">Sazonal / Temporário</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Jornada</label>
-                    <select
-                      disabled={isReadOnly}
-                      value={editingEmployee.jornada || '6x1'}
-                      onChange={(e) => onUpdateEmployee(editingEmployee.id, { jornada: e.target.value as any })}
-                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
-                    >
-                      <option value="6x1">6x1</option>
-                      <option value="5x2">5x2</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Data de Aniversário</label>
-                    <input
-                      type="date"
-                      disabled={isReadOnly}
-                      value={editingEmployee.birthday || ''}
-                      onChange={(e) => onUpdateEmployee(editingEmployee.id, { birthday: e.target.value })}
-                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 3: Escala Base & Folgas */}
-              <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
-                <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-                  <Icon name="schedule" className="text-orange-500 text-base" />
-                  <span>Escala Base & Folga Semanal</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Horário Base</label>
-                    <select
-                      disabled={isReadOnly}
-                      value={editingEmployee.workPeriod}
-                      onChange={(e) => onUpdateEmployee(editingEmployee.id, { workPeriod: e.target.value })}
-                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-orange-500"
-                    >
-                      {editingEmployee.isYoungApprentice ? (
-                        <option value={APPRENTICE_WORK_PERIOD}>{APPRENTICE_WORK_PERIOD}</option>
-                      ) : (
-                        SHIFT_HOURS.WEEKDAY.map(h => (
-                          <option key={h} value={h}>{h}</option>
-                        ))
-                      )}
-                      {!editingEmployee.isYoungApprentice && !SHIFT_HOURS.WEEKDAY.includes(editingEmployee.workPeriod) && editingEmployee.workPeriod && (
-                        <option value={editingEmployee.workPeriod}>{editingEmployee.workPeriod}</option>
-                      )}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Folga Fixa Semanal</label>
-                    <select
-                      disabled={isReadOnly}
-                      value={editingEmployee.preferredDayOff}
-                      onChange={(e) => onUpdateEmployee(editingEmployee.id, { preferredDayOff: e.target.value })}
-                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-orange-500"
-                    >
-                      <option value="">Nenhuma folga fixa</option>
-                      {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'].map(d => (
-                        <option key={d} value={d}>{d}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Tactical Positions */}
-                <div className="grid grid-cols-2 gap-3 pt-1">
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Posição Preferencial 1</label>
-                    <select
-                      disabled={isReadOnly}
-                      value={editingEmployee.preferredPosition1 || ''}
-                      onChange={(e) => onUpdateEmployee(editingEmployee.id, { preferredPosition1: e.target.value })}
-                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
-                    >
-                      <option value="">Nenhuma</option>
-                      {['P1', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
-                        <option key={p} value={p}>{p}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Posição Preferencial 2</label>
-                    <select
-                      disabled={isReadOnly}
-                      value={editingEmployee.preferredPosition2 || ''}
-                      onChange={(e) => onUpdateEmployee(editingEmployee.id, { preferredPosition2: e.target.value })}
-                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
-                    >
-                      <option value="">Nenhuma</option>
-                      {['P1', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
-                        <option key={p} value={p}>{p}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 4: Condições Especiais (Aprendiz & Férias) */}
-              <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
-                <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-                  <Icon name="verified_user" className="text-orange-500 text-base" />
-                  <span>Condições Especiais & Afastamentos</span>
-                </div>
-
-                {/* Jovem Aprendiz */}
-                <div className="p-3.5 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className={`p-2 rounded-xl ${editingEmployee.isYoungApprentice ? 'bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-300' : 'bg-slate-200/70 text-slate-400 dark:bg-zinc-700'}`}>
-                        <Icon name="child_care" className="text-base" />
-                      </div>
-                      <div>
-                        <span className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase">Jovem Aprendiz</span>
-                        <p className="text-[10px] text-slate-400">Folga automática aos Sábados, Domingos e Feriados</p>
-                      </div>
-                    </div>
-
-                    {!isReadOnly && (
-                      <button
-                        type="button"
-                        onClick={() => onUpdateEmployee(editingEmployee.id, { isYoungApprentice: !editingEmployee.isYoungApprentice })}
-                        className={`w-10 h-5 rounded-full transition-all relative ${editingEmployee.isYoungApprentice ? 'bg-sky-500' : 'bg-slate-300 dark:bg-zinc-600'}`}
-                      >
-                        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${editingEmployee.isYoungApprentice ? 'left-5.5' : 'left-0.5'}`}></div>
-                      </button>
-                    )}
-                  </div>
-
-                  {editingEmployee.isYoungApprentice && (
-                    <div className="pt-2 border-t border-slate-200 dark:border-zinc-700">
-                      <label className="text-[10px] font-black text-sky-600 dark:text-sky-400 uppercase tracking-widest block mb-1">Dia do Curso Teórico</label>
-                      <select
-                        disabled={isReadOnly}
-                        value={editingEmployee.courseDay || 'Segunda-feira'}
-                        onChange={(e) => onUpdateEmployee(editingEmployee.id, { courseDay: e.target.value })}
-                        className="w-full bg-white dark:bg-zinc-900 border border-sky-200 dark:border-sky-800 rounded-xl p-2 text-xs font-bold text-sky-900 dark:text-sky-200 outline-none"
-                      >
-                        {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'].map(d => <option key={d}>{d}</option>)}
-                      </select>
-                    </div>
-                  )}
-                </div>
-
-                {/* Férias */}
-                {!editingEmployee.isYoungApprentice && (
-                  <div className="p-3.5 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                        <Icon name="beach_access" className="text-emerald-500 text-sm" />
-                        Férias (Início)
-                      </label>
-                      {editingEmployee.vacationStart && (
-                        <button
-                          type="button"
-                          disabled={isReadOnly}
-                          onClick={() => handleVacationStart(editingEmployee, '', onUpdateEmployee)}
-                          className="text-[9px] font-black text-rose-500 hover:underline uppercase"
-                        >
-                          Limpar Férias
-                        </button>
-                      )}
-                    </div>
-                    <input
-                      type="date"
-                      disabled={isReadOnly}
-                      value={editingEmployee.vacationStart || ''}
-                      onChange={(e) => handleVacationStart(editingEmployee, e.target.value, onUpdateEmployee)}
-                      className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
-                    />
-                    {editingEmployee.vacationStart && editingEmployee.vacationEnd && (
-                      <div className="bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-900/50 flex items-center justify-between text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
-                        <span>Fim: {formatDateBR(editingEmployee.vacationEnd)}</span>
-                        <span>Retorno: {formatDateBR(addDays(editingEmployee.vacationEnd, 1))}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Atestado Médico */}
-                <div className="p-3.5 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <Icon name="medical_services" className="text-rose-500 text-sm" />
-                      Atestado Médico (Lançar por Período)
-                    </label>
-                    {editingEmployee.atestadoStart && editingEmployee.atestadoEnd && (
-                      <button
-                        type="button"
-                        disabled={isReadOnly}
-                        onClick={() => handleAtestadoClear(editingEmployee, onUpdateEmployee)}
-                        className="text-[9px] font-black text-rose-500 hover:underline uppercase"
-                      >
-                        Limpar Atestado
-                      </button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Data Início</span>
-                      <input
-                        type="date"
-                        disabled={isReadOnly}
-                        value={atestadoStartEdit}
-                        onChange={(e) => setAtestadoStartEdit(e.target.value)}
-                        className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Duração (Dias)</span>
-                      <input
-                        type="number"
-                        min={1}
-                        max={180}
-                        disabled={isReadOnly}
-                        value={atestadoDurationEdit}
-                        onChange={(e) => setAtestadoDurationEdit(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
-                      />
-                    </div>
-                  </div>
-                  {atestadoStartEdit && (
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-zinc-700/60">
-                      <div className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                        <span>Fim: {formatDateBR(addDays(atestadoStartEdit, atestadoDurationEdit - 1))}</span>
-                        <span className="ml-2 text-emerald-600 dark:text-emerald-400">Retorno: {formatDateBR(addDays(atestadoStartEdit, atestadoDurationEdit))}</span>
-                      </div>
-                      {!isReadOnly && (
-                        <button
-                          type="button"
-                          onClick={() => handleAtestadoSave(editingEmployee, atestadoStartEdit, atestadoDurationEdit, onUpdateEmployee)}
-                          className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-1"
-                        >
-                          <Icon name="save" className="text-xs" />
-                          Salvar Atestado
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Section 5: Acesso & Visibilidade */}
-              <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
-                <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-                  <Icon name="lock" className="text-orange-500 text-base" />
-                  <span>Acesso & Visibilidade</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Senha */}
-                  <div className="p-3 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Senha Individual</label>
-                      {!isReadOnly && (
-                        <button 
-                          type="button"
-                          onClick={() => onUpdateEmployee(editingEmployee.id, { password: '1234' })}
-                          className="text-[9px] font-black text-orange-500 hover:underline uppercase"
-                        >
-                          Resetar (1234)
-                        </button>
-                      )}
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        disabled={isReadOnly}
-                        value={editingEmployee.password || ''}
-                        onChange={(e) => onUpdateEmployee(editingEmployee.id, { password: e.target.value })}
-                        placeholder="Padrão: 1234"
-                        className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 outline-none"
-                      />
-                      <Icon name="key" className="absolute right-3 top-2 text-slate-400 text-xs" />
-                    </div>
-                  </div>
-
-                  {/* Visibilidade */}
-                  <div className="p-3 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 flex flex-col justify-between gap-2">
-                    <div>
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Visibilidade na Grade</span>
-                      <p className="text-[10px] text-slate-500 mt-0.5">
-                        {editingEmployee.isHidden ? 'Oculto na escala principal' : 'Visível na escala principal'}
-                      </p>
-                    </div>
-                    {!isReadOnly && (
-                      <button
-                        type="button"
-                        onClick={() => onUpdateEmployee(editingEmployee.id, { isHidden: !editingEmployee.isHidden })}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 border transition-all ${
-                          editingEmployee.isHidden
-                            ? 'bg-slate-900 text-white border-slate-900 dark:bg-zinc-700'
-                            : 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-zinc-700 hover:border-slate-300'
-                        }`}
-                      >
-                        <Icon name={editingEmployee.isHidden ? 'visibility_off' : 'visibility'} className="text-sm" />
-                        <span>{editingEmployee.isHidden ? 'Colaborador Oculto' : 'Colaborador Visível'}</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer Actions */}
-            <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/80">
-              {!isReadOnly && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const confirmed = await showDialog({
-                      type: 'confirm',
-                      message: `Excluir o colaborador ${editingEmployee.name} permanentemente?`
-                    });
-                    if (confirmed) {
-                      onDeleteEmployee(editingEmployee.id);
-                      setEditingEmpId(null);
-                    }
-                  }}
-                  className="px-3.5 py-2 rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 font-black text-xs uppercase transition-all flex items-center gap-1.5 border border-transparent hover:border-rose-200"
-                >
-                  <Icon name="delete" className="text-sm" />
-                  <span>Excluir</span>
-                </button>
-              )}
-
-              <div className="flex items-center gap-2 ml-auto">
-                <button
-                  type="button"
-                  onClick={() => setEditingEmpId(null)}
-                  className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl font-black text-xs uppercase shadow-md shadow-orange-500/20 transition-all flex items-center gap-1.5"
-                >
-                  <Icon name="check" className="text-base" />
-                  <span>Concluir & Fechar</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <EditEmployeeModal
+          employee={editingEmployee}
+          isReadOnly={isReadOnly}
+          onUpdateEmployee={onUpdateEmployee}
+          onDeleteEmployee={onDeleteEmployee}
+          onClose={() => setEditingEmpId(null)}
+        />
       )}
 
       {/* Employee Cards Grid (Compact, Sleek, Non-Expanding) */}
