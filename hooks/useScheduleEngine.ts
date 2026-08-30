@@ -13,7 +13,7 @@ const WEEKDAY_NAMES = [
 export function isWorkingShift(s: string | undefined): boolean {
     if (!s) return false;
     if (s === 'T') return true;
-    if (['P1', 'P2', 'P3', 'P4', 'ESTQ'].includes(s)) return true;
+    if (['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].includes(s)) return true;
     return false;
 }
 
@@ -1171,7 +1171,7 @@ export function resolveTacticalDay(
         groups[classification].push(e);
     });
 
-    const POSITIONS = ['P1', 'P2', 'P3', 'P4', 'ESTQ'];
+    const POSITIONS = ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'];
 
     // Process each shift group (Abertura, Intermediário, Fechamento)
     const groupNames = Object.keys(groups).sort((a, b) => {
@@ -1205,7 +1205,7 @@ export function resolveTacticalDay(
             }
         });
 
-        // Remaining candidates eligible for tactical positions (P1, P2, P3, P4)
+        // Remaining candidates eligible for tactical positions (P1, PC, P2, P3, P4)
         const eligibleForStorePositions = autoMembers.filter(m => !result[m.id] && m.cargo !== 'Estoquista');
 
         const isFiscalOrAprendiz = (m: Employee) => 
@@ -1261,13 +1261,13 @@ export function resolveTacticalDay(
         }
 
         // 5. Fill Remaining Eligible Staff
-        // Honor registered preferences first (P3, P4, ESTQ), else default all remaining non-estoquista staff to P3
+        // Honor registered preferences first (PC, P3, P4, ESTQ), else default all remaining non-estoquista staff to P3
         eligibleForStorePositions.filter(m => !result[m.id]).forEach(m => {
             let assigned = false;
 
             // Check preferredPosition1
             if (m.preferredPosition1 && POSITIONS.includes(m.preferredPosition1)) {
-                if (m.preferredPosition1 === 'P4' || m.preferredPosition1 === 'P3' || m.preferredPosition1 === 'ESTQ') {
+                if (['PC', 'P4', 'P3', 'ESTQ'].includes(m.preferredPosition1)) {
                     result[m.id] = m.preferredPosition1;
                     assigned = true;
                 }
@@ -1275,7 +1275,7 @@ export function resolveTacticalDay(
 
             // Check preferredPosition2
             if (!assigned && m.preferredPosition2 && POSITIONS.includes(m.preferredPosition2)) {
-                if (m.preferredPosition2 === 'P4' || m.preferredPosition2 === 'P3' || m.preferredPosition2 === 'ESTQ') {
+                if (['PC', 'P4', 'P3', 'ESTQ'].includes(m.preferredPosition2)) {
                     result[m.id] = m.preferredPosition2;
                     assigned = true;
                 }

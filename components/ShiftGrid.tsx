@@ -133,13 +133,15 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     ];
 
     const tacticalItems = tacticalDisplayMode === 'roles' ? [
-      { code: 'CX', label: 'Caixa / Pacote', color: 'bg-red-600' },
+      { code: 'CX', label: 'Caixa', color: 'bg-red-600' },
+      { code: 'PC', label: 'Pacote', color: 'bg-orange-500' },
       { code: 'FISC', label: 'Fiscal', color: 'bg-amber-500' },
       { code: 'ATEND', label: 'Atendimento', color: 'bg-emerald-600' },
       { code: 'APOIO', label: 'Apoio', color: 'bg-blue-600' },
       { code: 'ESTQ', label: 'Estoque', color: 'bg-slate-700' },
     ] : [
       { code: 'P1', label: 'P1 (Caixa)', color: 'bg-red-600' },
+      { code: 'PC', label: 'PC (Pacote)', color: 'bg-orange-500' },
       { code: 'P2', label: 'P2 (Porta)', color: 'bg-amber-500' },
       { code: 'P3', label: 'P3 (Salão)', color: 'bg-emerald-600' },
       { code: 'P4', label: 'P4 (Apoio)', color: 'bg-blue-600' },
@@ -706,7 +708,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                     >
                                       <option value="AUTO" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">AUTO 🤖</option>
                                       {(() => {
-                                        const finalPositions = ['P1', 'P2', 'P3', 'P4', 'ESTQ'];
+                                        const finalPositions = ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'];
                                         return finalPositions.map(p => (
                                           <option key={p} value={p} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">
                                             {getTacticalLabel(p, tacticalDisplayMode)} {getTacticalEmoji(p)}
@@ -715,8 +717,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                       })()}
                                     </select>
                                   </td>
-                               </>
-                             )}
+                                </>
+                              )}
 
                             {/* Shift Cells */}
                             {filteredDays.map(d => {
@@ -731,7 +733,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               } else if (emp.vacationStart && emp.vacationEnd && fullDate >= emp.vacationStart && fullDate <= emp.vacationEnd) {
                                 rawShift = 'FE';
                               }
-                              const shift = (isReadOnly && ['P1', 'P2', 'P3', 'P4', 'ESTQ'].includes(rawShift)) ? 'T' : rawShift;
+                              const shift = (isReadOnly && ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].includes(rawShift)) ? 'T' : rawShift;
                               
                               const prevStreak = prevWorkStreaks.get(emp.id) || 0;
                               let streak = 0;
@@ -833,13 +835,14 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                         ) : ''
                                       } ${
                                         shift === 'N/A' ? 'bg-slate-100/70 dark:bg-zinc-800/40 text-slate-400 dark:text-zinc-600 border border-dashed border-slate-200 dark:border-zinc-800 opacity-60' :
-                                        shift === 'AT' ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50' :
+                                       shift === 'AT' ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50' :
                                         shift === 'F' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
                                         shift.startsWith('FF') ? 'bg-amber-100 text-amber-600' :
                                         shift === 'C' ? 'bg-indigo-100 text-indigo-600' :
                                         shift === 'FE' ? 'bg-emerald-100 text-emerald-600' :
                                         shift === 'DO' ? 'bg-fuchsia-600 text-white shadow-md' :
                                         shift === 'P1' ? 'bg-red-600 text-white shadow-md ring-2 ring-red-400' :
+                                        shift === 'PC' ? 'bg-orange-500 text-white shadow-md ring-2 ring-orange-400' :
                                         shift === 'P2' ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300' :
                                         shift === 'P3' ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400' :
                                         shift === 'P4' ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400' :
@@ -877,7 +880,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                             return null;
                                           })()}
                                         </div>
-                                      ) : shift === 'C' ? <span className="text-[7px]">CURSO</span> : shift === 'N/A' ? <span className="text-[9px] text-slate-400 dark:text-zinc-500 font-mono">-</span> : (shift === 'T' ? (d.isSunday ? 'DOM' : 'T') : (shift.startsWith('FF') ? 'FF' : (['P1', 'P2', 'P3', 'P4', 'ESTQ'].includes(shift) ? getTacticalCellCode(shift, tacticalDisplayMode) : shift)))}
+                                      ) : shift === 'C' ? <span className="text-[7px]">CURSO</span> : shift === 'N/A' ? <span className="text-[9px] text-slate-400 dark:text-zinc-500 font-mono">-</span> : (shift === 'T' ? (d.isSunday ? 'DOM' : 'T') : (shift.startsWith('FF') ? 'FF' : (['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].includes(shift) ? getTacticalCellCode(shift, tacticalDisplayMode) : shift)))}
                                     </button>
 
                                     
@@ -919,6 +922,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                           <option value="C">Curso (C)</option>
                                           <option disabled>──────</option>
                                           <option value="P1">{getTacticalLabel('P1', tacticalDisplayMode)} 🟥</option>
+                                          <option value="PC">{getTacticalLabel('PC', tacticalDisplayMode)} 🟧</option>
                                           <option value="P2">{getTacticalLabel('P2', tacticalDisplayMode)} 🟨</option>
                                           <option value="P3">{getTacticalLabel('P3', tacticalDisplayMode)} 🟩</option>
                                           <option value="P4">{getTacticalLabel('P4', tacticalDisplayMode)} 🟦</option>

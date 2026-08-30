@@ -588,7 +588,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
                 >
                   <option value="">Nenhuma</option>
-                  {['P1', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
+                  {['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
                     <option key={p} value={p}>{p} — {getTacticalLabel(p, 'roles')} {getTacticalEmoji(p)}</option>
                   ))}
                 </select>
@@ -603,7 +603,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
                 >
                   <option value="">Nenhuma</option>
-                  {['P1', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
+                  {['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
                     <option key={p} value={p}>{p} — {getTacticalLabel(p, 'roles')} {getTacticalEmoji(p)}</option>
                   ))}
                 </select>

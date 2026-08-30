@@ -115,7 +115,7 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
               </td>
               {days.map(d => {
                 const shift = emp.shifts[monthKey]?.[d.num - 1] || 'T';
-                const isWorking = shift === 'T' || ['P1', 'P2', 'P3', 'P4', 'ESTQ'].includes(shift);
+                const isWorking = shift === 'T' || ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].includes(shift);
                 const display = (isWorking || shift === 'N/A') ? '' : (shift === 'AT' ? '+' : (shift.startsWith('FF') ? 'FF' : shift));
                 return (
                   <td key={d.num} className="border border-black p-1 text-center font-black">
@@ -132,7 +132,7 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
         {/* Bloco 1: INFORMAÇÕES */}
         <div className="border-2 border-black p-2 flex flex-col">
           <h3 className="font-black uppercase mb-1.5 text-[11px] border-b border-black text-center pb-0.5">INFORMAÇÕES E AVISOS</h3>
-          <div className="grid grid-cols-3 gap-2 flex-1">
+          <div className="grid grid-cols-2 gap-2 flex-1">
             <div className="border border-black p-1 flex flex-col">
               <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Férias programadas</h4>
               <div className="space-y-0.5 flex-1">
@@ -177,64 +177,78 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
           </div>
         </div>
 
-        {/* Bloco 2: REGRAS E ALMOÇOS */}
-        <div className="border-2 border-black p-2 flex flex-col">
-          <h3 className="font-black uppercase mb-1.5 text-[11px] border-b border-black text-center pb-0.5">REGRAS DE ALMOÇO E POSIÇÕES</h3>
-          <div className="grid grid-cols-3 gap-2 flex-1">
+        {/* Bloco 2: REGRAS E HORÁRIOS DE ALMOÇO */}
+        <div className="border-2 border-black p-2 flex flex-col justify-between">
+          <h3 className="font-black uppercase mb-1 text-[11px] border-b border-black pb-0.5 text-center">HORÁRIOS DE REFEIÇÃO / ALMOÇO</h3>
+          
+          <div className="grid grid-cols-2 gap-2 mt-1">
             <div className="border border-black p-1">
-               <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Almoços (Seg a Sáb)</h4>
-               <div className="text-[8px] font-black space-y-0.5">
-                 <div className="flex justify-between border-b border-gray-300"><span>12h45</span> <span>Aprendiz</span></div>
+               <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Dias de Semana e Sábados</h4>
+               <div className="text-[8px] font-bold space-y-0.5">
+                 <div className="flex justify-between border-b border-gray-300"><span>12h00</span> <span>Máx. 1 Colaborador</span></div>
                  <div className="flex justify-between border-b border-gray-300"><span>13h00</span> <span>Máx. 1 Colaborador</span></div>
-                 <div className="flex justify-between border-b border-gray-300"><span>13h30</span> <span>Máx. 1 Colaborador</span></div>
-                 <div className="flex justify-between border-b border-gray-300"><span>14h00</span> <span>Máx. 2 Colaboradores</span></div>
-                 <div className="flex justify-between border-b border-gray-300"><span>15h00</span> <span>Máx. 2 Colaboradores</span></div>
-                 <div className="flex justify-between border-b border-gray-300"><span>16h00</span> <span>Máx. 2 Colaboradores</span></div>
-                 <div className="flex justify-between border-b border-gray-300"><span>16h30</span> <span>Máx. 1 Colaborador</span></div>
-                 <div className="flex justify-between"><span>17h00</span> <span>Máx. 1 Colaborador</span></div>
+                 <div className="flex justify-between border-b border-gray-300"><span>14h00</span> <span>Máx. 1 Colaborador</span></div>
+                 <div className="flex justify-between border-b border-gray-300"><span>15h00</span> <span>Máx. 1 Colaborador</span></div>
+                 <div className="flex justify-between"><span>16h00</span> <span>Máx. 1 Colaborador</span></div>
                </div>
             </div>
+
             <div className="border border-black p-1">
-               <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Almoços (Domingo)</h4>
-               <div className="text-[8px] font-black space-y-0.5">
-                 <div className="flex justify-between border-b border-gray-300"><span>13h00</span> <span>Máx. 1 Colaborador</span></div>
-                 <div className="flex justify-between border-b border-gray-300"><span>13h30</span> <span>Máx. 1 Colaborador</span></div>
-                 <div className="flex justify-between border-b border-gray-300"><span>14h00</span> <span>Máx. 2 Colaboradores</span></div>
-                 <div className="flex justify-between border-b border-gray-300"><span>15h00</span> <span>Máx. 2 Colaboradores</span></div>
-                 <div className="flex justify-between border-b border-gray-300"><span>16h00</span> <span>Máx. 2 Colaboradores</span></div>
+               <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Domingos</h4>
+               <div className="text-[8px] font-bold space-y-0.5">
+                 <div className="flex justify-between border-b border-gray-300"><span>14h30</span> <span>Máx. 1 Colaborador</span></div>
+                 <div className="flex justify-between border-b border-gray-300"><span>15h00</span> <span>Máx. 1 Colaborador</span></div>
+                 <div className="flex justify-between border-b border-gray-300"><span>15h30</span> <span>Máx. 1 Colaborador</span></div>
+                 <div className="flex justify-between border-b border-gray-300"><span>16h00</span> <span>Máx. 1 Colaborador</span></div>
                  <div className="flex justify-between border-b border-gray-300"><span>16h30</span> <span>Máx. 1 Colaborador</span></div>
                  <div className="flex justify-between"><span>17h00</span> <span>Máx. 1 Colaborador</span></div>
-               </div>
-            </div>
-            <div className="flex flex-col gap-1.5">
-               <div className="border border-black p-1">
-                 <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Posições Táticas</h4>
-                 <div className="text-[8px] font-bold space-y-1">
-                     <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-red-400 border border-black"></div><span>P1 (Caixa)</span></div>
-                     <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-amber-400 border border-black"></div><span>P2 (Porta/Entrada)</span></div>
-                     <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-green-400 border border-black"></div><span>P3 (Salão)</span></div>
-                     <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-blue-400 border border-black"></div><span>P4 (Flexível)</span></div>
-                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-slate-400 border border-black"></div><span>ESTQ (Estoque)</span></div>
-                 </div>
-               </div>
-               <div className="text-[7.5px] font-black italic border border-black p-1 bg-gray-100 flex-1 flex items-center justify-center text-center leading-tight">
-                 * FERIADOS: PAUSAS DE 15 MINUTOS, UM COLABORADOR POR VEZ A PARTIR DE 14H.
                </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bloco 3: RECADOS */}
-      {monthNotes && monthNotes.trim().length > 0 && (
+      {/* FOOTER 2: POSIÇÕES TÁTICAS E RECADOS */}
+      <div className="grid grid-cols-2 gap-4 text-[9px]">
+        {/* Bloco: POSIÇÕES TÁTICAS */}
+        <div className="border-2 border-black p-2 flex flex-col justify-between">
+           <h3 className="font-black uppercase mb-1 text-[11px] border-b border-black pb-0.5 text-center">POSIÇÕES TÁTICAS & OBSERVAÇÕES</h3>
+           <div className="grid grid-cols-2 gap-2 mt-1">
+             <div className="border border-black p-1">
+                <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Horários de Saída</h4>
+                <div className="text-[8px] font-bold space-y-0.5">
+                  <div className="flex justify-between border-b border-gray-300"><span>18h20</span> <span>Saída Abertura</span></div>
+                  <div className="flex justify-between border-b border-gray-300"><span>20h20</span> <span>Saída Intermediário</span></div>
+                  <div className="flex justify-between"><span>22h00</span> <span>Saída Fechamento</span></div>
+                </div>
+             </div>
+             <div className="flex flex-col gap-1.5">
+                <div className="border border-black p-1">
+                  <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Posições Táticas</h4>
+                  <div className="text-[8px] font-bold space-y-1">
+                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-red-400 border border-black"></div><span>P1 (Caixa)</span></div>
+                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-orange-400 border border-black"></div><span>PC (Pacote)</span></div>
+                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-amber-400 border border-black"></div><span>P2 (Porta/Entrada)</span></div>
+                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-green-400 border border-black"></div><span>P3 (Salão)</span></div>
+                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-blue-400 border border-black"></div><span>P4 (Flexível)</span></div>
+                       <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-slate-400 border border-black"></div><span>ESTQ (Estoque)</span></div>
+                  </div>
+                </div>
+                <div className="text-[7.5px] font-black italic border border-black p-1 bg-gray-100 flex-1 flex items-center justify-center text-center leading-tight">
+                  * FERIADOS: PAUSAS DE 15 MINUTOS, UM COLABORADOR POR VEZ A PARTIR DE 14H.
+                </div>
+             </div>
+           </div>
+        </div>
+
+        {/* Bloco: RECADOS */}
         <div className="border-2 border-black p-2 flex flex-col">
           <h3 className="font-black uppercase mb-1 text-[11px] border-b border-black pb-0.5 text-center">RECADOS IMPORTANTES</h3>
-          <div className="text-[10px] font-bold p-1 whitespace-pre-wrap leading-tight h-16">
-            {monthNotes}
+          <div className="text-[10px] font-bold p-1 whitespace-pre-wrap leading-tight flex-1">
+            {monthNotes && monthNotes.trim().length > 0 ? monthNotes : 'Nenhum recado cadastrado para este mês.'}
           </div>
         </div>
-      )}
-      
+      </div>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 
-export type ShiftType = 'T' | 'P1' | 'P2' | 'P3' | 'P4' | 'ESTQ' | 'F' | 'FF' | 'FE' | 'C' | 'DO' | 'N/A' | string; // Trabalho (ou Posição), Folga, Feriado/Folga Especial, Férias, Curso, Day Off (Birthday), Not Available
+export type ShiftType = 'T' | 'P1' | 'PC' | 'P2' | 'P3' | 'P4' | 'ESTQ' | 'F' | 'FF' | 'FE' | 'C' | 'DO' | 'N/A' | string; // Trabalho (ou Posição), Folga, Feriado/Folga Especial, Férias, Curso, Day Off (Birthday), Not Available
 
 export type TacticalDisplayMode = 'positions' | 'roles';
 

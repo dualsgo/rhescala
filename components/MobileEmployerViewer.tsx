@@ -225,6 +225,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     if (!pos) return null;
     const colors: Record<string, string> = {
       'P1': 'bg-rose-500 text-white ring-2 ring-rose-300 shadow-sm',
+      'PC': 'bg-orange-500 text-white ring-2 ring-orange-300 shadow-sm',
       'P2': 'bg-amber-500 text-white ring-2 ring-amber-300 shadow-sm',
       'P3': 'bg-emerald-500 text-white ring-2 ring-emerald-300 shadow-sm',
       'P4': 'bg-sky-500 text-white ring-2 ring-sky-300 shadow-sm',

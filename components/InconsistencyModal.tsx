@@ -77,7 +77,7 @@ export const InconsistencyModal: React.FC<InconsistencyModalProps> = ({
       const currentWorkers = employees.filter(e => {
         if (e.isYoungApprentice || e.status !== 'active') return false;
         const shift = e.shifts[mKey]?.[dayIdx];
-        return shift === 'T' || ['P1', 'P2', 'P3', 'P4', 'ESTQ'].includes(shift as string);
+        return shift === 'T' || ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].includes(shift as string);
       }).length;
 
       const alreadyScheduledOff = fixesAppliedPerDay.get(dayIdx) ?? 0;

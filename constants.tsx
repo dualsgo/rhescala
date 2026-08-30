@@ -19,12 +19,23 @@ export const TACTICAL_ROLE_MAP: Record<string, {
     positionCode: 'P1',
     roleCode: 'CX',
     positionLabel: 'P1 - Caixa',
-    roleLabel: 'Caixa ou Pacote',
+    roleLabel: 'Caixa',
     shortRoleLabel: 'Caixa',
     colorBg: 'bg-red-600',
     colorText: 'text-white',
     colorRing: 'ring-red-400',
     emoji: '🟥'
+  },
+  PC: {
+    positionCode: 'PC',
+    roleCode: 'PC',
+    positionLabel: 'PC - Pacote',
+    roleLabel: 'Pacote',
+    shortRoleLabel: 'Pacote',
+    colorBg: 'bg-orange-500',
+    colorText: 'text-white',
+    colorRing: 'ring-orange-400',
+    emoji: '🟧'
   },
   P2: {
     positionCode: 'P2',
@@ -72,7 +83,7 @@ export const TACTICAL_ROLE_MAP: Record<string, {
   }
 };
 
-export const TACTICAL_POSITIONS_LIST = ['P1', 'P2', 'P3', 'P4', 'ESTQ'];
+export const TACTICAL_POSITIONS_LIST = ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'];
 
 /**
  * Retorna o rótulo descritivo da posição/função baseado no modo de exibição.

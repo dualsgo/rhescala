@@ -750,7 +750,7 @@ const IndividualEditModal: React.FC<IndividualEditModalProps> = ({
 
   const shiftBg = (s: ShiftType) => {
     if (s==='T') return 'bg-sky-600';
-    if (['P1', 'P2', 'P3', 'P4', 'ESTQ'].includes(s as string)) return 'bg-emerald-600';
+    if (['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].includes(s as string)) return 'bg-emerald-600';
     if (s==='F') return 'bg-orange-500';
     if (s?.startsWith('FF')) return 'bg-red-500';
     if (s==='C') return 'bg-teal-500';

@@ -707,6 +707,15 @@ const App: React.FC = () => {
         text += `\n⚠️ *Aviso:* Pausa para almoço 1 colaborador por vez. Saída permitida somente após o retorno do outro. Primeira saída 14h30\n`;
       }
 
+      // Legenda de Funções no rodapé do texto de WhatsApp
+      text += `\n📋 *Legenda de Funções:*\n`;
+      text += `🟥 Caixa\n`;
+      text += `🟧 Pacote\n`;
+      text += `🟨 Fiscal\n`;
+      text += `🟩 Atendimento\n`;
+      text += `🟦 Apoio\n`;
+      text += `📦 Estoque\n`;
+
       setWaModal({ show: true, text });
     } catch (err: any) {
       console.error('Erro ao gerar escala para WhatsApp:', err);
@@ -730,10 +739,16 @@ const App: React.FC = () => {
 
       text += `📍 *Posicionamento Diário*\n`;
       text += isRoles
-        ? `🟥 *Caixa ou Pacote (P1)*\n`
+        ? `🟥 *Caixa (P1)*\n`
         : `🟥 *P1 – Caixa*\n`;
       text += `• Só deixa o posto quando houver rendição.\n`;
       text += `• Sem filas: não ficar parado. Adiantar saquinhos de presente e alinhar produtos próximos.\n\n`;
+
+      text += isRoles
+        ? `🟧 *Pacote (PC)*\n`
+        : `🟧 *PC – Pacote*\n`;
+      text += `• Apoio direto no balcão de embrulhos e embalagens.\n`;
+      text += `• Agilizar o fluxo do caixa nos horários de maior movimento.\n\n`;
       
       text += isRoles
         ? `🟨 *Fiscal (P2)*\n`
@@ -774,8 +789,8 @@ const App: React.FC = () => {
         allWorkingEmps.push({ ...e, firstName: getShortName(e.name, activeEmps), pos, shiftName });
       });
 
-      const p1Abertura = allWorkingEmps.find(m => m.pos === 'P1' && m.shiftName === 'Abertura');
-      const p1Fechamento = allWorkingEmps.find(m => m.pos === 'P1' && (m.shiftName === 'Fechamento' || m.shiftName === 'Intermediário'));
+      const p1Abertura = allWorkingEmps.find(e => e.pos === 'P1' && e.shiftName === 'Abertura');
+      const p1Fechamento = allWorkingEmps.find(e => e.pos === 'P1' && e.shiftName !== 'Abertura');
 
       if (p1Abertura && p1Fechamento) {
         text += `🤝 *Revezamento (P1)*\n`;
@@ -784,6 +799,15 @@ const App: React.FC = () => {
       }
 
       text += `*Tempo Ocioso:* P1 abastece o balcão/saquinhos. Se tiver muitos no P3, foquem em arrumar a seção e abastecer no baixo fluxo.\n`;
+
+      // Legenda de Funções no rodapé do texto de Apoio
+      text += `\n📋 *Legenda de Funções:*\n`;
+      text += `🟥 Caixa\n`;
+      text += `🟧 Pacote\n`;
+      text += `🟨 Fiscal\n`;
+      text += `🟩 Atendimento\n`;
+      text += `🟦 Apoio\n`;
+      text += `📦 Estoque\n`;
 
       setWaModal({ show: true, text });
     } catch (err: any) {
