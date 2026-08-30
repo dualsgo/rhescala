@@ -1,5 +1,103 @@
 
 import { Employee, Holiday, JornadaSettings } from './types';
+import type { TacticalDisplayMode } from './types';
+
+export type { TacticalDisplayMode };
+
+export const TACTICAL_ROLE_MAP: Record<string, {
+  positionCode: string;
+  roleCode: string;
+  positionLabel: string;
+  roleLabel: string;
+  shortRoleLabel: string;
+  colorBg: string;
+  colorText: string;
+  colorRing: string;
+  emoji: string;
+}> = {
+  P1: {
+    positionCode: 'P1',
+    roleCode: 'CX',
+    positionLabel: 'P1 - Caixa',
+    roleLabel: 'Caixa ou Pacote',
+    shortRoleLabel: 'Caixa',
+    colorBg: 'bg-red-600',
+    colorText: 'text-white',
+    colorRing: 'ring-red-400',
+    emoji: '🟥'
+  },
+  P2: {
+    positionCode: 'P2',
+    roleCode: 'FISC',
+    positionLabel: 'P2 - Recepção / Porta',
+    roleLabel: 'Fiscal',
+    shortRoleLabel: 'Fiscal',
+    colorBg: 'bg-amber-500',
+    colorText: 'text-white',
+    colorRing: 'ring-amber-300',
+    emoji: '🟨'
+  },
+  P3: {
+    positionCode: 'P3',
+    roleCode: 'ATEND',
+    positionLabel: 'P3 - Salão de Vendas',
+    roleLabel: 'Atendimento',
+    shortRoleLabel: 'Atendimento',
+    colorBg: 'bg-emerald-600',
+    colorText: 'text-white',
+    colorRing: 'ring-emerald-400',
+    emoji: '🟩'
+  },
+  P4: {
+    positionCode: 'P4',
+    roleCode: 'APOIO',
+    positionLabel: 'P4 - Apoio Flexível',
+    roleLabel: 'Apoio',
+    shortRoleLabel: 'Apoio',
+    colorBg: 'bg-blue-600',
+    colorText: 'text-white',
+    colorRing: 'ring-blue-400',
+    emoji: '🟦'
+  },
+  ESTQ: {
+    positionCode: 'ESTQ',
+    roleCode: 'ESTQ',
+    positionLabel: 'ESTQ - Estoque',
+    roleLabel: 'Estoque',
+    shortRoleLabel: 'Estoque',
+    colorBg: 'bg-slate-700',
+    colorText: 'text-white',
+    colorRing: 'ring-slate-500',
+    emoji: '📦'
+  }
+};
+
+export const TACTICAL_POSITIONS_LIST = ['P1', 'P2', 'P3', 'P4', 'ESTQ'];
+
+/**
+ * Retorna o rótulo descritivo da posição/função baseado no modo de exibição.
+ */
+export function getTacticalLabel(posCode: string, mode: TacticalDisplayMode = 'positions'): string {
+  const item = TACTICAL_ROLE_MAP[posCode];
+  if (!item) return posCode;
+  return mode === 'roles' ? item.roleLabel : item.positionLabel;
+}
+
+/**
+ * Retorna a sigla exibida na célula da grade baseada no modo de exibição.
+ */
+export function getTacticalCellCode(posCode: string, mode: TacticalDisplayMode = 'positions'): string {
+  const item = TACTICAL_ROLE_MAP[posCode];
+  if (!item) return posCode;
+  return mode === 'roles' ? item.roleCode : item.positionCode;
+}
+
+/**
+ * Retorna o emoji associado à posição/função.
+ */
+export function getTacticalEmoji(posCode: string): string {
+  return TACTICAL_ROLE_MAP[posCode]?.emoji || '🔹';
+}
 
 /** ID sentinel do colaborador placeholder (nunca deve ser exibido como real) */
 export const PLACEHOLDER_EMPLOYEE_ID = '__placeholder__';

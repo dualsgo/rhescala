@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings, ScheduleDiffItem } from '../types';
+import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings, ScheduleDiffItem, TacticalDisplayMode } from '../types';
 import { Icon } from './Icon';
-import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, DEFAULT_JORNADA_SETTINGS, isEmployeeActiveInMonth, normalizeProtectedDaysConfig } from '../constants';
+import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, DEFAULT_JORNADA_SETTINGS, isEmployeeActiveInMonth, normalizeProtectedDaysConfig, getTacticalLabel, getTacticalCellCode, getTacticalEmoji } from '../constants';
 import { getShiftClassification, isWorkingShift, getPrevMonthWorkStreak } from '../hooks/useScheduleEngine';
 import { OperationalGuideModal } from './OperationalGuideModal';
 
@@ -45,6 +45,8 @@ interface ShiftGridProps {
   protectedDays?: Record<number, number> | number[];
   onOpenProtectedModal?: () => void;
   onToggleProtectDay?: (dayNum: number) => void;
+  tacticalDisplayMode?: TacticalDisplayMode;
+  onToggleTacticalDisplayMode?: (mode?: TacticalDisplayMode) => void;
 }
 
 export const ShiftGrid: React.FC<ShiftGridProps> = ({
@@ -78,6 +80,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onShareWhatsApp,
   diffs = [],
   onOpenPresetForEmployee,
+  tacticalDisplayMode = 'positions',
+  onToggleTacticalDisplayMode,
 }) => {
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
   const [hasScrolled, setHasScrolled] = useState(false);
@@ -109,27 +113,41 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
         
         const timeout = setTimeout(() => {
           if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollTo({
-              left: scrollPos,
-              behavior: 'smooth'
-            });
-            setHasScrolled(true);
+            scrollContainerRef.current.scrollTo({ left: scrollPos, behavior: 'smooth' });
           }
-        }, 500);
+        }, 300);
         return () => clearTimeout(timeout);
       }
     }
   }, [currentMY.month, currentMY.year, hidePastDays, isCompactMode]);
 
-  const legendItems = [
-    { code: 'F', label: 'Folga Comum', color: 'bg-rose-500' },
-    { code: 'FF', label: 'Folga de Feriado', color: 'bg-amber-500' },
-    { code: 'FE', label: 'Férias', color: 'bg-emerald-500' },
-    { code: 'DO', label: 'Aniversário / Especial', color: 'bg-fuchsia-600' },
-    { code: 'C', label: 'Curso / Treinamento', color: 'bg-slate-500' },
-    { code: 'AT', label: 'Atestado Médico', color: 'bg-rose-400' },
-    { code: '7º', label: '7º Dia (Limite 6x1)', color: 'bg-rose-600' },
-  ];
+  const legendItems = useMemo(() => {
+    const baseItems = [
+      { code: 'F', label: 'Folga Comum', color: 'bg-rose-500' },
+      { code: 'FF', label: 'Folga de Feriado', color: 'bg-amber-500' },
+      { code: 'FE', label: 'Férias', color: 'bg-emerald-500' },
+      { code: 'DO', label: 'Aniversário / Especial', color: 'bg-fuchsia-600' },
+      { code: 'C', label: 'Curso / Treinamento', color: 'bg-slate-500' },
+      { code: 'AT', label: 'Atestado Médico', color: 'bg-rose-400' },
+      { code: '7º', label: '7º Dia (Limite 6x1)', color: 'bg-rose-600' },
+    ];
+
+    const tacticalItems = tacticalDisplayMode === 'roles' ? [
+      { code: 'CX', label: 'Caixa / Pacote', color: 'bg-red-600' },
+      { code: 'FISC', label: 'Fiscal', color: 'bg-amber-500' },
+      { code: 'ATEND', label: 'Atendimento', color: 'bg-emerald-600' },
+      { code: 'APOIO', label: 'Apoio', color: 'bg-blue-600' },
+      { code: 'ESTQ', label: 'Estoque', color: 'bg-slate-700' },
+    ] : [
+      { code: 'P1', label: 'P1 (Caixa)', color: 'bg-red-600' },
+      { code: 'P2', label: 'P2 (Porta)', color: 'bg-amber-500' },
+      { code: 'P3', label: 'P3 (Salão)', color: 'bg-emerald-600' },
+      { code: 'P4', label: 'P4 (Apoio)', color: 'bg-blue-600' },
+      { code: 'ESTQ', label: 'ESTQ (Estoque)', color: 'bg-slate-700' },
+    ];
+
+    return [...baseItems, ...tacticalItems];
+  }, [tacticalDisplayMode]);
 
   const prevWorkStreaks = useMemo(() => {
     return getPrevMonthWorkStreak(employees, currentMY.year, currentMY.month);
@@ -269,6 +287,38 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 </span>
               )}
             </button>
+          )}
+
+          {/* Alternador de Modo: Posições vs Funções */}
+          {onToggleTacticalDisplayMode && (
+            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
+              <button
+                type="button"
+                onClick={() => onToggleTacticalDisplayMode('positions')}
+                className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                  tacticalDisplayMode === 'positions'
+                    ? 'bg-orange-500 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                }`}
+                title="Modo Posições: Exibir códigos P1, P2, P3, P4 e ESTQ"
+              >
+                <span className="hidden sm:inline">🏷️ Posições</span>
+                <span className="inline sm:hidden">🏷️ Pos</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleTacticalDisplayMode('roles')}
+                className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                  tacticalDisplayMode === 'roles'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                }`}
+                title="Modo Funções: Exibir funções Caixa ou Pacote, Fiscal, Atendimento, Apoio e Estoque"
+              >
+                <span className="hidden sm:inline">👔 Funções</span>
+                <span className="inline sm:hidden">👔 Func</span>
+              </button>
+            </div>
           )}
 
           {/* Grupo 2: Equipe & Contrato (Apenas Admin) */}
@@ -429,7 +479,9 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horário</span>
                     </th>
                     <th className="hidden md:table-cell sticky left-[225px] sm:left-[250px] z-[50] bg-slate-50 dark:bg-zinc-900 border-b border-r border-slate-200 dark:border-zinc-800 py-2 px-3 text-left min-w-[90px] w-[90px]">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Posição</span>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        {tacticalDisplayMode === 'roles' ? 'Função' : 'Posição'}
+                      </span>
                     </th>
                   </>
                 )}
@@ -647,22 +699,22 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                   </td>
                                   {/* Tactical Select */}
                                   <td className="hidden md:table-cell sticky left-[225px] sm:left-[250px] z-10 bg-white dark:bg-black border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-2 min-w-[90px] w-[90px]">
-                                   <select
-                                     value={emp.tacticalPositions?.[monthKey]?.[selectedDayIdx] || 'AUTO'}
-                                     onChange={(e) => onUpdateTacticalPosition(emp.id, selectedDayIdx, e.target.value)}
-                                     className="w-full bg-transparent border-none p-0 text-[11px] font-black text-slate-900 dark:text-slate-100 focus:ring-0 uppercase"
-                                   >
-                                     <option value="AUTO" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">AUTO 🤖</option>
-                                     {(() => {
-                                       const labels: Record<string, string> = { 'P1': 'P1 🟥', 'P2': 'P2 🟨', 'P3': 'P3 🟩', 'P4': 'P4 🟦', 'ESTQ': 'ESTQ 📦' };
-                                       const finalPositions = ['P1', 'P2', 'P3', 'P4', 'ESTQ'];
-   
-                                       return finalPositions.map(p => (
-                                         <option key={p} value={p} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">{labels[p] || p}</option>
-                                       ));
-                                     })()}
-                                   </select>
-                                 </td>
+                                    <select
+                                      value={emp.tacticalPositions?.[monthKey]?.[selectedDayIdx] || 'AUTO'}
+                                      onChange={(e) => onUpdateTacticalPosition(emp.id, selectedDayIdx, e.target.value)}
+                                      className="w-full bg-transparent border-none p-0 text-[11px] font-black text-slate-900 dark:text-slate-100 focus:ring-0 uppercase"
+                                    >
+                                      <option value="AUTO" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">AUTO 🤖</option>
+                                      {(() => {
+                                        const finalPositions = ['P1', 'P2', 'P3', 'P4', 'ESTQ'];
+                                        return finalPositions.map(p => (
+                                          <option key={p} value={p} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">
+                                            {getTacticalLabel(p, tacticalDisplayMode)} {getTacticalEmoji(p)}
+                                          </option>
+                                        ));
+                                      })()}
+                                    </select>
+                                  </td>
                                </>
                              )}
 
@@ -825,7 +877,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                             return null;
                                           })()}
                                         </div>
-                                      ) : shift === 'C' ? <span className="text-[7px]">CURSO</span> : shift === 'N/A' ? <span className="text-[9px] text-slate-400 dark:text-zinc-500 font-mono">-</span> : (shift === 'T' ? (d.isSunday ? 'DOM' : 'T') : (shift.startsWith('FF') ? 'FF' : shift))}
+                                      ) : shift === 'C' ? <span className="text-[7px]">CURSO</span> : shift === 'N/A' ? <span className="text-[9px] text-slate-400 dark:text-zinc-500 font-mono">-</span> : (shift === 'T' ? (d.isSunday ? 'DOM' : 'T') : (shift.startsWith('FF') ? 'FF' : (['P1', 'P2', 'P3', 'P4', 'ESTQ'].includes(shift) ? getTacticalCellCode(shift, tacticalDisplayMode) : shift)))}
                                     </button>
 
                                     
@@ -866,11 +918,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                           <option value="FE">Férias (FE)</option>
                                           <option value="C">Curso (C)</option>
                                           <option disabled>──────</option>
-                                          <option value="P1">Posição P1 🟥</option>
-                                          <option value="P2">Posição P2 🟨</option>
-                                          <option value="P3">Posição P3 🟩</option>
-                                          <option value="P4">Posição P4 🟦</option>
-                                          <option value="ESTQ">Posição ESTQ 📦</option>
+                                          <option value="P1">{getTacticalLabel('P1', tacticalDisplayMode)} 🟥</option>
+                                          <option value="P2">{getTacticalLabel('P2', tacticalDisplayMode)} 🟨</option>
+                                          <option value="P3">{getTacticalLabel('P3', tacticalDisplayMode)} 🟩</option>
+                                          <option value="P4">{getTacticalLabel('P4', tacticalDisplayMode)} 🟦</option>
+                                          <option value="ESTQ">{getTacticalLabel('ESTQ', tacticalDisplayMode)} 📦</option>
                                         </select>
                                       );
                                     })()}

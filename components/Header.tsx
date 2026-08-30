@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Icon } from './Icon';
-import { MonthYear, SyncStatus } from '../types';
+import { MonthYear, SyncStatus, TacticalDisplayMode } from '../types';
 
 interface HeaderProps {
   currentView: 'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays' | 'cleaning' | 'activities' | 'routine' | 'notices' | 'requests';
@@ -40,6 +40,8 @@ interface HeaderProps {
   onOpenDiffModal?: () => void;
   onOpenPresetModal?: () => void;
   onOptimizePeakWeek?: () => void;
+  tacticalDisplayMode?: TacticalDisplayMode;
+  onToggleTacticalDisplayMode?: (mode?: TacticalDisplayMode) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -79,6 +81,8 @@ export const Header: React.FC<HeaderProps> = ({
   diffCount = 0,
   onOpenDiffModal,
   onOpenPresetModal,
+  tacticalDisplayMode = 'positions',
+  onToggleTacticalDisplayMode,
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
@@ -484,6 +488,50 @@ export const Header: React.FC<HeaderProps> = ({
                           <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${allowRetroactive ? 'left-5' : 'left-1'}`} />
                         </button>
                       </div>
+
+                      {/* Alternador de Modo: Posições vs Funções */}
+                      {onToggleTacticalDisplayMode && (
+                        <div className="p-2.5 rounded-xl border border-slate-200/60 dark:border-zinc-700/60 bg-slate-50 dark:bg-zinc-800/60 flex flex-col gap-2">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-black uppercase text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                              <Icon name="badge" className="text-sm text-orange-500" /> Formato da Escala
+                            </span>
+                            <span className="text-[9px] font-normal text-slate-400">alternar entre códigos e nomes de funções</span>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-1.5 p-0.5 bg-slate-200/70 dark:bg-zinc-900 rounded-xl">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleTacticalDisplayMode('positions');
+                              }}
+                              className={`py-1.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
+                                tacticalDisplayMode === 'positions'
+                                  ? 'bg-orange-500 text-white shadow-sm'
+                                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                              }`}
+                            >
+                              <span>🏷️ Posições</span>
+                            </button>
+                            
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleTacticalDisplayMode('roles');
+                              }}
+                              className={`py-1.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
+                                tacticalDisplayMode === 'roles'
+                                  ? 'bg-indigo-600 text-white shadow-sm'
+                                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                              }`}
+                            >
+                              <span>👔 Funções</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 

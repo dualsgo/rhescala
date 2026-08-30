@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Employee, MonthYear, Holiday, JornadaSettings, ShiftType } from '../types';
+import { Employee, MonthYear, Holiday, JornadaSettings, ShiftType, TacticalDisplayMode } from '../types';
 import { Icon } from './Icon';
 import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { 
@@ -8,7 +8,7 @@ import {
   calculateLunches, 
   resolveTacticalDay 
 } from '../hooks/useScheduleEngine';
-import { buildHolidaySet, getShortName, isEmployeeActiveInMonth } from '../constants';
+import { buildHolidaySet, getShortName, isEmployeeActiveInMonth, getTacticalLabel } from '../constants';
 import { useDialog } from '../contexts/DialogContext';
 
 interface MobileEmployerViewerProps {
@@ -24,6 +24,7 @@ interface MobileEmployerViewerProps {
   onSwitchToFullGrid: () => void;
   onMonthChange: (my: MonthYear) => void;
   onUpdateEmployee?: (empId: string, data: Partial<Employee>) => void;
+  tacticalDisplayMode?: TacticalDisplayMode;
 }
 
 const WEEKDAY_NAMES_PT = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -41,6 +42,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
   onSwitchToFullGrid,
   onMonthChange,
   onUpdateEmployee,
+  tacticalDisplayMode = 'positions',
 }) => {
   const [activeTab, setActiveTab] = useState<'hoje' | 'semana' | 'equipe' | 'mes' | 'pedidos'>('hoje');
   const [searchTerm, setSearchTerm] = useState('');
@@ -228,16 +230,10 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
       'P4': 'bg-sky-500 text-white ring-2 ring-sky-300 shadow-sm',
       'ESTQ': 'bg-slate-700 text-white ring-2 ring-slate-400 shadow-sm',
     };
-    const labels: Record<string, string> = {
-      'P1': 'P1 - Caixa Principal',
-      'P2': 'P2 - Recepção / Porta',
-      'P3': 'P3 - Salão de Vendas',
-      'P4': 'P4 - Apoio Flexível',
-      'ESTQ': 'Estoque',
-    };
+    const label = getTacticalLabel(pos, tacticalDisplayMode);
     return (
       <span className={`px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider ${colors[pos] || 'bg-slate-800 text-white'}`}>
-        {labels[pos] || pos}
+        {label}
       </span>
     );
   };

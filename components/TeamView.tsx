@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useDialog } from '../contexts/DialogContext';
 import { Employee, EmployeeCargo } from '../types';
 import { Icon } from './Icon';
-import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD } from '../constants';
+import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, getTacticalLabel, getTacticalEmoji } from '../constants';
 
 interface TeamViewProps {
   employees: Employee[];
@@ -580,7 +580,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
             {/* Tactical Positions */}
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Posição Preferencial 1</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Posição / Função Preferencial 1</label>
                 <select
                   disabled={isReadOnly}
                   value={employee.preferredPosition1 || ''}
@@ -589,13 +589,13 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                 >
                   <option value="">Nenhuma</option>
                   {['P1', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
-                    <option key={p} value={p}>{p}</option>
+                    <option key={p} value={p}>{p} — {getTacticalLabel(p, 'roles')} {getTacticalEmoji(p)}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Posição Preferencial 2</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Posição / Função Preferencial 2</label>
                 <select
                   disabled={isReadOnly}
                   value={employee.preferredPosition2 || ''}
@@ -604,7 +604,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                 >
                   <option value="">Nenhuma</option>
                   {['P1', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
-                    <option key={p} value={p}>{p}</option>
+                    <option key={p} value={p}>{p} — {getTacticalLabel(p, 'roles')} {getTacticalEmoji(p)}</option>
                   ))}
                 </select>
               </div>

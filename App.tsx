@@ -43,8 +43,8 @@ import { Icon } from './components/Icon';
 import { Login } from './components/Login';
 import { PrintableSchedule } from './components/PrintableSchedule';
 import { useHolidayCredits } from './hooks/useHolidayCredits';
-import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay, getNationalHolidays, DEFAULT_JORNADA_SETTINGS, getShortName, getDefaultProtectedDays, isEmployeeActiveInMonth, normalizeProtectedDaysConfig } from './constants';
-import { Employee, MonthYear, Holiday, JornadaSettings, OfficialScheduleSnapshot, ScheduleDiffItem } from './types';
+import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay, getNationalHolidays, DEFAULT_JORNADA_SETTINGS, getShortName, getDefaultProtectedDays, isEmployeeActiveInMonth, normalizeProtectedDaysConfig, getTacticalEmoji, getTacticalLabel } from './constants';
+import { Employee, MonthYear, Holiday, JornadaSettings, OfficialScheduleSnapshot, ScheduleDiffItem, TacticalDisplayMode } from './types';
 import { HelpCenter } from './components/HelpCenter';
 import { JornadaManager } from './components/JornadaManager';
 import { EmployeeScheduleCard } from './components/EmployeeScheduleCard';
@@ -100,6 +100,7 @@ const App: React.FC = () => {
   const [authenticatedEmployeeId, setAuthenticatedEmployeeId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
   const [isDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
+  const [tacticalDisplayMode, setTacticalDisplayMode] = useLocalPreference<TacticalDisplayMode>('rhescala_tactical_display_mode', 'positions');
   const { showDialog } = useDialog();
   const [waModal, setWaModal] = useState<{ show: boolean, text: string }>({ show: false, text: '' });
   const [showHelp, setShowHelp] = useState(false);
@@ -586,7 +587,7 @@ const App: React.FC = () => {
           if (shift !== 'T') pos = shift;
           else pos = resolvedPositions[e.id];
         }
-        const posEmoji = pos === 'P1' ? '🟥' : pos === 'P2' ? '🟨' : pos === 'P3' ? '🟩' : pos === 'P4' ? '🟦' : pos === 'ESTQ' ? '📦' : '🔹';
+        const posEmoji = getTacticalEmoji(pos);
         
         if (!groups[hour]) groups[hour] = [];
         groups[hour].push({ ...e, firstName: getShortName(e.name, activeEmps), posEmoji, pos });
@@ -723,29 +724,39 @@ const App: React.FC = () => {
       const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(dateStr);
       const date = new Date(currentMY.year, currentMY.month, dayIdx + 1);
       const isSunday = date.getDay() === 0;
+      const isRoles = tacticalDisplayMode === 'roles';
 
       let text = `🛠️ *Apoio Operacional*\n\n`;
 
       text += `📍 *Posicionamento Diário*\n`;
-      text += `🟥 *P1 – Caixa*\n`;
+      text += isRoles
+        ? `🟥 *Caixa ou Pacote (P1)*\n`
+        : `🟥 *P1 – Caixa*\n`;
       text += `• Só deixa o posto quando houver rendição.\n`;
       text += `• Sem filas: não ficar parado. Adiantar saquinhos de presente e alinhar produtos próximos.\n\n`;
       
-      text += `🟨 *P2 – Porta*\n`;
+      text += isRoles
+        ? `🟨 *Fiscal (P2)*\n`
+        : `🟨 *P2 – Porta*\n`;
       text += `• Foco 100% no fluxo. Tocar o sino em ondas de clientes.\n`;
       text += `• Quando assumir rendição, retornar imediatamente ao posto de origem depois.\n\n`;
       
-      text += `🟩 *P3 – Salão / Anfitrião*\n`;
+      text += isRoles
+        ? `🟩 *Atendimento (P3)*\n`
+        : `🟩 *P3 – Salão / Anfitrião*\n`;
       text += `• Largar qualquer tarefa de arrumação imediatamente se visualizar um cliente.\n`;
-      text += `• 2º nível de apoio ao caixa (acionado quando P4 não der conta).\n\n`;
+      text += `• 2º nível de apoio ao caixa (acionado quando Apoio não der conta).\n\n`;
 
-      text += `🟦 *P4 – Suporte Flexível*\n`;
+      text += isRoles
+        ? `🟦 *Apoio (P4)*\n`
+        : `🟦 *P4 – Suporte Flexível*\n`;
       text += `• Atendimento digital (WhatsApp da loja), precificação e abastecimento (só sem clientes).\n`;
       text += `• 1º nível de apoio ao caixa: largar tudo e ir se o sino tocar.\n\n`;
 
       text += `⚡ *Dança de Cobertura*\n`;
-      text += `• Ida p/ Caixa: Vai o P4 > P3 > P2 (emergência extrema).\n`;
-      text += `• Retorno: P2 > P3 > P4.\n\n`;
+      text += isRoles
+        ? `• Ida p/ Caixa: Apoio (P4) > Atendimento (P3) > Fiscal (P2) (emergência extrema).\n• Retorno: Fiscal (P2) > Atendimento (P3) > Apoio (P4).\n\n`
+        : `• Ida p/ Caixa: Vai o P4 > P3 > P2 (emergência extrema).\n• Retorno: P2 > P3 > P4.\n\n`;
 
       const activeEmps = (employees || []).filter(e => e && !e.isHidden && e.status === 'active');
       const resolvedPositions = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, activeJornadaSettings);
@@ -897,6 +908,8 @@ const App: React.FC = () => {
                 setPresetInitialEmpId(null);
                 setShowPresetModal(true);
               }}
+              tacticalDisplayMode={tacticalDisplayMode}
+              onToggleTacticalDisplayMode={setTacticalDisplayMode}
             />
 
        <main className="flex-1 overflow-hidden p-2 sm:p-4">
@@ -969,6 +982,7 @@ const App: React.FC = () => {
                       onSwitchToFullGrid={() => setViewerModeType('grid')}
                       onMonthChange={setCurrentMY}
                       onUpdateEmployee={onUpdateEmployee}
+                      tacticalDisplayMode={tacticalDisplayMode}
                     />
                   );
                 }
@@ -990,6 +1004,8 @@ const App: React.FC = () => {
                    onCloseNotes={() => setShowNotes(false)}
                    resolvedPositions={selectedDayResolvedPositions}
                    onSelectDay={setSelectedDayIdx}
+                   tacticalDisplayMode={tacticalDisplayMode}
+                   onToggleTacticalDisplayMode={setTacticalDisplayMode}
                    onUpdateShift={(empId, d, s) => {
                      if (isReadOnly) return;
                      setEmployees(prev => prev.map(emp => {
