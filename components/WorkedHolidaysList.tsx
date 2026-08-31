@@ -13,6 +13,7 @@ interface WorkedHolidaysListProps {
   customHolidays: Holiday[];
   holidayCredits: Record<string, HolidayCredit[]>;
   deletedNationalHolidays?: string[];
+  validatedMonths?: Record<string, boolean>;
   trackingStartDate?: string;
   onUpdateTrackingStartDate?: (date: string) => void;
   onClose: () => void;
@@ -24,6 +25,7 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
   customHolidays,
   holidayCredits,
   deletedNationalHolidays = [],
+  validatedMonths = {},
   trackingStartDate,
   onUpdateTrackingStartDate,
   onClose,
@@ -35,10 +37,17 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
     const nationals = getNationalHolidays(currentMY.year).filter(h => !(deletedNationalHolidays || []).includes(h.id));
     const allHolidays = [...nationals, ...customHolidays];
     return allHolidays
-      .filter(h => h.date && (!trackingStartDate || h.date >= trackingStartDate))
+      .filter(h => {
+        if (!h.date) return false;
+        if (trackingStartDate && h.date < trackingStartDate) return false;
+        const [y, m] = h.date.split('-');
+        const hMonthKey = `${y}-${m}`;
+        // Só exibe feriados de meses cuja escala foi oficializada
+        return validatedMonths[hMonthKey] === true;
+      })
       .filter((h, i, self) => i === self.findIndex(t => t.date === h.date)) // Deduplicate
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [customHolidays, currentMY.year, trackingStartDate, deletedNationalHolidays]);
+  }, [customHolidays, currentMY.year, trackingStartDate, deletedNationalHolidays, validatedMonths]);
 
   const getWorkersForHoliday = (dateStr: string) => {
     const [year, month, day] = dateStr.split('-');
@@ -176,7 +185,7 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
       {relevantHolidays.length === 0 ? (
         <div className="text-center py-20 opacity-30">
           <Icon name="event_available" className="text-6xl text-slate-300 dark:text-slate-700 mb-4" />
-          <p className="text-lg font-black uppercase tracking-widest text-slate-400">Nenhum feriado após o marco zero</p>
+          <p className="text-lg font-black uppercase tracking-widest text-slate-400">Nenhum feriado em escalas oficializadas</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -207,24 +207,14 @@ const App: React.FC = () => {
   // We'll handle this in the useEffect that syncs all data, or add a specific one.
   // Actually, DataManager should handle it, but for real-time we can add it here.
 
-  const allHolidayCredits = useHolidayCredits(employees, customHolidays, currentMY.year, trackingStartDate, deletedNationalHolidays);
-  
-  // For Viewers, we only show holiday credits that come from VALIDATED months
-  const holidayCredits = useMemo(() => {
-    if (!isReadOnly) return allHolidayCredits;
-    
-    const filtered: Record<string, any[]> = {};
-    Object.keys(allHolidayCredits).forEach(empId => {
-      const credits = allHolidayCredits[empId] || [];
-      filtered[empId] = credits.filter(credit => {
-        if (!credit.holidayDate) return false;
-        const [y, m] = credit.holidayDate.split('-');
-        const key = `${y}-${m}`;
-        return validatedMonths[key] === true;
-      });
-    });
-    return filtered;
-  }, [allHolidayCredits, isReadOnly, validatedMonths]);
+  const holidayCredits = useHolidayCredits(
+    employees, 
+    customHolidays, 
+    currentMY.year, 
+    trackingStartDate, 
+    deletedNationalHolidays, 
+    validatedMonths
+  );
 
   const pendingRequestsCount = useMemo(() => {
     let count = 0;
@@ -1199,6 +1189,7 @@ const App: React.FC = () => {
                    customHolidays={customHolidays}
                    holidayCredits={holidayCredits}
                    deletedNationalHolidays={deletedNationalHolidays}
+                   validatedMonths={validatedMonths}
                    trackingStartDate={trackingStartDate}
                    onUpdateTrackingStartDate={setTrackingStartDate}
                    onClose={() => setCurrentView('grid')}

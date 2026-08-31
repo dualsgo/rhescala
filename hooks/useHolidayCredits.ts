@@ -16,7 +16,8 @@ export function useHolidayCredits(
   customHolidays: Holiday[], 
   currentYear: number, 
   trackingStartDate?: string,
-  deletedNationalHolidays: string[] = []
+  deletedNationalHolidays: string[] = [],
+  validatedMonths: Record<string, boolean> = {}
 ) {
   const creditsPerEmployee = useMemo(() => {
     const results: Record<string, HolidayCredit[]> = {};
@@ -44,6 +45,10 @@ export function useHolidayCredits(
 
       sortedMonthKeys.forEach(monthKey => {
         if (!monthKey.startsWith(String(currentYear))) return;
+
+        // REGRA: Apenas meses com escala oficializada são considerados para gerar créditos de feriado
+        const isMonthOfficialized = validatedMonths[monthKey] === true;
+
         const monthShifts = emp.shifts[monthKey] || [];
         
         monthShifts.forEach((rawShift, dayIdx) => {
@@ -67,10 +72,9 @@ export function useHolidayCredits(
 
           const holiday = allHolidays.find(h => h.date === dateStr);
 
-          // REGRA PRINCIPAL: Só gera crédito de feriado se o colaborador NÃO tiver nenhum tipo de folga
-          // (F, FF, FE, C, DO, AT, N/A) no dia do feriado, ou seja, se estiver escalado para trabalhar (T ou Posições).
-          // Mesmo que a data do feriado ainda vá acontecer no mês, o crédito fica pendente permitindo antecipar ou agendar a folga.
-          if (holiday && isWorkingShift(shift)) {
+          // REGRA PRINCIPAL: Só gera crédito de feriado se o mês estiver oficializado
+          // e o colaborador NÃO tiver nenhum tipo de folga no feriado (estiver escalado para trabalhar).
+          if (isMonthOfficialized && holiday && isWorkingShift(shift)) {
             if (dateStr.endsWith('-05-01')) {
               // 1º de Maio: CLT concede 2 folgas compensatórias
               workedHolidays.push({ id: dateStr, date: dateStr, name: `${holiday.name} (Folga 1)` });
@@ -138,7 +142,7 @@ export function useHolidayCredits(
     });
 
     return results;
-  }, [employees, customHolidays, currentYear, trackingStartDate, deletedNationalHolidays]);
+  }, [employees, customHolidays, currentYear, trackingStartDate, deletedNationalHolidays, validatedMonths]);
 
   return creditsPerEmployee;
 }
