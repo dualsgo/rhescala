@@ -35,6 +35,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
 }) => {
   const [newRequest, setNewRequest] = React.useState('');
   const [selectedRequestDate, setSelectedRequestDate] = React.useState('');
+  const [showSubmitFeedback, setShowSubmitFeedback] = React.useState(false);
   const effectiveInitialTab = (!isAdmin && initialTab === 'atestado') ? 'mes' : initialTab;
   const [activeTab, setActiveTab] = React.useState<'mes' | 'atual' | 'pedidos' | 'atestado'>(effectiveInitialTab);
   const [requestType, setRequestType] = React.useState<'folga_aviso' | 'troca_turno'>('folga_aviso');
