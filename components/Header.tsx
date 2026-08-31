@@ -532,14 +532,14 @@ export const Header: React.FC<HeaderProps> = ({
                             <span className="text-[9px] font-normal text-slate-400">alternar entre códigos e nomes de funções</span>
                           </div>
                           
-                          <div className="grid grid-cols-2 gap-1.5 p-0.5 bg-slate-200/70 dark:bg-zinc-900 rounded-xl">
+                          <div className="grid grid-cols-3 gap-1 p-0.5 bg-slate-200/70 dark:bg-zinc-900 rounded-xl">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onToggleTacticalDisplayMode('positions');
                               }}
-                              className={`py-1.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
+                              className={`py-1.5 px-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
                                 tacticalDisplayMode === 'positions'
                                   ? 'bg-orange-500 text-white shadow-sm'
                                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -554,13 +554,28 @@ export const Header: React.FC<HeaderProps> = ({
                                 e.stopPropagation();
                                 onToggleTacticalDisplayMode('roles');
                               }}
-                              className={`py-1.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
+                              className={`py-1.5 px-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
                                 tacticalDisplayMode === 'roles'
                                   ? 'bg-indigo-600 text-white shadow-sm'
                                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                               }`}
                             >
                               <span>👔 Funções</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleTacticalDisplayMode('off');
+                              }}
+                              className={`py-1.5 px-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
+                                tacticalDisplayMode === 'off'
+                                  ? 'bg-slate-700 text-white shadow-sm'
+                                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                              }`}
+                            >
+                              <span>🔘 Padrão (T)</span>
                             </button>
                           </div>
                         </div>
@@ -727,8 +742,8 @@ export const Header: React.FC<HeaderProps> = ({
                   }}
                   className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all text-left"
                 >
-                  <Icon name="help_outline" className="text-base text-slate-400" />
-                  <span>Manual & Dicas</span>
+                  <Icon name="badge" className="text-base text-orange-500" />
+                  <span>Guia de Posições & Funções</span>
                 </button>
 
                 <button
@@ -791,12 +806,12 @@ export const Header: React.FC<HeaderProps> = ({
                   }}
                   className="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-slate-200 flex items-center gap-3 text-xs font-black uppercase shadow-sm"
                 >
-                  <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600">
-                    <Icon name="menu_book" className="text-base" />
+                  <div className="p-2 rounded-xl bg-orange-100 dark:bg-orange-950 text-orange-600">
+                    <Icon name="badge" className="text-base" />
                   </div>
                   <div className="flex flex-col text-left">
-                    <span>Manual de Boas Práticas</span>
-                    <span className="text-[10px] font-normal text-slate-400 lowercase">diretrizes e dicas de convivência</span>
+                    <span>Guia de Posições & Funções</span>
+                    <span className="text-[10px] font-normal text-slate-400 lowercase">descrições de P1, P2, P3, P4 e Estoque</span>
                   </div>
                 </button>
 

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Icon } from './Icon';
 
@@ -7,120 +6,293 @@ interface HelpCenterProps {
 }
 
 export const HelpCenter: React.FC<HelpCenterProps> = ({ onClose }) => {
-  const [activeTab, setActiveTab] = useState<'faq' | 'guide'>('faq');
+  const [activeTab, setActiveTab] = useState<'posicoes' | 'funcoes' | 'legenda'>('posicoes');
 
-  const faqs = [
+  const tacticalPositions = [
     {
-      q: 'Como começar uma nova escala?',
-      a: 'Clique no botão "Editar" > "Criar Mês (Gerar)". O sistema irá criar automaticamente os dias do mês selecionado e aplicar as regras básicas de folga.'
+      code: 'P1',
+      name: 'Caixa / Frente de Loja',
+      color: 'bg-rose-500 text-white',
+      badgeBg: 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/50',
+      icon: 'point_of_sale',
+      desc: 'Responsável principal pela abertura do caixa, atendimento no checkout, organização do balcão, conferência de sangrias e fundo de troco.',
+      responsibilities: [
+        'Abertura e fechamento de caixa com conferência rigorosa',
+        'Atendimento ágil, cordial e registro correto de produtos',
+        'Oferta de produtos de impulso / itens de frente de caixa',
+        'Emissão de cupons fiscais e suporte em trocas com nota'
+      ]
     },
     {
-      q: 'Qual a diferença entre Folga Fixa e Sorteio?',
-      a: 'A Folga Fixa é o dia que o colaborador folga TODA semana (ex: Segunda). O Sorteio de Domingos é rotativo, garantindo que todos descansem conforme a legislação.'
+      code: 'PC',
+      name: 'Pacote / Fechamento de Vendas',
+      color: 'bg-orange-500 text-white',
+      badgeBg: 'bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-900/50',
+      icon: 'inventory_2',
+      desc: 'Foco no empacotamento de presentes com excelência, organização de fitas e embalagens e suporte direto à fluidez do caixa.',
+      responsibilities: [
+        'Embalagem cuidadosa de presentes e colocação de laços padrão Ri Happy',
+        'Manutenção do suprimento de sacolas e papéis de presente',
+        'Auxílio ao operador de caixa na conferência de itens frágeis',
+        'Agilização da fila em horários de pico'
+      ]
     },
     {
-      q: 'Como exportar para a equipe?',
-      a: 'Você pode usar o botão "Imprimir" para gerar um PDF profissional ou o botão "Copiar Texto" para enviar o posicionamento do dia via WhatsApp.'
+      code: 'P2',
+      name: 'Fiscal de Salão / Recepção',
+      color: 'bg-amber-500 text-white',
+      badgeBg: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/50',
+      icon: 'shield_person',
+      desc: 'Porta de entrada e recepção dos clientes, monitoramento do fluxo de salão, prevenção de perdas e suporte operacional geral.',
+      responsibilities: [
+        'Boas-vindas acolhedoras aos clientes e direcionamento no salão',
+        'Monitoramento atento de pontos cegos e prevenção de perdas',
+        'Conferência de mercadorias que entram e saem da loja',
+        'Comunicação rápida com a gerência sobre movimentações atípicas'
+      ]
     },
     {
-      q: 'O que significa cada sigla (P1, P2, etc)?',
-      a: 'P1: Caixa/Abertura, P2: Porta, P3: Salão, P4: Flexível/Apoio, ESTQ: Estoque. Você pode mudar essas posições clicando em "Distribuir Posições".'
+      code: 'P3',
+      name: 'Atendimento & Brinquedos (Salão)',
+      color: 'bg-emerald-500 text-white',
+      badgeBg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900/50',
+      icon: 'toys',
+      desc: 'Atendimento ativo, consultoria aos clientes, demonstração de brinquedos, reposição diária e manutenção visual das gôndolas.',
+      responsibilities: [
+        'Abordagem consultiva e encantamento de crianças e famílias',
+        'Demonstração interativa de lançamentos e produtos em destaque',
+        'Reposição contínua e alinhamento de gôndolas (frenteamento)',
+        'Verificação de etiquetagem de preços e precificação correta'
+      ]
     },
     {
-      q: 'Como configurar feriados?',
-      a: 'Vá em Configurações > Feriados. Lá você pode adicionar feriados municipais. Feriados nacionais já são incluídos automaticamente pelo sistema.'
+      code: 'P4',
+      name: 'Apoio Flexível / Fechamento',
+      color: 'bg-sky-500 text-white',
+      badgeBg: 'bg-sky-50 dark:bg-sky-950/40 border-sky-200 dark:border-sky-900/50',
+      icon: 'support_agent',
+      desc: 'Posição móvel e coringa que dá suporte aos caixas nos picos de movimento, ajuda no salão e atua nas rotinas de fechamento.',
+      responsibilities: [
+        'Suporte emergencial aos caixas quando a fila aumentar',
+        'Organização de carrinhos, cestos e devoluções espalhadas',
+        'Apoio na contagem de estoque e arrumação de seções',
+        'Rotinas de encerramento do expediente e limpeza rápida'
+      ]
+    },
+    {
+      code: 'ESTQ',
+      name: 'Estoque / Depósito & Abastecimento',
+      color: 'bg-slate-700 text-white',
+      badgeBg: 'bg-slate-50 dark:bg-zinc-800/60 border-slate-200 dark:border-zinc-700/50',
+      icon: 'pallet',
+      desc: 'Gestão do depósito de mercadorias, conferência de notas fiscais de entrada, separação de pedidos e abastecimento do salão de vendas.',
+      responsibilities: [
+        'Recebimento de carretas/entregas e conferência física com nota',
+        'Triagem, etiquetagem e endereçamento no estoque',
+        'Separação diária de itens para reposição no salão',
+        'Controle de avarias e preparação para trocas com fornecedores'
+      ]
     }
   ];
 
-  const guideSteps = [
-    { title: '1. Equipe', desc: 'Cadastre todos os colaboradores e defina seus cargos (Vendedor, Estoquista, Aprendiz).', icon: 'groups' },
-    { title: '2. Jornada', desc: 'Configure os horários padrão de abertura, fechamento e almoço em Configurações > Jornada.', icon: 'schedule' },
-    { title: '3. Gerar Mês', desc: 'Na grade, clique em Editar > Criar Mês para inicializar o calendário.', icon: 'auto_awesome' },
-    { title: '4. Ajustar', desc: 'Use o "Sorteio de Domingos" e ajuste folgas manuais se necessário.', icon: 'edit_calendar' }
+  const rolesGuide = [
+    {
+      cargo: 'Atendente / Vendedor',
+      icon: 'shopping_bag',
+      color: 'text-orange-500 bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-900/40',
+      desc: 'Linha de frente da loja, responsável pelo encantamento, venda de brinquedos, cumprimento de metas e excelente experiência do cliente.'
+    },
+    {
+      cargo: 'Estoquista',
+      icon: 'inventory',
+      color: 'text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700',
+      desc: 'Guardião da integridade do estoque, organização do depósito, abastecimento contínuo e logística reversa de mercadorias.'
+    },
+    {
+      cargo: 'Fiscal de Salão',
+      icon: 'verified_user',
+      color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/40',
+      desc: 'Garante a segurança do patrimônio, organização da entrada e suporte preventivo para uma operação tranquila e sem desvios.'
+    },
+    {
+      cargo: 'Jovem Aprendiz',
+      icon: 'school',
+      color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-900/40',
+      desc: 'Jornada especial de 6h (15 min de intervalo). Proibido trabalhar aos sábados, domingos e feriados, com folga obrigatória no dia de curso teórico.'
+    }
+  ];
+
+  const shiftLegend = [
+    { code: 'T / DOM', label: 'Trabalho Normal / Domingo', desc: 'Dia de trabalho regular conforme o horário cadastrado da escala.', bg: 'bg-indigo-600 text-white' },
+    { code: 'F', label: 'Folga Semanal', desc: 'Descanso Semanal Remunerado (DSR) regular do colaborador.', bg: 'bg-rose-500 text-white' },
+    { code: 'FF', label: 'Folga Feriado', desc: 'Compensação por feriado trabalhado (crédito adquirido).', bg: 'bg-red-600 text-white' },
+    { code: 'FE', label: 'Férias', desc: 'Período oficial de descanso anual remunerado.', bg: 'bg-purple-600 text-white' },
+    { code: 'DO', label: 'Day Off (Aniversário)', desc: 'Folga comemorativa concedida no dia de aniversário.', bg: 'bg-fuchsia-600 text-white' },
+    { code: 'AT', label: 'Atestado Médico', desc: 'Ausência justificada por atestado médico homologado.', bg: 'bg-rose-700 text-white' },
+    { code: 'C', label: 'Curso / Teórico', desc: 'Dia destinado ao curso de capacitação do Jovem Aprendiz.', bg: 'bg-teal-600 text-white' },
+    { code: 'N/A', label: 'Não Vigente', desc: 'Data anterior à admissão ou posterior ao desligamento.', bg: 'bg-slate-400 text-white' }
   ];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[80vh] animate-in zoom-in-95 duration-300">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white dark:bg-zinc-900 w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+        <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
-              <Icon name="help" className="text-xl" />
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
+              <Icon name="badge" className="text-xl" />
             </div>
             <div>
-              <h2 className="text-lg font-black uppercase text-slate-800 dark:text-slate-100 tracking-tight">Central de Ajuda</h2>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Suporte ao Usuário Rhescala</p>
+              <h2 className="text-base sm:text-lg font-black uppercase text-slate-800 dark:text-slate-100 tracking-tight">
+                Guia de Posições & Funções
+              </h2>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                Ri Happy Shift Management • Padrões Operacionais
+              </p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-all"
+            className="w-9 h-9 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-all"
           >
             <Icon name="close" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex px-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <div className="flex border-b border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 overflow-x-auto custom-scrollbar">
           <button 
-            onClick={() => setActiveTab('faq')}
-            className={`px-6 py-4 text-[11px] font-black uppercase tracking-widest transition-all border-b-2 ${activeTab === 'faq' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-400'}`}
+            onClick={() => setActiveTab('posicoes')}
+            className={`px-4 py-3.5 text-xs font-black uppercase tracking-wider transition-all border-b-2 whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'posicoes' 
+                ? 'border-orange-500 text-orange-600 dark:text-orange-400' 
+                : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
           >
-            Perguntas Frequentes
+            <Icon name="view_in_ar" className="text-sm" />
+            Posições Táticas (P1 a P4)
           </button>
           <button 
-            onClick={() => setActiveTab('guide')}
-            className={`px-6 py-4 text-[11px] font-black uppercase tracking-widest transition-all border-b-2 ${activeTab === 'guide' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-400'}`}
+            onClick={() => setActiveTab('funcoes')}
+            className={`px-4 py-3.5 text-xs font-black uppercase tracking-wider transition-all border-b-2 whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'funcoes' 
+                ? 'border-orange-500 text-orange-600 dark:text-orange-400' 
+                : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
           >
-            Guia Rápido
+            <Icon name="groups" className="text-sm" />
+            Cargos & Funções
+          </button>
+          <button 
+            onClick={() => setActiveTab('legenda')}
+            className={`px-4 py-3.5 text-xs font-black uppercase tracking-wider transition-all border-b-2 whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'legenda' 
+                ? 'border-orange-500 text-orange-600 dark:text-orange-400' 
+                : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <Icon name="format_list_bulleted" className="text-sm" />
+            Legenda de Turnos
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-slate-50/30 dark:bg-slate-900/30">
-          {activeTab === 'faq' ? (
-            <div className="space-y-4">
-              {faqs.map((faq, idx) => (
-                <div key={idx} className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:border-orange-200 dark:hover:border-orange-900 group">
-                  <h4 className="text-[12px] font-black text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-md bg-orange-100 dark:bg-orange-900/30 text-orange-600 flex items-center justify-center text-[10px]">Q</span>
-                    {faq.q}
-                  </h4>
-                  <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-relaxed pl-7">
-                    {faq.a}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {guideSteps.map((step, idx) => (
-                <div key={idx} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                  <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 mb-4">
-                    <Icon name={step.icon} className="text-lg" />
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6 custom-scrollbar bg-slate-50/40 dark:bg-zinc-950/40 space-y-4">
+          
+          {/* Aba 1: Posições Táticas */}
+          {activeTab === 'posicoes' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
+              {tacticalPositions.map(pos => (
+                <div 
+                  key={pos.code} 
+                  className={`p-4 rounded-2xl border ${pos.badgeBg} flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm ${pos.color}`}>
+                          {pos.code}
+                        </span>
+                        <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
+                          {pos.name}
+                        </h4>
+                      </div>
+                      <Icon name={pos.icon} className="text-lg text-slate-400" />
+                    </div>
+
+                    <p className="text-[11px] font-medium text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
+                      {pos.desc}
+                    </p>
+
+                    <div className="space-y-1.5 pt-2 border-t border-black/5 dark:border-white/5">
+                      <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest block">
+                        Principais Atividades:
+                      </span>
+                      {pos.responsibilities.map((r, i) => (
+                        <div key={i} className="flex items-start gap-1.5 text-[10px] text-slate-600 dark:text-slate-400">
+                          <span className="text-orange-500 font-bold">•</span>
+                          <span>{r}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <h4 className="text-[11px] font-black uppercase text-slate-800 dark:text-slate-100 mb-1">{step.title}</h4>
-                  <p className="text-[10px] font-bold text-slate-400 leading-normal">{step.desc}</p>
                 </div>
               ))}
-              <div className="md:col-span-2 mt-4 p-4 bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30 rounded-2xl">
-                 <p className="text-[10px] font-bold text-orange-600 uppercase flex items-center gap-2">
-                   <Icon name="info" /> Dica: Passe o mouse sobre os ícones para ver descrições detalhadas.
-                 </p>
-              </div>
             </div>
           )}
+
+          {/* Aba 2: Cargos & Funções */}
+          {activeTab === 'funcoes' && (
+            <div className="space-y-4 animate-fade-in">
+              {rolesGuide.map((item, idx) => (
+                <div key={idx} className={`p-4 rounded-2xl border ${item.color} flex items-start gap-3 shadow-sm`}>
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-800 shadow-sm shrink-0 mt-0.5">
+                    <Icon name={item.icon} className="text-xl" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black uppercase text-slate-900 dark:text-slate-100 tracking-tight">
+                      {item.cargo}
+                    </h4>
+                    <p className="text-[11px] font-medium text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                      {item.desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Aba 3: Legenda de Turnos */}
+          {activeTab === 'legenda' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in">
+              {shiftLegend.map((item, idx) => (
+                <div key={idx} className="p-3.5 rounded-2xl bg-white dark:bg-zinc-800/80 border border-slate-200/60 dark:border-zinc-700/60 flex items-start gap-3 shadow-sm">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0 shadow-sm ${item.bg}`}>
+                    {item.code}
+                  </div>
+                  <div className="min-w-0">
+                    <h5 className="text-[11px] font-black uppercase text-slate-800 dark:text-slate-100 tracking-tight">
+                      {item.label}
+                    </h5>
+                    <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
+                      {item.desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
         </div>
 
         {/* Footer */}
-        <div className="p-6 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800">
+        <div className="p-4 sm:p-5 bg-white dark:bg-zinc-900 border-t border-slate-100 dark:border-zinc-800 flex justify-end">
           <button 
             onClick={onClose}
-            className="w-full py-4 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl"
+            className="px-6 py-2.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-xs font-black uppercase tracking-wider hover:scale-[1.02] active:scale-95 transition-all shadow-md"
           >
-            Entendi, vamos lá!
+            Fechar Guia
           </button>
         </div>
 

@@ -192,13 +192,15 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
           >
             Solicitações
           </button>
-          <button 
-            onClick={() => setActiveTab('atestado')}
-            className={`px-4 py-4 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'atestado' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
-          >
-            <Icon name="medical_services" className="text-sm text-rose-500" />
-            Atestado Médico
-          </button>
+          {isAdmin && (
+            <button 
+              onClick={() => setActiveTab('atestado')}
+              className={`px-4 py-4 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'atestado' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+            >
+              <Icon name="medical_services" className="text-sm text-rose-500" />
+              Atestado Médico
+            </button>
+          )}
         </div>
 
         {/* Content */}
@@ -804,7 +806,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
           </div>
           )}
 
-          {activeTab === 'atestado' && (
+          {activeTab === 'atestado' && isAdmin && (
             <div className="space-y-6 animate-fade-in">
               <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 p-5 rounded-2xl flex items-start gap-3">
                 <Icon name="medical_services" className="text-rose-500 text-2xl shrink-0 mt-0.5" />

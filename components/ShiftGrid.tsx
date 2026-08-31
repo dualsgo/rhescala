@@ -293,34 +293,63 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
           {/* Alternador de Modo: Posições vs Funções */}
           {onToggleTacticalDisplayMode && (
-            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
+            isReadOnly ? (
               <button
                 type="button"
-                onClick={() => onToggleTacticalDisplayMode('positions')}
-                className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                  tacticalDisplayMode === 'positions'
-                    ? 'bg-orange-500 text-white shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                onClick={() => onToggleTacticalDisplayMode(tacticalDisplayMode === 'off' ? 'positions' : 'off')}
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shrink-0 ${
+                  tacticalDisplayMode !== 'off'
+                    ? 'bg-orange-500 border-orange-600 text-white shadow-orange-500/20'
+                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50 dark:hover:bg-zinc-800'
                 }`}
-                title="Modo Posições: Exibir códigos P1, P2, P3, P4 e ESTQ"
+                title={tacticalDisplayMode !== 'off' ? 'Desativar visualização de posições (exibir T/DOM)' : 'Ativar visualização de posições/funções táticas (P1, P2, ESTQ...)'}
               >
-                <span className="hidden sm:inline">🏷️ Posições</span>
-                <span className="inline sm:hidden">🏷️ Pos</span>
+                <Icon name={tacticalDisplayMode !== 'off' ? 'toggle_on' : 'toggle_off'} className="text-base" />
+                <span>{tacticalDisplayMode !== 'off' ? 'Posições: Ativadas' : 'Ver Posições Táticas'}</span>
               </button>
-              <button
-                type="button"
-                onClick={() => onToggleTacticalDisplayMode('roles')}
-                className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                  tacticalDisplayMode === 'roles'
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
-                }`}
-                title="Modo Funções: Exibir funções Caixa ou Pacote, Fiscal, Atendimento, Apoio e Estoque"
-              >
-                <span className="hidden sm:inline">👔 Funções</span>
-                <span className="inline sm:hidden">👔 Func</span>
-              </button>
-            </div>
+            ) : (
+              <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
+                <button
+                  type="button"
+                  onClick={() => onToggleTacticalDisplayMode('positions')}
+                  className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                    tacticalDisplayMode === 'positions'
+                      ? 'bg-orange-500 text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                  }`}
+                  title="Modo Posições: Exibir códigos P1, P2, P3, P4 e ESTQ"
+                >
+                  <span className="hidden sm:inline">🏷️ Posições</span>
+                  <span className="inline sm:hidden">🏷️ Pos</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onToggleTacticalDisplayMode('roles')}
+                  className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                    tacticalDisplayMode === 'roles'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                  }`}
+                  title="Modo Funções: Exibir funções Caixa, Fiscal, Atendimento, Apoio e Estoque"
+                >
+                  <span className="hidden sm:inline">👔 Funções</span>
+                  <span className="inline sm:hidden">👔 Func</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onToggleTacticalDisplayMode('off')}
+                  className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                    tacticalDisplayMode === 'off'
+                      ? 'bg-slate-700 text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                  }`}
+                  title="Modo Padrão: Ocultar posições e exibir apenas T / DOM"
+                >
+                  <span className="hidden sm:inline">🔘 Padrão (T)</span>
+                  <span className="inline sm:hidden">🔘 T</span>
+                </button>
+              </div>
+            )
           )}
 
           {/* Grupo 2: Equipe & Contrato (Apenas Admin) */}
@@ -446,8 +475,9 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             </div>
           )}
 
-          <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase bg-white dark:bg-zinc-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm ml-auto">
-            <Icon name="touch_app" className="text-orange-500 text-xs" /> Clique no seu nome para abrir sua escala
+          <div className="flex items-center gap-1 text-[8.5px] font-bold text-slate-400 dark:text-zinc-500 ml-auto select-none opacity-80">
+            <Icon name="touch_app" className="text-orange-400 text-xs" />
+            <span>Toque no nome para detalhes</span>
           </div>
         </div>
       </div>
@@ -845,18 +875,18 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                         ) : ''
                                       } ${
                                         shift === 'N/A' ? 'bg-slate-100/70 dark:bg-zinc-800/40 text-slate-400 dark:text-zinc-600 border border-dashed border-slate-200 dark:border-zinc-800 opacity-60' :
-                                       shift === 'AT' ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50' :
+                                        shift === 'AT' ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50' :
                                         shift === 'F' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
                                         shift.startsWith('FF') ? 'bg-amber-100 text-amber-600' :
                                         shift === 'C' ? 'bg-indigo-100 text-indigo-600' :
                                         shift === 'FE' ? 'bg-emerald-100 text-emerald-600' :
                                         shift === 'DO' ? 'bg-fuchsia-600 text-white shadow-md' :
-                                        shift === 'P1' ? 'bg-red-600 text-white shadow-md ring-2 ring-red-400' :
-                                        shift === 'PC' ? 'bg-orange-500 text-white shadow-md ring-2 ring-orange-400' :
-                                        shift === 'P2' ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300' :
-                                        shift === 'P3' ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400' :
-                                        shift === 'P4' ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400' :
-                                        shift === 'ESTQ' ? 'bg-slate-700 text-white shadow-md ring-2 ring-slate-500' :
+                                        (tacticalDisplayMode !== 'off' && shift === 'P1') ? 'bg-red-600 text-white shadow-md ring-2 ring-red-400' :
+                                        (tacticalDisplayMode !== 'off' && shift === 'PC') ? 'bg-orange-500 text-white shadow-md ring-2 ring-orange-400' :
+                                        (tacticalDisplayMode !== 'off' && shift === 'P2') ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300' :
+                                        (tacticalDisplayMode !== 'off' && shift === 'P3') ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400' :
+                                        (tacticalDisplayMode !== 'off' && shift === 'P4') ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400' :
+                                        (tacticalDisplayMode !== 'off' && shift === 'ESTQ') ? 'bg-slate-700 text-white shadow-md ring-2 ring-slate-500' :
                                         (!dayRequest ? 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-zinc-800' : '')
                                       }`}
                                     >
