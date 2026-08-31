@@ -207,7 +207,7 @@ const App: React.FC = () => {
   // We'll handle this in the useEffect that syncs all data, or add a specific one.
   // Actually, DataManager should handle it, but for real-time we can add it here.
 
-  const allHolidayCredits = useHolidayCredits(employees, customHolidays, currentMY.year, trackingStartDate);
+  const allHolidayCredits = useHolidayCredits(employees, customHolidays, currentMY.year, trackingStartDate, deletedNationalHolidays);
   
   // For Viewers, we only show holiday credits that come from VALIDATED months
   const holidayCredits = useMemo(() => {
@@ -1198,6 +1198,7 @@ const App: React.FC = () => {
                    currentMY={currentMY}
                    customHolidays={customHolidays}
                    holidayCredits={holidayCredits}
+                   deletedNationalHolidays={deletedNationalHolidays}
                    trackingStartDate={trackingStartDate}
                    onUpdateTrackingStartDate={setTrackingStartDate}
                    onClose={() => setCurrentView('grid')}

@@ -5,13 +5,14 @@ import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { Icon } from './Icon';
 import { useDialog } from '../contexts/DialogContext';
 import { isWorkingShift } from '../hooks/useScheduleEngine';
-
+import { copyToClipboard } from '../src/utils/clipboard';
 
 interface WorkedHolidaysListProps {
   employees: Employee[];
   currentMY: MonthYear;
   customHolidays: Holiday[];
   holidayCredits: Record<string, HolidayCredit[]>;
+  deletedNationalHolidays?: string[];
   trackingStartDate?: string;
   onUpdateTrackingStartDate?: (date: string) => void;
   onClose: () => void;
@@ -22,19 +23,22 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
   currentMY,
   customHolidays,
   holidayCredits,
+  deletedNationalHolidays = [],
   trackingStartDate,
   onUpdateTrackingStartDate,
   onClose,
 }) => {
   const { showDialog } = useDialog();
+  const todayStr = new Date().toLocaleDateString('en-CA');
+
   const relevantHolidays = useMemo(() => {
-    const todayStr = new Date().toLocaleDateString('en-CA');
-    const allHolidays = [...getNationalHolidays(currentMY.year), ...customHolidays];
+    const nationals = getNationalHolidays(currentMY.year).filter(h => !(deletedNationalHolidays || []).includes(h.id));
+    const allHolidays = [...nationals, ...customHolidays];
     return allHolidays
-      .filter(h => h.date && (!trackingStartDate || h.date >= trackingStartDate) && h.date < todayStr)
+      .filter(h => h.date && (!trackingStartDate || h.date >= trackingStartDate))
       .filter((h, i, self) => i === self.findIndex(t => t.date === h.date)) // Deduplicate
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [customHolidays, currentMY.year, trackingStartDate]);
+  }, [customHolidays, currentMY.year, trackingStartDate, deletedNationalHolidays]);
 
   const getWorkersForHoliday = (dateStr: string) => {
     const [year, month, day] = dateStr.split('-');
@@ -42,13 +46,15 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
     const dayIdx = parseInt(day, 10) - 1;
     
     return employees.filter(emp => {
-      const shift = (emp.shifts[targetMonthKey] || [])[dayIdx];
-      // Only count as worked if it's a working shift (T or P1-P4)
+      if (emp.isYoungApprentice || emp.cargo === 'Aprendiz') return false;
+      let shift = (emp.shifts[targetMonthKey] || [])[dayIdx];
+      if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) shift = 'FE';
+      if (emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd) shift = 'AT';
       const hasWorked = isWorkingShift(shift);
       return hasWorked && isEmployeeActiveInMonth(emp, parseInt(year, 10), parseInt(month, 10) - 1);
     });
-
   };
+
 
   const handleCopyPending = async () => {
     let text = "*📋 COLABORADORES COM FOLGAS PENDENTES*\n\n";
@@ -229,13 +235,17 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
                                   <span className="text-[7px] font-bold text-slate-400 mt-0.5">{credit.offDate?.split('-').reverse().join('/')}</span>
                                 </div>
                              ) : (
-                                <span className="text-[8px] font-black uppercase text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-md">TRABALHOU</span>
+                                <span className="text-[8px] font-black uppercase text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-md">
+                                  {holiday.date < todayStr ? 'TRABALHOU' : 'ESCALADO'}
+                                </span>
                              )}
                           </div>
                        </div>
                      ));
                    }) : (
-                     <p className="text-[10px] font-bold text-slate-400 uppercase text-center py-4">Ninguém trabalhou neste dia</p>
+                     <p className="text-[10px] font-bold text-slate-400 uppercase text-center py-4">
+                       {holiday.date < todayStr ? 'Ninguém trabalhou neste dia' : 'Ninguém escalado para trabalhar'}
+                     </p>
                    )}
                 </div>
               </div>

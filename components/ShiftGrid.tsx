@@ -825,7 +825,17 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                     )}
                                     <button
                                       onClick={() => onSelectDay(d.num - 1)}
-                                      title={shift === 'N/A' ? (emp.hiredAt ? `Não admitido nesta data (Início: ${emp.hiredAt.split('-').reverse().join('/')})` : 'Desconsiderado (N/A)') : undefined}
+                                      title={
+                                        shift === 'N/A' 
+                                          ? (emp.hiredAt ? `Não admitido nesta data (Início: ${emp.hiredAt.split('-').reverse().join('/')})` : 'Desconsiderado (N/A)') 
+                                          : shift?.startsWith('FF')
+                                          ? (() => {
+                                              const explicit = shift.split(' ')[1];
+                                              const matched = (holidayCredits[emp.id] || []).find(c => c.id === explicit || c.holidayDate === explicit);
+                                              return matched ? `Folga Feriado: ${matched.holidayName}` : 'Folga Feriado (FF)';
+                                            })()
+                                          : undefined
+                                      }
                                       className={`${isCompactMode ? 'w-8 h-8 rounded-lg text-[9px]' : 'w-10 h-10 rounded-xl text-[10px]'} flex items-center justify-center font-black transition-all shadow-sm relative ${
                                         dayRequest ? (
                                           dayRequest.status === 'granted' ? 'ring-2 ring-emerald-500 bg-emerald-50' :
@@ -914,9 +924,21 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                             ))
                                           }
                                           
-                                          {/* Current value if it's a specific FF already matched but not in pending anymore */}
-                                          {shift?.startsWith('FF ') && !(holidayCredits[emp.id] || []).some(c => c.status === 'pending' && `FF ${c.id || c.holidayDate}` === shift) && (
-                                            <option value={shift}>{shift.replace('FF ', 'FF — ')}</option>
+                                          {/* Fallback generic option if no specific pending ones */}
+                                          {pendingCount === 0 && !shift?.startsWith('FF') && (
+                                            <option value="FF">Folga Feriado (FF)</option>
+                                          )}
+
+                                          {/* Current value if it's already an FF */}
+                                          {shift?.startsWith('FF') && !(holidayCredits[emp.id] || []).some(c => c.status === 'pending' && `FF ${c.id || c.holidayDate}` === shift) && (
+                                            <option value={shift}>
+                                              {(() => {
+                                                if (shift === 'FF') return 'FF — Folga Feriado';
+                                                const explicitKey = shift.split(' ')[1];
+                                                const matched = (holidayCredits[emp.id] || []).find(c => c.id === explicitKey || c.holidayDate === explicitKey);
+                                                return matched ? `FF — ${matched.holidayName}` : shift.replace('FF ', 'FF — ');
+                                              })()}
+                                            </option>
                                           )}
                                           <option value="FE">Férias (FE)</option>
                                           <option value="C">Curso (C)</option>
