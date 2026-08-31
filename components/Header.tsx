@@ -42,6 +42,9 @@ interface HeaderProps {
   onOptimizePeakWeek?: () => void;
   tacticalDisplayMode?: TacticalDisplayMode;
   onToggleTacticalDisplayMode?: (mode?: TacticalDisplayMode) => void;
+  onManualSave?: () => void;
+  isSaving?: boolean;
+  isJustSaved?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -83,6 +86,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenPresetModal,
   tacticalDisplayMode = 'positions',
   onToggleTacticalDisplayMode,
+  onManualSave,
+  isSaving = false,
+  isJustSaved = false,
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
@@ -300,6 +306,33 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Right: Segmented Actions, Share & Profile Menus */}
         <div className="flex items-center gap-1.5 sm:gap-2">
           
+          {/* Botão de Salvar Manual com Atalho Ctrl+S */}
+          {!isReadOnly && onManualSave && (
+            <button
+              onClick={onManualSave}
+              disabled={isSaving}
+              className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border font-black text-[10px] sm:text-xs uppercase tracking-wider transition-all shadow-sm ${
+                isJustSaved
+                  ? 'bg-emerald-600 border-emerald-700 text-white shadow-emerald-500/30 scale-[1.02]'
+                  : isSaving
+                  ? 'bg-indigo-50 dark:bg-indigo-950/50 border-indigo-300 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 animate-pulse'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 hover:scale-[1.02] active:scale-95 shadow-emerald-500/20'
+              }`}
+              title="Salvar escala agora para garantir que as alterações sejam preservadas (Atalho: Ctrl+S)"
+            >
+              <Icon 
+                name={isJustSaved ? 'check_circle' : isSaving ? 'sync' : 'save'} 
+                className={`text-xs sm:text-sm ${isSaving ? 'animate-spin' : ''}`} 
+              />
+              <span className="inline">
+                {isJustSaved ? 'Salvo!' : isSaving ? 'Salvando...' : 'Salvar'}
+              </span>
+              <span className="hidden xl:inline text-[8px] sm:text-[9px] opacity-80 bg-black/25 px-1 py-0.5 rounded font-mono">
+                Ctrl+S
+              </span>
+            </button>
+          )}
+
           {/* 1. Menu: Ações da Escala (Segmentado) */}
           {!isReadOnly && currentView === 'grid' && (
             <div className="relative">
@@ -801,6 +834,27 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             ) : (
               <>
+                {/* Botão de Salvar no Mobile (Admin) */}
+                {onManualSave && (
+                  <button
+                    onClick={() => {
+                      onManualSave();
+                      setShowMobileMenu(false);
+                    }}
+                    disabled={isSaving}
+                    className={`w-full p-3.5 rounded-2xl flex items-center justify-center gap-2.5 text-xs font-black uppercase shadow-md transition-all ${
+                      isJustSaved
+                        ? 'bg-emerald-600 text-white shadow-emerald-500/30'
+                        : isSaving
+                        ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 animate-pulse'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20'
+                    }`}
+                  >
+                    <Icon name={isJustSaved ? 'check_circle' : isSaving ? 'sync' : 'save'} className={`text-lg ${isSaving ? 'animate-spin' : ''}`} />
+                    <span>{isJustSaved ? 'Escala Salva com Sucesso!' : isSaving ? 'Salvando...' : 'Salvar Escala Agora'}</span>
+                  </button>
+                )}
+
                 <div className="grid grid-cols-3 gap-2">
                   {navItems.map(item => (
                     <button

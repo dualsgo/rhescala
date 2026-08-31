@@ -9,6 +9,8 @@ interface ActionToolbarProps {
   currentMY: MonthYear;
   onImportClick: () => void;
   onOptimizePeakWeek?: () => void;
+  onManualSave?: () => void;
+  isSaving?: boolean;
 }
 
 const WEEKDAY_ABBR = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
@@ -17,7 +19,14 @@ const MONTHS_NAMES = [
   'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro',
 ];
 
-export const ActionToolbar: React.FC<ActionToolbarProps> = ({ employees, currentMY, onImportClick, onOptimizePeakWeek }) => {
+export const ActionToolbar: React.FC<ActionToolbarProps> = ({ 
+  employees, 
+  currentMY, 
+  onImportClick, 
+  onOptimizePeakWeek,
+  onManualSave,
+  isSaving = false,
+}) => {
   const { showDialog } = useDialog();
 
   const monthKey = `${currentMY.year}-${currentMY.month.toString().padStart(2, '0')}`;
@@ -200,6 +209,13 @@ export const ActionToolbar: React.FC<ActionToolbarProps> = ({ employees, current
   };
 
   const actions = [
+    ...(onManualSave ? [{ 
+      label: isSaving ? 'Salvando...' : 'Salvar Escala (Ctrl+S)', 
+      id: 'save', 
+      icon: 'save', 
+      color: 'text-emerald-600', 
+      bg: 'bg-emerald-50' 
+    }] : []),
     { label: 'Exportar Excel', id: 'excel', icon: 'table_view',      color: 'text-green-600', bg: 'bg-green-50' },
     { label: 'Gerar PDF',      id: 'pdf',   icon: 'picture_as_pdf',  color: 'text-red-600',   bg: 'bg-red-50'   },
     { label: 'Backup Nuvem',   id: 'backup', icon: 'cloud_upload',   color: 'text-sky-600',   bg: 'bg-sky-50'   },
@@ -223,6 +239,7 @@ export const ActionToolbar: React.FC<ActionToolbarProps> = ({ employees, current
         <button
           key={idx}
           onClick={async () => {
+            if (action.id === 'save') { onManualSave?.(); return; }
             if (action.id === 'backup') { await handleBackup(); return; }
             if (action.id === 'peak' || action.id === 'natal') { onOptimizePeakWeek?.(); return; }
             const confirmed = await showDialog({

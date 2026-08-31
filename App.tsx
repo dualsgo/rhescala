@@ -25,6 +25,7 @@ import {
 import { Header } from './components/Header';
 import { copyToClipboard } from './src/utils/clipboard';
 import { toPng } from 'html-to-image';
+import { apiStore, getConfiguredApiUrl } from './src/gas-api';
 
 import { ShiftGrid } from './components/ShiftGrid';
 import { TeamView } from './components/TeamView';
@@ -147,6 +148,89 @@ const App: React.FC = () => {
     () => detectInconsistencies(employees, currentMY.year, currentMY.month, new Date()),
     [employees, currentMY]
   );
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [isJustSaved, setIsJustSaved] = useState(false);
+
+  const handleManualSave = useCallback(async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+
+    try {
+      // 1. Gravação síncrona imediata no localStorage para proteção instantânea contra perda
+      window.localStorage.setItem('riHappyEmployeesData', JSON.stringify(employees));
+      window.localStorage.setItem('riHappyJornadaSettings', JSON.stringify(jornadaSettings));
+      window.localStorage.setItem('riHappyCustomHolidays', JSON.stringify(customHolidays));
+      window.localStorage.setItem('riHappyDeletedNationalHolidays', JSON.stringify(deletedNationalHolidays));
+      window.localStorage.setItem('riHappyMonthNotes', JSON.stringify(monthNotes));
+      window.localStorage.setItem('riHappyTrackingStart', JSON.stringify(trackingStartDate));
+      window.localStorage.setItem('riHappyOfficialSnapshots', JSON.stringify(officialSnapshots));
+      window.localStorage.setItem('riHappyProtectedDays', JSON.stringify(protectedDaysMap));
+      window.localStorage.setItem('riHappySectionAssignments', JSON.stringify(sectionAssignments));
+      window.localStorage.setItem('riHappyValidatedMonths', JSON.stringify(validatedMonths));
+
+      // 2. Transmissão imediata via BroadcastChannel para outras abas abertas
+      try {
+        new BroadcastChannel('sync_riHappyEmployeesData').postMessage(employees);
+        new BroadcastChannel('sync_riHappyValidatedMonths').postMessage(validatedMonths);
+      } catch (e) {}
+
+      // 3. Força envio imediato para a nuvem GAS caso a URL esteja configurada
+      const url = getConfiguredApiUrl();
+      if (url) {
+        await Promise.allSettled([
+          apiStore.set('riHappyEmployeesData', employees),
+          apiStore.set('riHappyValidatedMonths', validatedMonths),
+          apiStore.set('riHappyProtectedDays', protectedDaysMap),
+          apiStore.set('riHappyMonthNotes', monthNotes),
+          apiStore.set('riHappyOfficialSnapshots', officialSnapshots),
+          apiStore.set('riHappyCustomHolidays', customHolidays),
+          apiStore.set('riHappyDeletedNationalHolidays', deletedNationalHolidays),
+          apiStore.set('riHappyJornadaSettings', jornadaSettings),
+          apiStore.set('riHappySectionAssignments', sectionAssignments)
+        ]);
+      }
+
+      setIsJustSaved(true);
+      setTimeout(() => setIsJustSaved(false), 3000);
+    } catch (err) {
+      console.error('Erro ao salvar:', err);
+      showDialog({
+        title: 'Aviso de Sincronização',
+        message: 'As alterações foram salvas com segurança no cache local deste computador, mas houve uma oscilação na conexão com o servidor/planilha.',
+        type: 'alert'
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [
+    employees,
+    jornadaSettings,
+    customHolidays,
+    deletedNationalHolidays,
+    monthNotes,
+    trackingStartDate,
+    officialSnapshots,
+    protectedDaysMap,
+    sectionAssignments,
+    validatedMonths,
+    isSaving,
+    showDialog
+  ]);
+
+  // Atalho de teclado global Ctrl+S / Cmd+S
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (auth.role === 'admin') {
+          handleManualSave();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleManualSave, auth.role]);
   
   const onToggleValidation = useCallback(async () => {
     const newVal = !isValidated;
@@ -924,6 +1008,9 @@ const App: React.FC = () => {
               }}
               tacticalDisplayMode={tacticalDisplayMode}
               onToggleTacticalDisplayMode={setTacticalDisplayMode}
+              onManualSave={handleManualSave}
+              isSaving={isSaving}
+              isJustSaved={isJustSaved}
             />
 
        <main className="flex-1 overflow-hidden p-2 sm:p-4">

@@ -89,6 +89,7 @@ export const TACTICAL_POSITIONS_LIST = ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'];
  * Retorna o rótulo descritivo da posição/função baseado no modo de exibição.
  */
 export function getTacticalLabel(posCode: string, mode: TacticalDisplayMode = 'positions'): string {
+  if (mode === 'off') return 'Trabalho (T)';
   const item = TACTICAL_ROLE_MAP[posCode];
   if (!item) return posCode;
   return mode === 'roles' ? item.roleLabel : item.positionLabel;
@@ -98,6 +99,7 @@ export function getTacticalLabel(posCode: string, mode: TacticalDisplayMode = 'p
  * Retorna a sigla exibida na célula da grade baseada no modo de exibição.
  */
 export function getTacticalCellCode(posCode: string, mode: TacticalDisplayMode = 'positions'): string {
+  if (mode === 'off') return 'T';
   const item = TACTICAL_ROLE_MAP[posCode];
   if (!item) return posCode;
   return mode === 'roles' ? item.roleCode : item.positionCode;
