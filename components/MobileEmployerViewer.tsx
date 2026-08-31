@@ -25,6 +25,7 @@ interface MobileEmployerViewerProps {
   onMonthChange: (my: MonthYear) => void;
   onUpdateEmployee?: (empId: string, data: Partial<Employee>) => void;
   tacticalDisplayMode?: TacticalDisplayMode;
+  onToggleTacticalDisplayMode?: (mode?: TacticalDisplayMode) => void;
 }
 
 const WEEKDAY_NAMES_PT = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -43,6 +44,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
   onMonthChange,
   onUpdateEmployee,
   tacticalDisplayMode = 'positions',
+  onToggleTacticalDisplayMode,
 }) => {
   const [activeTab, setActiveTab] = useState<'hoje' | 'semana' | 'equipe' | 'mes' | 'pedidos'>('hoje');
   const [searchTerm, setSearchTerm] = useState('');
@@ -222,7 +224,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
 
   // Position Badge Helper
   const getPositionBadge = (pos: string | null) => {
-    if (!pos) return null;
+    if (!pos || tacticalDisplayMode === 'off') return null;
     const colors: Record<string, string> = {
       'P1': 'bg-rose-500 text-white ring-2 ring-rose-300 shadow-sm',
       'PC': 'bg-orange-500 text-white ring-2 ring-orange-300 shadow-sm',
@@ -309,6 +311,50 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
           )}
         </div>
 
+        {/* Format Switcher (Posições vs Funções vs Padrão) */}
+        {onToggleTacticalDisplayMode && (
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-zinc-800 text-[10px] font-black uppercase">
+            <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <Icon name="badge" className="text-sm text-orange-500" /> Exibição:
+            </span>
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-slate-200/60 dark:border-zinc-700">
+              <button
+                type="button"
+                onClick={() => onToggleTacticalDisplayMode('positions')}
+                className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase transition-all ${
+                  tacticalDisplayMode === 'positions'
+                    ? 'bg-orange-500 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+                }`}
+              >
+                🏷️ Posições
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleTacticalDisplayMode('roles')}
+                className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase transition-all ${
+                  tacticalDisplayMode === 'roles'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+                }`}
+              >
+                👔 Funções
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleTacticalDisplayMode('off')}
+                className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase transition-all ${
+                  tacticalDisplayMode === 'off'
+                    ? 'bg-slate-700 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+                }`}
+              >
+                🔘 Padrão (T)
+              </button>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* Navigation Pills (Mobile Segmented Tab Bar) */}
@@ -393,7 +439,11 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
                 <div className="bg-white/10 rounded-2xl p-2.5 backdrop-blur-sm">
                   <span className="text-[9px] font-black uppercase tracking-widest text-white/70 block mb-1">Posto Tático</span>
                   <div className="text-sm font-black text-white">
-                    {todayDetails.tacticalPos ? todayDetails.tacticalPos : 'Padrão / Apoio'}
+                    {tacticalDisplayMode === 'off'
+                      ? 'Trabalho Regular (T)'
+                      : todayDetails.tacticalPos
+                      ? `${todayDetails.tacticalPos} • ${getTacticalLabel(todayDetails.tacticalPos, tacticalDisplayMode)}`
+                      : 'Padrão / Apoio'}
                   </div>
                 </div>
 

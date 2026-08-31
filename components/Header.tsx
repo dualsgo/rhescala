@@ -333,6 +333,51 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
+          {/* Seletor de Formato de Escala no Modo Visualizador (Desktop) */}
+          {isReadOnly && onToggleTacticalDisplayMode && (
+            <div className="flex items-center bg-slate-100 dark:bg-zinc-900 border border-slate-200/70 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
+              <button
+                type="button"
+                onClick={() => onToggleTacticalDisplayMode('positions')}
+                className={`px-2 sm:px-2.5 py-1 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all ${
+                  tacticalDisplayMode === 'positions'
+                    ? 'bg-orange-500 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title="Exibir posições táticas (P1, P2, P3, P4, ESTQ)"
+              >
+                <span className="hidden sm:inline">🏷️ Posições</span>
+                <span className="inline sm:hidden">🏷️ Pos</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleTacticalDisplayMode('roles')}
+                className={`px-2 sm:px-2.5 py-1 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all ${
+                  tacticalDisplayMode === 'roles'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title="Exibir funções (Caixa, Fiscal, Atendimento, Apoio, Estoque)"
+              >
+                <span className="hidden sm:inline">👔 Funções</span>
+                <span className="inline sm:hidden">👔 Func</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleTacticalDisplayMode('off')}
+                className={`px-2 sm:px-2.5 py-1 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all ${
+                  tacticalDisplayMode === 'off'
+                    ? 'bg-slate-700 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title="Exibir apenas T e Folgas"
+              >
+                <span className="hidden sm:inline">🔘 Padrão (T)</span>
+                <span className="inline sm:hidden">🔘 T</span>
+              </button>
+            </div>
+          )}
+
           {/* 1. Menu: Ações da Escala (Segmentado) */}
           {!isReadOnly && currentView === 'grid' && (
             <div className="relative">
@@ -799,6 +844,58 @@ export const Header: React.FC<HeaderProps> = ({
 
             {isReadOnly ? (
               <div className="space-y-2 pt-2">
+                {/* Formato da Escala no Mobile */}
+                {onToggleTacticalDisplayMode && (
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black uppercase text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                        <Icon name="badge" className="text-orange-500 text-sm" /> Exibição da Escala
+                      </span>
+                      <span className="text-[9px] font-black uppercase text-slate-400">
+                        {tacticalDisplayMode === 'positions' ? 'Posições' : tacticalDisplayMode === 'roles' ? 'Funções' : 'Padrão (T)'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1 p-0.5 bg-slate-200/70 dark:bg-zinc-900 rounded-xl">
+                      <button
+                        onClick={() => {
+                          onToggleTacticalDisplayMode('positions');
+                        }}
+                        className={`py-2 px-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center ${
+                          tacticalDisplayMode === 'positions'
+                            ? 'bg-orange-500 text-white shadow-sm'
+                            : 'text-slate-600 dark:text-slate-400'
+                        }`}
+                      >
+                        🏷️ Posições
+                      </button>
+                      <button
+                        onClick={() => {
+                          onToggleTacticalDisplayMode('roles');
+                        }}
+                        className={`py-2 px-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center ${
+                          tacticalDisplayMode === 'roles'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'text-slate-600 dark:text-slate-400'
+                        }`}
+                      >
+                        👔 Funções
+                      </button>
+                      <button
+                        onClick={() => {
+                          onToggleTacticalDisplayMode('off');
+                        }}
+                        className={`py-2 px-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center ${
+                          tacticalDisplayMode === 'off'
+                            ? 'bg-slate-700 text-white shadow-sm'
+                            : 'text-slate-600 dark:text-slate-400'
+                        }`}
+                      >
+                        🔘 Padrão (T)
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <button
                   onClick={() => {
                     onShowHelp();

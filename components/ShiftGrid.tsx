@@ -291,65 +291,49 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             </button>
           )}
 
-          {/* Alternador de Modo: Posições vs Funções */}
+          {/* Alternador de Modo: Posições vs Funções vs Padrão */}
           {onToggleTacticalDisplayMode && (
-            isReadOnly ? (
+            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
               <button
                 type="button"
-                onClick={() => onToggleTacticalDisplayMode(tacticalDisplayMode === 'off' ? 'positions' : 'off')}
-                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shrink-0 ${
-                  tacticalDisplayMode !== 'off'
-                    ? 'bg-orange-500 border-orange-600 text-white shadow-orange-500/20'
-                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                onClick={() => onToggleTacticalDisplayMode('positions')}
+                className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                  tacticalDisplayMode === 'positions'
+                    ? 'bg-orange-500 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
                 }`}
-                title={tacticalDisplayMode !== 'off' ? 'Desativar visualização de posições (exibir T/DOM)' : 'Ativar visualização de posições/funções táticas (P1, P2, ESTQ...)'}
+                title="Modo Posições: Exibir códigos P1, P2, P3, P4 e ESTQ"
               >
-                <Icon name={tacticalDisplayMode !== 'off' ? 'toggle_on' : 'toggle_off'} className="text-base" />
-                <span>{tacticalDisplayMode !== 'off' ? 'Posições: Ativadas' : 'Ver Posições Táticas'}</span>
+                <span className="hidden sm:inline">🏷️ Posições</span>
+                <span className="inline sm:hidden">🏷️ Pos</span>
               </button>
-            ) : (
-              <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
-                <button
-                  type="button"
-                  onClick={() => onToggleTacticalDisplayMode('positions')}
-                  className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                    tacticalDisplayMode === 'positions'
-                      ? 'bg-orange-500 text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
-                  }`}
-                  title="Modo Posições: Exibir códigos P1, P2, P3, P4 e ESTQ"
-                >
-                  <span className="hidden sm:inline">🏷️ Posições</span>
-                  <span className="inline sm:hidden">🏷️ Pos</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onToggleTacticalDisplayMode('roles')}
-                  className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                    tacticalDisplayMode === 'roles'
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
-                  }`}
-                  title="Modo Funções: Exibir funções Caixa, Fiscal, Atendimento, Apoio e Estoque"
-                >
-                  <span className="hidden sm:inline">👔 Funções</span>
-                  <span className="inline sm:hidden">👔 Func</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onToggleTacticalDisplayMode('off')}
-                  className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                    tacticalDisplayMode === 'off'
-                      ? 'bg-slate-700 text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
-                  }`}
-                  title="Modo Padrão: Ocultar posições e exibir apenas T / DOM"
-                >
-                  <span className="hidden sm:inline">🔘 Padrão (T)</span>
-                  <span className="inline sm:hidden">🔘 T</span>
-                </button>
-              </div>
-            )
+              <button
+                type="button"
+                onClick={() => onToggleTacticalDisplayMode('roles')}
+                className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                  tacticalDisplayMode === 'roles'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                }`}
+                title="Modo Funções: Exibir funções Caixa, Fiscal, Atendimento, Apoio e Estoque"
+              >
+                <span className="hidden sm:inline">👔 Funções</span>
+                <span className="inline sm:hidden">👔 Func</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleTacticalDisplayMode('off')}
+                className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                  tacticalDisplayMode === 'off'
+                    ? 'bg-slate-700 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                }`}
+                title="Modo Padrão: Ocultar posições e exibir apenas T e Folgas"
+              >
+                <span className="hidden sm:inline">🔘 Padrão (T)</span>
+                <span className="inline sm:hidden">🔘 T</span>
+              </button>
+            </div>
           )}
 
           {/* Grupo 2: Equipe & Contrato (Apenas Admin) */}

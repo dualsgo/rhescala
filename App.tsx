@@ -1084,6 +1084,7 @@ const App: React.FC = () => {
                       onMonthChange={setCurrentMY}
                       onUpdateEmployee={onUpdateEmployee}
                       tacticalDisplayMode={tacticalDisplayMode}
+                      onToggleTacticalDisplayMode={setTacticalDisplayMode}
                     />
                   );
                 }
