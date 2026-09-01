@@ -90,7 +90,7 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
 
     const copied = await copyToClipboard(text);
     if (copied) {
-      showDialog({ title: 'Copiado', message: 'A lista de pendentes foi copiada para a área de transferência!', type: 'info' });
+      showDialog({ title: 'Copiado', message: 'A lista de pendentes foi copiada para a área de transferência!', type: 'alert' });
     } else {
       showDialog({ title: 'Aviso', message: 'Não foi possível copiar automaticamente.', type: 'alert' });
     }
@@ -123,7 +123,7 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
 
     const copied = await copyToClipboard(text);
     if (copied) {
-      showDialog({ title: 'Copiado', message: 'A lista de agendadas foi copiada para a área de transferência!', type: 'info' });
+      showDialog({ title: 'Copiado', message: 'A lista de agendadas foi copiada para a área de transferência!', type: 'alert' });
     } else {
       showDialog({ title: 'Aviso', message: 'Não foi possível copiar automaticamente.', type: 'alert' });
     }

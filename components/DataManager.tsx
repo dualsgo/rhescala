@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { SyncStatus, Employee, Holiday, JornadaSettings, OfficialScheduleSnapshot } from '../types';
+import { SyncStatus, Employee, Holiday, JornadaSettings, OfficialScheduleSnapshot, ProtectedDaysMap } from '../types';
 import { Icon } from './Icon';
 import { useDialog } from '../contexts/DialogContext';
 import { apiStore } from '../src/gas-api';
@@ -24,7 +24,7 @@ interface DataManagerProps {
   setTrackingStartDate?: (val: string | ((prev: string) => string)) => void;
   sectionAssignments?: Record<string, any>;
   setSectionAssignments?: (val: Record<string, any> | ((prev: Record<string, any>) => Record<string, any>)) => void;
-  protectedDaysMap?: Record<string, Record<number, number>>;
+  protectedDaysMap?: ProtectedDaysMap;
   setProtectedDaysMap?: (val: any) => void;
   onClose: () => void;
   role: 'admin' | 'viewer';

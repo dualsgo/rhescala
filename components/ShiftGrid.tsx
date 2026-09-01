@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings, ScheduleDiffItem, TacticalDisplayMode } from '../types';
+import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings, ScheduleDiffItem, TacticalDisplayMode, ProtectedDaysConfig } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, DEFAULT_JORNADA_SETTINGS, isEmployeeActiveInMonth, normalizeProtectedDaysConfig, getTacticalLabel, getTacticalCellCode, getTacticalEmoji } from '../constants';
 import { getShiftClassification, isWorkingShift, getPrevMonthWorkStreak } from '../hooks/useScheduleEngine';
@@ -42,7 +42,7 @@ interface ShiftGridProps {
   onOpenEmployeeCard: (emp: Employee, tab?: 'mes' | 'atual' | 'pedidos' | 'atestado', initialDate?: string) => void;
   diffs?: ScheduleDiffItem[];
   onOpenPresetForEmployee?: (empId: string) => void;
-  protectedDays?: Record<number, number> | number[];
+  protectedDays?: ProtectedDaysConfig | number[];
   onOpenProtectedModal?: () => void;
   onToggleProtectDay?: (dayNum: number) => void;
   tacticalDisplayMode?: TacticalDisplayMode;

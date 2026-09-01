@@ -1,6 +1,6 @@
 
-import { Employee, ShiftType, Holiday, JornadaSettings, MonthYear, OfficialScheduleSnapshot, ScheduleDiffItem } from '../types';
-import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth, normalizeProtectedDaysConfig } from '../constants';
+import { Employee, ShiftType, Holiday, JornadaSettings, MonthYear, OfficialScheduleSnapshot, ScheduleDiffItem, ProtectedDayDetail, ProtectedDaysConfig } from '../types';
+import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth, normalizeProtectedDaysConfig, normalizeProtectedDaysDetails } from '../constants';
 
 
 // ─── Shared weekday names ─────────────────────────────────────────────────────
@@ -197,7 +197,8 @@ export function buildSundayAssignments(
     month: number,
     sundaysInMonth: number[],
     initialConsecutive?: Map<string, number>,
-    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS,
+    protectedDays?: Record<number, number | ProtectedDayDetail> | number[]
 ): { assignments: Map<string, Set<number>>, nextConsecutive: Map<string, number> } {
     const assignments = new Map<string, Set<number>>();
     const consecutive = new Map<string, number>();
@@ -211,8 +212,7 @@ export function buildSundayAssignments(
         return { assignments, nextConsecutive: consecutive };
     }
 
-    // Rotate the tiebreaker origin per month so Sunday 1 doesn’t always
-    // give rest to the same index-0 employees
+    const protectedDetails = normalizeProtectedDaysDetails(protectedDays);
     const rotationOffset = month % Math.max(activeRegular.length, 1);
     const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
     const rotIdx = (emp: Employee) => (activeRegular.indexOf(emp) - rotationOffset + activeRegular.length) % activeRegular.length;
@@ -220,66 +220,95 @@ export function buildSundayAssignments(
     for (const sundayDayIdx of sundaysInMonth) {
         const dayNum = sundayDayIdx + 1;
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+        const isProtectedSunday = protectedDetails[dayNum] !== undefined;
+        const maxFolgas = isProtectedSunday ? protectedDetails[dayNum].maxFolgas : undefined;
+        const mandatoryIds = isProtectedSunday ? protectedDetails[dayNum].mandatoryEmployeeIds : undefined;
 
         // Build the eligible pool for rotation
         const available = activeRegular.filter(
             emp => !isSundayUnavailable(emp, dateStr, monthKey, sundayDayIdx)
         );
 
-        // Separa quem já atingiu o limite inegociável (streak >= 2)
-        const mustRest = available.filter(emp => (consecutive.get(emp.id) ?? 0) >= 2);
-        const canWork = available.filter(emp => (consecutive.get(emp.id) ?? 0) < 2);
-
-        // Separa elegíveis entre regulares e estoquistas
-        const regularCanWork = canWork.filter(emp => emp.cargo !== 'Estoquista');
-        const estoquistasCanWork = canWork.filter(emp => emp.cargo === 'Estoquista');
-
         const resting = new Set<string>();
         const working = new Set<string>();
 
-        // 1. Quem TEM que folgar, folga (Restrição inegociável)!
-        mustRest.forEach(emp => resting.add(emp.id));
-
-        const neededWorkers = settings.minSundayWorkers;
-
-        // Ordena para priorizar quem tem streak MENOR a trabalhar primeiro (ou seja, streak 0 trabalha antes de streak 1)
-        regularCanWork.sort((a, b) => {
-            const streakA = consecutive.get(a.id) ?? 0;
-            const streakB = consecutive.get(b.id) ?? 0;
-            if (streakA !== streakB) return streakA - streakB;
-            return rotIdx(a) - rotIdx(b);
-        });
-
-        estoquistasCanWork.sort((a, b) => {
-            const streakA = consecutive.get(a.id) ?? 0;
-            const streakB = consecutive.get(b.id) ?? 0;
-            if (streakA !== streakB) return streakA - streakB;
-            return rotIdx(a) - rotIdx(b);
-        });
-
-        // 2. Aloca Atendentes/Fiscais/Regulares até atingir a meta
-        for (const emp of regularCanWork) {
-            if (working.size < neededWorkers) {
-                working.add(emp.id);
-            } else {
-                resting.add(emp.id);
+        // Se o domingo for protegido com 100% de presença (maxFolgas === 0) e sem lista restritiva:
+        if (isProtectedSunday && maxFolgas === 0 && (!mandatoryIds || mandatoryIds.length === 0)) {
+            available.forEach(emp => working.add(emp.id));
+        } else {
+            // Se houver colaboradores com presença obrigatória definida
+            if (mandatoryIds && mandatoryIds.length > 0) {
+                available.forEach(emp => {
+                    if (mandatoryIds.includes(emp.id)) {
+                        working.add(emp.id);
+                    }
+                });
             }
-        }
 
-        // 3. Se ainda faltar, completa com Estoquistas
-        for (const emp of estoquistasCanWork) {
-            if (working.size < neededWorkers) {
-                working.add(emp.id);
-            } else {
-                resting.add(emp.id);
+            // Separa quem já atingiu o limite inegociável (streak >= 2) e NÃO está forçado a trabalhar
+            const mustRest = available.filter(emp => !working.has(emp.id) && (consecutive.get(emp.id) ?? 0) >= 2);
+            const canWork = available.filter(emp => !working.has(emp.id) && (consecutive.get(emp.id) ?? 0) < 2);
+
+            const regularCanWork = canWork.filter(emp => emp.cargo !== 'Estoquista');
+            const estoquistasCanWork = canWork.filter(emp => emp.cargo === 'Estoquista');
+
+            const maxRestAllowed = maxFolgas !== undefined ? Math.max(0, maxFolgas) : available.length;
+
+            // Quem TEM que folgar folga (até o limite de folgas permitidas no dia protegido)
+            mustRest.forEach(emp => {
+                if (resting.size < maxRestAllowed) {
+                    resting.add(emp.id);
+                } else {
+                    working.add(emp.id);
+                }
+            });
+
+            const neededWorkers = maxFolgas !== undefined
+                ? Math.max(settings.minSundayWorkers, available.length - maxRestAllowed)
+                : settings.minSundayWorkers;
+
+            // Ordena para priorizar quem tem streak MENOR a trabalhar primeiro
+            regularCanWork.sort((a, b) => {
+                const streakA = consecutive.get(a.id) ?? 0;
+                const streakB = consecutive.get(b.id) ?? 0;
+                if (streakA !== streakB) return streakA - streakB;
+                return rotIdx(a) - rotIdx(b);
+            });
+
+            estoquistasCanWork.sort((a, b) => {
+                const streakA = consecutive.get(a.id) ?? 0;
+                const streakB = consecutive.get(b.id) ?? 0;
+                if (streakA !== streakB) return streakA - streakB;
+                return rotIdx(a) - rotIdx(b);
+            });
+
+            // 2. Aloca Regulares até atingir a meta
+            for (const emp of regularCanWork) {
+                if (working.size < neededWorkers) {
+                    working.add(emp.id);
+                } else if (resting.size < maxRestAllowed) {
+                    resting.add(emp.id);
+                } else {
+                    working.add(emp.id);
+                }
+            }
+
+            // 3. Se ainda faltar, completa com Estoquistas
+            for (const emp of estoquistasCanWork) {
+                if (working.size < neededWorkers) {
+                    working.add(emp.id);
+                } else if (resting.size < maxRestAllowed) {
+                    resting.add(emp.id);
+                } else {
+                    working.add(emp.id);
+                }
             }
         }
 
         // Record assignments
         for (const empId of resting) assignments.get(empId)!.add(sundayDayIdx);
 
-        // Atualizar streaks.
-        // Se a pessoa NÃO estava available (férias, folga forçada, etc), a sequência DELA zera.
+        // Atualizar streaks
         for (const emp of activeRegular) {
             if (!available.includes(emp)) {
                 consecutive.set(emp.id, 0); // Ausência quebra o ciclo, começa do 0.
@@ -690,7 +719,7 @@ export function applyMonthUpdate(
     customHolidays: Holiday[] = [],
     deletedNationalHolidays: string[] = [],
     settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS,
-    protectedDays?: Record<number, number> | number[]
+    protectedDays?: ProtectedDaysConfig | number[]
 ): Record<string, { shifts: ShiftType[]; hours: string[] }> {
     const result: Record<string, { shifts: ShiftType[]; hours: string[] }> = {};
 
@@ -1643,44 +1672,50 @@ export function optimizeDecemberPeak(
 }
 
 /**
- * Otimiza a escala para QUALQUER conjunto customizado de Dias Protegidos (100% de Presença da Equipe).
- * Identifica os blocos de alta demanda, elimina folgas comuns nos dias protegidos e escalona
- * as folgas pré e pós-pico de forma inteligente (quem melhor se enquadra de acordo com seu streak)
- * sem violar a regra 6x1 da CLT ou regras de domingos e 5x2.
+ * Otimiza a escala para QUALQUER conjunto customizado de Dias Protegidos / Períodos Sazonais.
+ * 
+ * Algoritmo Peak-Centric (Âncora no Pico -> Propagação para Trás e para Frente):
+ * 1. Identifica os blocos de pico e quais colaboradores são de presença mandatória (todos ou específicos).
+ * 2. Fixa presença (100% de trabalho) nos dias de pico para os colaboradores selecionados.
+ * 3. Propagação para Trás (Lookback / Pré-Pico):
+ *    - Escala folgas pré-pico nos dias D_start - 1, D_start - 2, D_start - 3 em grupos balanceados.
+ *    - A partir dessa folga pré-pico, varre regressivamente até o Dia 1 garantindo conformidade 6x1 / 5x2.
+ * 4. Propagação para Frente (Lookahead / Pós-Pico):
+ *    - Imediatamente após D_end, agenda folgas obrigatórias nos dias D_end + 1, D_end + 2 em grupos.
+ *    - A partir dessa folga pós-pico, varre progressivamente até o final do mês mantendo conformidade 6x1 / 5x2.
  */
 export function optimizeProtectedDays(
     employees: Employee[],
     monthKey: string,
-    protectedDays: Record<number, number> | number[],
+    protectedDays: Record<number, number | ProtectedDayDetail> | number[],
     customHolidays: Holiday[] = [],
     deletedNationalHolidays: string[] = [],
     settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
 ): Record<string, { shifts: ShiftType[] }> {
-    const config = normalizeProtectedDaysConfig(protectedDays);
+    const details = normalizeProtectedDaysDetails(protectedDays);
     const [yearStr, monthStr] = monthKey.split('-');
-    const year = parseInt(yearStr);
-    const month = parseInt(monthStr) - 1;
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10) - 1;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    const protectedDaysList = Object.keys(config)
+    const protectedDaysList = Object.keys(details)
         .map(Number)
         .filter(d => d >= 1 && d <= daysInMonth)
         .sort((a, b) => a - b);
-
-    // Se for Outubro com os dias 8-12 configurados com 0 folgas, aplica a otimização de Outubro
-    if (month === 9 && [8, 9, 10, 11, 12].every(d => config[d] === 0)) {
-        return optimizeOctoberPeak(employees, monthKey, customHolidays, deletedNationalHolidays, settings);
-    }
-    // Se for Dezembro com os dias 20-24 configurados com 0 folgas, aplica a otimização de Natal
-    if (month === 11 && [20, 21, 22, 23, 24].every(d => config[d] === 0)) {
-        return optimizeDecemberPeak(employees, monthKey, customHolidays, deletedNationalHolidays, settings);
-    }
 
     const result: Record<string, { shifts: ShiftType[] }> = {};
     const activeRegular = employees.filter(e => e.status === 'active' && !e.isHidden && !e.isYoungApprentice);
     const prevStreaks = getPrevMonthWorkStreak(activeRegular, year, month);
 
-    const protectedIndices = protectedDaysList.map(d => d - 1);
+    if (protectedDaysList.length === 0) {
+        activeRegular.forEach(emp => {
+            result[emp.id] = { shifts: [...(emp.shifts[monthKey] || Array(daysInMonth).fill('T'))] };
+        });
+        return result;
+    }
+
+    // Identifica todos os índices protegidos no mês (0-indexed)
+    const protectedIndicesSet = new Set(protectedDaysList.map(d => d - 1));
 
     // Agrupa dias protegidos em blocos contíguos (clusters)
     const clusters: { start: number; end: number; indices: number[] }[] = [];
@@ -1718,94 +1753,143 @@ export function optimizeProtectedDays(
         return ['FE', 'AT', 'DO', 'N/A'].includes(s);
     };
 
-    // 1. Para cada dia protegido, respeita o limite máximo de folgas (maxFolgas)
-    protectedDaysList.forEach(dayNum => {
-        const dayIdx = dayNum - 1;
-        const maxAllowed = config[dayNum] ?? 0;
-
-        // Identifica colaboradores que estão com Folga simples (F) neste dia
-        const empsWithF = activeRegular.filter(emp => {
-            const s = employeeShifts[emp.id][dayIdx];
-            return s === 'F';
-        });
-
-        // Se o número de folgas exceder o limite permitido (ex: maxAllowed = 0 ou 1)
-        if (empsWithF.length > maxAllowed) {
-            // Ordena os colaboradores: quem mais precisa folgar neste dia
-            empsWithF.sort((a, b) => {
-                const streakA = (prevStreaks.get(a.id) || 0) + dayIdx;
-                const streakB = (prevStreaks.get(b.id) || 0) + dayIdx;
-                return streakB - streakA;
-            });
-
-            // Os primeiros `maxAllowed` mantêm a folga. Os excedentes trocam para 'T'.
-            const excessEmps = empsWithF.slice(maxAllowed);
-            excessEmps.forEach((emp, excessIdx) => {
-                employeeShifts[emp.id][dayIdx] = 'T';
-
-                // Escalonar a folga necessária para um dia adjacente (antes ou depois)
-                const isGroupA = excessIdx % 2 === 0;
-                let scheduled = false;
-
-                if (isGroupA && dayIdx >= 1) {
-                    for (let b = dayIdx - 1; b >= Math.max(0, dayIdx - 3); b--) {
-                        if (!protectedIndices.includes(b) && !isProtectedStatus(employeeShifts[emp.id], b)) {
-                            employeeShifts[emp.id][b] = 'F';
-                            scheduled = true;
-                            break;
-                        }
-                    }
-                }
-                if (!scheduled && dayIdx + 1 < daysInMonth) {
-                    for (let f = dayIdx + 1; f <= Math.min(daysInMonth - 1, dayIdx + 3); f++) {
-                        if (!protectedIndices.includes(f) && !isProtectedStatus(employeeShifts[emp.id], f)) {
-                            employeeShifts[emp.id][f] = 'F';
-                            scheduled = true;
-                            break;
-                        }
-                    }
-                }
-            });
-        }
-    });
-
-    // 2. Para blocos com 0 folgas contíguos >= 2 dias, escalona folgas pré e pós-bloco
-    clusters.forEach(cluster => {
-        const clusterLen = cluster.indices.length;
-        const startIdx = cluster.indices[0];
-        const endIdx = cluster.indices[cluster.indices.length - 1];
-
-        const allZero = cluster.indices.every(idx => (config[idx + 1] ?? 0) === 0);
-
-        if (clusterLen >= 2 && allZero) {
-            activeRegular.forEach((emp, empIdx) => {
-                const isGroupA = empIdx % 2 === 0;
-
-                // Pré-pico
-                if (startIdx >= 1) {
-                    const preDay = isGroupA ? startIdx - 1 : (startIdx >= 2 ? startIdx - 2 : startIdx - 1);
-                    if (preDay >= 0 && !isProtectedStatus(employeeShifts[emp.id], preDay)) {
-                        employeeShifts[emp.id][preDay] = 'F';
-                    }
-                }
-
-                // Pós-pico
-                if (endIdx + 1 < daysInMonth) {
-                    const postDay = isGroupA ? endIdx + 1 : (endIdx + 2 < daysInMonth ? endIdx + 2 : endIdx + 1);
-                    if (postDay < daysInMonth && !isProtectedStatus(employeeShifts[emp.id], postDay)) {
-                        employeeShifts[emp.id][postDay] = 'F';
-                    }
-                }
-            });
-        }
-    });
-
-    // 3. Varredura completa com validação rigorosa da regra 6x1 / 5x2
-    activeRegular.forEach(emp => {
+    // Executa a otimização Peak-Centric para cada colaborador
+    activeRegular.forEach((emp, empIdx) => {
         const shifts = employeeShifts[emp.id];
         const is5x2 = emp.jornada === '5x2';
         const maxStreak = is5x2 ? 5 : 6;
 
+        // Identifica quais blocos exigem presença obrigatória DESTE colaborador
+        const relevantClusters = clusters.filter(cluster => {
+            return cluster.indices.some(idx => {
+                const dayNum = idx + 1;
+                const dDetail = details[dayNum];
+                if (!dDetail) return false;
+                if (dDetail.mandatoryEmployeeIds && dDetail.mandatoryEmployeeIds.length > 0) {
+                    return dDetail.mandatoryEmployeeIds.includes(emp.id);
+                }
+                return true;
+            });
+        });
+
+        if (relevantClusters.length === 0) {
+            // Colaborador sem blocos de pico específicos: apenas valida 6x1/5x2 no mês
+            let currentStreak = prevStreaks.get(emp.id) || 0;
+            for (let i = 0; i < daysInMonth; i++) {
+                const s = shifts[i];
+                if (['F', 'FE', 'AT', 'DO', 'N/A'].includes(s) || s?.startsWith('FF')) {
+                    currentStreak = 0;
+                } else {
+                    currentStreak++;
+                    if (currentStreak > maxStreak) {
+                        if (!isProtectedStatus(shifts, i)) {
+                            shifts[i] = 'F';
+                            currentStreak = 0;
+                        }
+                    }
+                }
+            }
+            result[emp.id] = { shifts };
+            return;
+        }
+
+        // 1. Âncora no Pico (Peak Anchoring): Fixa 'T' nos dias de pico onde o colaborador deve trabalhar
+        relevantClusters.forEach(cluster => {
+            cluster.indices.forEach(idx => {
+                const dayNum = idx + 1;
+                const dDetail = details[dayNum];
+                const isMandatory = !dDetail?.mandatoryEmployeeIds || dDetail.mandatoryEmployeeIds.length === 0 || dDetail.mandatoryEmployeeIds.includes(emp.id);
+                if (isMandatory && !isProtectedStatus(shifts, idx) && !shifts[idx]?.startsWith('FF')) {
+                    shifts[idx] = 'T';
+                }
+            });
+        });
+
+        // 2. Propagação para Trás e para Frente para cada bloco de pico (Lookback & Lookahead)
+        relevantClusters.forEach((cluster, clusterIdx) => {
+            const startIdx = cluster.indices[0];
+            const endIdx = cluster.indices[cluster.indices.length - 1];
+            const clusterLength = cluster.indices.length;
+
+            // ─── LOOKBACK (Pré-Pico) ────────────────────────────────────────────────
+            const numGroups = Math.min(3, Math.max(2, maxStreak - clusterLength + 1));
+            const groupOffset = (empIdx + clusterIdx) % numGroups;
+            
+            const daysBeforePeak = Math.min(startIdx, Math.max(1, groupOffset + 1));
+            const preRestIdx = startIdx - daysBeforePeak;
+
+            if (preRestIdx >= 0 && !isProtectedStatus(shifts, preRestIdx) && !protectedIndicesSet.has(preRestIdx)) {
+                shifts[preRestIdx] = 'F';
+
+                for (let k = preRestIdx + 1; k < startIdx; k++) {
+                    if (!isProtectedStatus(shifts, k) && !shifts[k]?.startsWith('FF')) {
+                        shifts[k] = 'T';
+                    }
+                }
+
+                // Propaga regressivamente para trás: de preRestIdx - 1 até 0
+                let backStreak = 0;
+                for (let b = preRestIdx - 1; b >= 0; b--) {
+                    const s = shifts[b];
+                    if (['F', 'FE', 'AT', 'DO', 'N/A'].includes(s) || s?.startsWith('FF')) {
+                        backStreak = 0;
+                    } else {
+                        backStreak++;
+                        if (backStreak >= maxStreak) {
+                            if (!isProtectedStatus(shifts, b) && !protectedIndicesSet.has(b)) {
+                                shifts[b] = 'F';
+                                backStreak = 0;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ─── LOOKAHEAD (Pós-Pico) ───────────────────────────────────────────────
+            let workStreakAtPeakEnd = clusterLength;
+            for (let k = startIdx - 1; k >= 0; k--) {
+                const s = shifts[k];
+                if (['F', 'FE', 'AT', 'DO', 'N/A'].includes(s) || s?.startsWith('FF')) break;
+                workStreakAtPeakEnd++;
+            }
+
+            let postRestOffset = 1;
+            if (workStreakAtPeakEnd >= maxStreak) {
+                postRestOffset = 1;
+            } else {
+                postRestOffset = (empIdx % 2 === 0) ? 1 : 2;
+            }
+
+            const postRestIdx = endIdx + postRestOffset;
+            if (postRestIdx < daysInMonth && !isProtectedStatus(shifts, postRestIdx) && !protectedIndicesSet.has(postRestIdx)) {
+                shifts[postRestIdx] = 'F';
+
+                if (postRestOffset === 2 && endIdx + 1 < daysInMonth) {
+                    if (!isProtectedStatus(shifts, endIdx + 1) && !shifts[endIdx + 1]?.startsWith('FF')) {
+                        shifts[endIdx + 1] = 'T';
+                    }
+                }
+
+                // Propaga progressivamente para frente: de postRestIdx + 1 até daysInMonth - 1
+                let forwardStreak = 0;
+                for (let f = postRestIdx + 1; f < daysInMonth; f++) {
+                    const s = shifts[f];
+                    if (['F', 'FE', 'AT', 'DO', 'N/A'].includes(s) || s?.startsWith('FF')) {
+                        forwardStreak = 0;
+                    } else {
+                        forwardStreak++;
+                        if (forwardStreak >= maxStreak) {
+                            if (!isProtectedStatus(shifts, f) && !protectedIndicesSet.has(f)) {
+                                shifts[f] = 'F';
+                                forwardStreak = 0;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // 3. Varredura Final e Conexão com Carryover do Mês Anterior
         const prevStreak = prevStreaks.get(emp.id) || 0;
         let streak = prevStreak;
 
@@ -1816,20 +1900,34 @@ export function optimizeProtectedDays(
             } else {
                 streak++;
                 if (streak > maxStreak) {
-                    if (!protectedIndices.includes(i)) {
+                    if (!protectedIndicesSet.has(i)) {
                         if (!isProtectedStatus(shifts, i)) {
                             shifts[i] = 'F';
                             streak = 0;
                         }
                     } else {
-                        // Se o dia é protegido, tenta colocar folga no dia anterior não-protegido
                         for (let b = i - 1; b >= 0; b--) {
-                            if (!protectedIndices.includes(b) && !isProtectedStatus(shifts, b)) {
+                            if (!protectedIndicesSet.has(b) && !isProtectedStatus(shifts, b)) {
                                 shifts[b] = 'F';
                                 streak = i - b;
                                 break;
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        // 4. Suporte a 5x2 (2 folgas por semana)
+        if (is5x2) {
+            for (let w = 0; w < daysInMonth; w += 7) {
+                const weekIndices = [];
+                for (let k = 0; k < 7 && w + k < daysInMonth; k++) weekIndices.push(w + k);
+                const weekRests = weekIndices.filter(k => ['F', 'FE', 'AT', 'DO', 'N/A'].includes(shifts[k]) || shifts[k]?.startsWith('FF'));
+                if (weekRests.length < 2) {
+                    const candidate = weekIndices.find(k => !protectedIndicesSet.has(k) && !isProtectedStatus(shifts, k) && shifts[k] === 'T');
+                    if (candidate !== undefined) {
+                        shifts[candidate] = 'F';
                     }
                 }
             }
@@ -2018,9 +2116,10 @@ export function applyFolgasOnly(
     targetEmpId?: string,
     customHolidays: Holiday[] = [],
     deletedNationalHolidays: string[] = [],
-    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS,
+    protectedDays?: Record<number, number | ProtectedDayDetail> | number[]
 ): Record<string, ShiftType[]> {
-    const monthData = applyMonthUpdate(employees, year, month, customHolidays, deletedNationalHolidays, settings);
+    const monthData = applyMonthUpdate(employees, year, month, customHolidays, deletedNationalHolidays, settings, protectedDays);
     const result: Record<string, ShiftType[]> = {};
 
     if (targetEmpId) {
@@ -2173,6 +2272,7 @@ export function detectScheduleDiffs(
  * 7. CLT 6x1 e 5x2 (folgas fixas e rotação equitativa de domingos com limite inegociável de 2 domingos).
  * 8. Horários Diários (dailyHours baseados na jornada e workPeriod).
  * 9. Posições Táticas automáticas (P1 a P4 e ESTQ para quem trabalha).
+ * 10. Otimização Peak-Centric para dias protegidos/sazonais configurados.
  */
 export function generateCleanMonthSchedule(
     employees: Employee[],
@@ -2180,12 +2280,13 @@ export function generateCleanMonthSchedule(
     targetMonth: number,
     customHolidays: Holiday[] = [],
     deletedNationalHolidays: string[] = [],
-    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS,
+    protectedDays?: Record<number, number | ProtectedDayDetail> | number[]
 ): Employee[] {
     const targetKey = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
     
-    // 1. Gera folgas e horários validados
-    const monthData = applyMonthUpdate(employees, targetYear, targetMonth, customHolidays, deletedNationalHolidays, settings);
+    // 1. Gera folgas e horários validados (com suporte a dias protegidos)
+    const monthData = applyMonthUpdate(employees, targetYear, targetMonth, customHolidays, deletedNationalHolidays, settings, protectedDays);
     
     // 2. Aplica nos colaboradores
     const updatedEmps = employees.map(emp => {

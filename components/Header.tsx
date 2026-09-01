@@ -3,7 +3,7 @@ import { Icon } from './Icon';
 import { MonthYear, SyncStatus, TacticalDisplayMode } from '../types';
 
 interface HeaderProps {
-  currentView: 'grid' | 'analysis' | 'team' | 'jornada' | 'data' | 'feriados' | 'worked-holidays' | 'cleaning' | 'activities' | 'routine' | 'notices' | 'requests';
+  currentView: string;
   currentMY: MonthYear;
   filter: 'all' | 'sunday' | 'holiday' | 'week';
   onViewChange: (view: any) => void;
@@ -752,8 +752,8 @@ export const Header: React.FC<HeaderProps> = ({
           {/* 3. Indicador de Nuvem / Sync */}
           <div className="flex items-center px-2 py-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800/80 border border-slate-200/50 dark:border-zinc-700/50">
             <div className={`w-2 h-2 rounded-full ${
-              syncStatus.state === 'idle' ? 'bg-emerald-500' :
-              syncStatus.state === 'saving' ? 'bg-amber-500 animate-pulse' :
+              syncStatus.state === 'idle' || syncStatus.state === 'synced' ? 'bg-emerald-500' :
+              syncStatus.state === 'syncing' ? 'bg-amber-500 animate-pulse' :
               syncStatus.state === 'error' ? 'bg-rose-500' : 'bg-slate-400'
             }`} title={`Sincronização Nuvem: ${syncStatus.state}`} />
           </div>

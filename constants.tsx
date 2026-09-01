@@ -125,6 +125,7 @@ export const PLACEHOLDER_EMPLOYEE: Employee = {
   statusColor: '#94a3b8',
   shifts: {},
   dailyHours: {},
+  tacticalPositions: {},
   workPeriod: '10h às 18h20',
   preferredDayOff: 'Segunda-feira',
   shiftName: 'Abertura',
@@ -172,39 +173,68 @@ export function getDefaultProtectedDays(_month?: number): Record<number, number>
 
 /**
  * Retorna presets sazonais sugeridos para preenchimento rápido em 1 clique:
- * - Outubro (mês 9): Dias 8 a 12 (0 folgas)
- * - Dezembro (mês 11): Dias 20 a 24 (0 folgas)
+ * - Outubro (mês 9): Dias 8 a 12 (0 folgas, Dia das Crianças)
+ * - Novembro (mês 10): Dias 26 a 29 (0 folgas, Black Friday)
+ * - Dezembro (mês 11): Dias 20 a 24 (0 folgas, Natal)
  */
 export function getSeasonalPresetProtectedDays(month: number): Record<number, number> {
   if (month === 9) return { 8: 0, 9: 0, 10: 0, 11: 0, 12: 0 };
+  if (month === 10) return { 26: 0, 27: 0, 28: 0, 29: 0 };
   if (month === 11) return { 20: 0, 21: 0, 22: 0, 23: 0, 24: 0 };
   return {};
 }
 
 /**
- * Normaliza qualquer formato legado (array de números ou objeto) para Record<number, number> (dia -> maxFolgas).
+ * Normaliza qualquer formato (número, objeto com maxFolgas/mandatoryEmployeeIds ou array legado)
+ * para um mapa de detalhes completos: Record<number, { dayNum: number, maxFolgas: number, mandatoryEmployeeIds?: string[], note?: string }>.
  */
-export function normalizeProtectedDaysConfig(val: any): Record<number, number> {
+export function normalizeProtectedDaysDetails(val: any): Record<number, { dayNum: number; maxFolgas: number; mandatoryEmployeeIds?: string[]; note?: string }> {
   if (!val) return {};
+  const config: Record<number, { dayNum: number; maxFolgas: number; mandatoryEmployeeIds?: string[]; note?: string }> = {};
+
   if (Array.isArray(val)) {
-    const config: Record<number, number> = {};
     val.forEach(d => {
-      if (typeof d === 'number' && d >= 1 && d <= 31) config[d] = 0;
-    });
-    return config;
-  }
-  if (typeof val === 'object') {
-    const config: Record<number, number> = {};
-    Object.entries(val).forEach(([k, v]) => {
-      const dayNum = parseInt(k, 10);
-      const maxFolgas = typeof v === 'number' ? Math.max(0, v) : 0;
-      if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31) {
-        config[dayNum] = maxFolgas;
+      if (typeof d === 'number' && d >= 1 && d <= 31) {
+        config[d] = { dayNum: d, maxFolgas: 0 };
       }
     });
     return config;
   }
+
+  if (typeof val === 'object') {
+    Object.entries(val).forEach(([k, v]) => {
+      const dayNum = parseInt(k, 10);
+      if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) return;
+
+      if (typeof v === 'number') {
+        config[dayNum] = { dayNum, maxFolgas: Math.max(0, v) };
+      } else if (typeof v === 'object' && v !== null) {
+        const detail = v as any;
+        config[dayNum] = {
+          dayNum,
+          maxFolgas: typeof detail.maxFolgas === 'number' ? Math.max(0, detail.maxFolgas) : 0,
+          mandatoryEmployeeIds: Array.isArray(detail.mandatoryEmployeeIds) ? detail.mandatoryEmployeeIds : undefined,
+          note: typeof detail.note === 'string' ? detail.note : undefined,
+        };
+      }
+    });
+    return config;
+  }
+
   return {};
+}
+
+/**
+ * Normaliza qualquer formato legado ou objeto rico para Record<number, number> (dia -> maxFolgas).
+ */
+export function normalizeProtectedDaysConfig(val: any): Record<number, number> {
+  if (!val) return {};
+  const details = normalizeProtectedDaysDetails(val);
+  const config: Record<number, number> = {};
+  Object.entries(details).forEach(([k, v]) => {
+    config[Number(k)] = v.maxFolgas;
+  });
+  return config;
 }
 
 
@@ -417,6 +447,7 @@ export const MOCK_EMPLOYEES: Employee[] = names.map((name, i) => {
     statusColor: i % 2 === 0 ? '#ff8400' : '#3b82f6',
     shifts: {},
     dailyHours: {},
+    tacticalPositions: {},
     workPeriod: defaultHour,
     preferredDayOff: daysOff[i % daysOff.length],
     shiftName: i < 7 ? 'Abertura' : (i < 10 ? 'Intermediário' : 'Fechamento'),

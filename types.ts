@@ -53,8 +53,15 @@ export interface Holiday {
   recurring: boolean; // true = happens every year on same MM-DD
 }
 
-export type ProtectedDaysConfig = Record<number, number>; // dayNum (1..31) -> maxFolgas (0, 1, 2, ...)
-export type ProtectedDaysMap = Record<string, ProtectedDaysConfig>; // monthKey ("YYYY-MM") -> { [dayNum]: maxFolgas }
+export interface ProtectedDayDetail {
+  dayNum: number;
+  maxFolgas: number;
+  mandatoryEmployeeIds?: string[]; // IDs de colaboradores específicos bloqueados (vazio/undefined = toda a equipe ativa)
+  note?: string;
+}
+
+export type ProtectedDaysConfig = Record<number, number | ProtectedDayDetail>; // dayNum (1..31) -> maxFolgas ou ProtectedDayDetail
+export type ProtectedDaysMap = Record<string, ProtectedDaysConfig>; // monthKey ("YYYY-MM") -> { [dayNum]: maxFolgas | ProtectedDayDetail }
 
 export interface ComplianceAlert {
   id: string;

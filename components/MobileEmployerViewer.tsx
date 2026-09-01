@@ -130,8 +130,11 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     const tacticalPos = resolved[currentEmp.id] || null;
 
     // Calculate lunch
-    const lunches = calculateLunches(activeEmployees, currentMY.year, currentMY.month, currentDayIdx, customHolidays, deletedNationalHolidays, jornadaSettings);
-    const lunchInfo = lunches[currentEmp.id] || null;
+    const isOpening = classification === 'Abertura';
+    const workingToday = activeEmployees.filter(e => isWorkingShift((e.shifts[monthKey] || [])[currentDayIdx]));
+    const lunchTimes = calculateLunches(workingToday, isHoliday, isSunday, isOpening, jornadaSettings);
+    const empIdxInWorking = workingToday.findIndex(e => e.id === currentEmp.id);
+    const lunchInfo = empIdxInWorking !== -1 ? lunchTimes[empIdxInWorking] : null;
 
     return {
       dayNum: currentDayIdx + 1,
@@ -146,7 +149,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
       isHoliday,
       isSunday
     };
-  }, [currentEmp, currentMY, currentDayIdx, monthKey, holidaySet, activeEmployees, jornadaSettings, customHolidays, deletedNationalHolidays]);
+  }, [currentEmp, currentMY, currentDayIdx, monthKey, holidaySet, activeEmployees, jornadaSettings]);
 
   // Compute today's team roster (who works today grouped by shift)
   const todayTeamRoster = useMemo(() => {

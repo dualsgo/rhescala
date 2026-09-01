@@ -342,7 +342,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         </div>
                         <div>
                           <p className="text-[11px] font-black text-slate-800 dark:text-slate-100 uppercase">{c.holidayName}</p>
-                          <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-tighter">Agendado para {c.scheduledDate?.split('-').reverse().slice(0, 2).join('/')}</p>
+                          <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-tighter">Agendado para {c.offDate?.split('-').reverse().slice(0, 2).join('/')}</p>
                         </div>
                       </div>
                       <Icon name="done_all" className="text-emerald-500" />
@@ -541,7 +541,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         { 
                           date: selectedRequestDate, 
                           text: requestType === 'troca_turno' ? `Gostaria de trocar meu turno com ${getShortName((employees || []).find(e => e.id === targetEmployeeId)?.name, employees)}.` : newRequest.trim(), 
-                          status: 'pending',
+                          status: 'pending' as const,
                           createdAt: new Date().toISOString(),
                           type: requestType,
                           targetEmployeeId: requestType === 'troca_turno' ? targetEmployeeId : undefined
