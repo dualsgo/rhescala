@@ -57,10 +57,13 @@ import { PresetOptionsModal } from './components/PresetOptionsModal';
 import { ScheduleDiffModal } from './components/ScheduleDiffModal';
 import { MobileEmployerViewer } from './components/MobileEmployerViewer';
 import { ProtectedDaysModal } from './components/ProtectedDaysModal';
+import { CreateMonthModal } from './components/CreateMonthModal';
 
 const App: React.FC = () => {
   const [employees, setEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', [PLACEHOLDER_EMPLOYEE]);
   const [jornadaSettings, setJornadaSettings] = useLocalStorage<JornadaSettings>('riHappyJornadaSettings', DEFAULT_JORNADA_SETTINGS);
+  const [showCreateMonthModal, setShowCreateMonthModal] = useState(false);
+  const [createMonthTargetMY, setCreateMonthTargetMY] = useState<MonthYear | null>(null);
 
   const activeJornadaSettings = useMemo(() => ({
     ...DEFAULT_JORNADA_SETTINGS,
@@ -893,39 +896,37 @@ const App: React.FC = () => {
     }
   }, [currentMY, employees, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, showDialog]);
 
-  const handleCreateMonth = async () => {
+  const handleCreateMonth = () => {
     const nextDate = new Date(currentMY.year, currentMY.month + 1, 1);
     const nextMY = { month: nextDate.getMonth(), year: nextDate.getFullYear() };
+    setCreateMonthTargetMY(nextMY);
+    setShowCreateMonthModal(true);
+  };
+
+  const handleConfirmCreateMonth = (mode: 'suggested_retro' | 'all_working') => {
+    if (!createMonthTargetMY) return;
     const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-    const nextMonthName = monthNames[nextMY.month];
+    const targetMonthName = monthNames[createMonthTargetMY.month];
 
-    const confirmed = await showDialog({
-      title: `✨ Criar Escala de ${nextMonthName}/${nextMY.year}`,
-      message: `Deseja gerar a nova escala de ${nextMonthName}/${nextMY.year} de forma inteligente?\n\n` +
-               `✓ Analisa o mês anterior (carryover de domingos e streak de dias trabalhados CLT)\n` +
-               `✓ Valida férias e atestados ativos no novo mês (limpa férias antigas)\n` +
-               `✓ Distribui folgas fixas, regras de Jovem Aprendiz e aniversários\n` +
-               `✓ Aloca horários base e posições táticas (P1 a P4 / Estoque) automaticamente`,
-      type: 'confirm'
+    const updatedEmployees = generateCleanMonthSchedule(
+      employees,
+      createMonthTargetMY.year,
+      createMonthTargetMY.month,
+      customHolidays,
+      deletedNationalHolidays,
+      activeJornadaSettings,
+      activeProtectedDays,
+      mode
+    );
+    setEmployees(updatedEmployees);
+    setCurrentMY(createMonthTargetMY);
+    showDialog({
+      title: 'Sucesso!',
+      message: mode === 'all_working'
+        ? `Escala base 100% trabalhada de ${targetMonthName}/${createMonthTargetMY.year} gerada com sucesso! Você pode lançar as folgas manualmente no grid.`
+        : `Escala de ${targetMonthName}/${createMonthTargetMY.year} criada com sucesso e validada com verificação retroativa CLT!`,
+      type: 'alert'
     });
-
-    if (confirmed) {
-      const updatedEmployees = generateCleanMonthSchedule(
-        employees,
-        nextMY.year,
-        nextMY.month,
-        customHolidays,
-        deletedNationalHolidays,
-        activeJornadaSettings
-      );
-      setEmployees(updatedEmployees);
-      setCurrentMY(nextMY);
-      showDialog({
-        title: 'Sucesso!',
-        message: `Escala de ${nextMonthName}/${nextMY.year} criada com sucesso e validada contra todas as regras CLT.`,
-        type: 'alert'
-      });
-    }
   };
 
   const handleDistributePositions = () => {
@@ -1377,6 +1378,15 @@ const App: React.FC = () => {
            onSaveConfig={handleSaveProtectedConfig}
            onOptimizeSchedule={handleOptimizeScheduleWithProtectedDays}
            isReadOnly={isReadOnly}
+         />
+       )}
+
+       {showCreateMonthModal && createMonthTargetMY && (
+         <CreateMonthModal
+           isOpen={showCreateMonthModal}
+           onClose={() => setShowCreateMonthModal(false)}
+           targetMY={createMonthTargetMY}
+           onConfirm={handleConfirmCreateMonth}
          />
        )}
 

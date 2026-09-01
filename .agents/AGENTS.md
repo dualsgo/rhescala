@@ -149,6 +149,14 @@ O sistema atende integralmente à legislação trabalhista brasileira (CLT, Sazo
 1. **Modo Rascunho**: O gestor (`admin`) planeja e edita a escala livremente. No modo `viewer` (equipe), a escala aparece como "Escala em Construção".
 2. **Oficialização**: Ao validar, o sistema gera um [OfficialScheduleSnapshot](file:///c:/Users/mdbsi/OneDrive/Documentos/GitHub/rhescala/types.ts#L115) congelado contendo o estado exato de turnos, horários e posições. A escala é imediatamente disponibilizada para a equipe.
 3. **Auditoria de Alterações (`ScheduleDiffModal`)**: Qualquer mudança efetuada após a oficialização é registrada como divergência (`ScheduleDiffItem`), identificando quem alterou, data, valor original e valor atualizado.
+4. **Criação de Novo Mês com Seleção de Modo ([CreateMonthModal.tsx](file:///c:/Users/mdbsi/OneDrive/Documentos/GitHub/rhescala/components/CreateMonthModal.tsx))**:
+   - **Modo 1: Escala Sugerida Inteligente (Verificação Retroativa Estrita CLT)**:
+     - Conecta os dias trabalhados no mês anterior com o novo mês:
+       - Se o colaborador folgou no dia 31 (ou contratado no dia 1), trabalha de 1 a 6 e **folga obrigatoriamente no dia 7**.
+       - Se trabalhou nos 2 últimos domingos do mês anterior e o 1º domingo do novo mês é dia 4 ou 5, **folga obrigatoriamente no 1º domingo**.
+       - Aplica o ciclo contínuo de 6x1 e 5x2 a partir da última folga concedida.
+   - **Modo 2: Escala Base 100% Trabalhada (Ajuste Manual)**:
+     - Preenche todos os dias com turno de trabalho (`T`) e horários oficiais calculados, preservando apenas férias, atestados, aniversários e regras de aprendiz, para que o gestor lance manualmente as folgas no grid.
 
 ### 4.6 Otimização de Semanas de Pico Sazonal e Dias Protegidos (Motor Peak-Centric & Cenário Ideal)
 - **Engenharia de Cenário Ideal Operacional**: O motor otimiza a escala visando a máxima eficiência da loja independente de preferências fixas que criem gargalos, operando com base nas seguintes proporções e regras estritas:

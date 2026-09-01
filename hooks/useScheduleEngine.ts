@@ -719,7 +719,8 @@ export function applyMonthUpdate(
     customHolidays: Holiday[] = [],
     deletedNationalHolidays: string[] = [],
     settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS,
-    protectedDays?: ProtectedDaysConfig | number[]
+    protectedDays?: ProtectedDaysConfig | number[],
+    mode: 'suggested_retro' | 'all_working' = 'suggested_retro'
 ): Record<string, { shifts: ShiftType[]; hours: string[] }> {
     const result: Record<string, { shifts: ShiftType[]; hours: string[] }> = {};
 
@@ -730,377 +731,164 @@ export function applyMonthUpdate(
     const holidaySet = buildHolidaySet(year, customHolidays, deletedNationalHolidays);
     const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
 
-    // Find all Sundays in this month
+    // Helper para verificar status legal/especial
+    const getLegalOverride = (emp: Employee, dayIdx: number): ShiftType | null => {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+        if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) return 'FE';
+        if (emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd) return 'AT';
+        if (isBirthday(emp, dateStr)) return 'DO';
+        if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) return 'N/A';
+        return null;
+    };
+
+    // ── 1. Jovens Aprendizes ────────────────────────────────────────────────────
+    activeApprentices.forEach(app => {
+        const shifts: ShiftType[] = Array(daysInMonth).fill('T');
+        const courseDayNorm = app.courseDay ? app.courseDay.replace('-feira', '').trim() : '';
+
+        const hours: string[] = Array.from({ length: daysInMonth }, (_, i) => {
+            const dow = new Date(year, month, i + 1).getDay();
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
+            return getTargetHours(app, dow, holidaySet.has(dateStr), settings);
+        });
+
+        for (let i = 0; i < daysInMonth; i++) {
+            const date = new Date(year, month, i + 1);
+            const dow = date.getDay();
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
+            const isHoliday = holidaySet.has(dateStr);
+
+            const legal = getLegalOverride(app, i);
+            if (legal) {
+                shifts[i] = legal;
+                continue;
+            }
+
+            if (dow === 0 || dow === 6 || isHoliday) {
+                shifts[i] = 'F';
+            } else if (courseDayNorm && WEEKDAY_NAMES[dow] === courseDayNorm) {
+                shifts[i] = 'C';
+            } else {
+                shifts[i] = 'T';
+            }
+        }
+
+        result[app.id] = { shifts, hours };
+    });
+
+    // ── 2. MODO: 100% Trabalhado (Sem folgas automáticas para ajuste manual) ──────
+    if (mode === 'all_working') {
+        activeRegular.forEach(emp => {
+            const shifts: ShiftType[] = Array(daysInMonth).fill('T');
+            const hours: string[] = Array.from({ length: daysInMonth }, (_, i) => {
+                const dow = new Date(year, month, i + 1).getDay();
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
+                return getTargetHours(emp, dow, holidaySet.has(dateStr), settings);
+            });
+
+            for (let i = 0; i < daysInMonth; i++) {
+                const legal = getLegalOverride(emp, i);
+                if (legal) {
+                    shifts[i] = legal;
+                } else {
+                    shifts[i] = 'T';
+                }
+            }
+
+            result[emp.id] = { shifts, hours };
+        });
+        return result;
+    }
+
+    // ── 3. MODO: Sugerida Inteligente com Verificação Retroativa Estrita CLT ─────
+    // Localiza todos os domingos do mês
     const sundaysInMonth: number[] = [];
     for (let d = 0; d < daysInMonth; d++) {
         if (new Date(year, month, d + 1).getDay() === 0) sundaysInMonth.push(d);
     }
 
-    // Compute Sunday assignments — with cross-month carry (retro-analysis)
+    // Retro-análise dos 2 últimos domingos do mês anterior
     const prevConsecutive = getPrevMonthConsecutive(activeRegular, year, month);
     const { assignments: sundayAssignments } = buildSundayAssignments(
-        activeRegular, year, month, sundaysInMonth, prevConsecutive, settings
+        activeRegular, year, month, sundaysInMonth, prevConsecutive, settings, protectedDays
     );
 
-    const today = new Date();
-    const isPastMonth = year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth());
-
-    if (isPastMonth) {
-        employees.forEach(emp => {
-            const defaultHours = Array.from({ length: daysInMonth }, (_, i) => {
-                const date = new Date(year, month, i + 1);
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
-                return getTargetHours(emp, date.getDay(), holidaySet.has(dateStr), settings);
-            });
-            result[emp.id] = {
-                shifts: Array(daysInMonth).fill('N/A' as ShiftType),
-                hours: defaultHours
-            };
-        });
-        return result;
-    }
-
-    // ── Regular employees ──────────────────────────────────────────────────────
+    // Retro-análise dos dias trabalhados no mês anterior até o dia 31
     const prevStreaks = getPrevMonthWorkStreak(activeRegular, year, month);
 
-    // Build a set of ALL hours the system could auto-generate — used below to
-    // distinguish manual customisations from stale auto-generated values.
-    const allSystemHours = new Set<string>([
-        ...settings.shiftHours.weekday,
-        ...settings.shiftHours.sunday,
-        ...settings.shiftHours.holiday,
-        ...settings.shiftHours.apprentice,
-    ]);
-
     activeRegular.forEach(emp => {
-        const restDays = sundayAssignments.get(emp.id) ?? new Set<number>();
-        const existingShifts = emp.shifts[monthKey] || [];
-        const existingHours = emp.dailyHours[monthKey] || [];
-        const newShifts: ShiftType[] = Array(daysInMonth).fill('T');
+        const restSundays = sundayAssignments.get(emp.id) ?? new Set<number>();
+        const is5x2 = emp.jornada === '5x2';
+        const maxStreak = is5x2 ? 5 : 6;
+        const shifts: ShiftType[] = Array(daysInMonth).fill('T');
 
-        // Build hours: preserve truly manual overrides; recompute everything else.
-        const newHours: string[] = Array.from({ length: daysInMonth }, (_, i) => {
+        const hours: string[] = Array.from({ length: daysInMonth }, (_, i) => {
             const dow = new Date(year, month, i + 1).getDay();
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
-            const exH = existingHours[i];
-
-            const wasAutoGenerated =
-                !exH ||
-                exH === emp.workPeriod ||
-                allSystemHours.has(exH);
-
-            if (exH && !wasAutoGenerated) return exH;
             return getTargetHours(emp, dow, holidaySet.has(dateStr), settings);
         });
 
-        // 1. Pass: Apply absolute constraints and preferred day-off for ALL weekdays
-        for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
-            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
-            const dow = new Date(year, month, dayIdx + 1).getDay();
-
-            // Validações reais de datas contratuais
-            const isOnVacation = !!(emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd);
-            const isOnAtestado = !!(emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd);
-            const isEmpBirthday = isBirthday(emp, dateStr);
-
-            let baselineShift = existingShifts[dayIdx] || 'T';
-            if (baselineShift === 'FE' && !isOnVacation) baselineShift = 'T';
-            if (baselineShift === 'DO' && !isEmpBirthday) baselineShift = 'T';
-
-            newShifts[dayIdx] = baselineShift;
-
-            // Hard overrides (highest priority)
-            if (isOnVacation) {
-                newShifts[dayIdx] = 'FE'; continue;
-            }
-            if (isOnAtestado) {
-                newShifts[dayIdx] = 'AT'; continue;
-            }
-            if (isEmpBirthday) {
-                newShifts[dayIdx] = 'DO'; continue;
-            }
-
-            if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) {
-                newShifts[dayIdx] = 'N/A'; continue;
-            }
-
-            // Sunday rotation logic
-            if (dow === 0) {
-                if (isOnVacation) {
-                    newShifts[dayIdx] = 'FE';
-                } else if (isOnAtestado) {
-                    newShifts[dayIdx] = 'AT';
-                } else if (isEmpBirthday) {
-                    newShifts[dayIdx] = 'DO';
-                } else if (baselineShift?.startsWith('FF')) {
-                    newShifts[dayIdx] = baselineShift;
-                } else if (emp.preferredDayOff === 'Domingo' || restDays.has(dayIdx)) {
-                    newShifts[dayIdx] = 'F';
-                } else {
-                    newShifts[dayIdx] = 'T';
-                }
-                continue;
-            }
-
-            // Apply preferred weekday-off in Pass 1
-            const isPreferredDay = emp.preferredDayOff && (
-                WEEKDAY_NAMES[dow] === emp.preferredDayOff || 
-                `${WEEKDAY_NAMES[dow]}-feira` === emp.preferredDayOff ||
-                WEEKDAY_NAMES[dow] === `${emp.preferredDayOff}-feira`
-            );
-
-            if (isPreferredDay) {
-                newShifts[dayIdx] = 'F';
-                continue;
-            }
-
-            // All remaining regular weekdays default to T
-            if (!existingShifts[dayIdx] || existingShifts[dayIdx] === 'T') {
-                newShifts[dayIdx] = 'T';
-            }
-        }
-
-        // 2. Pass: Streak-based force-rest (6x1 or 5x2 compliance)
+        // Caminhamento dia a dia conectando o streak do mês anterior com o novo mês
         let currentStreak = prevStreaks.get(emp.id) || 0;
-        const maxStreak = emp.jornada === '5x2' ? 5 : 6;
 
         for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
-            const shift = newShifts[dayIdx];
-            if (shift === 'FE' || shift === 'F' || shift?.startsWith('FF') || shift === 'N/A' || shift === 'DO' || shift === 'AT') {
+            const dow = new Date(year, month, dayIdx + 1).getDay();
+            const legal = getLegalOverride(emp, dayIdx);
+
+            // 3.1 Se houver condição legal (Férias, Atestado, Aniversário, Não-contratado)
+            if (legal) {
+                shifts[dayIdx] = legal;
                 currentStreak = 0;
                 continue;
             }
 
+            // 3.2 Se for domingo de folga da rotação CLT (ex: se trabalhou 2 domingos anteriores folga dia 5)
+            if (dow === 0 && restSundays.has(dayIdx)) {
+                shifts[dayIdx] = 'F';
+                currentStreak = 0;
+                continue;
+            }
+
+            // 3.3 Verificação de limite CLT 6x1 / 5x2 (se trabalhou 6 dias seguidos, o 7º dia é FOLGA OBRIGATÓRIA)
+            if (currentStreak + 1 > maxStreak) {
+                shifts[dayIdx] = 'F';
+                currentStreak = 0;
+                continue;
+            }
+
+            // 3.4 Senão, dia regular de trabalho
+            shifts[dayIdx] = 'T';
             currentStreak++;
-
-            if (currentStreak > maxStreak) {
-                let hasFutureRest = false;
-                for (let lookAhead = 1; lookAhead <= 2; lookAhead++) {
-                    const nextDay = dayIdx + lookAhead;
-                    if (nextDay < daysInMonth) {
-                        const nextShift = newShifts[nextDay];
-                        if (nextShift === 'F' || nextShift === 'FE' || nextShift === 'AT' || nextShift === 'DO' || nextShift?.startsWith('FF')) {
-                            hasFutureRest = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (!hasFutureRest) {
-                    newShifts[dayIdx] = 'F';
-                    currentStreak = 0;
-                }
-            }
         }
 
-        // 3. Pass: Clean Redundant Common Off-Days and Guarantee 5x2
-        const processWeek = (weekIndices: number[]) => {
-            if (weekIndices.length === 0) return;
-
-            const offIndices = weekIndices.filter(idx => newShifts[idx] === 'F' || newShifts[idx]?.startsWith('FF') || newShifts[idx] === 'FE' || newShifts[idx] === 'DO' || newShifts[idx] === 'AT');
-
-            if (emp.jornada !== '5x2') {
-                const monFriIndices = weekIndices.filter(idx => {
-                    const d = new Date(year, month, idx + 1).getDay();
-                    return d >= 1 && d <= 5;
-                });
-                const commonOffIndices = monFriIndices.filter(idx => newShifts[idx] === 'F');
-                if (commonOffIndices.length > 1) {
-                    const preferredIdx = monFriIndices.find(idx => {
-                        const d = new Date(year, month, idx + 1).getDay();
-                        return emp.preferredDayOff && (
-                            WEEKDAY_NAMES[d] === emp.preferredDayOff ||
-                            `${WEEKDAY_NAMES[d]}-feira` === emp.preferredDayOff ||
-                            WEEKDAY_NAMES[d] === `${emp.preferredDayOff}-feira`
-                        );
-                    });
-
-                    if (preferredIdx !== undefined) {
-                        commonOffIndices.forEach(idx => {
-                            if (idx !== preferredIdx) newShifts[idx] = 'T';
-                        });
-                    } else {
-                        const lastF = commonOffIndices[commonOffIndices.length - 1];
-                        commonOffIndices.forEach(idx => {
-                            if (idx !== lastF) newShifts[idx] = 'T';
-                        });
-                    }
-                }
-            } else {
-                if (offIndices.length < 2) {
-                    const workingIndices = weekIndices.filter(idx => {
-                        const d = new Date(year, month, idx + 1).getDay();
-                        return newShifts[idx] === 'T' && d !== 0;
-                    });
-                    let needed = 2 - offIndices.length;
-                    const preferredAddOrder = workingIndices.sort((a, b) => {
-                        const dayA = new Date(year, month, a + 1).getDay();
-                        const dayB = new Date(year, month, b + 1).getDay();
-                        const scoreA = (dayA >= 2 && dayA <= 4) ? 0 : 1;
-                        const scoreB = (dayB >= 2 && dayB <= 4) ? 0 : 1;
-                        return scoreA - scoreB;
-                    });
-                    for (let i = 0; i < preferredAddOrder.length && needed > 0; i++) {
-                        newShifts[preferredAddOrder[i]] = 'F';
-                        needed--;
-                    }
-                } else if (offIndices.length > 2) {
-                    const fIndices = weekIndices.filter(idx => newShifts[idx] === 'F');
-                    let excess = offIndices.length - 2;
-                    const toRemove = fIndices.sort((a, b) => {
-                        const dayA = new Date(year, month, a + 1).getDay();
-                        const dayB = new Date(year, month, b + 1).getDay();
-                        const isPrefA = emp.preferredDayOff && WEEKDAY_NAMES[dayA].includes(emp.preferredDayOff.split('-')[0]) ? 1 : 0;
-                        const isPrefB = emp.preferredDayOff && WEEKDAY_NAMES[dayB].includes(emp.preferredDayOff.split('-')[0]) ? 1 : 0;
-                        const isSunA = dayA === 0 ? 1 : 0;
-                        const isSunB = dayB === 0 ? 1 : 0;
-                        return (isPrefA + isSunA * 2) - (isPrefB + isSunB * 2);
-                    });
-                    for (let i = 0; i < toRemove.length && excess > 0; i++) {
-                        newShifts[toRemove[i]] = 'T';
-                        excess--;
-                    }
-                }
-            }
-        };
-
-        const firstDow = new Date(year, month, 1).getDay();
-        if (firstDow !== 1) {
-            const partialFirst: number[] = [];
-            for (let idx = 0; idx < daysInMonth; idx++) {
-                const d = new Date(year, month, idx + 1).getDay();
-                if (d === 1 && idx > 0) break;
-                partialFirst.push(idx);
-            }
-            if (partialFirst.length > 0) processWeek(partialFirst);
-        }
-
-        for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
-            const date = new Date(year, month, dayIdx + 1);
-            if (date.getDay() === 1) {
+        // 3.5 Para jornada 5x2: assegura 2 folgas por semana
+        if (is5x2) {
+            for (let w = 0; w < daysInMonth; w += 7) {
                 const weekIndices: number[] = [];
-                for (let i = 0; i < 7; i++) {
-                    if (dayIdx + i < daysInMonth) weekIndices.push(dayIdx + i);
+                for (let k = 0; k < 7 && w + k < daysInMonth; k++) weekIndices.push(w + k);
+                const weekRests = weekIndices.filter(k => ['F', 'FE', 'AT', 'DO', 'N/A'].includes(shifts[k]) || shifts[k]?.startsWith('FF'));
+                if (weekRests.length < 2) {
+                    const candidate = weekIndices.find(k => {
+                        const d = new Date(year, month, k + 1).getDay();
+                        return shifts[k] === 'T' && d !== 6 && !getLegalOverride(emp, k);
+                    });
+                    if (candidate !== undefined) {
+                        shifts[candidate] = 'F';
+                    }
                 }
-                processWeek(weekIndices);
             }
         }
 
-        result[emp.id] = { shifts: newShifts, hours: newHours };
+        result[emp.id] = { shifts, hours };
     });
 
-    // ── Apprentices ────────────────────────────────────────────────────────────
-    activeApprentices.forEach(emp => {
-        const existingShifts = emp.shifts[monthKey] || [];
-        const newShifts: ShiftType[] = Array(daysInMonth).fill('T');
-        
-        const newHours: string[] = Array.from({ length: daysInMonth }, (_, i) => {
-            const exH = (emp.dailyHours[monthKey] ?? [])[i];
-            return exH || APPRENTICE_WORK_PERIOD;
-        });
-
-        for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
-            const dayNum = dayIdx + 1;
-            const date = new Date(year, month, dayNum);
-            const dow = date.getDay();
-            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-            const isHoliday = holidaySet.has(dateStr);
-
-            const isOnVacation = !!(emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd);
-            const isOnAtestado = !!(emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd);
-            const isEmpBirthday = isBirthday(emp, dateStr);
-
-            let baselineShift = existingShifts[dayIdx] || 'T';
-            if (baselineShift === 'FE' && !isOnVacation) baselineShift = 'T';
-            if (baselineShift === 'DO' && !isEmpBirthday) baselineShift = 'T';
-
-            newShifts[dayIdx] = baselineShift;
-
-            if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) {
-                newShifts[dayIdx] = 'N/A'; continue;
-            }
-
-            if (isOnVacation) {
-                newShifts[dayIdx] = 'FE'; continue;
-            }
-
-            if (isOnAtestado) {
-                newShifts[dayIdx] = 'AT'; continue;
-            }
-
-            if (isEmpBirthday) {
-                newShifts[dayIdx] = 'DO'; continue;
-            }
-
-            if (isHoliday) {
-                newShifts[dayIdx] = 'F';
-                continue;
-            }
-            if (dow === 0 || dow === 6) {
-                newShifts[dayIdx] = 'F';
-                continue;
-            }
-            if (WEEKDAY_NAMES[dow] === emp.courseDay) {
-                newShifts[dayIdx] = 'C';
-                continue;
-            }
-        }
-
-        result[emp.id] = { shifts: newShifts, hours: newHours };
-    });
-
-    // 2.5 Pass: Peak Week & Protected Days Optimization
-    const effectiveConfig = normalizeProtectedDaysConfig(protectedDays);
-    const configuredDays = Object.keys(effectiveConfig).map(Number);
-
-    if (month === 9 && configuredDays.length > 0 && [8, 9, 10, 11, 12].every(d => effectiveConfig[d] === 0)) {
-        const peakResult = optimizeOctoberPeak(employees, monthKey, customHolidays, deletedNationalHolidays, settings);
+    // Se houver dias protegidos configurados, otimiza com Peak-Centric
+    const configuredDays = Object.keys(normalizeProtectedDaysDetails(protectedDays)).map(Number);
+    if (configuredDays.length > 0) {
+        const peakResult = optimizeProtectedDays(employees, monthKey, protectedDays || {}, customHolidays, deletedNationalHolidays, settings);
         activeRegular.forEach(emp => {
             if (peakResult[emp.id]) {
                 result[emp.id].shifts = peakResult[emp.id].shifts;
-            }
-        });
-    } else if (month === 11 && configuredDays.length > 0 && [20, 21, 22, 23, 24].every(d => effectiveConfig[d] === 0)) {
-        const peakResult = optimizeDecemberPeak(employees, monthKey, customHolidays, deletedNationalHolidays, settings);
-        activeRegular.forEach(emp => {
-            if (peakResult[emp.id]) {
-                result[emp.id].shifts = peakResult[emp.id].shifts;
-            }
-        });
-    } else if (configuredDays.length > 0) {
-        const peakResult = optimizeProtectedDays(employees, monthKey, effectiveConfig, customHolidays, deletedNationalHolidays, settings);
-        activeRegular.forEach(emp => {
-            if (peakResult[emp.id]) {
-                result[emp.id].shifts = peakResult[emp.id].shifts;
-            }
-        });
-    }
-
-    // 3. Pass: Tactical Positioning (New Feature)
-    for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
-        const isHoliday = holidaySet.has(dateStr);
-        const isSunday = new Date(year, month, dayIdx + 1).getDay() === 0;
-
-        // Create virtual "active employees" with current pending shifts to resolve positions
-        const empsForDay = activeRegular.map(emp => ({
-            ...emp,
-            shifts: {
-                ...emp.shifts,
-                [monthKey]: result[emp.id].shifts
-            },
-            dailyHours: {
-                ...emp.dailyHours,
-                [monthKey]: result[emp.id].hours
-            }
-        }));
-
-        const positions = resolveTacticalDay(empsForDay, monthKey, dayIdx, isHoliday, isSunday, settings);
-        
-        // Update the shifts in result
-        activeRegular.forEach(emp => {
-            if (result[emp.id].shifts[dayIdx] === 'T' && positions[emp.id]) {
-                result[emp.id].shifts[dayIdx] = positions[emp.id] as ShiftType;
             }
         });
     }
@@ -2331,12 +2119,13 @@ export function generateCleanMonthSchedule(
     customHolidays: Holiday[] = [],
     deletedNationalHolidays: string[] = [],
     settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS,
-    protectedDays?: Record<number, number | ProtectedDayDetail> | number[]
+    protectedDays?: Record<number, number | ProtectedDayDetail> | number[],
+    mode: 'suggested_retro' | 'all_working' = 'suggested_retro'
 ): Employee[] {
     const targetKey = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
     
-    // 1. Gera folgas e horários validados (com suporte a dias protegidos)
-    const monthData = applyMonthUpdate(employees, targetYear, targetMonth, customHolidays, deletedNationalHolidays, settings, protectedDays);
+    // 1. Gera folgas e horários validados (com suporte a modo retroativo ou 100% trabalhado)
+    const monthData = applyMonthUpdate(employees, targetYear, targetMonth, customHolidays, deletedNationalHolidays, settings, protectedDays, mode);
     
     // 2. Aplica nos colaboradores
     const updatedEmps = employees.map(emp => {
@@ -2351,7 +2140,7 @@ export function generateCleanMonthSchedule(
         return emp;
     });
 
-    // 3. Distribui posições táticas automáticas (P1..P4 e ESTQ)
+    // 3. Distribui posições táticas automáticas (P1..P4 e ESTQ) para os turnos trabalhados
     const tacticalMap = applyTacticalOnly(updatedEmps, targetYear, targetMonth, customHolidays, deletedNationalHolidays, settings);
 
     return updatedEmps.map(emp => {
