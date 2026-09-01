@@ -150,19 +150,18 @@ O sistema atende integralmente à legislação trabalhista brasileira (CLT, Sazo
 2. **Oficialização**: Ao validar, o sistema gera um [OfficialScheduleSnapshot](file:///c:/Users/mdbsi/OneDrive/Documentos/GitHub/rhescala/types.ts#L115) congelado contendo o estado exato de turnos, horários e posições. A escala é imediatamente disponibilizada para a equipe.
 3. **Auditoria de Alterações (`ScheduleDiffModal`)**: Qualquer mudança efetuada após a oficialização é registrada como divergência (`ScheduleDiffItem`), identificando quem alterou, data, valor original e valor atualizado.
 
-### 4.6 Otimização de Semanas de Pico Sazonal e Dias Protegidos (Motor Peak-Centric)
-- **Estratégia Centrada no Pico (Peak-Centric / Anchor-Based Scheduling)**: Em vez de uma varredura linear do dia 1 ao 31, a escala é construída a partir dos **dias de pico como âncora fixa de trabalho**:
-  1. **Âncora no Pico**: Fixa trabalho contínuo (`T`) para todos os colaboradores regulares ou para a lista de colaboradores bloqueados (`mandatoryEmployeeIds`). Preserva rigorosamente férias (`FE`), atestados (`AT`), aniversários (`DO`) e Jovem Aprendiz.
-  2. **Lookback Pré-Pico**: A partir do dia $D_{start}$, analisa o tamanho do pico ($L_{peak}$) e escalona folgas pré-pico nos dias $D_{start} - 1$, $D_{start} - 2$, $D_{start} - 3$ em grupos equilibrados (Grupo A, B, C) para que ninguém chegue ao pico com streak acumulado que estoure a CLT 6x1 (máx 6 dias) ou 5x2 (máx 5 dias). A partir dessa folga pré-pico, varre regressivamente até o Dia 1 integrando com o carryover do mês anterior.
-  3. **Lookahead Pós-Pico**: Imediatamente após o término do pico ($D_{end}$), calcula o streak acumulado e aloca folgas obrigatórias nos dias $D_{end} + 1$, $D_{end} + 2$ escalonadas entre os grupos. A partir dessa folga pós-pico, retoma a rotação regular de folgas até o final do mês.
-- **Bloqueio de Colaboradores Específicos**: No [ProtectedDaysModal.tsx](file:///c:/Users/mdbsi/OneDrive/Documentos/GitHub/rhescala/components/ProtectedDaysModal.tsx), o gestor pode alternar entre "Toda a Equipe" ou marcar colaboradores individuais específicos para estarem obrigatoriamente presentes no dia crítico.
-- **Unificação com Rotação de Domingos e Presets**:
-  - A rotação de domingos (`buildSundayAssignments`) agora respeita domingos marcados como Dias Protegidos com `maxFolgas` (ex: se `maxFolgas: 0`, ninguém folga no domingo).
-  - A aplicação de pré-definições (`PresetOptionsModal`, `applyFolgasOnly`, `applyMonthUpdate`, `generateCleanMonthSchedule`) respeita automaticamente os dias protegidos como restrição de 1ª classe, sem sobrescrever o limite de folgas do dia.
-- **Presets Sazonais em 1 Clique**:
-  - **Outubro (Dia das Crianças - 8 a 12/10)**: 100% de presença com folgas pré-pico (6, 7) e pós-pico (13, 14).
-  - **Novembro (Black Friday - 26 a 29/11)**: 100% de presença com folgas balanceadas.
-  - **Dezembro (Natal - 20 a 24/12)**: 100% de presença com folgas pré-pico (18, 19) e folga de Natal no dia 25/12.
+### 4.6 Otimização de Semanas de Pico Sazonal e Dias Protegidos (Motor Peak-Centric & Cenário Ideal)
+- **Engenharia de Cenário Ideal Operacional**: O motor otimiza a escala visando a máxima eficiência da loja independente de preferências fixas que criem gargalos, operando com base nas seguintes proporções e regras estritas:
+  1. **Sábados e Dias de Pico (100% de Presença)**: 100% dos colaboradores regulares trabalham nos sábados e blocos de evento (Dia das Crianças 10 a 12/10, Natal 20 a 24/12, Black Friday), sem folgas de rotina.
+  2. **Sextas-feiras (Alta Demanda)**: Máxima presença (~85% a 100%), limitando folgas ao estritamente necessário para cumprimento de 5x2.
+  3. **Dias Úteis (Segunda a Quinta - ~25% de Folga Simétrica)**: A equipe é dividida em **4 grupos de revezamento equilibrados** ($g = \text{empIdx} \pmod 4$), garantindo que cada dia útil tenha aproximadamente $\approx \lceil N/4 \rceil$ folgas e mantenha entre 70% e 80% de presença estável na loja.
+  4. **Domingos**: Rotação CLT com teto inegociável de 2 domingos consecutivos trabalhados e garantia do efetivo mínimo `minSundayWorkers` (~35% a 40% de presença). Domingos protegidos com `maxFolgas: 0` têm 100% de trabalho.
+  5. **Escalonamento Pré e Pós-Pico (Lookback & Lookahead)**: Nos blocos de pico, o algoritmo divide a equipe em grupos de ~25% e escalona folgas em $D_{start}-4, D_{start}-3, D_{start}-2, D_{start}-1$ e folgas pós-pico em $D_{end}+1, D_{end}+2$, conectando com o início e fim do mês com **0 violações de CLT 6x1 e 5x2**.
+- **Preservação Rígida de Restrições Legais e Individuais**:
+  - Férias (`FE`), atestado (`AT`), aniversário (`DO`) e vigência contratual (`N/A`) são 100% intocáveis.
+  - Jovem Aprendiz: descanso obrigatório aos sábados, domingos e feriados, e curso teórico (`C`) no dia fixo (`courseDay`).
+- **Bloqueio de Colaboradores Específicos**: Possibilidade de selecionar colaboradores obrigatórios no [ProtectedDaysModal.tsx](file:///c:/Users/mdbsi/OneDrive/Documentos/GitHub/rhescala/components/ProtectedDaysModal.tsx).
+- **Presets Sazonais em 1 Clique**: Dia das Crianças (8 a 12/10), Black Friday (26 a 29/11), Natal (20 a 24/12) e Início do Mês.
 
 ### 4.7 Regra do 1º de Maio e Créditos de Feriado
 - **1º de Maio (Dia do Trabalho)**: O trabalho nesta data concede **2 créditos de folga compensatória** (Folga 1 e Folga 2).
