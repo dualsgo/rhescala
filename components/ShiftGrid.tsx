@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings, ScheduleDiffItem, TacticalDisplayMode, ProtectedDaysConfig } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, DEFAULT_JORNADA_SETTINGS, isEmployeeActiveInMonth, normalizeProtectedDaysConfig, getTacticalLabel, getTacticalCellCode, getTacticalEmoji } from '../constants';
-import { getShiftClassification, isWorkingShift, getPrevMonthWorkStreak } from '../hooks/useScheduleEngine';
+import { getShiftClassification, isWorkingShift, getPrevMonthWorkStreak, getPrevMonthConsecutive } from '../hooks/useScheduleEngine';
 import { OperationalGuideModal } from './OperationalGuideModal';
 
 import { HolidayCredit } from '../hooks/useHolidayCredits';
@@ -130,6 +130,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       { code: 'C', label: 'Curso / Treinamento', color: 'bg-slate-500' },
       { code: 'AT', label: 'Atestado Médico', color: 'bg-rose-400' },
       { code: '7º', label: '7º Dia (Limite 6x1)', color: 'bg-rose-600' },
+      { code: '3D', label: '3º Domingo (Limite CLT)', color: 'bg-rose-600' },
+      { code: '2D', label: '2º Domingo Trabalhado', color: 'bg-amber-500' },
     ];
 
     const tacticalItems = tacticalDisplayMode === 'roles' ? [
@@ -153,6 +155,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
   const prevWorkStreaks = useMemo(() => {
     return getPrevMonthWorkStreak(employees, currentMY.year, currentMY.month);
+  }, [employees, currentMY.year, currentMY.month]);
+
+  const prevMonthConsecs = useMemo(() => {
+    return getPrevMonthConsecutive(employees.filter(e => e.status === 'active' && !e.isYoungApprentice), currentMY.year, currentMY.month);
   }, [employees, currentMY.year, currentMY.month]);
 
   const allHolidays = useMemo(() => {
@@ -778,8 +784,55 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                 streak += prevStreak;
                               }
 
+                              // Cálculo de domingos consecutivos
+                              const isSunday = d.isSunday;
+                              let isSundayViolation = false;
+                              let isSundayWarning = false;
+                              let isSundayRestAfterStreak = false;
+                              let finalSundayStreak = 0;
+
+                              if (isSunday && !emp.isYoungApprentice) {
+                                const initialSundayStreak = prevMonthConsecs.get(emp.id) || 0;
+                                let currentSunCount = initialSundayStreak;
+                                
+                                for (let i = 0; i < d.num - 1; i++) {
+                                  const dDate = new Date(currentMY.year, currentMY.month, i + 1);
+                                  if (dDate.getDay() === 0) {
+                                    const fullDateI = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
+                                    let sI = emp.shifts[monthKey]?.[i] || 'T';
+                                    if (emp.hiredAt && fullDateI < emp.hiredAt) sI = 'N/A';
+                                    else if (emp.firedAt && fullDateI > emp.firedAt) sI = 'N/A';
+                                    else if (emp.atestadoStart && emp.atestadoEnd && fullDateI >= emp.atestadoStart && fullDateI <= emp.atestadoEnd) sI = 'AT';
+                                    else if (emp.vacationStart && emp.vacationEnd && fullDateI >= emp.vacationStart && fullDateI <= emp.vacationEnd) sI = 'FE';
+
+                                    if (isWorkingShift(sI) || sI === 'C') {
+                                      currentSunCount++;
+                                    } else {
+                                      currentSunCount = 0;
+                                    }
+                                  }
+                                }
+
+                                const isCurrentSundayWorking = isWorkingShift(shift) || shift === 'C';
+                                if (isCurrentSundayWorking) {
+                                  finalSundayStreak = currentSunCount + 1;
+                                  if (finalSundayStreak >= 3) {
+                                    isSundayViolation = true;
+                                  } else if (finalSundayStreak === 2) {
+                                    isSundayWarning = true;
+                                  }
+                                } else {
+                                  if (currentSunCount >= 2) {
+                                    isSundayRestAfterStreak = true;
+                                  }
+                                }
+                              }
+
                               const is7thDay = streak === 7;
                               const hasAlert = streak >= 7 && (isWorkingShift(shift) || shift === 'C');
+                              const hasCellViolation = hasAlert || isSundayViolation;
+                              const hasTopRightBadge = !isReadOnly && isSunday && (isSundayViolation || isSundayWarning || isSundayRestAfterStreak);
+
                               const todayStr = new Date().toISOString().split('T')[0];
                               const isPast = d.dateStr < todayStr;
                               const dimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
@@ -791,20 +844,21 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const focusHighlight = isSelectedCol && focusSelectedDay ? 'ring-2 ring-inset ring-orange-500 bg-orange-50/80 dark:bg-orange-950/40' : isSelectedCol ? 'ring-2 ring-inset ring-orange-400/50' : '';
 
                               return (
-                                <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all relative ${dimClass} ${blurClass} ${focusHighlight} ${(!isReadOnly && hasAlert) ? 'ring-2 ring-inset ring-rose-500 bg-rose-50/50 dark:bg-rose-950/30' : (!isReadOnly && is7thDay) ? 'ring-2 ring-inset ring-emerald-500/40 bg-emerald-50/20' : ''}`}>
+                                <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all relative ${dimClass} ${blurClass} ${focusHighlight} ${(!isReadOnly && hasCellViolation) ? 'ring-2 ring-inset ring-rose-500 bg-rose-50/50 dark:bg-rose-950/30' : (!isReadOnly && isSundayWarning) ? 'ring-2 ring-inset ring-amber-500/50 bg-amber-50/20' : (!isReadOnly && is7thDay) ? 'ring-2 ring-inset ring-emerald-500/40 bg-emerald-50/20' : ''}`}>
                                   <div className="relative group flex flex-col items-center gap-1">
                                     {!isReadOnly && cellDiff && (
                                         <span 
-                                          className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-900 shadow-md z-30 cursor-help"
+                                          className="absolute -bottom-1 -left-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-900 shadow-md z-30 cursor-help"
                                           title={`Alteração pós-oficialização (${cellDiff.type}): Oficial [${cellDiff.officialVal}] ➔ Atual [${cellDiff.currentVal}]`}
                                         />
                                     )}
+                                    {/* Badge 1: 7º Dia Consecutivo de Trabalho (Canto Superior Esquerdo) */}
                                     {!isReadOnly && is7thDay && (
                                       <span
                                         className={`absolute -top-1.5 -left-1.5 px-1 py-0.2 text-[8px] font-black rounded-full shadow-md z-30 transition-all ${
                                           hasAlert
-                                            ? 'bg-rose-600 text-white ring-2 ring-white animate-pulse'
-                                            : 'bg-emerald-600 text-white ring-1 ring-white'
+                                            ? 'bg-rose-600 text-white ring-2 ring-white dark:ring-slate-900 animate-pulse'
+                                            : 'bg-emerald-600 text-white ring-1 ring-white dark:ring-slate-900'
                                         }`}
                                         title={
                                           hasAlert
@@ -815,8 +869,32 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                         7º
                                       </span>
                                     )}
+
+                                    {/* Badge 2: Domingos Consecutivos (Canto Superior Direito - Lado Oposto) */}
+                                    {!isReadOnly && isSunday && (isSundayViolation || isSundayWarning || isSundayRestAfterStreak) && (
+                                      <span
+                                        className={`absolute -top-1.5 -right-1.5 px-1 py-0.2 text-[8px] font-black rounded-full shadow-md z-30 transition-all ${
+                                          isSundayViolation
+                                            ? 'bg-rose-600 text-white ring-2 ring-white dark:ring-slate-900 animate-pulse'
+                                            : isSundayWarning
+                                            ? 'bg-amber-500 text-white ring-1 ring-white dark:ring-slate-900'
+                                            : 'bg-emerald-600 text-white ring-1 ring-white dark:ring-slate-900'
+                                        }`}
+                                        title={
+                                          isSundayViolation
+                                            ? `${finalSundayStreak}º Domingo Consecutivo Trabalhado: Violação CLT (máximo 2 domingos consecutivos)!`
+                                            : isSundayWarning
+                                            ? `2º Domingo Consecutivo Trabalhado: Atenção ao limite CLT (o próximo domingo deve ser folga)!`
+                                            : `Folga de Domingo Obrigatória Cumprida (após domingos consecutivos trabalhados)`
+                                        }
+                                      >
+                                        {isSundayViolation ? `${finalSundayStreak}D` : isSundayWarning ? '2D' : 'D✓'}
+                                      </span>
+                                    )}
+
+                                    {/* Badge 3: Pedido de Colaborador */}
                                     {dayRequest && (
-                                      <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full z-10 border-2 border-white dark:border-slate-900 cursor-help flex items-center justify-center group/balloon">
+                                      <div className={`absolute ${hasTopRightBadge ? '-bottom-1 -right-1' : '-top-1 -right-1'} w-2.5 h-2.5 rounded-full z-10 border-2 border-white dark:border-slate-900 cursor-help flex items-center justify-center group/balloon`}>
                                         <div className={`w-full h-full rounded-full ${
                                           dayRequest.status === 'granted' ? 'bg-emerald-500' : 
                                           dayRequest.status === 'refused' ? 'bg-red-500' :
