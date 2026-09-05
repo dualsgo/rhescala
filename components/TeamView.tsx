@@ -17,7 +17,8 @@ interface TeamViewProps {
     birthday: string, 
     contractType?: 'CLT' | 'Sazonal', 
     jornada?: '6x1' | '5x2',
-    hiredAt?: string
+    hiredAt?: string,
+    firedAt?: string
   ) => void;
 }
 
@@ -36,6 +37,44 @@ function formatDateBR(dateStr?: string): string {
   const parts = dateStr.split('-');
   if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
   return dateStr;
+}
+
+/**
+ * Sincroniza a grade de turnos de um colaborador com as novas datas de início (hiredAt) e término (firedAt).
+ * Marca como 'N/A' dias fora do contrato e restaura para 'T' dias que estavam 'N/A' caso o contrato seja estendido.
+ */
+function syncEmployeeContractShifts(emp: Employee, hiredAt?: string, firedAt?: string): Record<string, import('../types').ShiftType[]> {
+  const newShifts: Record<string, import('../types').ShiftType[]> = {};
+  for (const [mKey, shiftArr] of Object.entries(emp.shifts || {})) {
+    if (!Array.isArray(shiftArr)) continue;
+    const parts = mKey.split('-');
+    if (parts.length !== 2) {
+      newShifts[mKey] = [...shiftArr];
+      continue;
+    }
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const updated = [...shiftArr];
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const fullDate = `${mKey}-${String(d).padStart(2, '0')}`;
+      const isOutside = (hiredAt && fullDate < hiredAt) || (firedAt && fullDate > firedAt);
+      const currentShift = updated[d - 1];
+
+      if (isOutside) {
+        if (currentShift !== 'N/A') {
+          updated[d - 1] = 'N/A';
+        }
+      } else {
+        if (currentShift === 'N/A') {
+          updated[d - 1] = 'T';
+        }
+      }
+    }
+    newShifts[mKey] = updated;
+  }
+  return newShifts;
 }
 
 /** When user sets vacation start (saída), auto-compute end = start + 30 days */
@@ -131,7 +170,6 @@ function handleAtestadoClear(emp: Employee, onUpdate: (id: string, data: Partial
   onUpdate(emp.id, updates);
 }
 
-/** Componente Modal para Cadastro de Novo Colaborador */
 interface AddEmployeeModalProps {
   onClose: () => void;
   onAddEmployee: (
@@ -142,7 +180,8 @@ interface AddEmployeeModalProps {
     birthday: string, 
     contractType?: 'CLT' | 'Sazonal', 
     jornada?: '6x1' | '5x2',
-    hiredAt?: string
+    hiredAt?: string,
+    firedAt?: string
   ) => void;
 }
 
@@ -153,6 +192,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
   const [newCargo, setNewCargo] = useState<EmployeeCargo>('Atendente');
   const [newBirthday, setNewBirthday] = useState('');
   const [newHiredAt, setNewHiredAt] = useState('');
+  const [newFiredAt, setNewFiredAt] = useState('');
   const [newContractType, setNewContractType] = useState<'CLT' | 'Sazonal'>('CLT');
   const [newJornada, setNewJornada] = useState<'6x1' | '5x2'>('6x1');
   const { showDialog } = useDialog();
@@ -173,7 +213,8 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
           newBirthday, 
           newContractType, 
           newJornada,
-          newHiredAt || undefined
+          newHiredAt || undefined,
+          newFiredAt || undefined
         );
         onClose();
       }
@@ -242,32 +283,13 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
             </div>
           </div>
 
-          {/* Data de Início (Admissão) */}
-          <div className="p-3.5 bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200/60 dark:border-orange-900/40 rounded-2xl space-y-1.5">
-            <div className="flex items-center gap-1.5">
-              <Icon name="event" className="text-orange-500 text-sm" />
-              <label className="text-[10px] font-black text-orange-900 dark:text-orange-300 uppercase tracking-wider">
-                Data de Início / Admissão
-              </label>
-            </div>
-            <input 
-              type="date" 
-              value={newHiredAt} 
-              onChange={(e) => setNewHiredAt(e.target.value)} 
-              className="w-full bg-white dark:bg-zinc-800 border border-orange-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-orange-500" 
-            />
-            <p className="text-[10px] text-orange-700 dark:text-orange-400/90 font-medium">
-              Antes desta data, o colaborador é desconsiderado na escala (marcado como N/A). Deixe em branco se já atua desde o início.
-            </p>
-          </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Contrato</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Tipo de Contrato</label>
               <select 
                 value={newContractType} 
                 onChange={(e) => setNewContractType(e.target.value as any)}
-                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none"
+                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="CLT">CLT (Efetivo)</option>
                 <option value="Sazonal">Sazonal / Temporário</option>
@@ -278,12 +300,69 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
               <select 
                 value={newJornada} 
                 onChange={(e) => setNewJornada(e.target.value as any)}
-                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none"
+                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="6x1">6x1</option>
                 <option value="5x2">5x2</option>
               </select>
             </div>
+          </div>
+
+          {/* Período de Contrato (Início e Término) */}
+          <div className={`p-4 rounded-2xl border space-y-3 transition-colors ${
+            newContractType === 'Sazonal'
+              ? 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-300/80 dark:border-amber-900/50'
+              : 'bg-orange-50/50 dark:bg-orange-950/20 border-orange-200/60 dark:border-orange-900/40'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Icon name="date_range" className={newContractType === 'Sazonal' ? 'text-amber-600' : 'text-orange-500'} />
+                <label className={`text-[11px] font-black uppercase tracking-wider ${
+                  newContractType === 'Sazonal' ? 'text-amber-900 dark:text-amber-300' : 'text-orange-900 dark:text-orange-300'
+                }`}>
+                  {newContractType === 'Sazonal' ? 'Período do Contrato Sazonal' : 'Período do Contrato / Admissão'}
+                </label>
+              </div>
+              {newContractType === 'Sazonal' && (
+                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-200/70 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200">
+                  Temporário
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block mb-1">
+                  Início / Admissão {newContractType === 'Sazonal' && '*'}
+                </label>
+                <input 
+                  type="date" 
+                  value={newHiredAt} 
+                  onChange={(e) => setNewHiredAt(e.target.value)} 
+                  className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-orange-500" 
+                />
+                <span className="text-[9px] text-slate-400 block mt-0.5">Antes desta data: N/A</span>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block mb-1">
+                  Término do Contrato {newContractType === 'Sazonal' ? '(Previsto)' : '(Opcional)'}
+                </label>
+                <input 
+                  type="date" 
+                  value={newFiredAt} 
+                  onChange={(e) => setNewFiredAt(e.target.value)} 
+                  className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-orange-500" 
+                />
+                <span className="text-[9px] text-slate-400 block mt-0.5">Após esta data: N/A</span>
+              </div>
+            </div>
+
+            <p className={`text-[10px] font-medium leading-relaxed ${
+              newContractType === 'Sazonal' ? 'text-amber-800 dark:text-amber-300/90' : 'text-orange-700 dark:text-orange-400/90'
+            }`}>
+              💡 <strong>Automação Inteligente:</strong> Os dias fora do período de contrato são automaticamente desconsiderados (marcados como <strong>N/A</strong>). Não é necessário preencher folgas (F) caso o colaborador só atue em parte do mês.
+            </p>
           </div>
 
           <div>
@@ -461,45 +540,116 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
             </div>
           </div>
 
-          {/* Section 2: Data de Início (Admissão) & Contrato */}
+          {/* Section 2: Período de Contrato & Vínculo */}
           <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
             <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
               <Icon name="event_available" className="text-orange-500 text-base" />
-              <span>Data de Início (Admissão) & Contrato</span>
+              <span>Período de Contrato & Vínculo</span>
             </div>
 
-            <div className="p-4 bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200/70 dark:border-orange-900/40 rounded-2xl space-y-2">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <label className="text-[10px] font-black text-orange-950 dark:text-orange-200 uppercase tracking-wider flex items-center gap-1.5">
-                  <Icon name="calendar_month" className="text-orange-500 text-sm" />
-                  Data de Início / Admissão
-                </label>
-                {employee.hiredAt && (
-                  <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400">
-                    Início: {formatDateBR(employee.hiredAt)}
+            <div className={`p-4 rounded-2xl border space-y-3 transition-colors ${
+              employee.contractType === 'Sazonal'
+                ? 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-300/80 dark:border-amber-900/50'
+                : 'bg-orange-50/60 dark:bg-orange-950/20 border-orange-200/70 dark:border-orange-900/40'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Icon name="date_range" className={`text-base ${employee.contractType === 'Sazonal' ? 'text-amber-600' : 'text-orange-500'}`} />
+                  <span className={`text-xs font-black uppercase tracking-wide ${
+                    employee.contractType === 'Sazonal' ? 'text-amber-900 dark:text-amber-300' : 'text-orange-950 dark:text-orange-200'
+                  }`}>
+                    {employee.contractType === 'Sazonal' ? 'Vigência do Contrato Sazonal' : 'Período Contratual'}
+                  </span>
+                </div>
+
+                {employee.contractType === 'Sazonal' && (
+                  <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200">
+                    Contrato Temporário
                   </span>
                 )}
               </div>
-              <input
-                type="date"
-                disabled={isReadOnly}
-                value={employee.hiredAt || ''}
-                onChange={(e) => onUpdateEmployee(employee.id, { hiredAt: e.target.value })}
-                className="w-full bg-white dark:bg-zinc-800 border border-orange-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-orange-500"
-              />
-              <p className="text-[10px] text-orange-800 dark:text-orange-300/90 font-medium leading-relaxed">
-                💡 <strong>Como funciona:</strong> Nos dias e meses anteriores a esta data, o colaborador é automaticamente desconsiderado (marcado como <strong>N/A</strong>), não interferindo em folgas, escalas e relatórios.
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Data de Início / Admissão */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                      Início / Admissão
+                    </label>
+                    {employee.hiredAt && (
+                      <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400">
+                        {formatDateBR(employee.hiredAt)}
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="date"
+                    disabled={isReadOnly}
+                    value={employee.hiredAt || ''}
+                    onChange={(e) => {
+                      const newHiredAt = e.target.value || undefined;
+                      const syncedShifts = syncEmployeeContractShifts(employee, newHiredAt, employee.firedAt);
+                      onUpdateEmployee(employee.id, { hiredAt: newHiredAt, shifts: syncedShifts });
+                    }}
+                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                  <p className="text-[9px] text-slate-400">
+                    Antes desta data: <strong>N/A</strong> automático
+                  </p>
+                </div>
+
+                {/* Data de Término / Fim de Contrato */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                      Término do Contrato
+                    </label>
+                    {employee.firedAt && !isReadOnly && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const syncedShifts = syncEmployeeContractShifts(employee, employee.hiredAt, undefined);
+                          onUpdateEmployee(employee.id, { firedAt: undefined, shifts: syncedShifts });
+                        }}
+                        className="text-[9px] font-bold text-rose-500 hover:text-rose-700 underline"
+                        title="Remover data de término"
+                      >
+                        Limpar término
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="date"
+                    disabled={isReadOnly}
+                    value={employee.firedAt || ''}
+                    onChange={(e) => {
+                      const newFiredAt = e.target.value || undefined;
+                      const syncedShifts = syncEmployeeContractShifts(employee, employee.hiredAt, newFiredAt);
+                      onUpdateEmployee(employee.id, { firedAt: newFiredAt, shifts: syncedShifts });
+                    }}
+                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                  <p className="text-[9px] text-slate-400">
+                    Após esta data: <strong>N/A</strong> automático
+                  </p>
+                </div>
+              </div>
+
+              <p className={`text-[10px] font-medium leading-relaxed ${
+                employee.contractType === 'Sazonal' ? 'text-amber-800 dark:text-amber-300/90' : 'text-orange-800 dark:text-orange-300/90'
+              }`}>
+                💡 <strong>Automação de Folgas & Período:</strong> Qualquer dia fora do período de vigência ([início] até [término]) é automaticamente considerado <strong>N/A</strong>. Você <strong>não precisa colocar folga (F)</strong> caso o colaborador trabalhe apenas uma parte do mês!
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Contrato</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Tipo de Contrato</label>
                 <select
                   disabled={isReadOnly}
                   value={employee.contractType || 'CLT'}
                   onChange={(e) => onUpdateEmployee(employee.id, { contractType: e.target.value as any })}
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="CLT">CLT (Efetivo)</option>
                   <option value="Sazonal">Sazonal / Temporário</option>
@@ -512,7 +662,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   disabled={isReadOnly}
                   value={employee.jornada || '6x1'}
                   onChange={(e) => onUpdateEmployee(employee.id, { jornada: e.target.value as any })}
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="6x1">6x1</option>
                   <option value="5x2">5x2</option>
@@ -526,7 +676,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   disabled={isReadOnly}
                   value={employee.birthday || ''}
                   onChange={(e) => onUpdateEmployee(employee.id, { birthday: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
             </div>
@@ -1044,11 +1194,23 @@ export const TeamView: React.FC<TeamViewProps> = ({
 
                 {/* Key Chips */}
                 <div className="flex flex-col gap-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-300 pt-2 border-t border-slate-100 dark:border-zinc-800">
-                  {/* Data de Início / Admissão */}
-                  {emp.hiredAt && (
-                    <div className="flex items-center gap-1.5 text-[10px] text-orange-600 dark:text-orange-400 bg-orange-50/70 dark:bg-orange-950/30 px-2 py-0.5 rounded-lg border border-orange-100 dark:border-orange-900/30 w-fit">
-                      <Icon name="event" className="text-xs shrink-0" />
-                      <span>Início: {formatDateBR(emp.hiredAt)}</span>
+                  {/* Período de Contrato / Início & Término */}
+                  {(emp.hiredAt || emp.firedAt) && (
+                    <div className={`flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-lg border w-fit ${
+                      emp.contractType === 'Sazonal'
+                        ? 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/40 font-black'
+                        : 'text-orange-600 dark:text-orange-400 bg-orange-50/70 dark:bg-orange-950/30 border-orange-100 dark:border-orange-900/30'
+                    }`}>
+                      <Icon name="date_range" className="text-xs shrink-0" />
+                      <span>
+                        {emp.contractType === 'Sazonal'
+                          ? `Contrato: ${formatDateBR(emp.hiredAt) || '...'} a ${formatDateBR(emp.firedAt) || 'Em aberto'}`
+                          : emp.hiredAt && emp.firedAt
+                          ? `Início: ${formatDateBR(emp.hiredAt)} • Término: ${formatDateBR(emp.firedAt)}`
+                          : emp.hiredAt
+                          ? `Início: ${formatDateBR(emp.hiredAt)}`
+                          : `Término: ${formatDateBR(emp.firedAt)}`}
+                      </span>
                     </div>
                   )}
 

@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { SyncStatus, Employee, Holiday, JornadaSettings, OfficialScheduleSnapshot, ProtectedDaysMap } from '../types';
+import { isEmployeeActiveOnDay } from '../constants';
 import { Icon } from './Icon';
 import { useDialog } from '../contexts/DialogContext';
 import { apiStore } from '../src/gas-api';
@@ -114,9 +115,14 @@ export const DataManager: React.FC<DataManagerProps> = ({
           const tactPos = tactArr[idx];
           const shiftVal = shiftsArr[idx];
 
-          let pos = (tactPos && typeof tactPos === 'string' && tactPos.trim()) 
-            ? tactPos.trim() 
-            : (shiftVal && typeof shiftVal === 'string' && shiftVal.trim() ? shiftVal.trim() : 'NONE');
+          let pos = 'NONE';
+          if (!isEmployeeActiveOnDay(emp, fullDate, mKey, idx) || shiftVal === 'N/A') {
+            pos = 'N/A';
+          } else if (tactPos && typeof tactPos === 'string' && tactPos.trim()) {
+            pos = tactPos.trim();
+          } else if (shiftVal && typeof shiftVal === 'string' && shiftVal.trim()) {
+            pos = shiftVal.trim();
+          }
 
           escalas.push({
             colaborador: emp.name,

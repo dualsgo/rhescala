@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Employee, MonthYear, Holiday } from '../types';
-import { buildHolidaySet, getNationalHolidays, getShortName, isEmployeeActiveInMonth } from '../constants';
+import { buildHolidaySet, getNationalHolidays, getShortName, isEmployeeActiveInMonth, isEmployeeActiveOnDay } from '../constants';
 
 interface PrintableScheduleProps {
   employees: Employee[];
@@ -114,11 +114,12 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
                 {emp.workPeriod || ''}
               </td>
               {days.map(d => {
-                const shift = emp.shifts[monthKey]?.[d.num - 1] || 'T';
+                const isOut = !isEmployeeActiveOnDay(emp, d.dateStr, monthKey, d.num - 1);
+                const shift = isOut ? 'N/A' : (emp.shifts[monthKey]?.[d.num - 1] || 'T');
                 const isWorking = shift === 'T' || ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].includes(shift);
-                const display = (isWorking || shift === 'N/A') ? '' : (shift === 'AT' ? '+' : (shift.startsWith('FF') ? 'FF' : shift));
+                const display = (isOut || shift === 'N/A') ? '-' : (isWorking ? '' : (shift === 'AT' ? '+' : (shift.startsWith('FF') ? 'FF' : shift)));
                 return (
-                  <td key={d.num} className="border border-black p-1 text-center font-black">
+                  <td key={d.num} className={`border border-black p-1 text-center font-black ${(isOut || shift === 'N/A') ? 'text-gray-400 bg-gray-50' : ''}`}>
                     {display}
                   </td>
                 );

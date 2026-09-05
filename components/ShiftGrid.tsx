@@ -919,7 +919,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                       onClick={() => onSelectDay(d.num - 1)}
                                       title={
                                         shift === 'N/A' 
-                                          ? (emp.hiredAt ? `Não admitido nesta data (Início: ${emp.hiredAt.split('-').reverse().join('/')})` : 'Desconsiderado (N/A)') 
+                                          ? (emp.hiredAt && fullDate < emp.hiredAt 
+                                              ? `Não admitido nesta data (Início: ${emp.hiredAt.split('-').reverse().join('/')})` 
+                                              : emp.firedAt && fullDate > emp.firedAt 
+                                              ? `Contrato encerrado nesta data (Término: ${emp.firedAt.split('-').reverse().join('/')})`
+                                              : 'Desconsiderado (N/A)') 
                                           : shift?.startsWith('FF')
                                           ? (() => {
                                               const explicit = shift.split(' ')[1];
@@ -1001,6 +1005,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                           }}
                                           className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-50"
                                         >
+                                          {shift === 'N/A' && <option value="N/A">Fora do Contrato (N/A)</option>}
                                           <option value="T">Trabalha (T)</option>
                                           <option value="F">Folga (F)</option>
                                           <option value="AT">Atestado Médico (Apenas este dia) 🩺</option>

@@ -8,7 +8,7 @@ import {
   calculateLunches, 
   resolveTacticalDay 
 } from '../hooks/useScheduleEngine';
-import { buildHolidaySet, getShortName, isEmployeeActiveInMonth, getTacticalLabel } from '../constants';
+import { buildHolidaySet, getShortName, isEmployeeActiveInMonth, isEmployeeActiveOnDay, getTacticalLabel } from '../constants';
 import { useDialog } from '../contexts/DialogContext';
 
 interface MobileEmployerViewerProps {
@@ -78,9 +78,10 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     let holidaysWorked = 0;
 
     for (let i = 0; i < daysInMonth; i++) {
-      const s = shifts[i] || 'T';
-      const date = new Date(currentMY.year, currentMY.month, i + 1);
       const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
+      const isOut = !isEmployeeActiveOnDay(currentEmp, dateStr, monthKey, i);
+      const s = isOut ? 'N/A' : (shifts[i] || 'T');
+      const date = new Date(currentMY.year, currentMY.month, i + 1);
       const isSunday = date.getDay() === 0;
       const isHoliday = holidaySet.has(dateStr);
 
@@ -88,7 +89,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
         workDays++;
         if (isSunday) sundaysWorked++;
         if (isHoliday) holidaysWorked++;
-      } else {
+      } else if (s !== 'N/A') {
         offDays++;
       }
     }
@@ -121,7 +122,8 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     const isHoliday = holidaySet.has(dateStr);
     const isSunday = dow === 0;
 
-    const shift = (currentEmp.shifts[monthKey] || [])[currentDayIdx] || 'T';
+    const isOut = !isEmployeeActiveOnDay(currentEmp, dateStr, monthKey, currentDayIdx);
+    const shift = isOut ? 'N/A' : ((currentEmp.shifts[monthKey] || [])[currentDayIdx] || 'T');
     const isWorking = isWorkingShift(shift);
     const hour = (currentEmp.dailyHours[monthKey] || [])[currentDayIdx] || currentEmp.workPeriod || '10h às 18h20';
     const classification = getShiftClassification(hour, isSunday, jornadaSettings);
@@ -169,7 +171,9 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     const resolved = resolveTacticalDay(activeEmployees, monthKey, currentDayIdx, isHoliday, isSunday, jornadaSettings);
 
     activeEmployees.forEach(emp => {
-      const shift = (emp.shifts[monthKey] || [])[currentDayIdx] || 'T';
+      const isOut = !isEmployeeActiveOnDay(emp, dateStr, monthKey, currentDayIdx);
+      const shift = isOut ? 'N/A' : ((emp.shifts[monthKey] || [])[currentDayIdx] || 'T');
+      if (isOut || shift === 'N/A') return;
       const hour = (emp.dailyHours[monthKey] || [])[currentDayIdx] || emp.workPeriod || '10h às 18h20';
       const isWorking = isWorkingShift(shift);
       const classification = getShiftClassification(hour, isSunday, jornadaSettings);
@@ -204,7 +208,8 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
       const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
       const isHoliday = holidaySet.has(dateStr);
       const isSunday = dow === 0;
-      const shift = (currentEmp.shifts[monthKey] || [])[i] || 'T';
+      const isOut = !isEmployeeActiveOnDay(currentEmp, dateStr, monthKey, i);
+      const shift = isOut ? 'N/A' : ((currentEmp.shifts[monthKey] || [])[i] || 'T');
       const hour = (currentEmp.dailyHours[monthKey] || [])[i] || currentEmp.workPeriod || '10h às 18h20';
       const isWorking = isWorkingShift(shift);
 
@@ -245,6 +250,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
   };
 
   const getShiftBadge = (shift: ShiftType) => {
+    if (shift === 'N/A') return <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-slate-400 font-bold text-xs uppercase">Fora do Contrato</span>;
     if (shift === 'FE') return <span className="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-black text-xs uppercase">Férias</span>;
     if (shift.startsWith('FF')) return <span className="px-2 py-0.5 rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 font-black text-xs uppercase">Folga Feriado</span>;
     if (shift === 'F') return <span className="px-2 py-0.5 rounded-lg bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 font-black text-xs uppercase">Folga</span>;
@@ -660,7 +666,8 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
               const dow = date.getDay();
               const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
               const isHoliday = holidaySet.has(dateStr);
-              const shift = (currentEmp.shifts[monthKey] || [])[i] || 'T';
+              const isOut = !isEmployeeActiveOnDay(currentEmp, dateStr, monthKey, i);
+              const shift = isOut ? 'N/A' : ((currentEmp.shifts[monthKey] || [])[i] || 'T');
               const isWorking = isWorkingShift(shift);
               const isToday = isCurrentMonth && i === currentDayIdx;
 
@@ -670,6 +677,8 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
                   className={`p-1.5 rounded-xl flex flex-col items-center justify-center border text-[10px] font-black transition-all ${
                     isToday
                       ? 'ring-2 ring-orange-500 bg-orange-50 dark:bg-orange-950/40 border-orange-400'
+                      : isOut || shift === 'N/A'
+                      ? 'bg-slate-50 dark:bg-zinc-900/60 border-dashed border-slate-200 dark:border-zinc-800 text-slate-400 dark:text-zinc-600 opacity-60'
                       : isWorking
                       ? 'bg-slate-50 dark:bg-zinc-800/80 border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200'
                       : shift === 'FE'
@@ -681,7 +690,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
                 >
                   <span>{i + 1}</span>
                   <span className="text-[8px] uppercase font-bold mt-0.5">
-                    {shift === 'FE' ? 'FE' : shift === 'F' ? 'F' : shift.startsWith('FF') ? 'FF' : 'T'}
+                    {isOut || shift === 'N/A' ? '-' : shift === 'FE' ? 'FE' : shift === 'F' ? 'F' : shift.startsWith('FF') ? 'FF' : 'T'}
                   </span>
                 </div>
               );

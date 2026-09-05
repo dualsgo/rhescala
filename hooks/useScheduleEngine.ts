@@ -1,6 +1,6 @@
 
 import { Employee, ShiftType, Holiday, JornadaSettings, MonthYear, OfficialScheduleSnapshot, ScheduleDiffItem, ProtectedDayDetail, ProtectedDaysConfig } from '../types';
-import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth, normalizeProtectedDaysConfig, normalizeProtectedDaysDetails } from '../constants';
+import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth, isEmployeeActiveOnDay, normalizeProtectedDaysConfig, normalizeProtectedDaysDetails } from '../constants';
 
 
 // ─── Shared weekday names ─────────────────────────────────────────────────────
@@ -1877,7 +1877,9 @@ export function getCleaningSchedule(
     const schedule: { day: number; empName: string; empId?: string }[] = [];
 
     for (let d = 0; d < daysInMonth; d++) {
+        const dStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`;
         const workingToday = activeEmps.filter(emp => {
+            if (!isEmployeeActiveOnDay(emp, dStr, monthKey, d)) return false;
             const shift = (emp.shifts?.[monthKey] || [])[d] || 'T';
             return isWorkingShift(shift);
         });
