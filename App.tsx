@@ -58,6 +58,7 @@ import { ScheduleDiffModal } from './components/ScheduleDiffModal';
 import { MobileEmployerViewer } from './components/MobileEmployerViewer';
 import { ProtectedDaysModal } from './components/ProtectedDaysModal';
 import { CreateMonthModal } from './components/CreateMonthModal';
+import { DailyScheduleModulatorModal } from './components/DailyScheduleModulatorModal';
 
 const App: React.FC = () => {
   const [employees, setEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', [PLACEHOLDER_EMPLOYEE]);
@@ -131,7 +132,7 @@ const App: React.FC = () => {
   const [isDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
   const [tacticalDisplayMode, setTacticalDisplayMode] = useLocalPreference<TacticalDisplayMode>('rhescala_tactical_display_mode', 'positions');
   const { showDialog } = useDialog();
-  const [waModal, setWaModal] = useState<{ show: boolean, text: string }>({ show: false, text: '' });
+  const [waModal, setWaModal] = useState<{ show: boolean; dayIdx: number }>({ show: false, dayIdx: 0 });
   const [showHelp, setShowHelp] = useState(false);
   const [selectedEmployeeForCard, setSelectedEmployeeForCard] = useState<Employee | null>(null);
   const [employeeCardInitialTab, setEmployeeCardInitialTab] = useState<'mes' | 'atual' | 'pedidos' | 'atestado'>('mes');
@@ -645,189 +646,9 @@ const App: React.FC = () => {
   }, []);
 
   const handleShareWhatsApp = useCallback((dayIdx: number) => {
-    try {
-      const weekdaysFull = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-      const date = new Date(currentMY.year, currentMY.month, dayIdx + 1);
-      const weekdayName = weekdaysFull[date.getDay()];
-      const dateFormatted = `${String(dayIdx + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}`;
-      
-      const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
-      const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(dateStr);
-      const isSunday = date.getDay() === 0;
-
-      let text = `📅 *Escala ${weekdayName} ${dateFormatted}*\n`;
-      if (isHoliday) {
-        text += `⏱️ Jornada 5h45 + 15 min. pausa\n`;
-      }
-      text += `\n`;
-
-      const groups: Record<string, any[]> = {};
-      const folgas: string[] = [];
-      const atestados: string[] = [];
-
-      const activeEmps = (employees || []).filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
-      const resolvedPositions = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, activeJornadaSettings);
-      
-      activeEmps.forEach(e => {
-        const shift = e.shifts?.[monthKey]?.[dayIdx] || 'T';
-        
-        if (shift === 'F' || (typeof shift === 'string' && shift.startsWith('FF'))) {
-          folgas.push(`${getShortName(e.name, activeEmps)} (${shift})`);
-          return;
-        }
-
-        if (shift === 'AT') {
-          atestados.push(getShortName(e.name, activeEmps));
-          return;
-        }
-        
-        if (!isWorkingShift(shift)) return; // Ignore FE, C, etc.
-
-        const hour = e.dailyHours?.[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
-        let pos = e.tacticalPositions?.[monthKey]?.[dayIdx];
-        if (!pos || pos === 'AUTO') {
-          if (shift !== 'T') pos = shift;
-          else pos = resolvedPositions[e.id];
-        }
-        const posEmoji = getTacticalEmoji(pos);
-        
-        if (!groups[hour]) groups[hour] = [];
-        groups[hour].push({ ...e, firstName: getShortName(e.name, activeEmps), posEmoji, pos });
-      });
-
-      const hourOrder = isHoliday ? ['12h às 18h', '13h às 19h', '14h às 20h', '15h às 21h'] : 
-                        isSunday ? ['12h às 20h', '13h às 21h'] :
-                        ['10h às 16h15', '10h às 18h20', '12h às 20h20', '13h40 às 22h'];
-
-      Object.keys(groups).sort((a, b) => {
-        const idxA = hourOrder.indexOf(a);
-        const idxB = hourOrder.indexOf(b);
-        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-        return a.localeCompare(b);
-      }).forEach(hour => {
-        const members = groups[hour];
-        const shiftName = getShiftClassification(hour, isSunday, activeJornadaSettings);
-        const isOpening = shiftName === 'Abertura';
-
-        text += `⏰ *${shiftName} ${hour}*\n`;
-        const lunches = calculateLunches(members, isHoliday, isSunday, isOpening, activeJornadaSettings) || [];
-
-        members.forEach((m, idx) => {
-          const lunchTime = lunches[idx] || '13h';
-          text += `${m.posEmoji} ${m.firstName} (almoço ${lunchTime})\n`;
-        });
-        text += '\n';
-      });
-
-      if (folgas.length > 0) {
-        text += `Folgas: ${folgas.join(', ')}\n`;
-      }
-      if (atestados.length > 0) {
-        text += `🩺 Atestados: ${atestados.join(', ')}\n`;
-      }
-
-      const workingEmps = activeEmps.filter(e => isWorkingShift(e.shifts?.[monthKey]?.[dayIdx] || 'T'));
-      if (workingEmps.length > 0) {
-        const empsWithPos = workingEmps.map(e => {
-          const shift = e.shifts?.[monthKey]?.[dayIdx] || 'T';
-          const hour = e.dailyHours?.[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
-          const shiftName = getShiftClassification(hour, isSunday, activeJornadaSettings);
-          let pos = e.tacticalPositions?.[monthKey]?.[dayIdx];
-          if (!pos || pos === 'AUTO') {
-            if (shift !== 'T') pos = shift;
-            else pos = resolvedPositions[e.id];
-          }
-          return { ...e, shiftName, pos };
-        });
-
-        const getPriority = (pos: string) => {
-          if (pos === 'P3') return 1;
-          if (pos === 'P1') return 2;
-          if (pos === 'P4') return 3;
-          return 4;
-        };
-
-        const pickDigital = (group: any[], excludeIds: string[] = [], seedOffset: number = 0) => {
-          let available = group.filter(e => !excludeIds.includes(e.id));
-          if (available.length === 0) available = group;
-          if (available.length === 0) return null;
-          const minPriority = Math.min(...available.map(e => getPriority(e.pos)));
-          const candidates = available.filter(e => getPriority(e.pos) === minPriority);
-          candidates.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-          const digitalIdx = (dayIdx * 7 + currentMY.month * 11 + seedOffset) % Math.max(1, candidates.length);
-          return candidates[digitalIdx];
-        };
-
-        const turno1 = empsWithPos.filter(e => e.shiftName === 'Abertura');
-        const turno2 = empsWithPos.filter(e => e.shiftName !== 'Abertura');
-
-        let digital1 = pickDigital(turno1);
-        let digital2 = pickDigital(turno2);
-        
-        if (!digital1 && turno2.length > 1) {
-          const remaining = turno2.filter(e => e.id !== digital2?.id);
-          digital1 = pickDigital(remaining);
-        } else if (!digital2 && turno1.length > 1) {
-          const remaining = turno1.filter(e => e.id !== digital1?.id);
-          digital2 = pickDigital(remaining);
-        }
-
-        text += `\n📱 *Digital (WhatsApp da Loja)*\n`;
-        const digitals = [digital1, digital2].filter(Boolean);
-        if (digitals.length > 0) {
-          digitals.forEach(d => {
-            text += `• ${d.shiftName}: ${getShortName(d.name, activeEmps)}\n`;
-          });
-        } else {
-          text += `• Responsável: Não definido\n`;
-        }
-
-        const excludeForRetiradas = [digital1?.id, digital2?.id].filter(Boolean) as string[];
-        let retirada1 = pickDigital(turno1, excludeForRetiradas, 3);
-        let retirada2 = pickDigital(turno2, excludeForRetiradas, 3);
-
-        if (!retirada1 && turno2.length > 1) {
-          const remaining = turno2.filter(e => e.id !== retirada2?.id);
-          retirada1 = pickDigital(remaining, excludeForRetiradas, 3);
-        } else if (!retirada2 && turno1.length > 1) {
-          const remaining = turno1.filter(e => e.id !== retirada1?.id);
-          retirada2 = pickDigital(remaining, excludeForRetiradas, 3);
-        }
-
-        text += `\n🛍️ *Retiradas Online*\n`;
-        const retiradas = [retirada1, retirada2].filter(Boolean);
-        if (retiradas.length > 0) {
-          retiradas.forEach(r => {
-            text += `• ${r.shiftName}: ${getShortName(r.name, activeEmps)}\n`;
-          });
-        } else {
-          text += `• Responsável: Não definido\n`;
-        }
-      }
-
-      if (isHoliday) {
-        text += `\n⚠️ *Aviso:* Pausa para almoço 1 colaborador por vez. Saída permitida somente após o retorno do outro. Primeira saída 14h30\n`;
-      }
-
-      // Legenda de Funções no rodapé do texto de WhatsApp
-      text += `\n📋 *Legenda de Funções:*\n`;
-      text += `🟥 Caixa\n`;
-      text += `🟧 Pacote\n`;
-      text += `🟨 Fiscal\n`;
-      text += `🟩 Atendimento\n`;
-      text += `🟦 Apoio\n`;
-      text += `📦 Estoque\n`;
-
-      setWaModal({ show: true, text });
-    } catch (err: any) {
-      console.error('Erro ao gerar escala para WhatsApp:', err);
-      showDialog({
-        title: 'Erro de Geração',
-        message: `Ocorreu um erro ao gerar o texto da escala para WhatsApp: ${err?.message || String(err)}`,
-        type: 'alert'
-      });
-    }
-  }, [currentMY, employees, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, showDialog]);
+    setSelectedDayIdx(dayIdx);
+    setWaModal({ show: true, dayIdx });
+  }, []);
 
   const handleShareApoioWhatsApp = useCallback((dayIdx: number) => {
     try {
@@ -1519,41 +1340,19 @@ const App: React.FC = () => {
          </div>
        )}
 
-       {/* WhatsApp Modal */}
+       {/* Modulador da Escala Diária (WhatsApp) */}
        {waModal.show && (
-         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-sm animate-fade-in">
-           <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800">
-             <div className="flex justify-between items-center mb-6">
-               <h4 className="text-xl font-extrabold flex items-center gap-2 text-slate-900 dark:text-slate-100">
-                 <Icon name="chat" className="text-green-600 dark:text-green-500" /> Escala Diária
-               </h4>
-               <button onClick={() => setWaModal({ show: false, text: '' })} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400">
-                 <Icon name="close" />
-               </button>
-             </div>
-             <textarea
-               onChange={(e) => setWaModal(prev => ({ ...prev, text: e.target.value }))}
-               className="w-full h-80 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm font-medium focus:ring-2 focus:ring-green-500/50 resize-none whitespace-pre-wrap text-slate-900 dark:text-slate-100"
-               value={waModal.text}
-             />
-             <div className="mt-6 flex gap-3">
-               <button
-                 onClick={async () => { 
-                   const copied = await copyToClipboard(waModal.text); 
-                   if (copied) {
-                     await showDialog({ message: 'Texto da escala copiado com sucesso! Você já pode colar no WhatsApp.' }); 
-                   } else {
-                     await showDialog({ message: 'Não foi possível copiar automaticamente. Por favor, selecione e copie o texto no campo acima.', type: 'alert' }); 
-                   }
-                   setWaModal({ show: false, text: '' });
-                 }}
-                 className="flex-1 bg-green-600 dark:bg-green-700 text-white font-extrabold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:bg-green-700 dark:hover:bg-green-800 transition-all active:scale-95"
-               >
-                 <Icon name="content_copy" /> Copiar Escala
-               </button>
-             </div>
-           </div>
-         </div>
+         <DailyScheduleModulatorModal
+           isOpen={waModal.show}
+           onClose={() => setWaModal(prev => ({ ...prev, show: false }))}
+           dayIdx={waModal.dayIdx}
+           currentMY={currentMY}
+           employees={employees}
+           customHolidays={customHolidays}
+           deletedNationalHolidays={deletedNationalHolidays}
+           jornadaSettings={activeJornadaSettings}
+           tacticalDisplayMode={tacticalDisplayMode}
+         />
        )}
 
        {/* Floating Manager Toolbar for Mobile */}
