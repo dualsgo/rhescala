@@ -132,6 +132,8 @@ export const Header: React.FC<HeaderProps> = ({
     }
   ];
 
+  const configItems = operationsSections.flatMap(s => s.items);
+
   return (
     <header className="bg-white dark:bg-black border-b border-slate-200 dark:border-zinc-800 sticky top-0 z-50 shadow-sm transition-colors h-14">
       {/* Backdrop overlay to prevent clicking behind open dropdowns */}
@@ -776,9 +778,13 @@ export const Header: React.FC<HeaderProps> = ({
                           onViewChange(item.id as any);
                           setShowMobileMenu(false);
                         }}
-                        className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 flex items-center gap-2 text-xs font-bold"
+                        className={`p-3 rounded-xl flex items-center gap-2 text-xs font-bold text-left transition-all ${
+                          currentView === item.id 
+                            ? 'bg-orange-500 text-white shadow-md' 
+                            : 'bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-slate-300'
+                        }`}
                       >
-                        <Icon name={item.icon} className="text-sm text-slate-400" />
+                        <Icon name={item.icon} className={`text-sm ${currentView === item.id ? 'text-white' : 'text-slate-400'}`} />
                         <span className="truncate">{item.label}</span>
                       </button>
                     ))}

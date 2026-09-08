@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Employee, MonthYear, Holiday, ShiftType } from '../types';
+import { Employee, MonthYear, Holiday, ShiftType, AuditLogEntry } from '../types';
 import { Icon } from './Icon';
 import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { isWorkingShift } from '../hooks/useScheduleEngine';
@@ -16,8 +16,9 @@ interface EmployeeScheduleCardProps {
   isAdmin?: boolean;
   isValidated?: boolean;
   onClose: () => void;
-  initialTab?: 'mes' | 'atual' | 'pedidos' | 'atestado';
+  initialTab?: 'mes' | 'atual' | 'pedidos' | 'atestado' | 'historico';
   initialDate?: string;
+  auditLogs?: AuditLogEntry[];
 }
 
 export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
@@ -31,13 +32,14 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   isValidated,
   onClose,
   initialTab = 'mes',
-  initialDate
+  initialDate,
+  auditLogs = [],
 }) => {
   const [newRequest, setNewRequest] = React.useState('');
   const [selectedRequestDate, setSelectedRequestDate] = React.useState('');
   const [showSubmitFeedback, setShowSubmitFeedback] = React.useState(false);
   const effectiveInitialTab = (!isAdmin && initialTab === 'atestado') ? 'mes' : initialTab;
-  const [activeTab, setActiveTab] = React.useState<'mes' | 'atual' | 'pedidos' | 'atestado'>(effectiveInitialTab);
+  const [activeTab, setActiveTab] = React.useState<'mes' | 'atual' | 'pedidos' | 'atestado' | 'historico'>(effectiveInitialTab);
   const [requestType, setRequestType] = React.useState<'folga_aviso' | 'troca_turno'>('folga_aviso');
   const [targetEmployeeId, setTargetEmployeeId] = React.useState('');
 
@@ -150,6 +152,13 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   const pendingCredits = holidayCredits.filter(c => c.status === 'pending');
   const scheduledCredits = holidayCredits.filter(c => c.status === 'scheduled');
 
+  const myAuditLogs = React.useMemo(() => {
+    if (!auditLogs || auditLogs.length === 0) return [];
+    return auditLogs
+      .filter(log => log.empId === employee.id)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [auditLogs, employee.id]);
+
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
       <div className="bg-white dark:bg-black w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-300">
@@ -192,6 +201,18 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
             className={`px-4 py-4 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${activeTab === 'pedidos' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
           >
             Solicitações
+          </button>
+          <button 
+            onClick={() => setActiveTab('historico')}
+            className={`px-4 py-4 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'historico' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+          >
+            <Icon name="history_edu" className="text-sm" />
+            <span>Histórico</span>
+            {myAuditLogs.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-orange-500 text-white text-[9px] font-black shadow-xs">
+                {myAuditLogs.length}
+              </span>
+            )}
           </button>
           {isAdmin && (
             <button 
@@ -805,6 +826,109 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
             </div>
           </div>
           </div>
+          )}
+
+          {activeTab === 'historico' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-transparent border border-orange-200/60 dark:border-orange-900/40 p-5 rounded-2xl flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-500/20 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0">
+                  <Icon name="history_edu" className="text-2xl" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">
+                    Histórico de Alterações na Escala
+                  </h4>
+                  <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mt-0.5">
+                    Registro de todas as mudanças realizadas após a oficialização da escala, com justificativas e horários de alteração.
+                  </p>
+                </div>
+              </div>
+
+              {myAuditLogs.length === 0 ? (
+                <div className="p-12 text-center flex flex-col items-center justify-center rounded-3xl bg-slate-50 dark:bg-zinc-900/50 border border-dashed border-slate-200 dark:border-zinc-800">
+                  <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
+                    <Icon name="check_circle" className="text-3xl" />
+                  </div>
+                  <h5 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                    Nenhuma Alteração Registrada
+                  </h5>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium max-w-sm mt-1">
+                    Sua escala permanece exatamente conforme a versão original oficializada, sem alterações posteriores.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                      {myAuditLogs.length} alteraç{myAuditLogs.length === 1 ? 'ão registrada' : 'ões registradas'} (Mais recentes primeiro)
+                    </span>
+                  </div>
+
+                  {myAuditLogs.map((log) => {
+                    const dateFormatted = new Date(log.timestamp).toLocaleString('pt-BR', {
+                      dateStyle: 'short',
+                      timeStyle: 'short',
+                    });
+
+                    return (
+                      <div
+                        key={log.id}
+                        className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 shadow-sm space-y-3 hover:border-orange-200 dark:hover:border-zinc-700 transition-colors"
+                      >
+                        {/* Header: Dia da escala e quando foi modificado */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-zinc-800/80 pb-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2.5 py-1 rounded-xl bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 font-black text-xs uppercase tracking-wider">
+                              📅 Dia {log.dateStr}
+                            </span>
+                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                              {log.humanDescription}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+                            <Icon name="schedule" className="text-xs" />
+                            <span>{dateFormatted} por {log.authorName || 'Gestor'}</span>
+                          </div>
+                        </div>
+
+                        {/* Antes e Depois */}
+                        <div className="flex items-center gap-3 text-xs font-semibold flex-wrap">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-black uppercase text-slate-400">Antes:</span>
+                            <span className="px-2.5 py-1 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-black border border-rose-200 dark:border-rose-900/50 line-through opacity-85">
+                              {log.beforeVal}
+                            </span>
+                          </div>
+
+                          <Icon name="arrow_forward" className="text-xs text-slate-400 shrink-0" />
+
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-black uppercase text-slate-400">Depois:</span>
+                            <span className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-black border border-emerald-200 dark:border-emerald-900/50 shadow-xs">
+                              {log.afterVal}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Justificativa */}
+                        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-100 dark:border-zinc-800 flex items-start gap-2">
+                          <Icon name="comment" className="text-xs text-orange-500 shrink-0 mt-0.5" />
+                          <div className="text-xs">
+                            <span className="font-black text-slate-500 dark:text-slate-400 uppercase text-[10px] mr-1.5">
+                              Motivo:
+                            </span>
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">
+                              "{log.justification}"
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
 
           {activeTab === 'atestado' && isAdmin && (

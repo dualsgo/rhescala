@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { SyncStatus, Employee, Holiday, JornadaSettings, OfficialScheduleSnapshot, ProtectedDaysMap } from '../types';
+import { SyncStatus, Employee, Holiday, JornadaSettings, OfficialScheduleSnapshot, ProtectedDaysMap, AuditLogEntry } from '../types';
 import { isEmployeeActiveOnDay } from '../constants';
 import { Icon } from './Icon';
 import { useDialog } from '../contexts/DialogContext';
@@ -27,6 +27,8 @@ interface DataManagerProps {
   setSectionAssignments?: (val: Record<string, any> | ((prev: Record<string, any>) => Record<string, any>)) => void;
   protectedDaysMap?: ProtectedDaysMap;
   setProtectedDaysMap?: (val: any) => void;
+  auditLogs?: AuditLogEntry[];
+  setAuditLogs?: (val: AuditLogEntry[] | ((prev: AuditLogEntry[]) => AuditLogEntry[])) => void;
   onClose: () => void;
   role: 'admin' | 'viewer';
 }
@@ -53,6 +55,8 @@ export const DataManager: React.FC<DataManagerProps> = ({
   setSectionAssignments,
   protectedDaysMap,
   setProtectedDaysMap,
+  auditLogs,
+  setAuditLogs,
   onClose, 
   role 
 }) => {
@@ -75,7 +79,8 @@ export const DataManager: React.FC<DataManagerProps> = ({
       monthNotes,
       trackingStartDate,
       sectionAssignments,
-      protectedDaysMap
+      protectedDaysMap,
+      auditLogs
     };
     const dataStr = JSON.stringify(backupData, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
@@ -198,6 +203,9 @@ export const DataManager: React.FC<DataManagerProps> = ({
               }
               if (importedData.protectedDaysMap && setProtectedDaysMap) {
                 setProtectedDaysMap(importedData.protectedDaysMap);
+              }
+              if (importedData.auditLogs && setAuditLogs) {
+                setAuditLogs(importedData.auditLogs);
               }
             } else if (Array.isArray(importedData)) {
               // Legacy support for older backups that only had the employees array

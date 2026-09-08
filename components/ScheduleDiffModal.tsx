@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Employee, MonthYear, OfficialScheduleSnapshot, ScheduleDiffItem } from '../types';
+import { Employee, MonthYear, OfficialScheduleSnapshot, ScheduleDiffItem, AuditLogEntry } from '../types';
 import { Icon } from './Icon';
 import { copyToClipboard } from '../src/utils/clipboard';
 import { useDialog } from '../contexts/DialogContext';
@@ -11,6 +11,7 @@ interface ScheduleDiffModalProps {
   diffs: ScheduleDiffItem[];
   currentMY: MonthYear;
   onSelectDay?: (dayIdx: number) => void;
+  auditLogs?: AuditLogEntry[];
 }
 
 export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
@@ -20,10 +21,30 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
   diffs,
   currentMY,
   onSelectDay,
+  auditLogs = [],
 }) => {
   const { showDialog } = useDialog();
+  const [activeTab, setActiveTab] = useState<'logs' | 'diffs'>('logs');
   const [selectedEmpId, setSelectedEmpId] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'shift' | 'hour' | 'position'>('all');
+
+  const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+
+  const monthAuditLogs = useMemo(() => {
+    return auditLogs
+      .filter(l => l.monthKey === monthKey)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [auditLogs, monthKey]);
+
+  const filteredLogs = useMemo(() => {
+    return monthAuditLogs.filter(log => {
+      if (selectedEmpId !== 'all' && log.empId !== selectedEmpId) return false;
+      if (typeFilter === 'shift' && !['FOLGA_TRABALHO', 'TRABALHO_FOLGA', 'ALTERACAO_TURNO'].includes(log.changeType)) return false;
+      if (typeFilter === 'hour' && log.changeType !== 'ALTERACAO_HORARIO') return false;
+      if (typeFilter === 'position' && log.changeType !== 'ALTERACAO_POSTO') return false;
+      return true;
+    });
+  }, [monthAuditLogs, selectedEmpId, typeFilter]);
 
   const filteredDiffs = useMemo(() => {
     return diffs.filter(d => {
@@ -37,15 +58,16 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
     const shiftCount = diffs.filter(d => d.type === 'shift').length;
     const hourCount = diffs.filter(d => d.type === 'hour').length;
     const posCount = diffs.filter(d => d.type === 'position').length;
-    return { total: diffs.length, shiftCount, hourCount, posCount };
-  }, [diffs]);
+    return { total: diffs.length, shiftCount, hourCount, posCount, logsTotal: monthAuditLogs.length };
+  }, [diffs, monthAuditLogs]);
 
   // Lista única de colaboradores que possuem alterações
   const employeesWithDiffs = useMemo(() => {
     const map = new Map<string, string>();
     diffs.forEach(d => map.set(d.empId, d.empName));
+    monthAuditLogs.forEach(l => map.set(l.empId, l.empName));
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [diffs]);
+  }, [diffs, monthAuditLogs]);
 
   if (!isOpen) return null;
 
@@ -55,16 +77,50 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
     : 'Desconhecida';
 
   const handleCopyReport = async () => {
+    if (activeTab === 'logs') {
+      if (monthAuditLogs.length === 0) {
+        await showDialog({ message: 'Nenhuma alteração com justificativa registrada neste mês.', type: 'alert' });
+        return;
+      }
+
+      let text = `📋 *Histórico de Alterações com Justificativa — Escala de ${monthName}*\n`;
+      text += `🔒 *Oficializada em:* ${validatedDateStr}\n`;
+      text += `📝 *Total de Registros de Alteração:* ${monthAuditLogs.length}\n\n`;
+
+      const byEmp: Record<string, AuditLogEntry[]> = {};
+      monthAuditLogs.forEach(l => {
+        if (!byEmp[l.empName]) byEmp[l.empName] = [];
+        byEmp[l.empName].push(l);
+      });
+
+      Object.entries(byEmp).forEach(([name, items]) => {
+        text += `👤 *${name}* (${items.length} alteraç${items.length === 1 ? 'ão' : 'ões'}):\n`;
+        items.forEach(it => {
+          const timeFormatted = new Date(it.timestamp).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+          text += `  • Dia ${it.dateStr}: ${it.beforeVal} ➔ ${it.afterVal}\n`;
+          text += `    💬 Motivo: "${it.justification}"\n`;
+          text += `    🕒 Modificado em: ${timeFormatted} por ${it.authorName || 'Gestor'}\n`;
+        });
+        text += `\n`;
+      });
+
+      const success = await copyToClipboard(text);
+      if (success) {
+        await showDialog({ title: 'Sucesso', message: 'Histórico de auditoria com justificativas copiado para a área de transferência!' });
+      }
+      return;
+    }
+
+    // Tab diffs
     if (diffs.length === 0) {
       await showDialog({ message: 'Nenhuma alteração registrada em relação à escala oficial.', type: 'alert' });
       return;
     }
 
-    let text = `📋 *Relatório de Alterações — Escala de ${monthName}*\n`;
+    let text = `📋 *Relatório de Divergências de Linha de Base — Escala de ${monthName}*\n`;
     text += `🔒 *Oficializada em:* ${validatedDateStr}\n`;
-    text += `⚠️ *Total de Divergências:* ${diffs.length}\n\n`;
+    text += `⚠️ *Total de Divergências Atuais:* ${diffs.length}\n\n`;
 
-    // Agrupar por colaborador
     const byEmp: Record<string, ScheduleDiffItem[]> = {};
     diffs.forEach(d => {
       if (!byEmp[d.empName]) byEmp[d.empName] = [];
@@ -87,7 +143,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
 
     const success = await copyToClipboard(text);
     if (success) {
-      await showDialog({ title: 'Sucesso', message: 'Relatório de auditoria copiado para a área de transferência!' });
+      await showDialog({ title: 'Sucesso', message: 'Relatório de divergências copiado para a área de transferência!' });
     }
   };
 
@@ -132,15 +188,58 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
           </button>
         </div>
 
+        {/* Tab Switcher: Histórico Justificado vs Divergências do Snapshot */}
+        <div className="flex border-b border-slate-100 dark:border-slate-800 px-6 bg-slate-50/50 dark:bg-slate-850">
+          <button
+            onClick={() => setActiveTab('logs')}
+            className={`px-4 py-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${
+              activeTab === 'logs'
+                ? 'border-orange-500 text-orange-600 dark:text-orange-400'
+                : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+            }`}
+          >
+            <Icon name="history_edu" className="text-sm" />
+            <span>Histórico com Justificativas</span>
+            {monthAuditLogs.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-orange-500 text-white text-[9px] font-black">
+                {monthAuditLogs.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('diffs')}
+            className={`px-4 py-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${
+              activeTab === 'diffs'
+                ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+            }`}
+          >
+            <Icon name="difference" className="text-sm" />
+            <span>Divergências do Snapshot</span>
+            {diffs.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-indigo-600 text-white text-[9px] font-black">
+                {diffs.length}
+              </span>
+            )}
+          </button>
+        </div>
+
         {/* Stats Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
           <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 flex items-center justify-center font-black">
-              {stats.total}
+              {activeTab === 'logs' ? stats.logsTotal : stats.total}
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase text-slate-400">Total Alterações</p>
-              <p className="text-xs font-black text-slate-800 dark:text-slate-200">{stats.total === 0 ? 'Sem divergências' : `${stats.total} no mês`}</p>
+              <p className="text-[10px] font-black uppercase text-slate-400">
+                {activeTab === 'logs' ? 'Logs de Alteração' : 'Total Divergências'}
+              </p>
+              <p className="text-xs font-black text-slate-800 dark:text-slate-200">
+                {activeTab === 'logs' 
+                  ? (stats.logsTotal === 0 ? 'Sem registros' : `${stats.logsTotal} no mês`)
+                  : (stats.total === 0 ? 'Sem divergências' : `${stats.total} no mês`)}
+              </p>
             </div>
           </div>
 
@@ -183,7 +282,9 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
               onChange={(e) => setSelectedEmpId(e.target.value)}
               className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="all">Todos os Colaboradores ({diffs.length})</option>
+              <option value="all">
+                Todos os Colaboradores ({activeTab === 'logs' ? filteredLogs.length : filteredDiffs.length})
+              </option>
               {employeesWithDiffs.map(emp => (
                 <option key={emp.id} value={emp.id}>{emp.name}</option>
               ))}
@@ -221,88 +322,184 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
             onClick={handleCopyReport}
             className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm"
           >
-            <Icon name="content_copy" className="text-sm" /> Copiar Resumo
+            <Icon name="content_copy" className="text-sm" /> 
+            <span>{activeTab === 'logs' ? 'Copiar Histórico Justificado' : 'Copiar Resumo'}</span>
           </button>
         </div>
 
         {/* Content Table / List */}
         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-          {filteredDiffs.length === 0 ? (
-            <div className="py-16 text-center">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-4 text-3xl">
-                <Icon name="verified" />
-              </div>
-              <h4 className="text-base font-black text-slate-800 dark:text-slate-200">
-                {diffs.length === 0 ? 'Nenhuma alteração pós-oficialização' : 'Nenhuma alteração com os filtros selecionados'}
-              </h4>
-              <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                {diffs.length === 0 
-                  ? 'A escala em andamento está 100% idêntica à versão oficial que foi impressa no início do mês.'
-                  : 'Tente limpar os filtros acima para visualizar as outras alterações.'}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredDiffs.map((diff) => (
-                <div
-                  key={diff.id}
-                  className="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-indigo-400/50 transition-all shadow-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => {
-                        if (onSelectDay) {
-                          onSelectDay(diff.dayIdx);
-                          onClose();
-                        }
-                      }}
-                      className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-xl text-center transition-colors group"
-                      title="Ir para este dia na grade"
-                    >
-                      <span className="block text-xs font-black text-slate-800 dark:text-slate-100 group-hover:text-indigo-600">{diff.dateStr}</span>
-                      <span className="block text-[9px] font-bold text-slate-400 uppercase">Dia {diff.dayIdx + 1}</span>
-                    </button>
-
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-slate-900 dark:text-slate-100">{diff.empName}</span>
-                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${
-                          diff.type === 'shift' ? 'bg-rose-100 dark:bg-rose-950/50 text-rose-600' :
-                          diff.type === 'hour' ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-600' :
-                          'bg-blue-100 dark:bg-blue-950/50 text-blue-600'
-                        }`}>
-                          {diff.type === 'shift' ? 'Turno / Folga' : diff.type === 'hour' ? 'Horário' : 'Posição Tática'}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        {diff.type === 'shift' && 'Alteração no status de trabalho/folga'}
-                        {diff.type === 'hour' && 'Mudança no horário da jornada diária'}
-                        {diff.type === 'position' && 'Troca de setor/posição tática'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Comparativo: Oficial vs Atual */}
-                  <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/60 p-2 rounded-xl border border-slate-100 dark:border-slate-800 self-stretch sm:self-auto justify-between sm:justify-end">
-                    <div className="text-right">
-                      <span className="block text-[9px] font-black text-slate-400 uppercase">Oficial</span>
-                      {diff.type === 'shift' ? getShiftBadge(diff.officialVal) : (
-                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 line-through">{diff.officialVal}</span>
-                      )}
-                    </div>
-
-                    <Icon name="arrow_forward" className="text-slate-400 text-sm mx-1" />
-
-                    <div>
-                      <span className="block text-[9px] font-black text-indigo-500 uppercase">Atual</span>
-                      {diff.type === 'shift' ? getShiftBadge(diff.currentVal) : (
-                        <span className="text-xs font-black text-indigo-600 dark:text-indigo-400">{diff.currentVal}</span>
-                      )}
-                    </div>
-                  </div>
+          {/* TAB 1: HISTÓRICO JUSTIFICADO */}
+          {activeTab === 'logs' && (
+            filteredLogs.length === 0 ? (
+              <div className="py-16 text-center">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-4 text-3xl">
+                  <Icon name="verified" />
                 </div>
-              ))}
-            </div>
+                <h4 className="text-base font-black text-slate-800 dark:text-slate-200">
+                  {monthAuditLogs.length === 0 ? 'Nenhuma alteração com justificativa registrada' : 'Nenhuma alteração com os filtros selecionados'}
+                </h4>
+                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                  {monthAuditLogs.length === 0 
+                    ? 'Qualquer alteração realizada após a oficialização da escala exigirá uma justificativa e será registrada aqui.'
+                    : 'Tente limpar os filtros acima para visualizar as outras alterações.'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredLogs.map((log) => {
+                  const dateFormatted = new Date(log.timestamp).toLocaleString('pt-BR', {
+                    dateStyle: 'short',
+                    timeStyle: 'short',
+                  });
+
+                  return (
+                    <div
+                      key={log.id}
+                      className="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-3 hover:border-orange-400/50 transition-all shadow-sm"
+                    >
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-2.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            onClick={() => {
+                              if (onSelectDay) {
+                                onSelectDay(log.dayIdx);
+                                onClose();
+                              }
+                            }}
+                            className="px-2.5 py-1 rounded-xl bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 font-black text-xs uppercase tracking-wider hover:bg-orange-200 transition-colors"
+                            title="Ir para este dia na grade"
+                          >
+                            📅 Dia {log.dateStr}
+                          </button>
+                          <span className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase">
+                            {log.empName}
+                          </span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                            • {log.humanDescription}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap">
+                          <Icon name="schedule" className="text-xs" />
+                          <span>{dateFormatted} por {log.authorName || 'Gestor'}</span>
+                        </div>
+                      </div>
+
+                      {/* Antes e Depois + Justificativa */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 text-xs font-semibold flex-wrap">
+                          <span className="text-[10px] font-black uppercase text-slate-400">Antes:</span>
+                          <span className="px-2.5 py-1 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-black border border-rose-200 dark:border-rose-900/50 line-through opacity-85">
+                            {log.beforeVal}
+                          </span>
+
+                          <Icon name="arrow_forward" className="text-xs text-slate-400 shrink-0" />
+
+                          <span className="text-[10px] font-black uppercase text-slate-400">Depois:</span>
+                          <span className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-black border border-emerald-200 dark:border-emerald-900/50 shadow-xs">
+                            {log.afterVal}
+                          </span>
+                        </div>
+
+                        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 flex items-start gap-2 max-w-md">
+                          <Icon name="comment" className="text-xs text-orange-500 shrink-0 mt-0.5" />
+                          <div className="text-xs">
+                            <span className="font-black text-slate-400 uppercase text-[9px] mr-1">
+                              Motivo:
+                            </span>
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">
+                              "{log.justification}"
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          )}
+
+          {/* TAB 2: DIVERGÊNCIAS DO SNAPSHOT */}
+          {activeTab === 'diffs' && (
+            filteredDiffs.length === 0 ? (
+              <div className="py-16 text-center">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-4 text-3xl">
+                  <Icon name="verified" />
+                </div>
+                <h4 className="text-base font-black text-slate-800 dark:text-slate-200">
+                  {diffs.length === 0 ? 'Nenhuma alteração pós-oficialização' : 'Nenhuma alteração com os filtros selecionados'}
+                </h4>
+                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                  {diffs.length === 0 
+                    ? 'A escala em andamento está 100% idêntica à versão oficial que foi impressa no início do mês.'
+                    : 'Tente limpar os filtros acima para visualizar as outras alterações.'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredDiffs.map((diff) => (
+                  <div
+                    key={diff.id}
+                    className="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-indigo-400/50 transition-all shadow-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => {
+                          if (onSelectDay) {
+                            onSelectDay(diff.dayIdx);
+                            onClose();
+                          }
+                        }}
+                        className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-xl text-center transition-colors group"
+                        title="Ir para este dia na grade"
+                      >
+                        <span className="block text-xs font-black text-slate-800 dark:text-slate-100 group-hover:text-indigo-600">{diff.dateStr}</span>
+                        <span className="block text-[9px] font-bold text-slate-400 uppercase">Dia {diff.dayIdx + 1}</span>
+                      </button>
+
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black text-slate-900 dark:text-slate-100">{diff.empName}</span>
+                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${
+                            diff.type === 'shift' ? 'bg-rose-100 dark:bg-rose-950/50 text-rose-600' :
+                            diff.type === 'hour' ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-600' :
+                            'bg-blue-100 dark:bg-blue-950/50 text-blue-600'
+                          }`}>
+                            {diff.type === 'shift' ? 'Turno / Folga' : diff.type === 'hour' ? 'Horário' : 'Posição Tática'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {diff.type === 'shift' && 'Alteração no status de trabalho/folga'}
+                          {diff.type === 'hour' && 'Mudança no horário da jornada diária'}
+                          {diff.type === 'position' && 'Troca de setor/posição tática'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Comparativo: Oficial vs Atual */}
+                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/60 p-2 rounded-xl border border-slate-100 dark:border-slate-800 self-stretch sm:self-auto justify-between sm:justify-end">
+                      <div className="text-right">
+                        <span className="block text-[9px] font-black text-slate-400 uppercase">Oficial</span>
+                        {diff.type === 'shift' ? getShiftBadge(diff.officialVal) : (
+                          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 line-through">{diff.officialVal}</span>
+                        )}
+                      </div>
+
+                      <Icon name="arrow_forward" className="text-slate-400 text-sm mx-1" />
+
+                      <div>
+                        <span className="block text-[9px] font-black text-indigo-500 uppercase">Atual</span>
+                        {diff.type === 'shift' ? getShiftBadge(diff.currentVal) : (
+                          <span className="text-xs font-black text-indigo-600 dark:text-indigo-400">{diff.currentVal}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
           )}
         </div>
 

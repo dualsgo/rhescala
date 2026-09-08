@@ -45,7 +45,7 @@ import { Login } from './components/Login';
 import { PrintableSchedule } from './components/PrintableSchedule';
 import { useHolidayCredits } from './hooks/useHolidayCredits';
 import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay, getNationalHolidays, DEFAULT_JORNADA_SETTINGS, getShortName, getDefaultProtectedDays, isEmployeeActiveInMonth, normalizeProtectedDaysConfig, normalizeProtectedDaysDetails, getTacticalEmoji, getTacticalLabel } from './constants';
-import { Employee, MonthYear, Holiday, JornadaSettings, OfficialScheduleSnapshot, ScheduleDiffItem, TacticalDisplayMode, ProtectedDaysConfig, ProtectedDaysMap } from './types';
+import { Employee, MonthYear, Holiday, JornadaSettings, OfficialScheduleSnapshot, ScheduleDiffItem, TacticalDisplayMode, ProtectedDaysConfig, ProtectedDaysMap, AuditLogEntry, AuditChangeType, ShiftType } from './types';
 import { HelpCenter } from './components/HelpCenter';
 import { JornadaManager } from './components/JornadaManager';
 import { EmployeeScheduleCard } from './components/EmployeeScheduleCard';
@@ -59,6 +59,8 @@ import { MobileEmployerViewer } from './components/MobileEmployerViewer';
 import { ProtectedDaysModal } from './components/ProtectedDaysModal';
 import { CreateMonthModal } from './components/CreateMonthModal';
 import { DailyScheduleModulatorModal } from './components/DailyScheduleModulatorModal';
+import { AuditJustificationModal, AuditImpactPreview } from './components/AuditJustificationModal';
+import { classifyShiftChange, classifyHourChange, classifyTacticalChange } from './src/utils/auditUtils';
 
 const App: React.FC = () => {
   const [employees, setEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', [PLACEHOLDER_EMPLOYEE]);
@@ -101,6 +103,11 @@ const App: React.FC = () => {
   const [showInconsistencyModal, setShowInconsistencyModal] = useState(false);
   const [viewerModeType, setViewerModeType] = useLocalStorage<'personal' | 'grid'>('rhescala_viewer_mode_type', 'grid');
   const [viewerSelectedEmpId, setViewerSelectedEmpId] = useLocalStorage<string>('rhescala_viewer_selected_emp_id', '');
+  const [auditLogs, setAuditLogs] = useLocalStorage<AuditLogEntry[]>('rhescala_audit_logs', []);
+  const [pendingAuditAction, setPendingAuditAction] = useState<{
+    impacts: AuditImpactPreview[];
+    onConfirm: (justification: string) => void;
+  } | null>(null);
   const [auth, setAuth] = useState<{ isAuthenticated: boolean, role: 'admin' | 'viewer' }>(() => {
     try {
       const saved = sessionStorage.getItem('rhescala_auth_session');
@@ -197,6 +204,7 @@ const App: React.FC = () => {
       window.localStorage.setItem('riHappyProtectedDays', JSON.stringify(protectedDaysMap));
       window.localStorage.setItem('riHappySectionAssignments', JSON.stringify(sectionAssignments));
       window.localStorage.setItem('riHappyValidatedMonths', JSON.stringify(validatedMonths));
+      window.localStorage.setItem('rhescala_audit_logs', JSON.stringify(auditLogs));
 
       // 2. Transmissão imediata via BroadcastChannel para outras abas abertas
       try {
@@ -216,7 +224,8 @@ const App: React.FC = () => {
           apiStore.set('riHappyCustomHolidays', customHolidays),
           apiStore.set('riHappyDeletedNationalHolidays', deletedNationalHolidays),
           apiStore.set('riHappyJornadaSettings', jornadaSettings),
-          apiStore.set('riHappySectionAssignments', sectionAssignments)
+          apiStore.set('riHappySectionAssignments', sectionAssignments),
+          apiStore.set('rhescala_audit_logs', auditLogs)
         ]);
       }
 
@@ -468,61 +477,303 @@ const App: React.FC = () => {
     }
   }, [employees, setEmployees]);
 
+  const handleUpdateShift = useCallback((empId: string, dayIdx: number, newShift: ShiftType) => {
+    if (isReadOnly) return;
+    const targetEmp = employees.find(e => e.id === empId);
+    if (!targetEmp) return;
+
+    const oldShift = targetEmp.shifts[monthKey]?.[dayIdx] || 'T';
+    if (oldShift === newShift) return; // Zero falsos positivos
+
+    const dateStr = `${String(dayIdx + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}/${currentMY.year}`;
+    const curHour = targetEmp.dailyHours[monthKey]?.[dayIdx] || targetEmp.workPeriod || '';
+
+    const applyChange = (justification?: string) => {
+      setEmployees(prev => prev.map(emp => {
+        if (emp.id !== empId) return emp;
+        const sfs = [...(emp.shifts[monthKey] || [])];
+        sfs[dayIdx] = newShift;
+        return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
+      }));
+
+      if (justification) {
+        const c = classifyShiftChange(targetEmp.name, dateStr, oldShift, newShift, curHour);
+        const newLog: AuditLogEntry = {
+          id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          timestamp: new Date().toISOString(),
+          authorRole: 'admin',
+          authorName: 'Gestor',
+          empId: targetEmp.id,
+          empName: targetEmp.name,
+          monthKey,
+          dayIdx,
+          dateStr,
+          changeType: c.changeType,
+          beforeVal: c.beforeVal,
+          afterVal: c.afterVal,
+          humanDescription: c.humanDescription,
+          justification,
+          isPostOfficialization: true,
+        };
+        setAuditLogs(prev => [newLog, ...prev]);
+      }
+    };
+
+    if (validatedMonths[monthKey]) {
+      const c = classifyShiftChange(targetEmp.name, dateStr, oldShift, newShift, curHour);
+      setPendingAuditAction({
+        impacts: [{
+          empId: targetEmp.id,
+          empName: targetEmp.name,
+          dayIdx,
+          dateStr,
+          beforeVal: c.beforeVal,
+          afterVal: c.afterVal,
+          changeType: c.changeType,
+          humanDescription: c.humanDescription,
+        }],
+        onConfirm: (justification) => {
+          applyChange(justification);
+          setPendingAuditAction(null);
+        }
+      });
+    } else {
+      applyChange();
+    }
+  }, [isReadOnly, employees, monthKey, currentMY, validatedMonths, setEmployees, setAuditLogs]);
+
+  const handleUpdateShifts = useCallback((updates: { empId: string; dayIdx: number; newShift: ShiftType }[]) => {
+    if (isReadOnly) return;
+    const effectiveUpdates = updates.filter(u => {
+      const emp = employees.find(e => e.id === u.empId);
+      const oldShift = emp?.shifts[monthKey]?.[u.dayIdx] || 'T';
+      return oldShift !== u.newShift;
+    });
+    if (effectiveUpdates.length === 0) return;
+
+    const applyChange = (justification?: string) => {
+      setEmployees(prev => prev.map(emp => {
+        const empU = effectiveUpdates.filter(u => u.empId === emp.id);
+        if (empU.length === 0) return emp;
+        const sfs = [...(emp.shifts[monthKey] || [])];
+        empU.forEach(u => { sfs[u.dayIdx] = u.newShift; });
+        return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
+      }));
+
+      if (justification) {
+        const newLogs: AuditLogEntry[] = effectiveUpdates.map(u => {
+          const emp = employees.find(e => e.id === u.empId)!;
+          const dateStr = `${String(u.dayIdx + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}/${currentMY.year}`;
+          const oldShift = emp.shifts[monthKey]?.[u.dayIdx] || 'T';
+          const curHour = emp.dailyHours[monthKey]?.[u.dayIdx] || emp.workPeriod || '';
+          const c = classifyShiftChange(emp.name, dateStr, oldShift, u.newShift, curHour);
+          return {
+            id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            timestamp: new Date().toISOString(),
+            authorRole: 'admin',
+            authorName: 'Gestor',
+            empId: emp.id,
+            empName: emp.name,
+            monthKey,
+            dayIdx: u.dayIdx,
+            dateStr,
+            changeType: c.changeType,
+            beforeVal: c.beforeVal,
+            afterVal: c.afterVal,
+            humanDescription: c.humanDescription,
+            justification,
+            isPostOfficialization: true,
+          };
+        });
+        setAuditLogs(prev => [...newLogs, ...prev]);
+      }
+    };
+
+    if (validatedMonths[monthKey]) {
+      const impacts = effectiveUpdates.map(u => {
+        const emp = employees.find(e => e.id === u.empId)!;
+        const dateStr = `${String(u.dayIdx + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}/${currentMY.year}`;
+        const oldShift = emp.shifts[monthKey]?.[u.dayIdx] || 'T';
+        const curHour = emp.dailyHours[monthKey]?.[u.dayIdx] || emp.workPeriod || '';
+        const c = classifyShiftChange(emp.name, dateStr, oldShift, u.newShift, curHour);
+        return {
+          empId: emp.id,
+          empName: emp.name,
+          dayIdx: u.dayIdx,
+          dateStr,
+          beforeVal: c.beforeVal,
+          afterVal: c.afterVal,
+          changeType: c.changeType,
+          humanDescription: c.humanDescription,
+        };
+      });
+
+      setPendingAuditAction({
+        impacts,
+        onConfirm: (justification) => {
+          applyChange(justification);
+          setPendingAuditAction(null);
+        }
+      });
+    } else {
+      applyChange();
+    }
+  }, [isReadOnly, employees, monthKey, currentMY, validatedMonths, setEmployees, setAuditLogs]);
+
   const onUpdateEmployeeDailyHour = useCallback((empId: string, dayIdx: number, newHour: string) => {
-    setEmployees(prev => prev.map(emp => {
-      if (emp.id !== empId) return emp;
-      const hours = [...(emp.dailyHours[monthKey] || [])];
-      hours[dayIdx] = newHour;
-      return { ...emp, dailyHours: { ...emp.dailyHours, [monthKey]: hours } };
-    }));
-  }, [monthKey, setEmployees]);
+    if (isReadOnly) return;
+    const targetEmp = employees.find(e => e.id === empId);
+    if (!targetEmp) return;
+
+    const oldHour = targetEmp.dailyHours[monthKey]?.[dayIdx] || targetEmp.workPeriod || '';
+    if (oldHour === newHour) return; // Zero falsos positivos
+
+    const dateStr = `${String(dayIdx + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}/${currentMY.year}`;
+
+    const applyChange = (justification?: string) => {
+      setEmployees(prev => prev.map(emp => {
+        if (emp.id !== empId) return emp;
+        const hours = [...(emp.dailyHours[monthKey] || [])];
+        hours[dayIdx] = newHour;
+        return { ...emp, dailyHours: { ...emp.dailyHours, [monthKey]: hours } };
+      }));
+
+      if (justification) {
+        const c = classifyHourChange(targetEmp.name, dateStr, oldHour, newHour);
+        const newLog: AuditLogEntry = {
+          id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          timestamp: new Date().toISOString(),
+          authorRole: 'admin',
+          authorName: 'Gestor',
+          empId: targetEmp.id,
+          empName: targetEmp.name,
+          monthKey,
+          dayIdx,
+          dateStr,
+          changeType: c.changeType,
+          beforeVal: c.beforeVal,
+          afterVal: c.afterVal,
+          humanDescription: c.humanDescription,
+          justification,
+          isPostOfficialization: true,
+        };
+        setAuditLogs(prev => [newLog, ...prev]);
+      }
+    };
+
+    if (validatedMonths[monthKey]) {
+      const c = classifyHourChange(targetEmp.name, dateStr, oldHour, newHour);
+      setPendingAuditAction({
+        impacts: [{
+          empId: targetEmp.id,
+          empName: targetEmp.name,
+          dayIdx,
+          dateStr,
+          beforeVal: c.beforeVal,
+          afterVal: c.afterVal,
+          changeType: c.changeType,
+          humanDescription: c.humanDescription,
+        }],
+        onConfirm: (justification) => {
+          applyChange(justification);
+          setPendingAuditAction(null);
+        }
+      });
+    } else {
+      applyChange();
+    }
+  }, [isReadOnly, employees, monthKey, currentMY, validatedMonths, setEmployees, setAuditLogs]);
 
   const onUpdateTacticalPosition = useCallback((empId: string, dayIdx: number, newPos: string | null) => {
-    setEmployees(prev => {
-      const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
-      const activeEmps = prev.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
-      
-      // 1. Identify target employee and their group
-      const targetEmp = prev.find(e => e.id === empId);
-      if (!targetEmp) return prev;
-      
-      const targetHour = targetEmp.dailyHours[monthKey]?.[dayIdx] || targetEmp.workPeriod;
-      const date = new Date(currentMY.year, currentMY.month, dayIdx + 1);
-      const isSunday = date.getDay() === 0;
-      const targetGroup = getShiftClassification(targetHour, isSunday);
+    if (isReadOnly) return;
+    const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+    const targetEmp = employees.find(e => e.id === empId);
+    if (!targetEmp) return;
 
-      // 2. Get current resolved positions for this group
-      const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`);
-      const resolved = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, jornadaSettings);
-      
-      const oldPos = targetEmp.tacticalPositions?.[monthKey]?.[dayIdx] || resolved[empId];
+    const dateStr = `${String(dayIdx + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}/${currentMY.year}`;
+    const oldPos = targetEmp.tacticalPositions?.[monthKey]?.[dayIdx] || null;
+    if (oldPos === newPos) return;
 
-      return prev.map(emp => {
-        // If it's the employee we are editing
-        if (emp.id === empId) {
-          const positions = [...(emp.tacticalPositions?.[monthKey] || [])];
-          positions[dayIdx] = newPos;
-          return { ...emp, tacticalPositions: { ...emp.tacticalPositions, [monthKey]: positions } };
-        }
+    const applyChange = (justification?: string) => {
+      setEmployees(prev => {
+        const activeEmps = prev.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
+        const empHour = targetEmp.dailyHours[monthKey]?.[dayIdx] || targetEmp.workPeriod;
+        const date = new Date(currentMY.year, currentMY.month, dayIdx + 1);
+        const isSunday = date.getDay() === 0;
+        const targetGroup = getShiftClassification(empHour, isSunday);
 
-        // If it's another employee, check if they are in the same group and had the 'newPos'
-        const empHour = emp.dailyHours[monthKey]?.[dayIdx] || emp.workPeriod;
-        const empGroup = getShiftClassification(empHour, isSunday);
-        
-        if (empGroup === targetGroup && newPos !== 'AUTO') {
-          const empCurrentPos = emp.tacticalPositions?.[monthKey]?.[dayIdx] || resolved[emp.id];
-          if (empCurrentPos === newPos) {
-            // Swap: Give them the old position of the target employee
+        const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`);
+        const resolved = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, jornadaSettings);
+        const resolvedOldPos = targetEmp.tacticalPositions?.[monthKey]?.[dayIdx] || resolved[empId];
+
+        return prev.map(emp => {
+          if (emp.id === empId) {
             const positions = [...(emp.tacticalPositions?.[monthKey] || [])];
-            positions[dayIdx] = oldPos;
+            positions[dayIdx] = newPos;
             return { ...emp, tacticalPositions: { ...emp.tacticalPositions, [monthKey]: positions } };
           }
-        }
 
-        return emp;
+          const eHour = emp.dailyHours[monthKey]?.[dayIdx] || emp.workPeriod;
+          const eGroup = getShiftClassification(eHour, isSunday);
+
+          if (eGroup === targetGroup && newPos !== 'AUTO') {
+            const empCurrentPos = emp.tacticalPositions?.[monthKey]?.[dayIdx] || resolved[emp.id];
+            if (empCurrentPos === newPos) {
+              const positions = [...(emp.tacticalPositions?.[monthKey] || [])];
+              positions[dayIdx] = resolvedOldPos;
+              return { ...emp, tacticalPositions: { ...emp.tacticalPositions, [monthKey]: positions } };
+            }
+          }
+
+          return emp;
+        });
       });
-    });
-  }, [currentMY, customHolidays]);
+
+      if (justification) {
+        const c = classifyTacticalChange(targetEmp.name, dateStr, oldPos, newPos);
+        const newLog: AuditLogEntry = {
+          id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          timestamp: new Date().toISOString(),
+          authorRole: 'admin',
+          authorName: 'Gestor',
+          empId: targetEmp.id,
+          empName: targetEmp.name,
+          monthKey,
+          dayIdx,
+          dateStr,
+          changeType: c.changeType,
+          beforeVal: c.beforeVal,
+          afterVal: c.afterVal,
+          humanDescription: c.humanDescription,
+          justification,
+          isPostOfficialization: true,
+        };
+        setAuditLogs(prev => [newLog, ...prev]);
+      }
+    };
+
+    if (validatedMonths[monthKey]) {
+      const c = classifyTacticalChange(targetEmp.name, dateStr, oldPos, newPos);
+      setPendingAuditAction({
+        impacts: [{
+          empId: targetEmp.id,
+          empName: targetEmp.name,
+          dayIdx,
+          dateStr,
+          beforeVal: c.beforeVal,
+          afterVal: c.afterVal,
+          changeType: c.changeType,
+          humanDescription: c.humanDescription,
+        }],
+        onConfirm: (justification) => {
+          applyChange(justification);
+          setPendingAuditAction(null);
+        }
+      });
+    } else {
+      applyChange();
+    }
+  }, [isReadOnly, employees, currentMY, customHolidays, deletedNationalHolidays, jornadaSettings, validatedMonths, setEmployees, setAuditLogs]);
 
   const handleApplyGranularPresets = useCallback((options: {
     scope: 'all' | 'single';
@@ -913,33 +1164,10 @@ const App: React.FC = () => {
                    onSelectDay={setSelectedDayIdx}
                    tacticalDisplayMode={tacticalDisplayMode}
                    onToggleTacticalDisplayMode={setTacticalDisplayMode}
-                   onUpdateShift={(empId, d, s) => {
-                     if (isReadOnly) return;
-                     setEmployees(prev => prev.map(emp => {
-                       if (emp.id !== empId) return emp;
-                       const sfs = [...(emp.shifts[monthKey] || [])];
-                       sfs[d] = s;
-                       return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
-                     }));
-                   }}
-                   onUpdateShifts={(updates) => {
-                     if (isReadOnly) return;
-                     setEmployees(prev => prev.map(emp => {
-                       const empU = updates.filter(u => u.empId === emp.id);
-                       if (empU.length === 0) return emp;
-                       const sfs = [...(emp.shifts[monthKey] || [])];
-                       empU.forEach(u => { sfs[u.dayIdx] = u.newShift; });
-                       return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
-                     }));
-                   }}
-                   onUpdateEmployeeDailyHour={(empId, dayIdx, newHour) => {
-                     if (isReadOnly) return;
-                     onUpdateEmployeeDailyHour(empId, dayIdx, newHour);
-                   }}
-                   onUpdateTacticalPosition={(empId, dayIdx, newPos) => {
-                     if (isReadOnly) return;
-                     onUpdateTacticalPosition(empId, dayIdx, newPos);
-                   }}
+                   onUpdateShift={handleUpdateShift}
+                   onUpdateShifts={handleUpdateShifts}
+                   onUpdateEmployeeDailyHour={onUpdateEmployeeDailyHour}
+                   onUpdateTacticalPosition={onUpdateTacticalPosition}
                    onShareWhatsApp={handleShareWhatsApp}
                    onOpenDayDetail={(idx) => {
                      setSelectedDayIdx(idx);
@@ -1058,6 +1286,8 @@ const App: React.FC = () => {
                    setSectionAssignments={setSectionAssignments}
                    protectedDaysMap={protectedDaysMap}
                    setProtectedDaysMap={setProtectedDaysMap}
+                   auditLogs={auditLogs}
+                   setAuditLogs={setAuditLogs}
                    onClose={() => setCurrentView('grid')} 
                    role={auth.role}
                  />
@@ -1214,6 +1444,7 @@ const App: React.FC = () => {
            isValidated={isReadOnly}
            initialTab={employeeCardInitialTab}
            initialDate={employeeCardInitialDate}
+           auditLogs={auditLogs}
            onClose={() => setSelectedEmployeeForCard(null)}
          />
        )}
@@ -1362,25 +1593,10 @@ const App: React.FC = () => {
               setCurrentView('grid');
             }}
             onApplyFix={(empId, dayIdx, shift) => {
-              const monthKeyStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
-              setEmployees(prev => prev.map(emp => {
-                if (emp.id !== empId) return emp;
-                const sfs = [...(emp.shifts[monthKeyStr] || [])];
-                sfs[dayIdx] = shift;
-                return { ...emp, shifts: { ...emp.shifts, [monthKeyStr]: sfs } };
-              }));
+              handleUpdateShift(empId, dayIdx, shift);
             }}
             onApplyBulkFixes={(updates) => {
-              const monthKeyStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
-              setEmployees(prev => prev.map(emp => {
-                const empUpdates = updates.filter(u => u.empId === emp.id);
-                if (empUpdates.length === 0) return emp;
-                const sfs = [...(emp.shifts[monthKeyStr] || [])];
-                empUpdates.forEach(u => {
-                  sfs[u.dayIdx] = u.newShift;
-                });
-                return { ...emp, shifts: { ...emp.shifts, [monthKeyStr]: sfs } };
-              }));
+              handleUpdateShifts(updates);
             }}
           />
         )}
@@ -1403,10 +1619,20 @@ const App: React.FC = () => {
             snapshot={officialSnapshots[monthKey]}
             diffs={scheduleDiffs}
             currentMY={currentMY}
+            auditLogs={auditLogs}
             onSelectDay={(idx) => {
               setSelectedDayIdx(idx);
               setCurrentView('grid');
             }}
+          />
+        )}
+
+        {pendingAuditAction && (
+          <AuditJustificationModal
+            isOpen={!!pendingAuditAction}
+            impacts={pendingAuditAction.impacts}
+            onConfirm={pendingAuditAction.onConfirm}
+            onCancel={() => setPendingAuditAction(null)}
           />
         )}
 

@@ -137,3 +137,29 @@ export interface ScheduleDiffItem {
   officialVal: string;
   currentVal: string;
 }
+
+export type AuditChangeType = 
+  | 'FOLGA_TRABALHO' 
+  | 'TRABALHO_FOLGA' 
+  | 'ALTERACAO_HORARIO' 
+  | 'ALTERACAO_TURNO' 
+  | 'ALTERACAO_POSTO' 
+  | 'OUTRA_ALTERACAO_RELEVANTE';
+
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string;          // ISO string
+  authorRole: 'admin';
+  authorName: string;         // 'Gestor'
+  empId: string;
+  empName: string;
+  monthKey: string;           // YYYY-MM
+  dayIdx: number;
+  dateStr: string;            // DD/MM/YYYY
+  changeType: AuditChangeType;
+  beforeVal: string;
+  afterVal: string;
+  humanDescription: string;
+  justification: string;
+  isPostOfficialization: boolean;
+}
