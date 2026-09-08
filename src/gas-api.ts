@@ -71,16 +71,38 @@ export const apiStore = {
         if (!url) return { success: false, error: 'URL da Planilha não configurada.' };
 
         try {
-            const response = await fetch(`${url}?action=login&password=${encodeURIComponent(password)}`, {
-                method: 'GET',
+            // Tenta login via POST (padrão seguro, evita expor senha na URL e nos logs)
+            const response = await fetch(`${url}?action=login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'login', password }),
                 redirect: 'follow',
             });
             if (!response.ok) throw new Error('Erro na conexão com o servidor.');
-            return await response.json();
+            const data = await response.json();
+            // Se backend legado retornar erro de chave ausente, fallback para GET
+            if (!data || (data.error && data.error.includes('Key not provided'))) {
+                return await this.loginFallbackGet(url, password);
+            }
+            return data;
         } catch (e) {
-            console.error('Erro no login:', e);
-            return { success: false, error: 'Falha na autenticação. Verifique a conexão.' };
+            // Fallback para GET caso o deployment do GAS seja versão anterior que só aceita GET
+            try {
+                return await this.loginFallbackGet(url, password);
+            } catch (fallbackErr) {
+                console.error('Erro no login:', fallbackErr);
+                return { success: false, error: 'Falha na autenticação. Verifique a conexão.' };
+            }
         }
+    },
+
+    async loginFallbackGet(url: string, password: string): Promise<{ success: boolean, role?: 'admin' | 'viewer', error?: string }> {
+        const response = await fetch(`${url}?action=login&password=${encodeURIComponent(password)}`, {
+            method: 'GET',
+            redirect: 'follow',
+        });
+        if (!response.ok) throw new Error('Erro na conexão com o servidor.');
+        return await response.json();
     },
 
     async updatePassword(role: 'admin' | 'viewer', newPassword: string): Promise<{ success: boolean, error?: string }> {

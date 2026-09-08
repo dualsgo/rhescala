@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Icon } from './Icon';
-import { apiStore } from '../src/gas-api';
+import { apiStore, clearConfiguredApiUrl } from '../src/gas-api';
 
 interface LoginProps {
   onLogin: (role: 'admin' | 'viewer') => void;
@@ -36,18 +36,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4 font-sans relative overflow-hidden">
-      {/* Ambient Background Glows */}
-      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-orange-500/5 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] translate-x-1/2 translate-y-1/2 pointer-events-none" />
-      
-      <div className="max-w-md w-full bg-white dark:bg-black rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-zinc-800 p-10 animate-fade-in relative z-10">
+    <div className="min-h-screen bg-slate-900 dark:bg-black flex items-center justify-center p-4 font-sans relative">
+      <div className="max-w-md w-full bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 p-8 sm:p-10 animate-fade-in relative z-10">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-20 h-20 bg-orange-500 rounded-3xl shadow-lg shadow-orange-500/20 flex items-center justify-center mb-6 animate-bounce-subtle">
-             <Icon name="event_note" className="text-4xl text-white" />
+          <div className="w-16 h-16 bg-orange-500 rounded-2xl shadow-lg shadow-orange-500/20 flex items-center justify-center mb-4">
+             <Icon name="event_note" className="text-3xl text-white" />
           </div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">RH Escala</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-2">Sistema de Gestão de Escalas</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">RH Escala</h1>
+          <p className="text-slate-500 dark:text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-1">Sistema de Gestão de Escalas</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -102,10 +98,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <button 
               onClick={() => {
                 if (window.confirm('Deseja realmente trocar o link da planilha? Você voltará para a tela de configuração inicial.')) {
-                  import('../src/gas-api').then(m => {
-                    m.clearConfiguredApiUrl();
-                    window.location.reload();
-                  });
+                  clearConfiguredApiUrl();
+                  window.location.reload();
                 }
               }}
               className="text-[10px] font-black text-slate-400 hover:text-orange-500 uppercase tracking-widest transition-colors flex items-center gap-2"

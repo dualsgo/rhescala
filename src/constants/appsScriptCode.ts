@@ -5,7 +5,7 @@ export const APPS_SCRIPT_CODE = `/**
 
 function doGet(e) {
   try {
-    logDebug('GET', JSON.stringify(e.parameter));
+    logDebug('GET', sanitizeLog(JSON.stringify(e.parameter)));
     var action = e.parameter.action;
     var key = e.parameter.key;
 
@@ -50,9 +50,26 @@ function doGet(e) {
 
 function doPost(e) {
   try {
-    logDebug('POST', JSON.stringify(e.parameter), e.postData ? e.postData.contents : 'sem body');
     var action = e.parameter.action;
     var key = e.parameter.key;
+    logDebug('POST', sanitizeLog(JSON.stringify(e.parameter)), sanitizeLog(e.postData ? e.postData.contents : 'sem body'));
+
+    // Login seguro via POST (evita exposição de senha na URL e no histórico)
+    if (action === 'login') {
+      var body = {};
+      try { body = JSON.parse(e.postData.contents); } catch (err) {}
+      var password = body.password || e.parameter.password;
+      var adminPass = getConfig('admin_password', 'admin');
+      var viewerPass = getConfig('viewer_password', '1234');
+
+      if (password === adminPass) {
+        return buildCorsResponse(JSON.stringify({ success: true, role: 'admin' }));
+      } else if (password === viewerPass) {
+        return buildCorsResponse(JSON.stringify({ success: true, role: 'viewer' }));
+      } else {
+        return buildCorsResponse(JSON.stringify({ success: false, error: 'Senha incorreta' }));
+      }
+    }
 
     // Atualização de Senha
     if (action === 'update_password') {
@@ -185,10 +202,18 @@ function getOrCreateSheet(sheetName) {
   return sheet;
 }
 
+function sanitizeLog(text) {
+  if (!text) return '';
+  return text.toString()
+    .replace(/"password"\s*:\s*"[^"]*"/gi, '"password":"***"')
+    .replace(/password=[^&]*/gi, 'password=***')
+    .replace(/"newPassword"\s*:\s*"[^"]*"/gi, '"newPassword":"***"');
+}
+
 function logDebug(type, details, payload) {
   try {
     var sheet = getOrCreateSheet('DebugLog');
-    sheet.appendRow([new Date(), type, details, payload || '']);
+    sheet.appendRow([new Date(), type, sanitizeLog(details), sanitizeLog(payload || '')]);
     // Mantém apenas as últimas 100 linhas de log
     if (sheet.getLastRow() > 105) {
       sheet.deleteRows(2, 10);
@@ -198,33 +223,38 @@ function logDebug(type, details, payload) {
 
 /**
  * Remove versões antigas de dados, mantendo apenas a última de cada chave.
- * Isso evita que a planilha fique lenta com milhares de linhas de histórico.
+ * Execução em lote (batch) para alta performance sem risco de timeout no GAS.
  */
 function cleanupDatabase() {
   var sheet = getOrCreateSheet('Database');
   var data = sheet.getDataRange().getValues();
   if (data.length <= 2) return 0;
   
-  var latestIndices = {};
-  // Mapeia a última ocorrência de cada chave
-  for (var i = 1; i < data.length; i++) {
-    latestIndices[data[i][0]] = i;
-  }
+  var latestRows = {};
+  var headers = data[0];
+  var totalOriginal = data.length - 1;
   
-  var rowsToDelete = [];
-  // Identifica linhas que NÃO são a última versão
+  // Mapeia a linha mais recente de cada chave
   for (var i = 1; i < data.length; i++) {
     var key = data[i][0];
-    if (latestIndices[key] !== i) {
-      rowsToDelete.push(i + 1);
+    if (key) {
+      latestRows[key] = data[i];
     }
   }
   
-  // Apaga de baixo para cima para não perder a referência dos índices
-  for (var j = rowsToDelete.length - 1; j >= 0; j--) {
-    sheet.deleteRow(rowsToDelete[j]);
+  var preservedRows = [headers];
+  for (var k in latestRows) {
+    if (latestRows.hasOwnProperty(k)) {
+      preservedRows.push(latestRows[k]);
+    }
   }
   
-  return rowsToDelete.length;
+  var removedCount = totalOriginal - (preservedRows.length - 1);
+  if (removedCount > 0) {
+    sheet.clearContents();
+    sheet.getRange(1, 1, preservedRows.length, preservedRows[0].length).setValues(preservedRows);
+  }
+  
+  return removedCount;
 }
 `;

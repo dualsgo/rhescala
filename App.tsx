@@ -100,7 +100,32 @@ const App: React.FC = () => {
   const [showInconsistencyModal, setShowInconsistencyModal] = useState(false);
   const [viewerModeType, setViewerModeType] = useLocalStorage<'personal' | 'grid'>('rhescala_viewer_mode_type', 'grid');
   const [viewerSelectedEmpId, setViewerSelectedEmpId] = useLocalStorage<string>('rhescala_viewer_selected_emp_id', '');
-  const [auth, setAuth] = useState<{ isAuthenticated: boolean, role: 'admin' | 'viewer' }>({ isAuthenticated: false, role: 'viewer' });
+  const [auth, setAuth] = useState<{ isAuthenticated: boolean, role: 'admin' | 'viewer' }>(() => {
+    try {
+      const saved = sessionStorage.getItem('rhescala_auth_session');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.isAuthenticated === 'boolean' && (parsed.role === 'admin' || parsed.role === 'viewer')) {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return { isAuthenticated: false, role: 'viewer' };
+  });
+
+  const updateAuth = useCallback((newAuth: { isAuthenticated: boolean, role: 'admin' | 'viewer' } | ((prev: { isAuthenticated: boolean, role: 'admin' | 'viewer' }) => { isAuthenticated: boolean, role: 'admin' | 'viewer' })) => {
+    setAuth(prev => {
+      const next = typeof newAuth === 'function' ? newAuth(prev) : newAuth;
+      try {
+        if (next.isAuthenticated) {
+          sessionStorage.setItem('rhescala_auth_session', JSON.stringify(next));
+        } else {
+          sessionStorage.removeItem('rhescala_auth_session');
+        }
+      } catch (e) {}
+      return next;
+    });
+  }, []);
   const [authenticatedEmployeeId, setAuthenticatedEmployeeId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
   const [isDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
@@ -954,7 +979,7 @@ const App: React.FC = () => {
 
 
   if (!auth.isAuthenticated) {
-    return <Login onLogin={(role) => setAuth({ isAuthenticated: true, role })} />;
+    return <Login onLogin={(role) => updateAuth({ isAuthenticated: true, role })} />;
   }
 
   return (
@@ -984,13 +1009,13 @@ const App: React.FC = () => {
               onOptimizePeakWeek={handleOptimizePeakWeek}
               showNotes={showNotes}
               onToggleNotes={() => setShowNotes(!showNotes)}
-              onLogout={() => setAuth({ isAuthenticated: false, role: 'viewer' })}
+              onLogout={() => updateAuth({ isAuthenticated: false, role: 'viewer' })}
               onSwitchRole={() => {
                 if (auth.role === 'admin') {
-                  setAuth(prev => ({ ...prev, role: 'viewer' }));
+                  updateAuth(prev => ({ ...prev, role: 'viewer' }));
                 } else {
                   // If switching from viewer to admin, we must logout to force password entry
-                  setAuth({ isAuthenticated: false, role: 'viewer' });
+                  updateAuth({ isAuthenticated: false, role: 'viewer' });
                 }
               }}
               onShowHelp={() => setShowHelp(true)}

@@ -70,18 +70,15 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
     }
 
     return (
-        <div className="min-h-screen bg-black flex items-center justify-center p-4 py-20 font-sans relative overflow-hidden">
-            {/* Ambient Background Glows */}
-            <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-orange-500/5 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-            <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] translate-x-1/2 translate-y-1/2 pointer-events-none" />
+        <div className="min-h-screen bg-slate-900 dark:bg-black flex items-center justify-center p-4 py-16 font-sans relative">
             <div className="w-full max-w-2xl">
                 {/* Logo / Header */}
-                <div className="text-center mb-10">
-                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-[2rem] bg-indigo-500 shadow-xl shadow-indigo-500/20 mb-6 animate-bounce-subtle">
-                        <Icon name="event_note" className="text-4xl text-white" />
+                <div className="text-center mb-8">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 shadow-xl shadow-indigo-600/20 mb-4">
+                        <Icon name="event_note" className="text-3xl text-white" />
                     </div>
-                    <h1 className="text-4xl font-black text-white uppercase tracking-tight">RH Escala</h1>
-                    <p className="text-indigo-300 font-bold text-[11px] uppercase tracking-[0.2em] mt-3">Configuração de Nova Unidade</p>
+                    <h1 className="text-3xl sm:text-4xl font-black text-white uppercase tracking-tight">RH Escala</h1>
+                    <p className="text-indigo-300 font-bold text-[11px] uppercase tracking-[0.2em] mt-2">Configuração de Nova Unidade</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

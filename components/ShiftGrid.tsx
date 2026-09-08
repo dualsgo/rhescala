@@ -93,7 +93,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   const [hidePastDays, setHidePastDays] = useState(false);
   const [onlyWorkingToday, setOnlyWorkingToday] = useState(false);
   const [isCompactMode, setIsCompactMode] = useState(false);
-  const [focusSelectedDay, setFocusSelectedDay] = useState(true);
+  const [focusSelectedDay, setFocusSelectedDay] = useState(false);
 
   const protectedConfig = useMemo(() => normalizeProtectedDaysConfig(protectedDays), [protectedDays]);
 
@@ -474,14 +474,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
       {/* Grid Container */}
       <div className="bg-white dark:bg-black rounded-3xl border border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden flex-1 flex flex-col relative">
-        {/* Scroll Indicator Hint */}
-        {!hasScrolled && (
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 z-30 pointer-events-none animate-pulse-subtle bg-orange-500/90 text-white px-3 py-2 rounded-xl flex items-center gap-2 shadow-lg lg:hidden">
-             <span className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap">Deslize para ver mais</span>
-             <Icon name="arrow_forward" className="text-sm animate-bounce-x" />
-          </div>
-        )}
-        
         <div 
           ref={scrollContainerRef}
           className="overflow-auto custom-scrollbar flex-1"
