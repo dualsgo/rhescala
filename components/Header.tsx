@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Icon } from './Icon';
 import { MonthYear, SyncStatus, TacticalDisplayMode } from '../types';
+import { ActionsOptionsModal } from './ActionsOptionsModal';
 
 interface HeaderProps {
   currentView: string;
@@ -91,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
   isJustSaved = false,
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [showActionsModal, setShowActionsModal] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -119,12 +120,12 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="bg-white dark:bg-black border-b border-slate-200 dark:border-zinc-800 sticky top-0 z-50 shadow-sm transition-colors h-14">
       {/* Backdrop overlay to prevent clicking behind open dropdowns */}
-      {(showConfigMenu || showActionsMenu || showShareMenu || showProfileMenu) && (
+      {(showConfigMenu || showShareMenu || showProfileMenu) && (
         <div 
-          className="fixed inset-0 z-40 bg-transparent" 
-          onClick={() => {
+          className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[0.5px]" 
+          onClick={(e) => {
+            e.stopPropagation();
             setShowConfigMenu(false);
-            setShowActionsMenu(false);
             setShowShareMenu(false);
             setShowProfileMenu(false);
           }}
@@ -185,7 +186,10 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
 
                 {showConfigMenu && (
-                  <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div 
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-1.5 animate-in fade-in slide-in-from-top-1 duration-200"
+                  >
                     <div className="px-3 py-1.5 text-[9px] font-black uppercase text-slate-400 tracking-widest border-b border-slate-100 dark:border-zinc-800 mb-1">
                       Parâmetros do Sistema
                     </div>
@@ -378,259 +382,40 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           )}
 
-          {/* 1. Menu: Ações da Escala (Segmentado) */}
+          {/* Botão Direto: Modo Edição */}
           {!isReadOnly && currentView === 'grid' && (
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowActionsMenu(!showActionsMenu);
-                  setShowShareMenu(false);
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 border shadow-sm ${
-                  isEditable || showActionsMenu
-                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-orange-600 shadow-orange-500/20'
-                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-200 hover:border-orange-300'
-                }`}
-                title="Ações inteligentes e automações da escala"
-              >
-                <Icon name="auto_fix_high" className="text-sm" />
-                <span className="hidden md:inline">Ações da Escala</span>
-                <Icon name={showActionsMenu ? 'expand_less' : 'expand_more'} className="text-xs" />
-              </button>
+            <button
+              type="button"
+              onClick={onToggleEdit}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all shadow-sm ${
+                isEditable
+                  ? 'bg-indigo-600 border-indigo-700 text-white shadow-indigo-500/20'
+                  : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-200 hover:border-indigo-300'
+              }`}
+              title={isEditable ? 'Modo de Edição Ativo: clique para bloquear edição das células' : 'Clique para ativar o modo de edição das células'}
+            >
+              <Icon name={isEditable ? 'lock_open' : 'edit'} className="text-xs sm:text-sm" />
+              <span className="hidden sm:inline">{isEditable ? 'Edição Ativa' : 'Modo Edição'}</span>
+              <span className="inline sm:hidden">{isEditable ? 'Edição' : 'Editar'}</span>
+            </button>
+          )}
 
-              {showActionsMenu && (
-                <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                  
-                  {/* Seção 1: Geração Inteligente */}
-                  <div>
-                    <div className="px-2.5 py-1 text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest flex items-center gap-1">
-                      <Icon name="psychology" className="text-xs text-orange-500" />
-                      <span>Automação & Geração</span>
-                    </div>
-
-                    <div className="space-y-1 mt-1">
-                      <button
-                        onClick={() => {
-                          onCreateMonth();
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-black uppercase text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/40 transition-all text-left"
-                      >
-                        <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-900/50 text-orange-600">
-                          <Icon name="add_circle" className="text-sm" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span>Criar Próximo Mês</span>
-                          <span className="text-[9px] font-normal text-slate-400 lowercase">valida retro-análise, folgas e férias</span>
-                        </div>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          if (onOpenPresetModal) onOpenPresetModal();
-                          else onApplyFolgas();
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-all text-left"
-                      >
-                        <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600">
-                          <Icon name="tune" className="text-sm" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span>Aplicar Pré-definições</span>
-                          <span className="text-[9px] font-normal text-slate-400 lowercase">só horários, folgas ou posições</span>
-                        </div>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          onSortearDomingo();
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold uppercase text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all text-left"
-                      >
-                        <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-600">
-                          <Icon name="casino" className="text-sm" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span>Sortear Domingos CLT</span>
-                          <span className="text-[9px] font-normal text-slate-400 lowercase">máximo 2 domingos seguidos</span>
-                        </div>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          onDistributePositions();
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold uppercase text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-all text-left"
-                      >
-                        <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600">
-                          <Icon name="view_in_ar" className="text-sm" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span>Distribuir Posições Táticas</span>
-                          <span className="text-[9px] font-normal text-slate-400 lowercase">P1 a P4 e Estoque</span>
-                        </div>
-                      </button>
-
-                      {/* Otimização de Pico Contextual (Dia das Crianças / Natal) */}
-                      {onOptimizePeakWeek && (
-                        <button
-                          onClick={() => {
-                            onOptimizePeakWeek();
-                            setShowActionsMenu(false);
-                          }}
-                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-black uppercase text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-all text-left"
-                        >
-                          <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600">
-                            <Icon name={currentMY.month === 9 ? 'celebration' : 'auto_awesome'} className="text-sm" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span>
-                              {currentMY.month === 9 
-                                ? 'Dias Protegidos & Limite de Folgas' 
-                                : currentMY.month === 11 
-                                ? 'Dias Protegidos & Limite de Folgas' 
-                                : 'Configurar Dias Protegidos'}
-                            </span>
-                            <span className="text-[9px] font-normal text-slate-400 lowercase">
-                              escolher dias e limite máximo de folgas
-                            </span>
-                          </div>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="h-px bg-slate-100 dark:border-zinc-800" />
-
-                  {/* Seção 2: Modos de Edição e Controles */}
-                  <div>
-                    <div className="px-2.5 py-1 text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest flex items-center gap-1">
-                      <Icon name="edit" className="text-xs text-indigo-500" />
-                      <span>Modos de Edição</span>
-                    </div>
-
-                    <div className="space-y-1.5 mt-1 px-1">
-                      <div 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleEdit();
-                        }}
-                        className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none ${
-                          isEditable 
-                            ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-800' 
-                            : 'bg-slate-50 dark:bg-zinc-800/60 border-slate-200/50 dark:border-zinc-700/50 hover:bg-slate-100 dark:hover:bg-zinc-800'
-                        }`}
-                      >
-                        <div className="flex flex-col">
-                          <span className="text-xs font-black uppercase text-slate-800 dark:text-slate-200">Modo Edição</span>
-                          <span className="text-[9px] font-normal text-slate-400">permite alterar células da grade</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleEdit();
-                          }}
-                          className={`w-10 h-6 rounded-full relative transition-colors shrink-0 ${isEditable ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-zinc-600'}`}
-                        >
-                          <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${isEditable ? 'left-5' : 'left-1'}`} />
-                        </button>
-                      </div>
-
-                      <div 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleRetroactive();
-                        }}
-                        className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none ${
-                          allowRetroactive 
-                            ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-800' 
-                            : 'bg-slate-50 dark:bg-zinc-800/60 border-slate-200/50 dark:border-zinc-700/50 hover:bg-slate-100 dark:hover:bg-zinc-800'
-                        }`}
-                      >
-                        <div className="flex flex-col">
-                          <span className="text-xs font-black uppercase text-slate-800 dark:text-slate-200">Edição Retroativa</span>
-                          <span className="text-[9px] font-normal text-slate-400">permitir alterar dias passados</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleRetroactive();
-                          }}
-                          className={`w-10 h-6 rounded-full relative transition-colors shrink-0 ${allowRetroactive ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-zinc-600'}`}
-                        >
-                          <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${allowRetroactive ? 'left-5' : 'left-1'}`} />
-                        </button>
-                      </div>
-
-                      {/* Alternador de Modo: Posições vs Funções */}
-                      {onToggleTacticalDisplayMode && (
-                        <div className="p-2.5 rounded-xl border border-slate-200/60 dark:border-zinc-700/60 bg-slate-50 dark:bg-zinc-800/60 flex flex-col gap-2">
-                          <div className="flex flex-col">
-                            <span className="text-xs font-black uppercase text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                              <Icon name="badge" className="text-sm text-orange-500" /> Formato da Escala
-                            </span>
-                            <span className="text-[9px] font-normal text-slate-400">alternar entre códigos e nomes de funções</span>
-                          </div>
-                          
-                          <div className="grid grid-cols-3 gap-1 p-0.5 bg-slate-200/70 dark:bg-zinc-900 rounded-xl">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleTacticalDisplayMode('positions');
-                              }}
-                              className={`py-1.5 px-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
-                                tacticalDisplayMode === 'positions'
-                                  ? 'bg-orange-500 text-white shadow-sm'
-                                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                              }`}
-                            >
-                              <span>🏷️ Posições</span>
-                            </button>
-                            
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleTacticalDisplayMode('roles');
-                              }}
-                              className={`py-1.5 px-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
-                                tacticalDisplayMode === 'roles'
-                                  ? 'bg-indigo-600 text-white shadow-sm'
-                                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                              }`}
-                            >
-                              <span>👔 Funções</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleTacticalDisplayMode('off');
-                              }}
-                              className={`py-1.5 px-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
-                                tacticalDisplayMode === 'off'
-                                  ? 'bg-slate-700 text-white shadow-sm'
-                                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                              }`}
-                            >
-                              <span>🔘 Padrão (T)</span>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                </div>
-              )}
-            </div>
+          {/* Botão: Painel de Ações & Opções da Escala (Abre Modal) */}
+          {!isReadOnly && currentView === 'grid' && (
+            <button
+              type="button"
+              onClick={() => {
+                setShowActionsModal(true);
+                setShowShareMenu(false);
+                setShowConfigMenu(false);
+              }}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all shadow-sm bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-200 hover:border-orange-300 hover:bg-orange-50/50 dark:hover:bg-zinc-800"
+              title="Abrir painel de ações inteligentes e opções da escala"
+            >
+              <Icon name="auto_fix_high" className="text-xs sm:text-sm text-orange-500" />
+              <span className="hidden md:inline">Ações & Opções</span>
+              <span className="inline md:hidden">Opções</span>
+            </button>
           )}
 
           {/* 2. Menu: Compartilhar & Exportar (Segmentado) */}
@@ -639,7 +424,6 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 onClick={() => {
                   setShowShareMenu(!showShareMenu);
-                  setShowActionsMenu(false);
                 }}
                 className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 border shadow-sm ${
                   showShareMenu
@@ -654,7 +438,10 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
 
               {showShareMenu && (
-                <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div 
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-200"
+                >
                   
                   {/* WhatsApp */}
                   <div>
@@ -773,7 +560,10 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             {showProfileMenu && (
-              <div className="absolute top-full right-0 mt-2 w-52 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+              <div 
+                onClick={(e) => e.stopPropagation()}
+                className="absolute top-full right-0 mt-2 w-52 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-1.5 animate-in fade-in slide-in-from-top-1 duration-200"
+              >
                 <div className="px-3 py-2 border-b border-slate-100 dark:border-zinc-800 mb-1">
                   <span className="block text-xs font-black uppercase text-slate-800 dark:text-slate-200">Gestão Loja</span>
                   <span className="block text-[10px] font-bold text-slate-400">{isReadOnly ? 'Visualizador' : 'Administrador'}</span>
@@ -987,6 +777,19 @@ export const Header: React.FC<HeaderProps> = ({
                   ))}
                 </div>
 
+                {!isReadOnly && currentView === 'grid' && (
+                  <button
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      setShowActionsModal(true);
+                    }}
+                    className="w-full p-3.5 rounded-2xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 flex items-center justify-center gap-2.5 text-xs font-black uppercase shadow-sm"
+                  >
+                    <Icon name="auto_fix_high" className="text-base text-orange-500" />
+                    <span>Ações & Opções da Escala</span>
+                  </button>
+                )}
+
                 <div className="space-y-1 pt-2">
                   <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block px-1">Configurações & Dados</span>
                   <div className="grid grid-cols-2 gap-2">
@@ -1010,6 +813,25 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
       )}
+
+      {/* Modal de Ações & Opções da Escala (Sem sobreposição falha sobre a grade) */}
+      <ActionsOptionsModal
+        isOpen={showActionsModal}
+        onClose={() => setShowActionsModal(false)}
+        currentMY={currentMY}
+        isEditable={isEditable}
+        onToggleEdit={onToggleEdit}
+        allowRetroactive={allowRetroactive}
+        onToggleRetroactive={onToggleRetroactive}
+        onCreateMonth={onCreateMonth}
+        onOpenPresetModal={onOpenPresetModal}
+        onApplyFolgas={onApplyFolgas}
+        onSortearDomingo={onSortearDomingo}
+        onDistributePositions={onDistributePositions}
+        onOptimizePeakWeek={onOptimizePeakWeek}
+        tacticalDisplayMode={tacticalDisplayMode}
+        onToggleTacticalDisplayMode={onToggleTacticalDisplayMode}
+      />
     </header>
   );
 };
