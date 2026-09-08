@@ -53,44 +53,8 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
   const [quickEditEmp, setQuickEditEmp] = useState<Employee | null>(null);
 
   const dayNum = selectedDayIdx + 1;
-  const dateObj = new Date(currentMY.year, currentMY.month, dayNum);
   const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-  
-  const weekDaysFull = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-  const weekDayName = weekDaysFull[dateObj.getDay()];
-  const monthsNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-
-  const activePool = allEmployees || employees;
   const settings = jornadaSettings || DEFAULT_JORNADA_SETTINGS;
-
-  // Global day stats computed across all active store employees
-  const dayStats = React.useMemo(() => {
-    let opening = 0;
-    let intermediate = 0;
-    let closing = 0;
-    let folgasCount = 0;
-
-    activePool.forEach(emp => {
-      if (emp.status === 'inactive' || emp.isHidden) return;
-      if (!isEmployeeActiveOnDay(emp, dateStr, monthKey, selectedDayIdx)) return;
-
-      const shift = emp.shifts?.[monthKey]?.[selectedDayIdx] || 'T';
-      const isOff = !isWorkingShift(shift);
-
-      if (isOff) {
-        folgasCount++;
-      } else {
-        const hour = emp.dailyHours?.[monthKey]?.[selectedDayIdx] || emp.workPeriod || getDefaultHourForDay(emp, isHoliday, isSunday);
-        const classification = getShiftClassification(hour, isSunday, settings);
-        if (classification === 'Abertura') opening++;
-        else if (classification === 'Intermediário') intermediate++;
-        else closing++;
-      }
-    });
-
-    return { opening, intermediate, closing, folgasCount, totalWorking: opening + intermediate + closing };
-  }, [activePool, dateStr, monthKey, selectedDayIdx, isHoliday, isSunday, settings]);
-
   // Categorize displayed employees for the selected day
   const categorized = React.useMemo(() => {
     const abertura: Array<{ emp: Employee; shift: string; hour: string; pos: string }> = [];
@@ -161,101 +125,6 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
 
   return (
     <div className="space-y-3 pb-6">
-      {/* Header do Dia com Resumo Operacional */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-slate-200/80 dark:border-zinc-800 shadow-sm space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-base font-black text-slate-900 dark:text-slate-100">
-                {weekDayName}, {dayNum} de {monthsNames[currentMY.month]}
-              </span>
-              {isHoliday && (
-                <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase tracking-wider">
-                  🎉 {holidayName || 'Feriado'}
-                </span>
-              )}
-              {isSunday && (
-                <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-wider">
-                  Domingo
-                </span>
-              )}
-              {isProtected && (
-                <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-wider">
-                  🛡️ Protegido
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-              Escala operacional escalonada por turno
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => onOpenDayDetail(selectedDayIdx)}
-            className="p-2 rounded-xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 text-xs font-bold flex items-center gap-1 shrink-0 shadow-sm"
-            title="Ver detalhes de almoço e apoio deste dia"
-          >
-            <Icon name="event_note" className="text-base" />
-            <span className="hidden xs:inline">Almoços</span>
-          </button>
-        </div>
-
-        {/* Cobertura Rápida em Pílulas */}
-        <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-100 dark:border-zinc-800">
-          <button
-            type="button"
-            onClick={() => {
-              const el = document.getElementById('sec-abertura');
-              el?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="p-2 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 text-center transition-all active:scale-95 cursor-pointer"
-            title="Ir para Turno Abertura"
-          >
-            <span className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 block">Abertura</span>
-            <span className="text-base font-black text-blue-800 dark:text-blue-200">{dayStats.opening}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const el = document.getElementById('sec-intermediario');
-              el?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="p-2 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 text-center transition-all active:scale-95 cursor-pointer"
-            title="Ir para Turno Intermediário"
-          >
-            <span className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 block">Intermed.</span>
-            <span className="text-base font-black text-amber-800 dark:text-amber-200">{dayStats.intermediate}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const el = document.getElementById('sec-fechamento');
-              el?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="p-2 rounded-xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/40 text-center transition-all active:scale-95 cursor-pointer"
-            title="Ir para Turno Fechamento"
-          >
-            <span className="text-[10px] font-black uppercase text-purple-600 dark:text-purple-400 block">Fechamento</span>
-            <span className="text-base font-black text-purple-800 dark:text-purple-200">{dayStats.closing}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setShowFolgas(true);
-              setTimeout(() => {
-                const el = document.getElementById('sec-folgas');
-                el?.scrollIntoView({ behavior: 'smooth' });
-              }, 50);
-            }}
-            className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-center transition-all active:scale-95 cursor-pointer"
-            title="Ver Folgas e Ausências"
-          >
-            <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 block">Folgas</span>
-            <span className="text-base font-black text-slate-700 dark:text-slate-200">{dayStats.folgasCount}</span>
-          </button>
-        </div>
-      </div>
 
       {/* Seção 1: Abertura */}
       {categorized.abertura.length > 0 && (

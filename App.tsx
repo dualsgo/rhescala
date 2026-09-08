@@ -1230,6 +1230,22 @@ const App: React.FC = () => {
                  />
                 );
              case 'analysis':
+               if (isReadOnly) {
+                 return (
+                   <div className="h-full flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+                     <div className="w-16 h-16 bg-amber-100 dark:bg-amber-950/40 text-amber-600 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
+                       <Icon name="lock" className="text-3xl" />
+                     </div>
+                     <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 mb-1">Acesso Exclusivo da Gestão</h3>
+                     <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm mb-6">
+                       O painel analítico de cobertura de equipe é reservado aos administradores da loja.
+                     </p>
+                     <button onClick={() => setCurrentView('grid')} className="px-5 py-2.5 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-xl font-bold text-xs text-slate-700 dark:text-slate-200 transition-colors">
+                       Voltar para a Escala
+                     </button>
+                   </div>
+                 );
+               }
                return (
                  <AnalysisPanel 
                    employees={employees} 
@@ -1397,7 +1413,23 @@ const App: React.FC = () => {
                  </div>
                );
              case 'requests':
-               return (
+                if (isReadOnly) {
+                  return (
+                    <div className="h-full flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+                      <div className="w-16 h-16 bg-rose-100 dark:bg-rose-950/40 text-rose-600 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
+                        <Icon name="lock" className="text-3xl" />
+                      </div>
+                      <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 mb-1">Privacidade Protegida</h3>
+                      <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm mb-6">
+                        O mural geral de solicitações é exclusivo para a gestão da loja. Para consultar e enviar seus próprios pedidos com privacidade, acesse seu Cartão Individual.
+                      </p>
+                      <button onClick={() => setCurrentView('grid')} className="px-5 py-2.5 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-xl font-bold text-xs text-slate-700 dark:text-slate-200 transition-colors">
+                        Voltar para a Escala
+                      </button>
+                    </div>
+                  );
+                }
+                return (
                  <RequestManager
                    employees={employees}
                    currentMY={currentMY}
@@ -1661,6 +1693,7 @@ const App: React.FC = () => {
           inconsistencyCount={activeInconsistencies.length}
           onOpenMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           onGoToToday={handleGoToToday}
+          isReadOnly={isReadOnly}
         />
 
         <SyncBlockingOverlay syncStatus={syncStatus} />
