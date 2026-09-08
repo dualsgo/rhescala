@@ -20,6 +20,7 @@ interface TeamViewProps {
     hiredAt?: string,
     firedAt?: string
   ) => void;
+  onClose?: () => void;
 }
 
 const CARGO_OPTIONS: EmployeeCargo[] = ['Atendente', 'Estoquista', 'Aprendiz', 'Fiscal'];
@@ -1016,7 +1017,8 @@ export const TeamView: React.FC<TeamViewProps> = ({
   isReadOnly = false,
   onUpdateEmployee, 
   onDeleteEmployee, 
-  onAddEmployee 
+  onAddEmployee,
+  onClose
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingEmpId, setEditingEmpId] = useState<string | null>(null);
@@ -1056,16 +1058,29 @@ export const TeamView: React.FC<TeamViewProps> = ({
            </p>
         </div>
         
-        {!isReadOnly && (
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95"
+              title="Voltar para a Grade Principal"
+            >
+              <Icon name="arrow_back" className="text-sm" />
+              <span>Voltar à Grade</span>
+            </button>
+          )}
+
+          {!isReadOnly && (
             <button 
+              type="button"
               onClick={() => setShowAddModal(true)}
               className="w-full sm:w-auto bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider shadow-md shadow-orange-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
             >
               <Icon name="person_add" className="text-base" /> Novo Colaborador
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Filter Toolbar */}

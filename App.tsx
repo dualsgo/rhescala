@@ -1247,6 +1247,7 @@ const App: React.FC = () => {
                    onUpdateEmployee={onUpdateEmployee}
                    onDeleteEmployee={onDeleteEmployee}
                    onAddEmployee={onAddEmployee}
+                   onClose={() => setCurrentView('grid')}
                  />
                );
              case 'data':
@@ -1382,6 +1383,7 @@ const App: React.FC = () => {
                    currentMY={currentMY}
                    onUpdateEmployee={onUpdateEmployee}
                    isReadOnly={isReadOnly}
+                   onClose={() => setCurrentView('grid')}
                  />
                );
              default:

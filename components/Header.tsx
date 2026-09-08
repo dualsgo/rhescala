@@ -106,15 +106,30 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'requests', label: 'Solicitações', icon: 'assignment' },
   ];
 
-  const configItems = [
-    { id: 'team', label: 'Equipe Operacional', icon: 'groups' },
-    { id: 'jornada', label: 'Parâmetros de Jornada', icon: 'schedule' },
-    { id: 'feriados', label: 'Feriados & Folgas', icon: 'event_busy' },
-    { id: 'worked-holidays', label: 'Feriados Trabalhados', icon: 'list_alt' },
-    { id: 'cleaning', label: 'Limpeza da Copa', icon: 'cleaning_services' },
-    { id: 'patrol', label: 'Ronda da Loja', icon: 'local_police' },
-    { id: 'sections', label: 'Donos de Seção', icon: 'category' },
-    { id: 'data', label: 'Banco de Dados & Backup', icon: 'storage' },
+  const operationsSections = [
+    {
+      title: 'Rotinas da Loja',
+      items: [
+        { id: 'cleaning', label: 'Limpeza da Copa', icon: 'cleaning_services' },
+        { id: 'patrol', label: 'Ronda da Loja', icon: 'local_police' },
+        { id: 'sections', label: 'Donos de Seção', icon: 'category' },
+      ]
+    },
+    {
+      title: 'Gestão Operacional',
+      items: [
+        { id: 'team', label: 'Equipe Operacional', icon: 'groups' },
+        { id: 'jornada', label: 'Parâmetros de Jornada', icon: 'schedule' },
+        { id: 'feriados', label: 'Feriados & Folgas', icon: 'event_busy' },
+        { id: 'worked-holidays', label: 'Feriados Trabalhados', icon: 'list_alt' },
+      ]
+    },
+    {
+      title: 'Sistema & Dados',
+      items: [
+        { id: 'data', label: 'Banco de Dados & Backup', icon: 'storage' },
+      ]
+    }
   ];
 
   return (
@@ -150,7 +165,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   key={item.id}
                   onClick={() => onViewChange(item.id as any)}
-                  className={`relative px-3.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                  className={`relative px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
                     currentView === item.id 
                       ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600 dark:text-orange-400' 
                       : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
@@ -169,47 +184,53 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               ))}
 
-              {/* Config Menu Dropdown */}
+              {/* Operações & Loja Dropdown */}
               <div className="relative">
                 <button
                   onClick={() => setShowConfigMenu(!showConfigMenu)}
                   onBlur={() => setTimeout(() => setShowConfigMenu(false), 200)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
                     ['team','jornada','data','feriados','worked-holidays','cleaning','patrol','sections'].includes(currentView) 
                       ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600 dark:text-orange-400' 
                       : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
-                  <Icon name="settings" className="text-sm" />
-                  <span>Configurações</span>
+                  <Icon name="tune" className="text-sm" />
+                  <span>Operações & Loja</span>
                   <Icon name={showConfigMenu ? 'expand_less' : 'expand_more'} className="text-xs" />
                 </button>
 
                 {showConfigMenu && (
                   <div 
                     onClick={(e) => e.stopPropagation()}
-                    className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-1.5 animate-in fade-in slide-in-from-top-1 duration-200"
+                    className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 animate-in fade-in slide-in-from-top-1 duration-150 space-y-2"
                   >
-                    <div className="px-3 py-1.5 text-[9px] font-black uppercase text-slate-400 tracking-widest border-b border-slate-100 dark:border-zinc-800 mb-1">
-                      Parâmetros do Sistema
-                    </div>
-                    {configItems.map(item => (
-                      <button
-                        key={item.id}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          onViewChange(item.id as any);
-                          setShowConfigMenu(false);
-                        }}
-                        className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold transition-all text-left ${
-                          currentView === item.id 
-                            ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400' 
-                            : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800'
-                        }`}
-                      >
-                        <Icon name={item.icon} className="text-base text-slate-400" />
-                        <span>{item.label}</span>
-                      </button>
+                    {operationsSections.map((section, sIdx) => (
+                      <div key={section.title} className={sIdx > 0 ? 'pt-1.5 border-t border-slate-100 dark:border-zinc-800' : ''}>
+                        <div className="px-2.5 py-1 text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">
+                          {section.title}
+                        </div>
+                        <div className="space-y-0.5">
+                          {section.items.map(item => (
+                            <button
+                              key={item.id}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                onViewChange(item.id as any);
+                                setShowConfigMenu(false);
+                              }}
+                              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all text-left ${
+                                currentView === item.id 
+                                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 font-bold' 
+                                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                              }`}
+                            >
+                              <Icon name={item.icon} className="text-base text-slate-400 shrink-0" />
+                              <span className="truncate">{item.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}

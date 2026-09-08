@@ -224,252 +224,277 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           </button>
         )}
 
-        <div className="flex items-center justify-between gap-2 bg-slate-50/90 dark:bg-zinc-900/80 p-1.5 sm:p-2 rounded-2xl border border-slate-200/70 dark:border-zinc-800 overflow-x-auto custom-scrollbar w-full">
-          
-          {/* Grupo 1: Período & Foco */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
-              {[
-                { id: 'all', label: 'Mês', short: 'Mês' },
-                { id: 'sunday', label: 'Domingos', short: 'Dom' },
-                { id: 'holiday', label: 'Feriados', short: 'Fer' }
-              ].map(f => (
-                <button
-                  key={f.id}
-                  onClick={() => onFilterChange(f.id as any)}
-                  className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                    filter === f.id 
-                      ? 'bg-orange-500 text-white shadow-sm' 
-                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
-                  }`}
-                >
-                  <span className="hidden sm:inline">{f.label}</span>
-                  <span className="inline sm:hidden">{f.short}</span>
-                </button>
-              ))}
-            </div>
-
+        {/* Linha 1: Contexto Operacional do Dia & Ações Imediatas */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white dark:bg-zinc-900 p-2 sm:p-2.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-sm w-full">
+          {/* Lado Esquerdo: Dia Selecionado & Ações Diárias */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Âncora do Dia Selecionado */}
             <button
+              type="button"
+              onClick={() => onOpenDayDetail(selectedDayIdx)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-black uppercase tracking-wider transition-all shadow-sm ${
+                isCurrentMonth && (selectedDayIdx + 1) === todayDayNum
+                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20'
+                  : 'bg-slate-50 dark:bg-zinc-800/80 border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800'
+              }`}
+              title="Clique para abrir o Resumo Operacional detalhado deste dia (escalas, almoços e postos)"
+            >
+              <span className={`w-2 h-2 rounded-full ${isCurrentMonth && (selectedDayIdx + 1) === todayDayNum ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'}`} />
+              <span>
+                {isCurrentMonth && (selectedDayIdx + 1) === todayDayNum ? 'Hoje' : 'Dia'}: {String(selectedDayIdx + 1).padStart(2, '0')}/{String(currentMY.month + 1).padStart(2, '0')} {days[selectedDayIdx]?.weekday ? `(${days[selectedDayIdx].weekday})` : ''}
+              </span>
+              <Icon name="visibility" className="text-xs text-slate-400 dark:text-zinc-400" />
+            </button>
+
+            {/* Botão WhatsApp do Dia */}
+            {onShareWhatsApp && (
+              <button
+                type="button"
+                onClick={() => onShareWhatsApp(selectedDayIdx)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shadow-emerald-600/20 active:scale-95 whitespace-nowrap"
+                title="Copiar ou compartilhar escala do dia para o WhatsApp"
+              >
+                <Icon name="chat" className="text-xs" />
+                <span>WhatsApp do Dia</span>
+              </button>
+            )}
+
+            {/* Foco no Dia Selecionado */}
+            <button
+              type="button"
               onClick={() => setFocusSelectedDay(!focusSelectedDay)}
-              className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shrink-0 whitespace-nowrap ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
                 focusSelectedDay 
                   ? 'bg-amber-500 border-amber-500 text-white shadow-amber-500/20' 
-                  : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50'
+                  : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
               }`}
-              title={focusSelectedDay ? 'Desativar efeito de foco no dia selecionado' : 'Ofuscar os outros dias com blur e destacar apenas o dia selecionado'}
+              title={focusSelectedDay ? 'Desativar efeito de foco' : 'Ofuscar os outros dias com blur e focar apenas neste dia'}
             >
               <Icon name={focusSelectedDay ? 'filter_center_focus' : 'center_focus_weak'} className="text-xs" />
               <span>{focusSelectedDay ? `Dia ${selectedDayIdx + 1}` : 'Foco'}</span>
             </button>
 
+            {/* Restantes (se for mês corrente) */}
             {isCurrentMonth && (
               <button
+                type="button"
                 onClick={() => setHidePastDays(!hidePastDays)}
-                className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shrink-0 whitespace-nowrap ${
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
                   hidePastDays 
                     ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-500/20' 
-                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50'
+                    : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
                 }`}
                 title={hidePastDays ? 'Exibir o mês inteiro' : 'Ocultar dias passados para focar no restante do mês'}
               >
                 <Icon name={hidePastDays ? 'fast_forward' : 'history_toggle_off'} className="text-xs" />
-                <span className="hidden sm:inline">{hidePastDays ? `Restantes (${daysRemainingCount}d)` : 'Restantes'}</span>
-                <span className="inline sm:hidden">{hidePastDays ? `${daysRemainingCount}d` : 'Rest.'}</span>
+                <span>{hidePastDays ? `Restantes (${daysRemainingCount}d)` : 'Restantes'}</span>
+              </button>
+            )}
+
+            {/* Dias Protegidos (Apenas Admin) */}
+            {!isReadOnly && onOpenProtectedModal && (
+              <button
+                type="button"
+                onClick={onOpenProtectedModal}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap"
+                title="Configurar dias protegidos e limite de folgas"
+              >
+                <Icon name="shield" className="text-xs text-amber-500" />
+                <span>Dias Protegidos</span>
+                {Object.keys(protectedConfig).length > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 text-[9px] font-black">
+                    {Object.keys(protectedConfig).length}
+                  </span>
+                )}
               </button>
             )}
           </div>
 
-          {/* Grupo: Dias Protegidos (Apenas Admin) */}
-          {!isReadOnly && onOpenProtectedModal && (
+          {/* Lado Direito: Modos de Exibição & Controles */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Alternador de Modo: Posições vs Funções vs Padrão */}
+            {onToggleTacticalDisplayMode && (
+              <div className="flex items-center bg-slate-100 dark:bg-zinc-800 p-0.5 rounded-xl shadow-inner shrink-0">
+                <button
+                  type="button"
+                  onClick={() => onToggleTacticalDisplayMode('positions')}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                    tacticalDisplayMode === 'positions'
+                      ? 'bg-orange-500 text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-zinc-700'
+                  }`}
+                  title="Modo Posições: Exibir códigos P1, P2, P3, P4 e ESTQ"
+                >
+                  <span>🏷️ Posições</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onToggleTacticalDisplayMode('roles')}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                    tacticalDisplayMode === 'roles'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-zinc-700'
+                  }`}
+                  title="Modo Funções: Exibir funções Caixa, Fiscal, Atendimento, Apoio e Estoque"
+                >
+                  <span>👔 Funções</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onToggleTacticalDisplayMode('off')}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                    tacticalDisplayMode === 'off'
+                      ? 'bg-slate-700 text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-zinc-700'
+                  }`}
+                  title="Modo Padrão: Ocultar posições e exibir apenas T e Folgas"
+                >
+                  <span>🔘 T</span>
+                </button>
+              </div>
+            )}
+
+            {/* Modo Denso */}
             <button
-              onClick={onOpenProtectedModal}
-              className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800/60 hover:bg-amber-100 text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shrink-0 whitespace-nowrap"
-              title="Configurar dias protegidos e limite de folgas"
+              type="button"
+              onClick={() => setIsCompactMode(!isCompactMode)}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
+                isCompactMode 
+                  ? 'bg-purple-600 border-purple-600 text-white shadow-purple-500/20' 
+                  : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
+              }`}
+              title="Alternar entre espaçamento normal e denso para exibir mais colaboradores"
             >
-              <Icon name="shield" className="text-xs text-amber-500" />
-              <span className="hidden sm:inline">Dias Protegidos</span>
-              <span className="inline sm:hidden">Protegidos</span>
-              {Object.keys(protectedConfig).length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 text-[9px] font-black">
-                  {Object.keys(protectedConfig).length}
-                </span>
-              )}
+              <Icon name={isCompactMode ? 'view_agenda' : 'view_headline'} className="text-xs" />
+              <span>{isCompactMode ? 'Denso' : 'Normal'}</span>
             </button>
-          )}
 
-          {/* Alternador de Modo: Posições vs Funções vs Padrão */}
-          {onToggleTacticalDisplayMode && (
-            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
-              <button
-                type="button"
-                onClick={() => onToggleTacticalDisplayMode('positions')}
-                className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                  tacticalDisplayMode === 'positions'
-                    ? 'bg-orange-500 text-white shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
-                }`}
-                title="Modo Posições: Exibir códigos P1, P2, P3, P4 e ESTQ"
-              >
-                <span className="hidden sm:inline">🏷️ Posições</span>
-                <span className="inline sm:hidden">🏷️ Pos</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onToggleTacticalDisplayMode('roles')}
-                className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                  tacticalDisplayMode === 'roles'
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
-                }`}
-                title="Modo Funções: Exibir funções Caixa, Fiscal, Atendimento, Apoio e Estoque"
-              >
-                <span className="hidden sm:inline">👔 Funções</span>
-                <span className="inline sm:hidden">👔 Func</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onToggleTacticalDisplayMode('off')}
-                className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                  tacticalDisplayMode === 'off'
-                    ? 'bg-slate-700 text-white shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
-                }`}
-                title="Modo Padrão: Ocultar posições e exibir apenas T e Folgas"
-              >
-                <span className="hidden sm:inline">🔘 Padrão (T)</span>
-                <span className="inline sm:hidden">🔘 T</span>
-              </button>
-            </div>
-          )}
-
-          {/* Grupo 2: Equipe & Contrato (Apenas Admin) */}
-          {!isReadOnly && (
-            <div className="flex items-center gap-1.5 shrink-0">
-              <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
-                {[
-                  { id: 'all', label: 'Todos', short: 'Todos' },
-                  { id: 'clt', label: 'CLT', short: 'CLT' },
-                  { id: 'sazonal', label: 'Sazonais', short: 'Saz' }
-                ].map(f => (
-                  <button
-                    key={f.id}
-                    onClick={() => setContractFilter(f.id as any)}
-                    className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                      contractFilter === f.id 
-                        ? 'bg-orange-500 text-white shadow-sm' 
-                        : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
-                    }`}
-                  >
-                    <span className="hidden sm:inline">{f.label}</span>
-                    <span className="inline sm:hidden">{f.short}</span>
-                  </button>
-                ))}
-              </div>
-
-              <button
-                onClick={() => setOnlyWorkingToday(!onlyWorkingToday)}
-                className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shrink-0 whitespace-nowrap ${
-                  onlyWorkingToday 
-                    ? 'bg-emerald-600 border-emerald-600 text-white shadow-emerald-500/20' 
-                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50'
-                }`}
-                title="Filtrar apenas colaboradores escalados para trabalhar no dia selecionado"
-              >
-                <Icon name={onlyWorkingToday ? 'check_circle' : 'person_pin_circle'} className="text-xs" />
-                <span className="hidden sm:inline">{onlyWorkingToday ? 'Escalados' : 'Quem Trabalha'}</span>
-                <span className="inline sm:hidden">Hoje</span>
-              </button>
-            </div>
-          )}
-
-          {/* Grupo 3: Turnos & Densidade (Apenas Admin) */}
-          {!isReadOnly && (
-            <div className="flex items-center gap-1.5 shrink-0">
-              <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
-                <div className="hidden md:flex items-center">
-                  <button 
-                    onClick={() => setSelectedGroup(null)}
-                    className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                      !selectedGroup ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                    }`}
-                  >
-                    Todos
-                  </button>
-                  {['Abertura', 'Intermediário', 'Fechamento', 'Folgas/Outros'].map(group => (
-                    <button 
-                      key={group}
-                      onClick={() => setSelectedGroup(group)}
-                      className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                        selectedGroup === group ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                      }`}
-                    >
-                      {group.split('/')[0]}
-                    </button>
-                  ))}
-                </div>
-                
-                <div className="flex md:hidden items-center px-1">
-                  <select 
-                    value={selectedGroup || ''} 
-                    onChange={(e) => setSelectedGroup(e.target.value || null)}
-                    className="bg-transparent border-none py-1 pl-1 pr-5 text-[10px] font-black uppercase tracking-wider outline-none text-slate-700 dark:text-slate-300"
-                  >
-                    <option value="">Turno: Todos</option>
-                    <option value="Abertura">Abertura</option>
-                    <option value="Intermediário">Intermediário</option>
-                    <option value="Fechamento">Fechamento</option>
-                    <option value="Folgas/Outros">Folgas / Outros</option>
-                  </select>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setIsCompactMode(!isCompactMode)}
-                className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shrink-0 whitespace-nowrap ${
-                  isCompactMode 
-                    ? 'bg-purple-600 border-purple-600 text-white shadow-purple-500/20' 
-                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50'
-                }`}
-                title="Alternar entre modo normal e modo denso para caber mais colaboradores na tela"
-              >
-                <Icon name={isCompactMode ? 'view_agenda' : 'view_headline'} className="text-xs" />
-                <span className="hidden sm:inline">{isCompactMode ? 'Denso' : 'Normal'}</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Legend & Helper Row */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {!isReadOnly && (
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 px-3 py-1.5 rounded-xl shadow-sm w-full sm:w-auto">
-              <button 
-                onClick={() => setShowLegend(!showLegend)} 
-                className="flex items-center justify-between sm:justify-start w-full sm:w-auto sm:pr-3 sm:border-r border-slate-100 dark:border-zinc-800 py-0.5"
-              >
-                <div className="flex items-center gap-1.5">
-                  <Icon name="info" className="text-orange-500 text-[14px]" />
-                  <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Legenda</span>
-                </div>
-                <Icon name={showLegend ? 'expand_less' : 'expand_more'} className="text-slate-400 sm:hidden text-[14px]" />
-              </button>
-              
-              <div className={`${showLegend ? 'flex' : 'hidden'} sm:flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 sm:mt-0 pb-1 sm:pb-0 w-full sm:w-auto`}>
-                {legendItems.map(item => (
-                  <div key={item.code} className="flex items-center gap-1.5">
-                    <div className={`w-2 h-2 rounded-full ${item.color}`} />
-                    <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300 tracking-tight whitespace-nowrap">{item.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center gap-1 text-[10px] font-medium text-slate-400 dark:text-zinc-400 ml-auto select-none opacity-90">
-            <Icon name="touch_app" className="text-orange-400 text-xs" />
-            <span>Toque no nome para detalhes</span>
+            {/* Legenda Toggle */}
+            <button
+              type="button"
+              onClick={() => setShowLegend(!showLegend)}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
+                showLegend 
+                  ? 'bg-orange-500 border-orange-500 text-white shadow-orange-500/20' 
+                  : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
+              }`}
+              title="Exibir ou ocultar legenda de turnos e posições"
+            >
+              <Icon name="info" className="text-xs" />
+              <span>Legenda</span>
+              <Icon name={showLegend ? 'expand_less' : 'expand_more'} className="text-xs" />
+            </button>
           </div>
         </div>
+
+        {/* Linha 2: Barra de Filtros & Segmentação da Equipe */}
+        <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50/90 dark:bg-zinc-900/80 p-1.5 sm:p-2 rounded-2xl border border-slate-200/70 dark:border-zinc-800 w-full">
+          {/* Lado Esquerdo: Filtros de Equipe e Presença */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Filtro: Presença Diária */}
+            <button
+              type="button"
+              onClick={() => setOnlyWorkingToday(!onlyWorkingToday)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
+                onlyWorkingToday 
+                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-emerald-500/20' 
+                  : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-zinc-100 hover:bg-slate-50'
+              }`}
+              title="Filtrar apenas colaboradores escalados para trabalhar no dia selecionado"
+            >
+              <Icon name={onlyWorkingToday ? 'check_circle' : 'person_pin_circle'} className="text-xs" />
+              <span>{onlyWorkingToday ? 'Apenas Escalados Hoje' : 'Quem Trabalha Hoje'}</span>
+            </button>
+
+            {/* Filtro: Turno do Colaborador */}
+            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
+              <button 
+                type="button"
+                onClick={() => setSelectedGroup(null)}
+                className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                  !selectedGroup ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+              >
+                Todos os Turnos
+              </button>
+              {['Abertura', 'Intermediário', 'Fechamento', 'Folgas/Outros'].map(group => (
+                <button 
+                  type="button"
+                  key={group}
+                  onClick={() => setSelectedGroup(group)}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                    selectedGroup === group ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`}
+                >
+                  {group.split('/')[0]}
+                </button>
+              ))}
+            </div>
+
+            {/* Filtro: Tipo de Contrato */}
+            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
+              {[
+                { id: 'all', label: 'Todos' },
+                { id: 'clt', label: 'CLT' },
+                { id: 'sazonal', label: 'Sazonais' }
+              ].map(f => (
+                <button
+                  type="button"
+                  key={f.id}
+                  onClick={() => setContractFilter(f.id as any)}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                    contractFilter === f.id 
+                      ? 'bg-orange-500 text-white shadow-sm' 
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Lado Direito: Filtro de Período da Grade */}
+          <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
+            {[
+              { id: 'all', label: 'Mês Completo', short: 'Mês' },
+              { id: 'sunday', label: 'Domingos', short: 'Dom' },
+              { id: 'holiday', label: 'Feriados', short: 'Fer' }
+            ].map(f => (
+              <button
+                type="button"
+                key={f.id}
+                onClick={() => onFilterChange(f.id as any)}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                  filter === f.id 
+                    ? 'bg-orange-500 text-white shadow-sm' 
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                }`}
+              >
+                <span className="hidden sm:inline">{f.label}</span>
+                <span className="inline sm:hidden">{f.short}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Linha 3: Legenda Retrátil com Animação Suave */}
+        {showLegend && (
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 px-3.5 py-2 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-1 duration-150 w-full">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+              {legendItems.map(item => (
+                <div key={item.code} className="flex items-center gap-1.5">
+                  <div className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
+                  <span className="text-[10px] font-bold text-slate-700 dark:text-zinc-300 tracking-tight whitespace-nowrap">{item.label}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-1 text-[10px] font-medium text-slate-400 dark:text-zinc-500 ml-auto select-none">
+              <Icon name="touch_app" className="text-orange-400 text-xs" />
+              <span>Toque no nome do colaborador para ver detalhes</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Grid Container */}

@@ -8,6 +8,7 @@ interface RequestManagerProps {
   currentMY: MonthYear;
   onUpdateEmployee: (empId: string, data: Partial<Employee>) => void;
   isReadOnly?: boolean;
+  onClose?: () => void;
 }
 
 export const RequestManager: React.FC<RequestManagerProps> = ({
@@ -15,6 +16,7 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
   currentMY,
   onUpdateEmployee,
   isReadOnly = false,
+  onClose,
 }) => {
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
 
@@ -60,6 +62,18 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
               </p>
             </div>
           </div>
+
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 self-start sm:self-center"
+              title="Voltar para a Grade Principal"
+            >
+              <Icon name="arrow_back" className="text-sm" />
+              <span>Voltar à Grade</span>
+            </button>
+          )}
         </div>
 
         {/* Requests List */}
