@@ -43,9 +43,10 @@ interface HeaderProps {
   onOptimizePeakWeek?: () => void;
   tacticalDisplayMode?: TacticalDisplayMode;
   onToggleTacticalDisplayMode?: (mode?: TacticalDisplayMode) => void;
-  onManualSave?: () => void;
   isSaving?: boolean;
   isJustSaved?: boolean;
+  isMobileMenuOpen?: boolean;
+  onToggleMobileMenu?: (open: boolean) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -90,12 +91,16 @@ export const Header: React.FC<HeaderProps> = ({
   onManualSave,
   isSaving = false,
   isJustSaved = false,
+  isMobileMenuOpen,
+  onToggleMobileMenu,
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);
   const [showActionsModal, setShowActionsModal] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [internalMobileMenu, setInternalMobileMenu] = useState(false);
+  const showMobileMenu = isMobileMenuOpen !== undefined ? isMobileMenuOpen : internalMobileMenu;
+  const setShowMobileMenu = onToggleMobileMenu || setInternalMobileMenu;
 
   const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
   const currentMonthName = months[currentMY.month];
@@ -151,15 +156,19 @@ export const Header: React.FC<HeaderProps> = ({
 
       <div className="flex items-center justify-between px-3 sm:px-4 h-full gap-2 sm:gap-4 max-w-full relative z-50">
         
-        {/* Left: Mobile Menu Trigger & Main Navigation */}
+        {/* Left: Brand on Mobile, Nav on Large Screens */}
         <div className="flex items-center gap-2 lg:gap-4">
-          <button 
-            onClick={() => setShowMobileMenu(!showMobileMenu)}
-            className="lg:hidden p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-all z-[70] relative"
-            title="Abrir Menu"
-          >
-            <Icon name={showMobileMenu ? 'close' : 'menu'} />
-          </button>
+          <div className="flex items-center gap-2 lg:hidden">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-sm font-black text-xs">
+              RH
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-black tracking-tight text-slate-900 dark:text-slate-100 leading-none">Rhescala</span>
+              <span className="text-[9px] font-bold text-orange-600 dark:text-orange-400 tracking-wider uppercase leading-none mt-0.5">
+                {isReadOnly ? 'Colaborador' : 'Gestão'}
+              </span>
+            </div>
+          </div>
 
           {!isReadOnly && (
             <nav className="hidden lg:flex items-center gap-1 bg-slate-100 dark:bg-zinc-900 p-1 rounded-xl border border-slate-200/50 dark:border-zinc-800">
@@ -291,10 +300,10 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* Scale Status: Official vs Draft */}
+          {/* Scale Status: Official vs Draft (Desktop & Tablet) */}
           <button
             onClick={isReadOnly ? undefined : onToggleValidation}
-            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border font-bold text-[10px] uppercase tracking-wider transition-all shadow-sm ${
+            className={`hidden sm:flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border font-bold text-[10px] uppercase tracking-wider transition-all shadow-sm ${
               isValidated
                 ? 'bg-emerald-500 text-white border-emerald-600 shadow-emerald-500/20'
                 : 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border-amber-300 dark:border-amber-800'
@@ -302,14 +311,14 @@ export const Header: React.FC<HeaderProps> = ({
             title={isReadOnly ? 'Status da Escala' : (isValidated ? 'Oficializada! Clique para alternar para Rascunho' : 'Rascunho. Clique para oficializar escala')}
           >
             <Icon name={isValidated ? 'verified' : 'pending_actions'} className="text-xs sm:text-sm" />
-            <span className="hidden sm:inline">{isValidated ? 'Oficial' : 'Rascunho'}</span>
+            <span>{isValidated ? 'Oficial' : 'Rascunho'}</span>
           </button>
 
-          {/* Audit Diff Badge (when officialized and differences exist - Admin only) */}
+          {/* Audit Diff Badge (Desktop) */}
           {!isReadOnly && isValidated && onOpenDiffModal && diffCount > 0 && (
             <button
               onClick={onOpenDiffModal}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border bg-amber-500 border-amber-600 text-white shadow-sm font-bold text-[10px] uppercase tracking-wider hover:scale-105 transition-all"
+              className="hidden lg:flex items-center gap-1 px-2.5 py-1.5 rounded-xl border bg-amber-500 border-amber-600 text-white shadow-sm font-bold text-[10px] uppercase tracking-wider hover:scale-105 transition-all"
               title="Auditoria: Existem divergências em relação à versão oficial impressa"
             >
               <Icon name="difference" className="text-xs" />
@@ -317,11 +326,11 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Inconsistency / Violation Badge (Admin only) */}
+          {/* Inconsistency / Violation Badge (Desktop) */}
           {!isReadOnly && onOpenInconsistencyModal && inconsistencyCount > 0 && (
             <button
               onClick={onOpenInconsistencyModal}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border bg-rose-500 border-rose-600 text-white shadow-sm font-black text-[10px] uppercase tracking-wider animate-pulse hover:scale-105 transition-all"
+              className="hidden lg:flex items-center gap-1 px-2.5 py-1.5 rounded-xl border bg-rose-500 border-rose-600 text-white shadow-sm font-black text-[10px] uppercase tracking-wider animate-pulse hover:scale-105 transition-all"
               title="Central de Alertas e Regras CLT"
             >
               <Icon name="warning" className="text-xs" />
@@ -330,8 +339,8 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Right: Segmented Actions, Share & Profile Menus */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* Right: Desktop Actions (>= lg) */}
+        <div className="hidden lg:flex items-center gap-1.5 sm:gap-2">
           
           {/* Botão de Salvar Manual com Atalho Ctrl+S */}
           {!isReadOnly && onManualSave && (
@@ -590,94 +599,88 @@ export const Header: React.FC<HeaderProps> = ({
 
         </div>
 
+        {/* Right: Mobile Alerts & Menu Trigger (< lg) */}
+        <div className="flex items-center gap-1.5 lg:hidden">
+          {!isReadOnly && isValidated && onOpenDiffModal && diffCount > 0 && (
+            <button
+              onClick={onOpenDiffModal}
+              className="flex items-center gap-1 px-2 py-1 rounded-xl bg-amber-500 text-white font-black text-[10px] shadow-sm"
+              title="Divergências pós-oficialização"
+            >
+              <Icon name="difference" className="text-xs" />
+              <span>{diffCount}</span>
+            </button>
+          )}
+
+          {!isReadOnly && onOpenInconsistencyModal && inconsistencyCount > 0 && (
+            <button
+              onClick={onOpenInconsistencyModal}
+              className="flex items-center gap-1 px-2 py-1 rounded-xl bg-rose-500 text-white font-black text-[10px] shadow-sm animate-pulse"
+              title="Alertas CLT"
+            >
+              <Icon name="warning" className="text-xs" />
+              <span>{inconsistencyCount}</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setShowMobileMenu(!showMobileMenu)}
+            className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
+            title="Menu da Loja"
+          >
+            <Icon name={showMobileMenu ? 'close' : 'menu'} className="text-lg" />
+          </button>
+        </div>
+
       </div>
 
       {/* Mobile Navigation Drawer Overlay */}
       {showMobileMenu && (
         <div className="lg:hidden fixed inset-0 z-[60] bg-slate-950/60 backdrop-blur-sm animate-fade-in flex flex-col justify-end">
-          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl p-6 border-t border-slate-200 dark:border-zinc-800 max-h-[85vh] overflow-y-auto space-y-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl p-5 border-t border-slate-200 dark:border-zinc-800 max-h-[85vh] overflow-y-auto space-y-4 custom-scrollbar">
+            {/* Handle */}
+            <div className="w-12 h-1.5 bg-slate-300 dark:bg-zinc-700 rounded-full mx-auto -mt-1 mb-2" />
+
+            {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
               <div>
                 <span className="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight block">
-                  {isReadOnly ? 'Painel do Colaborador' : 'Navegação Principal'}
+                  {isReadOnly ? 'Painel do Colaborador' : 'Menu Operacional'}
                 </span>
                 <span className="text-[10px] font-bold text-slate-400">
-                  {isReadOnly ? 'Acesso rápido para consulta de escala' : 'Gestão de equipe e escalas'}
+                  {isReadOnly ? 'Consulta rápida da escala' : 'Gestão de equipe e rotinas'}
                 </span>
               </div>
-              <button onClick={() => setShowMobileMenu(false)} className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-500">
-                <Icon name="close" />
+              <button 
+                onClick={() => setShowMobileMenu(false)} 
+                className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-500 hover:text-slate-800"
+              >
+                <Icon name="close" className="text-lg" />
               </button>
             </div>
 
             {isReadOnly ? (
-              <div className="space-y-2 pt-2">
-                {/* Formato da Escala no Mobile */}
-                {onToggleTacticalDisplayMode && (
-                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800 flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black uppercase text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                        <Icon name="badge" className="text-orange-500 text-sm" /> Exibição da Escala
-                      </span>
-                      <span className="text-[9px] font-black uppercase text-slate-400">
-                        {tacticalDisplayMode === 'positions' ? 'Posições' : tacticalDisplayMode === 'roles' ? 'Funções' : 'Padrão (T)'}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1 p-0.5 bg-slate-200/70 dark:bg-zinc-900 rounded-xl">
-                      <button
-                        onClick={() => {
-                          onToggleTacticalDisplayMode('positions');
-                        }}
-                        className={`py-2 px-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center ${
-                          tacticalDisplayMode === 'positions'
-                            ? 'bg-orange-500 text-white shadow-sm'
-                            : 'text-slate-600 dark:text-slate-400'
-                        }`}
-                      >
-                        🏷️ Posições
-                      </button>
-                      <button
-                        onClick={() => {
-                          onToggleTacticalDisplayMode('roles');
-                        }}
-                        className={`py-2 px-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center ${
-                          tacticalDisplayMode === 'roles'
-                            ? 'bg-indigo-600 text-white shadow-sm'
-                            : 'text-slate-600 dark:text-slate-400'
-                        }`}
-                      >
-                        👔 Funções
-                      </button>
-                      <button
-                        onClick={() => {
-                          onToggleTacticalDisplayMode('off');
-                        }}
-                        className={`py-2 px-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center ${
-                          tacticalDisplayMode === 'off'
-                            ? 'bg-slate-700 text-white shadow-sm'
-                            : 'text-slate-600 dark:text-slate-400'
-                        }`}
-                      >
-                        🔘 Padrão (T)
-                      </button>
-                    </div>
-                  </div>
-                )}
+              <div className="space-y-2 pt-1">
+                <button
+                  onClick={() => {
+                    onViewChange('grid');
+                    setShowMobileMenu(false);
+                  }}
+                  className="w-full p-3 rounded-2xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 flex items-center gap-3 text-xs font-black uppercase shadow-xs"
+                >
+                  <Icon name="calendar_month" className="text-lg text-orange-500" />
+                  <span>Ver Grade da Escala</span>
+                </button>
 
                 <button
                   onClick={() => {
-                    onShowHelp();
+                    onViewChange('requests');
                     setShowMobileMenu(false);
                   }}
-                  className="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-slate-200 flex items-center gap-3 text-xs font-black uppercase shadow-sm"
+                  className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-slate-200 flex items-center gap-3 text-xs font-black uppercase"
                 >
-                  <div className="p-2 rounded-xl bg-orange-100 dark:bg-orange-950 text-orange-600">
-                    <Icon name="badge" className="text-base" />
-                  </div>
-                  <div className="flex flex-col text-left">
-                    <span>Guia de Posições & Funções</span>
-                    <span className="text-[10px] font-normal text-slate-400 lowercase">descrições de P1, P2, P3, P4 e Estoque</span>
-                  </div>
+                  <Icon name="assignment" className="text-lg text-slate-400" />
+                  <span>Minhas Solicitações de Folga</span>
                 </button>
 
                 <button
@@ -685,15 +688,21 @@ export const Header: React.FC<HeaderProps> = ({
                     onViewChange('feriados');
                     setShowMobileMenu(false);
                   }}
-                  className="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-slate-200 flex items-center gap-3 text-xs font-black uppercase shadow-sm"
+                  className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-slate-200 flex items-center gap-3 text-xs font-black uppercase"
                 >
-                  <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-600">
-                    <Icon name="event_busy" className="text-base" />
-                  </div>
-                  <div className="flex flex-col text-left">
-                    <span>Feriados & Folgas da Loja</span>
-                    <span className="text-[10px] font-normal text-slate-400 lowercase">calendário anual de feriados</span>
-                  </div>
+                  <Icon name="event_busy" className="text-lg text-slate-400" />
+                  <span>Feriados da Loja</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    onShowHelp();
+                    setShowMobileMenu(false);
+                  }}
+                  className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-slate-200 flex items-center gap-3 text-xs font-black uppercase"
+                >
+                  <Icon name="info" className="text-lg text-slate-400" />
+                  <span>Manual & Regras</span>
                 </button>
 
                 <button
@@ -701,96 +710,145 @@ export const Header: React.FC<HeaderProps> = ({
                     onSwitchRole();
                     setShowMobileMenu(false);
                   }}
-                  className="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-slate-200 flex items-center gap-3 text-xs font-black uppercase shadow-sm"
+                  className="w-full p-3.5 rounded-2xl bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-slate-200 flex items-center gap-3 text-xs font-black uppercase shadow-sm mt-3"
                 >
-                  <div className="p-2 rounded-xl bg-orange-100 dark:bg-orange-950 text-orange-600">
+                  <div className="p-1.5 rounded-xl bg-orange-100 dark:bg-orange-950 text-orange-600">
                     <Icon name="admin_panel_settings" className="text-base" />
                   </div>
                   <div className="flex flex-col text-left">
-                    <span>Entrar como Administrador</span>
-                    <span className="text-[10px] font-normal text-slate-400 lowercase">acesso de gestão para o gerente</span>
+                    <span>Acesso Gerencial</span>
+                    <span className="text-[10px] font-normal text-slate-400 lowercase">entrar como administrador</span>
                   </div>
                 </button>
               </div>
             ) : (
-              <>
-                {/* Botão de Salvar no Mobile (Admin) */}
-                {onManualSave && (
-                  <button
-                    onClick={() => {
-                      onManualSave();
-                      setShowMobileMenu(false);
-                    }}
-                    disabled={isSaving}
-                    className={`w-full p-3.5 rounded-2xl flex items-center justify-center gap-2.5 text-xs font-black uppercase shadow-md transition-all ${
-                      isJustSaved
-                        ? 'bg-emerald-600 text-white shadow-emerald-500/30'
-                        : isSaving
-                        ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 animate-pulse'
-                        : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20'
-                    }`}
-                  >
-                    <Icon name={isJustSaved ? 'check_circle' : isSaving ? 'sync' : 'save'} className={`text-lg ${isSaving ? 'animate-spin' : ''}`} />
-                    <span>{isJustSaved ? 'Escala Salva com Sucesso!' : isSaving ? 'Salvando...' : 'Salvar Escala Agora'}</span>
-                  </button>
-                )}
-
-                <div className="grid grid-cols-3 gap-2">
-                  {navItems.map(item => (
+              <div className="space-y-4 pt-1">
+                {/* Destaque: Salvar Escala & Status Oficial */}
+                <div className="space-y-2 bg-slate-50 dark:bg-zinc-800/60 p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-700/80">
+                  {onManualSave && (
                     <button
-                      key={item.id}
                       onClick={() => {
-                        onViewChange(item.id as any);
+                        onManualSave();
                         setShowMobileMenu(false);
                       }}
-                      className={`p-3 rounded-2xl flex flex-col items-center gap-1.5 text-xs font-black uppercase transition-all ${
-                        currentView === item.id 
-                          ? 'bg-orange-500 text-white shadow-md' 
-                          : 'bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-slate-300'
+                      disabled={isSaving}
+                      className={`w-full p-3 rounded-xl flex items-center justify-center gap-2 text-xs font-black uppercase shadow-md transition-all ${
+                        isJustSaved
+                          ? 'bg-emerald-600 text-white'
+                          : isSaving
+                          ? 'bg-indigo-600 text-white animate-pulse'
+                          : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                       }`}
                     >
-                      <Icon name={item.icon} className="text-xl" />
-                      <span>{item.label}</span>
+                      <Icon name={isJustSaved ? 'check_circle' : isSaving ? 'sync' : 'save'} className={`text-base ${isSaving ? 'animate-spin' : ''}`} />
+                      <span>{isJustSaved ? 'Escala Salva com Sucesso!' : isSaving ? 'Salvando...' : 'Salvar Escala Agora'}</span>
                     </button>
-                  ))}
-                </div>
+                  )}
 
-                {!isReadOnly && currentView === 'grid' && (
-                  <button
-                    onClick={() => {
-                      setShowMobileMenu(false);
-                      setShowActionsModal(true);
-                    }}
-                    className="w-full p-3.5 rounded-2xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 flex items-center justify-center gap-2.5 text-xs font-black uppercase shadow-sm"
-                  >
-                    <Icon name="auto_fix_high" className="text-base text-orange-500" />
-                    <span>Ações & Opções da Escala</span>
-                  </button>
-                )}
-
-                <div className="space-y-1 pt-2">
-                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block px-1">Configurações & Dados</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    {configItems.map(item => (
-                      <button
-                        key={item.id}
-                        onClick={() => {
-                          onViewChange(item.id as any);
-                          setShowMobileMenu(false);
-                        }}
-                        className={`p-3 rounded-xl flex items-center gap-2 text-xs font-bold text-left transition-all ${
-                          currentView === item.id 
-                            ? 'bg-orange-500 text-white shadow-md' 
-                            : 'bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        <Icon name={item.icon} className={`text-sm ${currentView === item.id ? 'text-white' : 'text-slate-400'}`} />
-                        <span className="truncate">{item.label}</span>
-                      </button>
-                    ))}
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Status da Escala:</span>
+                    <button
+                      type="button"
+                      onClick={onToggleValidation}
+                      className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1 border shadow-xs ${
+                        isValidated
+                          ? 'bg-emerald-500 text-white border-emerald-600'
+                          : 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700'
+                      }`}
+                    >
+                      <Icon name={isValidated ? 'verified' : 'pending_actions'} className="text-xs" />
+                      <span>{isValidated ? 'Oficializada' : 'Modo Rascunho'}</span>
+                    </button>
                   </div>
                 </div>
-              </>
+
+                {/* Ações da Escala */}
+                <div className="space-y-2">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block px-1">
+                    Ações da Escala
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        setShowMobileMenu(false);
+                        setShowActionsModal(true);
+                      }}
+                      className="p-3 rounded-xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 flex items-center gap-2 text-xs font-black uppercase shadow-xs text-left"
+                    >
+                      <Icon name="auto_fix_high" className="text-base text-orange-500 shrink-0" />
+                      <span>Ações & Opções</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        onToggleEdit?.();
+                        setShowMobileMenu(false);
+                      }}
+                      className={`p-3 rounded-xl border flex items-center gap-2 text-xs font-bold uppercase transition-all ${
+                        isEditable 
+                          ? 'bg-indigo-600 text-white border-indigo-700' 
+                          : 'bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-zinc-700'
+                      }`}
+                    >
+                      <Icon name={isEditable ? 'lock_open' : 'edit'} className="text-base shrink-0" />
+                      <span>{isEditable ? 'Edição Ativa' : 'Modo Edição'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Rotinas da Loja */}
+                {operationsSections.map(sec => (
+                  <div key={sec.title} className="space-y-1.5">
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block px-1">
+                      {sec.title}
+                    </span>
+                    <div className="grid grid-cols-2 gap-2">
+                      {sec.items.map(item => (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            onViewChange(item.id as any);
+                            setShowMobileMenu(false);
+                          }}
+                          className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold text-left transition-all ${
+                            currentView === item.id
+                              ? 'bg-orange-500 text-white border-orange-600 shadow-sm'
+                              : 'bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-zinc-700/80'
+                          }`}
+                        >
+                          <Icon name={item.icon} className={`text-sm shrink-0 ${currentView === item.id ? 'text-white' : 'text-slate-400'}`} />
+                          <span className="truncate">{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Sessão */}
+                <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 space-y-2">
+                  <button
+                    onClick={() => {
+                      onSwitchRole();
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full p-2.5 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-2"
+                  >
+                    <Icon name="visibility" className="text-base text-slate-400" />
+                    <span>Alternar para Modo Colaborador</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      onLogout();
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full p-2.5 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold text-xs flex items-center justify-center gap-2"
+                  >
+                    <Icon name="logout" className="text-base text-rose-500" />
+                    <span>Sair da Conta</span>
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>

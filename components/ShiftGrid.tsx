@@ -4,6 +4,8 @@ import { Icon } from './Icon';
 import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, DEFAULT_JORNADA_SETTINGS, isEmployeeActiveInMonth, normalizeProtectedDaysConfig, getTacticalLabel, getTacticalCellCode, getTacticalEmoji } from '../constants';
 import { getShiftClassification, isWorkingShift, getPrevMonthWorkStreak, getPrevMonthConsecutive } from '../hooks/useScheduleEngine';
 import { OperationalGuideModal } from './OperationalGuideModal';
+import { MobileDayScheduleView } from './MobileDayScheduleView';
+import { MobileFilterDrawer } from './MobileFilterDrawer';
 
 import { HolidayCredit } from '../hooks/useHolidayCredits';
 
@@ -99,10 +101,37 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   const [isCompactMode, setIsCompactMode] = useState(false);
   const [focusSelectedDay, setFocusSelectedDay] = useState(false);
 
+  // Mobile Redesign States
+  const [mobileViewMode, setMobileViewMode] = useState<'daily' | 'table'>('daily');
+  const [showMobileFilterDrawer, setShowMobileFilterDrawer] = useState(false);
+  const [mobileSearchQuery, setMobileSearchQuery] = useState('');
+  const mobileCarouselRef = useRef<HTMLDivElement>(null);
+
   const protectedConfig = useMemo(() => normalizeProtectedDaysConfig(protectedDays), [protectedDays]);
 
   const isCurrentMonth = currentMY.year === today.getFullYear() && currentMY.month === today.getMonth();
   const todayDayNum = today.getDate();
+
+  // Auto-scroll mobile carousel to selectedDayIdx
+  useEffect(() => {
+    if (mobileCarouselRef.current) {
+      const activeEl = mobileCarouselRef.current.children[selectedDayIdx] as HTMLElement;
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  }, [selectedDayIdx]);
+
+  // Count active filters for mobile badge
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (onlyWorkingToday) count++;
+    if (selectedGroup) count++;
+    if (contractFilter !== 'all') count++;
+    if (hidePastDays) count++;
+    if (mobileSearchQuery.trim()) count++;
+    return count;
+  }, [onlyWorkingToday, selectedGroup, contractFilter, hidePastDays, mobileSearchQuery]);
 
   // Auto-scroll to today on mount or when month changes to current month
   useEffect(() => {
@@ -211,13 +240,144 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       });
     }
 
+    if (mobileSearchQuery.trim()) {
+      const q = mobileSearchQuery.toLowerCase();
+      list = list.filter(emp => emp.name.toLowerCase().includes(q) || (emp.role && emp.role.toLowerCase().includes(q)));
+    }
+
+    if (selectedGroup) {
+      list = list.filter(emp => {
+        const s = (emp.shifts[monthKey]?.[selectedDayIdx] || '').toUpperCase();
+        if (selectedGroup === 'folgas') return ['F', 'FF', 'FE', 'DO', 'C', 'AT', 'N/A'].includes(s);
+        if (selectedGroup === 'abertura') return s === 'A' || s.startsWith('09:') || s.startsWith('08:') || emp.defaultShift === 'abertura';
+        if (selectedGroup === 'intermediario') return s === 'I' || s.startsWith('11:') || s.startsWith('12:') || emp.defaultShift === 'intermediario';
+        if (selectedGroup === 'fechamento') return s === 'F' || s === 'FECH' || s.startsWith('13:') || s.startsWith('14:') || emp.defaultShift === 'fechamento';
+        return true;
+      });
+    }
+
     return list.sort((a, b) => (a.workPeriod || '').localeCompare(b.workPeriod || '') || a.name.localeCompare(b.name));
-  }, [employees, contractFilter, onlyWorkingToday, monthKey, selectedDayIdx]);
+  }, [employees, contractFilter, onlyWorkingToday, mobileSearchQuery, selectedGroup, monthKey, selectedDayIdx]);
 
   return (
-    <div className="flex flex-col gap-4 relative h-full">
-      {/* Top Controls: Semantic Segmented Groups */}
-      <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-3 sm:gap-4 relative h-full">
+      {/* ============================================================ */}
+      {/* MOBILE CONTROLS & HEADER (< lg)                              */}
+      {/* ============================================================ */}
+      <div className="flex flex-col gap-2 lg:hidden">
+        {/* Row 1: Alternador Diário/Tabela + Botão Filtros + WhatsApp */}
+        <div className="flex items-center justify-between gap-2 bg-white dark:bg-zinc-900 p-2 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-sm">
+          {/* Alternador Diário vs Tabela */}
+          <div className="flex items-center bg-slate-100 dark:bg-zinc-800 p-0.5 rounded-xl">
+            <button
+              type="button"
+              onClick={() => setMobileViewMode('daily')}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all ${
+                mobileViewMode === 'daily'
+                  ? 'bg-orange-500 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <Icon name="view_agenda" className="text-sm" />
+              <span>Diário</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileViewMode('table')}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all ${
+                mobileViewMode === 'table'
+                  ? 'bg-orange-500 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <Icon name="grid_on" className="text-sm" />
+              <span>Tabela</span>
+            </button>
+          </div>
+
+          {/* Ações Rápidas: WhatsApp do Dia e Filtros */}
+          <div className="flex items-center gap-1.5">
+            {!isReadOnly && onShareWhatsApp && (
+              <button
+                type="button"
+                onClick={() => onShareWhatsApp(selectedDayIdx)}
+                className="p-2 rounded-xl bg-emerald-600 text-white shadow-sm active:scale-95 transition-all"
+                title="Compartilhar Escala do Dia no WhatsApp"
+              >
+                <Icon name="chat" className="text-base" />
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowMobileFilterDrawer(true)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
+                activeFiltersCount > 0
+                  ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-500 text-orange-600 dark:text-orange-400 font-black shadow-sm'
+                  : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-slate-300'
+              }`}
+            >
+              <Icon name="tune" className="text-sm text-orange-500" />
+              <span>Filtros</span>
+              {activeFiltersCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-black flex items-center justify-center">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Row 2: Carrossel Horizontal de Dias (1 a 31) */}
+        <div 
+          ref={mobileCarouselRef}
+          className="flex items-center gap-1.5 overflow-x-auto py-1 px-0.5 custom-scrollbar no-scrollbar scroll-smooth"
+        >
+          {days.map((d, idx) => {
+            const isSelected = selectedDayIdx === idx;
+            const isToday = isCurrentMonth && (idx + 1) === todayDayNum;
+            const isSun = d.isSunday;
+            const isHol = d.isHoliday;
+
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => onSelectDay?.(idx)}
+                className={`shrink-0 w-11 py-2 rounded-2xl flex flex-col items-center justify-center transition-all relative select-none ${
+                  isSelected
+                    ? 'bg-gradient-to-b from-orange-500 to-amber-600 text-white shadow-md shadow-orange-500/25 scale-105 font-black z-10'
+                    : isToday
+                    ? 'bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 font-black'
+                    : isSun
+                    ? 'bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 font-bold'
+                    : isHol
+                    ? 'bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-400 font-bold'
+                    : 'bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 text-slate-700 dark:text-slate-300 font-bold'
+                }`}
+              >
+                <span className={`text-[8px] uppercase tracking-tighter ${isSelected ? 'text-white/90' : 'text-slate-400 dark:text-slate-500'}`}>
+                  {d.weekday}
+                </span>
+                <span className="text-sm font-black leading-tight">
+                  {idx + 1}
+                </span>
+                <div className="flex items-center gap-0.5 mt-0.5 h-1.5">
+                  {isToday && (
+                    <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-amber-500'}`} />
+                  )}
+                  {isHol && (
+                    <span className={`w-1 h-1 rounded-full ${isSelected ? 'bg-white' : 'bg-rose-500'}`} />
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Top Controls: Desktop Semantic Segmented Groups */}
+      <div className="hidden lg:flex flex-col gap-2.5">
         {/* Linha 1: Contexto Operacional do Dia & Ações Imediatas */}
         <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white dark:bg-zinc-900 p-2 sm:p-2.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-sm w-full">
           {/* Lado Esquerdo: Dia Selecionado & Ações Diárias */}
@@ -533,8 +693,36 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
         )}
       </div>
 
+      {/* Mobile Day Schedule View (< lg) */}
+      <div className="lg:hidden">
+        {mobileViewMode === 'daily' && (
+          <MobileDayScheduleView
+            employees={displayedEmployees}
+            currentMY={currentMY}
+            selectedDayIdx={selectedDayIdx}
+            monthKey={monthKey}
+            isHoliday={days[selectedDayIdx]?.isHoliday || false}
+            holidayName={days[selectedDayIdx]?.holidayName}
+            isSunday={days[selectedDayIdx]?.isSunday || false}
+            isProtected={Boolean(protectedConfig[selectedDayIdx + 1])}
+            resolvedPositions={resolvedPositions}
+            tacticalDisplayMode={tacticalDisplayMode}
+            isReadOnly={Boolean(isReadOnly)}
+            highlightedEmpId={highlightedEmpId}
+            onUpdateShift={onUpdateShift || (() => {})}
+            onUpdateEmployeeDailyHour={onUpdateEmployeeDailyHour}
+            onUpdateTacticalPosition={(empId, dayIdx, pos) => onUpdateTacticalPosition(empId, dayIdx, pos)}
+            onOpenEmployeeCard={onOpenEmployeeCard}
+            onOpenDayDetail={onOpenDayDetail || (() => {})}
+            diffs={diffs}
+          />
+        )}
+      </div>
+
       {/* Grid Container */}
-      <div className="bg-white dark:bg-black rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden flex-1 flex flex-col relative">
+      <div className={`bg-white dark:bg-black rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden flex-1 flex-col relative ${
+        mobileViewMode === 'daily' ? 'hidden lg:flex' : 'flex'
+      }`}>
         <div 
           ref={scrollContainerRef}
           className="overflow-auto custom-scrollbar flex-1"
@@ -1164,6 +1352,34 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       {showGuideModal && (
         <OperationalGuideModal onClose={() => setShowGuideModal(false)} />
       )}
+
+      {/* Mobile Filter Bottom Sheet Drawer */}
+      <MobileFilterDrawer
+        isOpen={showMobileFilterDrawer}
+        onClose={() => setShowMobileFilterDrawer(false)}
+        onlyWorkingToday={onlyWorkingToday}
+        setOnlyWorkingToday={setOnlyWorkingToday}
+        selectedGroup={selectedGroup}
+        setSelectedGroup={setSelectedGroup}
+        contractFilter={contractFilter}
+        setContractFilter={setContractFilter}
+        tacticalDisplayMode={tacticalDisplayMode}
+        onToggleTacticalDisplayMode={onToggleTacticalDisplayMode}
+        isCompactMode={isCompactMode}
+        setIsCompactMode={setIsCompactMode}
+        hidePastDays={hidePastDays}
+        setHidePastDays={setHidePastDays}
+        isCurrentMonth={isCurrentMonth}
+        searchQuery={mobileSearchQuery}
+        setSearchQuery={setMobileSearchQuery}
+        onResetFilters={() => {
+          setOnlyWorkingToday(false);
+          setSelectedGroup(null);
+          setContractFilter('all');
+          setMobileSearchQuery('');
+          setHidePastDays(false);
+        }}
+      />
     </div>
   );
 };

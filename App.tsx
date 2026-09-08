@@ -61,6 +61,7 @@ import { CreateMonthModal } from './components/CreateMonthModal';
 import { DailyScheduleModulatorModal } from './components/DailyScheduleModulatorModal';
 import { AuditJustificationModal, AuditImpactPreview } from './components/AuditJustificationModal';
 import { classifyShiftChange, classifyHourChange, classifyTacticalChange } from './src/utils/auditUtils';
+import { MobileNavBar } from './components/MobileNavBar';
 
 const App: React.FC = () => {
   const [employees, setEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', [PLACEHOLDER_EMPLOYEE]);
@@ -269,6 +270,16 @@ const App: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleManualSave, auth.role]);
+
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleGoToToday = useCallback(() => {
+    const now = new Date();
+    setCurrentMY({ month: now.getMonth(), year: now.getFullYear() });
+    setSelectedDayIdx(now.getDate() - 1);
+    setCurrentView('grid');
+    setIsMobileMenuOpen(false);
+  }, []);
   
   const onToggleValidation = useCallback(async () => {
     const newVal = !isValidated;
@@ -1109,9 +1120,11 @@ const App: React.FC = () => {
               onManualSave={handleManualSave}
               isSaving={isSaving}
               isJustSaved={isJustSaved}
+              isMobileMenuOpen={isMobileMenuOpen}
+              onToggleMobileMenu={setIsMobileMenuOpen}
             />
 
-       <main className="flex-1 overflow-hidden p-2 sm:p-4">
+       <main className="flex-1 overflow-y-auto p-2 sm:p-4 pb-24 lg:pb-4">
          {(() => {
            const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
            const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(dateStr);
@@ -1641,6 +1654,19 @@ const App: React.FC = () => {
           currentMY={currentMY} 
           customHolidays={customHolidays} 
           monthNotes={monthNotes[monthKey] || ''}
+        />
+
+        {/* Barra de Navegação Inferior Mobile (< lg) */}
+        <MobileNavBar
+          currentView={currentView}
+          onViewChange={(v) => {
+            setCurrentView(v);
+            setIsMobileMenuOpen(false);
+          }}
+          pendingRequestsCount={pendingRequestsCount}
+          inconsistencyCount={activeInconsistencies.length}
+          onOpenMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          onGoToToday={handleGoToToday}
         />
 
         <SyncBlockingOverlay syncStatus={syncStatus} />
