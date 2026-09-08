@@ -458,14 +458,14 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 {legendItems.map(item => (
                   <div key={item.code} className="flex items-center gap-1.5">
                     <div className={`w-2 h-2 rounded-full ${item.color}`} />
-                    <span className="text-[8.5px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight whitespace-nowrap">{item.label}</span>
+                    <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300 tracking-tight whitespace-nowrap">{item.label}</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          <div className="flex items-center gap-1 text-[8.5px] font-bold text-slate-400 dark:text-zinc-500 ml-auto select-none opacity-80">
+          <div className="flex items-center gap-1 text-[10px] font-medium text-slate-400 dark:text-zinc-400 ml-auto select-none opacity-90">
             <Icon name="touch_app" className="text-orange-400 text-xs" />
             <span>Toque no nome para detalhes</span>
           </div>
@@ -473,7 +473,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       </div>
 
       {/* Grid Container */}
-      <div className="bg-white dark:bg-black rounded-3xl border border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden flex-1 flex flex-col relative">
+      <div className="bg-white dark:bg-black rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden flex-1 flex flex-col relative">
         <div 
           ref={scrollContainerRef}
           className="overflow-auto custom-scrollbar flex-1"
@@ -823,7 +823,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const is7thDay = streak === 7;
                               const hasAlert = streak >= 7 && (isWorkingShift(shift) || shift === 'C');
                               const hasCellViolation = hasAlert || isSundayViolation;
-                              const hasTopRightBadge = !isReadOnly && isSunday && (isSundayViolation || isSundayWarning || isSundayRestAfterStreak);
+                              const hasTopRightBadge = !isReadOnly && isSunday && (isSundayViolation || isSundayWarning);
 
                               const todayStr = new Date().toISOString().split('T')[0];
                               const isPast = d.dateStr < todayStr;
@@ -836,7 +836,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const focusHighlight = isSelectedCol && focusSelectedDay ? 'ring-2 ring-inset ring-orange-500 bg-orange-50/80 dark:bg-orange-950/40' : isSelectedCol ? 'ring-2 ring-inset ring-orange-400/50' : '';
 
                               return (
-                                <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all relative ${dimClass} ${blurClass} ${focusHighlight} ${(!isReadOnly && hasCellViolation) ? 'ring-2 ring-inset ring-rose-500 bg-rose-50/50 dark:bg-rose-950/30' : (!isReadOnly && isSundayWarning) ? 'ring-2 ring-inset ring-amber-500/50 bg-amber-50/20' : (!isReadOnly && is7thDay) ? 'ring-2 ring-inset ring-emerald-500/40 bg-emerald-50/20' : ''}`}>
+                                <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all relative ${dimClass} ${blurClass} ${focusHighlight} ${(!isReadOnly && hasCellViolation) ? 'ring-2 ring-inset ring-rose-500 bg-rose-50/50 dark:bg-rose-950/30' : (!isReadOnly && isSundayWarning) ? 'ring-2 ring-inset ring-amber-500/50 bg-amber-50/20' : ''}`}>
                                   <div className="relative group flex flex-col items-center gap-1">
                                     {!isReadOnly && cellDiff && (
                                         <span 
@@ -844,43 +844,31 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                           title={`Alteração pós-oficialização (${cellDiff.type}): Oficial [${cellDiff.officialVal}] ➔ Atual [${cellDiff.currentVal}]`}
                                         />
                                     )}
-                                    {/* Badge 1: 7º Dia Consecutivo de Trabalho (Canto Superior Esquerdo) */}
-                                    {!isReadOnly && is7thDay && (
+                                    {/* Badge 1: 7º Dia Consecutivo de Trabalho (Canto Superior Esquerdo) - Apenas em alerta de violação CLT */}
+                                    {!isReadOnly && hasAlert && (
                                       <span
-                                        className={`absolute -top-1.5 -left-1.5 px-1 py-0.2 text-[8px] font-black rounded-full shadow-md z-30 transition-all ${
-                                          hasAlert
-                                            ? 'bg-rose-600 text-white ring-2 ring-white dark:ring-slate-900 animate-pulse'
-                                            : 'bg-emerald-600 text-white ring-1 ring-white dark:ring-slate-900'
-                                        }`}
-                                        title={
-                                          hasAlert
-                                            ? `7º Dia Consecutivo: Trabalho sem folga! (${streak} dias seguidos)`
-                                            : `7º Dia Consecutivo: Folga Obrigatória Cumprida (Regra 6x1)`
-                                        }
+                                        className="absolute -top-1.5 -left-1.5 px-1 py-0.2 text-[8px] font-black rounded-full shadow-md z-30 transition-all bg-rose-600 text-white ring-2 ring-white dark:ring-slate-900 animate-pulse"
+                                        title={`7º Dia Consecutivo: Trabalho sem folga! (${streak} dias seguidos)`}
                                       >
                                         7º
                                       </span>
                                     )}
 
-                                    {/* Badge 2: Domingos Consecutivos (Canto Superior Direito - Lado Oposto) */}
-                                    {!isReadOnly && isSunday && (isSundayViolation || isSundayWarning || isSundayRestAfterStreak) && (
+                                    {/* Badge 2: Domingos Consecutivos (Canto Superior Direito) - Apenas em violação (3D) ou aviso prévio (2D) */}
+                                    {!isReadOnly && isSunday && (isSundayViolation || isSundayWarning) && (
                                       <span
                                         className={`absolute -top-1.5 -right-1.5 px-1 py-0.2 text-[8px] font-black rounded-full shadow-md z-30 transition-all ${
                                           isSundayViolation
                                             ? 'bg-rose-600 text-white ring-2 ring-white dark:ring-slate-900 animate-pulse'
-                                            : isSundayWarning
-                                            ? 'bg-amber-500 text-white ring-1 ring-white dark:ring-slate-900'
-                                            : 'bg-emerald-600 text-white ring-1 ring-white dark:ring-slate-900'
+                                            : 'bg-amber-500 text-white ring-1 ring-white dark:ring-slate-900'
                                         }`}
                                         title={
                                           isSundayViolation
                                             ? `${finalSundayStreak}º Domingo Consecutivo Trabalhado: Violação CLT (máximo 2 domingos consecutivos)!`
-                                            : isSundayWarning
-                                            ? `2º Domingo Consecutivo Trabalhado: Atenção ao limite CLT (o próximo domingo deve ser folga)!`
-                                            : `Folga de Domingo Obrigatória Cumprida (após domingos consecutivos trabalhados)`
+                                            : `2º Domingo Consecutivo Trabalhado: Atenção ao limite CLT (o próximo domingo deve ser folga)!`
                                         }
                                       >
-                                        {isSundayViolation ? `${finalSundayStreak}D` : isSundayWarning ? '2D' : 'D✓'}
+                                        {isSundayViolation ? `${finalSundayStreak}D` : '2D'}
                                       </span>
                                     )}
 

@@ -271,10 +271,10 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Scale Status: Official vs Draft */}
           <button
             onClick={isReadOnly ? undefined : onToggleValidation}
-            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border font-black text-[10px] uppercase tracking-wider transition-all shadow-sm ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border font-bold text-[10px] uppercase tracking-wider transition-all shadow-sm ${
               isValidated
                 ? 'bg-emerald-500 text-white border-emerald-600 shadow-emerald-500/20'
-                : 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border-amber-300 dark:border-amber-800 animate-pulse-subtle'
+                : 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border-amber-300 dark:border-amber-800'
             } ${isReadOnly ? 'cursor-default' : 'hover:scale-[1.02] active:scale-95'}`}
             title={isReadOnly ? 'Status da Escala' : (isValidated ? 'Oficializada! Clique para alternar para Rascunho' : 'Rascunho. Clique para oficializar escala')}
           >
@@ -286,7 +286,7 @@ export const Header: React.FC<HeaderProps> = ({
           {isValidated && onOpenDiffModal && diffCount > 0 && (
             <button
               onClick={onOpenDiffModal}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border bg-amber-500 border-amber-600 text-white shadow-sm font-black text-[10px] uppercase tracking-wider animate-pulse hover:scale-105 transition-all"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border bg-amber-500 border-amber-600 text-white shadow-sm font-bold text-[10px] uppercase tracking-wider hover:scale-105 transition-all"
               title="Auditoria: Existem divergências em relação à versão oficial impressa"
             >
               <Icon name="difference" className="text-xs" />
@@ -387,7 +387,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onToggleEdit}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all shadow-sm ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all shadow-sm ${
                 isEditable
                   ? 'bg-indigo-600 border-indigo-700 text-white shadow-indigo-500/20'
                   : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-200 hover:border-indigo-300'
@@ -409,7 +409,7 @@ export const Header: React.FC<HeaderProps> = ({
                 setShowShareMenu(false);
                 setShowConfigMenu(false);
               }}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all shadow-sm bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-200 hover:border-orange-300 hover:bg-orange-50/50 dark:hover:bg-zinc-800"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all shadow-sm bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-200 hover:border-orange-300 hover:bg-orange-50/50 dark:hover:bg-zinc-800"
               title="Abrir painel de ações inteligentes e opções da escala"
             >
               <Icon name="auto_fix_high" className="text-xs sm:text-sm text-orange-500" />
@@ -425,7 +425,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => {
                   setShowShareMenu(!showShareMenu);
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 border shadow-sm ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 border shadow-sm ${
                   showShareMenu
                     ? 'bg-slate-900 text-white border-slate-900'
                     : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-200 hover:border-slate-300'

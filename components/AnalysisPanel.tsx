@@ -167,26 +167,26 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
   // ── Render Helpers ───────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col h-full animate-fade-in transition-colors bg-white ">
-      <div className="bg-white  rounded-[2rem] border border-slate-200  shadow-sm overflow-hidden flex flex-col flex-1">
+    <div className="flex flex-col h-full animate-fade-in transition-colors bg-white dark:bg-black">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden flex flex-col flex-1">
         
         {/* Header */}
-        <div className="px-8 py-6 border-b border-slate-100  flex items-center justify-between bg-white  sticky top-0 z-10 transition-colors no-print">
+        <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900 sticky top-0 z-10 transition-colors no-print">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-600  text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100 ">
+            <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
                <Icon name="insights" className="text-2xl" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <button 
                   onClick={onClose}
-                  className="p-1 hover:bg-slate-100  rounded-lg text-slate-400  hover:text-indigo-600  transition-colors mr-1"
+                  className="p-1 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mr-1"
                 >
                   <Icon name="arrow_back" />
                 </button>
-                <h2 className="text-2xl font-black text-slate-900  tracking-tight">Análise de Escala & Gargalos</h2>
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Análise de Escala & Gargalos</h2>
               </div>
-              <p className="text-[10px] font-black text-slate-400  uppercase tracking-widest leading-none mt-1">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-1">
                 Visualização de Sobrecarga e Cobertura Operacional • {(currentMY.month + 1).toString().padStart(2, '0')}/{currentMY.year}
               </p>
             </div>
@@ -205,7 +205,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                  jornadaSettings={jornadaSettings}
                />
              )}
-             <div className="bg-slate-100  p-1 rounded-2xl flex gap-1">
+             <div className="bg-slate-100 dark:bg-zinc-800 p-1 rounded-2xl flex gap-1">
                 {viewMode === 'team-calendar' && (
                   <button 
                     onClick={() => window.print()}
@@ -216,19 +216,19 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                 )}
                 <button 
                   onClick={() => setViewMode('insights')}
-                  className={`px-6 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${viewMode === 'insights' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
+                  className={`px-5 sm:px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${viewMode === 'insights' ? 'bg-white dark:bg-zinc-900 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
                 >
                   <Icon name="analytics" className="text-sm" /> Insights
                 </button>
                 <button 
                   onClick={() => setViewMode('team-calendar')}
-                  className={`px-6 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${viewMode === 'team-calendar' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
+                  className={`px-5 sm:px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${viewMode === 'team-calendar' ? 'bg-white dark:bg-zinc-900 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
                 >
                   <Icon name="calendar_view_month" className="text-sm" /> Escala Geral
                 </button>
              </div>
-             <button onClick={onClose} className="p-2.5 hover:bg-slate-100  rounded-full transition-colors order-last ml-2">
-               <Icon name="close" className="text-slate-400 " />
+             <button onClick={onClose} className="p-2.5 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-full transition-colors order-last ml-2">
+               <Icon name="close" className="text-slate-400" />
              </button>
           </div>
         </div>
@@ -273,16 +273,16 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                 
                 {/* Left: Individual Weekly Calendar */}
                 <div className="lg:col-span-12 xl:col-span-5 flex flex-col gap-6">
-                  <div className="bg-white  rounded-[2rem] border border-slate-200  p-8 shadow-sm h-full flex flex-col transition-colors">
+                  <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-6 sm:p-8 shadow-sm h-full flex flex-col transition-colors">
                     <div className="mb-6 flex justify-between items-start">
                         <div className="min-w-0">
-                            <h3 className="text-lg font-black text-slate-800 truncate">
+                            <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 truncate">
                                 {selectedEmployee?.name || 'Selecione um colaborador'}
                             </h3>
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Calendário Semanal (Dom-Sáb)</p>
                         </div>
                         {selectedEmployee?.overlooked && (
-                            <div className="bg-rose-50 text-rose-600 px-3 py-1 rounded-lg text-[10px] font-black animate-pulse">
+                            <div className="bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 px-3 py-1 rounded-lg text-[10px] font-black animate-pulse">
                                 ALERTA 6x1
                             </div>
                         )}
@@ -291,13 +291,12 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                             onClick={async () => {
                               const el = document.getElementById('individual-calendar-capture');
                               if (el) {
-                                // Add some padding/background for the screenshot
                                 const dataUrl = await toPng(el, { 
                                   backgroundColor: '#ffffff',
                                   pixelRatio: 2,
                                   style: { 
                                     padding: '20px', 
-                                    borderRadius: '32px',
+                                    borderRadius: '24px',
                                     transform: 'scale(0.9)',
                                     transformOrigin: 'center'
                                   }
@@ -308,7 +307,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                                 link.click();
                               }
                             }}
-                            className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center ml-2"
+                            className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-slate-400 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center ml-2"
                             title="Baixar Calendário"
                           >
                             <Icon name="download" className="text-sm" />
@@ -317,10 +316,10 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                     </div>
 
                     <div className="flex-1">
-                        <div id="individual-calendar-capture" className="bg-white p-4 rounded-3xl">
-                          <div className="mb-4 text-center border-b border-slate-100 pb-4">
-                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Escala Individual</p>
-                              <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">{selectedEmployee?.name}</h3>
+                        <div id="individual-calendar-capture" className="bg-white dark:bg-zinc-900 p-4 rounded-2xl">
+                          <div className="mb-4 text-center border-b border-slate-100 dark:border-zinc-800 pb-4">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Escala Individual</p>
+                              <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">{selectedEmployee?.name}</h3>
                               <p className="text-[9px] font-bold text-slate-400 uppercase">{(currentMY.month + 1).toString().padStart(2, '0')}/{currentMY.year}</p>
                           </div>
                         {selectedEmployee && (
@@ -334,32 +333,32 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                         )}
                         </div>
                         {!selectedEmployee && (
-                          <div className="flex items-center justify-center h-40 text-slate-300">
+                          <div className="flex items-center justify-center h-40 text-slate-300 dark:text-slate-600">
                             <p className="text-sm font-bold">Selecione um colaborador no ranking →</p>
                           </div>
                         )}
                     </div>
 
-                    <div className="mt-6 grid grid-cols-2 gap-4 pt-6 border-t border-slate-100 ">
-                        <div className="bg-indigo-50  p-4 rounded-2xl border border-indigo-100 ">
-                            <p className="text-[10px] font-black text-indigo-400  uppercase">Horas Estimadas</p>
-                            <p className="text-2xl font-black text-indigo-700 ">{selectedEmployee?.totalHours}h</p>
-                            <p className="text-[9px] font-bold text-indigo-400 ">Mês completo ({selectedEmployee?.worked}d)</p>
+                    <div className="mt-6 grid grid-cols-2 gap-4 pt-6 border-t border-slate-100 dark:border-zinc-800">
+                        <div className="bg-indigo-50 dark:bg-indigo-950/40 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900/50">
+                            <p className="text-[10px] font-bold text-indigo-400 uppercase">Horas Estimadas</p>
+                            <p className="text-2xl font-black text-indigo-700 dark:text-indigo-300">{selectedEmployee?.totalHours}h</p>
+                            <p className="text-[9px] font-medium text-indigo-400">Mês completo ({selectedEmployee?.worked}d)</p>
                         </div>
-                        <div className="bg-amber-50  p-4 rounded-2xl border border-amber-100 ">
-                            <p className="text-[10px] font-black text-amber-500  uppercase">Domingos/Feriados</p>
-                            <p className="text-2xl font-black text-amber-700 ">{selectedEmployee?.sundaysWorked}D / {selectedEmployee?.holidaysWorked}F</p>
-                            <p className="text-[9px] font-bold text-amber-500 ">Presença em dias premium</p>
+                        <div className="bg-amber-50 dark:bg-amber-950/40 p-4 rounded-xl border border-amber-100 dark:border-amber-900/50">
+                            <p className="text-[10px] font-bold text-amber-500 uppercase">Domingos/Feriados</p>
+                            <p className="text-2xl font-black text-amber-700 dark:text-amber-300">{selectedEmployee?.sundaysWorked}D / {selectedEmployee?.holidaysWorked}F</p>
+                            <p className="text-[9px] font-medium text-amber-500">Presença em dias premium</p>
                         </div>
-                        <div className="bg-rose-50  p-4 rounded-2xl border border-rose-100 ">
-                            <p className="text-[10px] font-black text-rose-400  uppercase">Aderência</p>
-                            <p className="text-2xl font-black text-rose-600 ">{selectedEmployee?.adherence.toFixed(0)}%</p>
-                            <p className="text-[9px] font-bold text-rose-400 ">Frente aos dias trabalháveis ({selectedEmployee?.theoreticalMax}d)</p>
+                        <div className="bg-rose-50 dark:bg-rose-950/40 p-4 rounded-xl border border-rose-100 dark:border-rose-900/50">
+                            <p className="text-[10px] font-bold text-rose-400 uppercase">Aderência</p>
+                            <p className="text-2xl font-black text-rose-600 dark:text-rose-400">{selectedEmployee?.adherence.toFixed(0)}%</p>
+                            <p className="text-[9px] font-medium text-rose-400">Frente aos dias trabalháveis ({selectedEmployee?.theoreticalMax}d)</p>
                         </div>
-                        <div className="bg-slate-50  p-4 rounded-2xl border border-slate-200 ">
-                            <p className="text-[10px] font-black text-slate-400  uppercase">Maior Sequência</p>
-                            <p className="text-2xl font-black text-slate-900 ">{selectedEmployee?.maxStreak}d</p>
-                            <p className="text-[9px] font-bold text-slate-400 ">{selectedEmployee?.overlooked ? '⚠️ Excede limite legal' : 'Dentro do limite'}</p>
+                        <div className="bg-slate-50 dark:bg-zinc-800/60 p-4 rounded-xl border border-slate-200 dark:border-zinc-700">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Maior Sequência</p>
+                            <p className="text-2xl font-black text-slate-900 dark:text-slate-100">{selectedEmployee?.maxStreak}d</p>
+                            <p className="text-[9px] font-medium text-slate-400">{selectedEmployee?.overlooked ? '⚠️ Excede limite legal' : 'Dentro do limite'}</p>
                         </div>
                     </div>
                   </div>
@@ -367,16 +366,16 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
 
                 {/* Middle/Right: Overload Ranking with Click Interaction */}
                 <div className="lg:col-span-12 xl:col-span-7 flex flex-col gap-6">
-                   <div className="bg-white  rounded-[2rem] border border-slate-200  p-8 shadow-sm flex flex-col max-h-[600px] transition-colors">
+                   <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-6 sm:p-8 shadow-sm flex flex-col max-h-[600px] transition-colors">
                         <div className="mb-6 flex items-center justify-between">
                             <div>
-                              <h3 className="text-lg font-black text-slate-800">Ranking de Escala</h3>
+                              <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">Ranking de Escala</h3>
                               <p className="text-xs font-bold text-slate-400">Clique para ver o calendário individual</p>
                             </div>
                             {selectedEmployee && onUpdateShift && (
                               <button
                                 onClick={() => setShowIndividualModal(true)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-black rounded-lg hover:bg-indigo-700 transition-all"
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-bold rounded-lg hover:bg-indigo-700 transition-all"
                               >
                                 <Icon name="edit" className="text-xs" /> Editar Escala
                               </button>
@@ -387,10 +386,10 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                                 <button 
                                     key={s.id} 
                                     onClick={() => { setSelectedEmpId(s.id); }}
-                                    className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all border ${
+                                    className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all border ${
                                         selectedEmpId === s.id 
-                                        ? 'bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-100 scale-[1.02]' 
-                                        : 'bg-slate-50 border-slate-100 hover:bg-slate-100'
+                                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/20 scale-[1.01]' 
+                                        : 'bg-slate-50 dark:bg-zinc-800/60 border-slate-100 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-800 dark:text-slate-200'
                                     }`}
                                 >
                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${
@@ -505,18 +504,18 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
 };
 
  const InsightCard: React.FC<{ label: string, value: string, icon: any, color: any, description: string, urgent?: boolean }> = ({ label, value, icon, color, description, urgent }) => (
-  <div className={`bg-white border rounded-3xl p-6 shadow-sm flex items-center gap-5 transition-all hover:translate-y-[-4px] hover:shadow-md ${urgent ? 'border-rose-300 ring-2 ring-rose-50' : 'border-slate-100'}`}>
+  <div className={`bg-white dark:bg-zinc-900 border rounded-2xl p-5 sm:p-6 shadow-sm flex items-center gap-4 sm:gap-5 transition-all hover:translate-y-[-2px] hover:shadow-md ${urgent ? 'border-rose-300 dark:border-rose-800 ring-2 ring-rose-50 dark:ring-rose-950/40' : 'border-slate-100 dark:border-zinc-800'}`}>
      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
-       color === 'indigo' ? 'bg-indigo-50 text-indigo-600' : 
-       color === 'rose' ? 'bg-rose-50 text-rose-600' : 
-       color === 'amber' ? 'bg-amber-50 text-amber-600' : 'bg-sky-50 text-sky-600'
+       color === 'indigo' ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400' : 
+       color === 'rose' ? 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400' : 
+       color === 'amber' ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400' : 'bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400'
      }`}>
         <Icon name={icon} className="text-xl" />
      </div>
      <div className="min-w-0">
-        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
-        <h4 className={`text-xl font-black ${urgent ? 'text-rose-600' : 'text-slate-900'} leading-none`}>{value}</h4>
-        <p className="text-[9px] font-bold text-slate-400 truncate">{description}</p>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
+        <h4 className={`text-xl font-black ${urgent ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-100'} leading-none`}>{value}</h4>
+        <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 truncate mt-1">{description}</p>
      </div>
   </div>
 );

@@ -1071,32 +1071,32 @@ export const TeamView: React.FC<TeamViewProps> = ({
       {/* Filter Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 dark:bg-zinc-900/60 p-3 rounded-2xl border border-slate-200/60 dark:border-zinc-800">
         {/* Left: Search & Cargo Filter */}
-        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[280px]">
-          <div className="relative flex-1 min-w-[180px] max-w-xs">
+        <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
             <Icon name="search" className="absolute left-3 top-2.5 text-slate-400 text-sm" />
             <input 
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar colaborador..."
-              className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl pl-9 pr-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 placeholder-slate-400 outline-none focus:ring-2 focus:ring-orange-500/30 transition-all"
+              className="w-full h-9 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl pl-9 pr-8 text-xs font-semibold text-slate-700 dark:text-slate-200 placeholder-slate-400 outline-none focus:ring-2 focus:ring-orange-500/30 transition-all"
             />
             {searchTerm && (
               <button 
                 onClick={() => setSearchTerm('')} 
-                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs"
+                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs"
               >
                 <Icon name="close" />
               </button>
             )}
           </div>
 
-          <div className="flex items-center bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-0.5 rounded-xl">
+          <div className="h-9 flex items-center bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-0.5 rounded-xl">
             {['ALL', ...CARGO_OPTIONS].map(c => (
               <button
                 key={c}
                 onClick={() => setCargoFilter(c)}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${
+                className={`h-full px-2.5 sm:px-3 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center ${
                   cargoFilter === c 
                     ? 'bg-orange-500 text-white shadow-sm' 
                     : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
@@ -1108,7 +1108,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
           </div>
         </div>
 
-        <div className="text-[11px] font-bold text-slate-400 dark:text-zinc-500">
+        <div className="text-[11px] font-semibold text-slate-400 dark:text-zinc-500">
           Exibindo {filteredEmployees.length} de {employees.length}
         </div>
       </div>
