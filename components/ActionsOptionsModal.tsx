@@ -14,7 +14,7 @@ interface ActionsOptionsModalProps {
   onOpenPresetModal?: () => void;
   onApplyFolgas: () => void;
   onSortearDomingo: () => void;
-  onDistributePositions: () => void;
+  onDistributePositions?: () => void;
   onOptimizePeakWeek?: () => void;
   tacticalDisplayMode?: TacticalDisplayMode;
   onToggleTacticalDisplayMode?: (mode?: TacticalDisplayMode) => void;
@@ -34,7 +34,7 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
   onSortearDomingo,
   onDistributePositions,
   onOptimizePeakWeek,
-  tacticalDisplayMode = 'positions',
+  tacticalDisplayMode = 'off',
   onToggleTacticalDisplayMode,
 }) => {
   if (!isOpen) return null;
@@ -159,60 +159,7 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
                 </div>
               </div>
 
-              {/* Formato da Escala */}
-              {onToggleTacticalDisplayMode && (
-                <div className="p-3 rounded-2xl border border-slate-200/70 dark:border-zinc-700/60 bg-slate-50 dark:bg-zinc-800/60 flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col">
-                      <span className="text-xs font-black uppercase text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                        <Icon name="badge" className="text-sm text-orange-500" />
-                        Visualização da Escala
-                      </span>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                        Alternar entre códigos táticos, funções ou padrão
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-200/70 dark:bg-zinc-900 rounded-xl mt-1">
-                    <button
-                      type="button"
-                      onClick={() => onToggleTacticalDisplayMode('positions')}
-                      className={`py-2 px-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
-                        tacticalDisplayMode === 'positions'
-                          ? 'bg-orange-500 text-white shadow-sm'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <span>🏷️ Posições</span>
-                    </button>
-                    
-                    <button
-                      type="button"
-                      onClick={() => onToggleTacticalDisplayMode('roles')}
-                      className={`py-2 px-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
-                        tacticalDisplayMode === 'roles'
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <span>👔 Funções</span>
-                    </button>
 
-                    <button
-                      type="button"
-                      onClick={() => onToggleTacticalDisplayMode('off')}
-                      className={`py-2 px-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
-                        tacticalDisplayMode === 'off'
-                          ? 'bg-slate-700 text-white shadow-sm'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <span>🔘 Padrão (T)</span>
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -296,28 +243,7 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
                 <Icon name="chevron_right" className="text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0 text-base" />
               </button>
 
-              {/* Distribuir Posições Táticas */}
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  onDistributePositions();
-                }}
-                className="w-full flex items-center gap-3 p-3 rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/60 dark:hover:bg-emerald-950/40 text-left transition-all group"
-              >
-                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm shrink-0 group-hover:scale-105 transition-transform">
-                  <Icon name="view_in_ar" className="text-xl" />
-                </div>
-                <div className="flex flex-col flex-1 min-w-0">
-                  <span className="text-xs font-black uppercase text-emerald-700 dark:text-emerald-300">
-                    Distribuir Posições Táticas
-                  </span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                    Aloca P1 a P4 e Estoque respeitando abertura e fechamento
-                  </span>
-                </div>
-                <Icon name="chevron_right" className="text-emerald-400 group-hover:translate-x-0.5 transition-transform shrink-0 text-base" />
-              </button>
+
 
               {/* Dias Protegidos & Limite de Folgas */}
               {onOptimizePeakWeek && (

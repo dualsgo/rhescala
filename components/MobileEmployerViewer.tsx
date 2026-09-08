@@ -43,7 +43,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
   onSwitchToFullGrid,
   onMonthChange,
   onUpdateEmployee,
-  tacticalDisplayMode = 'positions',
+  tacticalDisplayMode = 'off',
   onToggleTacticalDisplayMode,
 }) => {
   const [activeTab, setActiveTab] = useState<'hoje' | 'semana' | 'equipe' | 'mes' | 'pedidos'>('hoje');
@@ -320,49 +320,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
           )}
         </div>
 
-        {/* Format Switcher (Posições vs Funções vs Padrão) */}
-        {onToggleTacticalDisplayMode && (
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-zinc-800 text-[10px] font-black uppercase">
-            <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-              <Icon name="badge" className="text-sm text-orange-500" /> Exibição:
-            </span>
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-slate-200/60 dark:border-zinc-700">
-              <button
-                type="button"
-                onClick={() => onToggleTacticalDisplayMode('positions')}
-                className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase transition-all ${
-                  tacticalDisplayMode === 'positions'
-                    ? 'bg-orange-500 text-white shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
-                }`}
-              >
-                🏷️ Posições
-              </button>
-              <button
-                type="button"
-                onClick={() => onToggleTacticalDisplayMode('roles')}
-                className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase transition-all ${
-                  tacticalDisplayMode === 'roles'
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
-                }`}
-              >
-                👔 Funções
-              </button>
-              <button
-                type="button"
-                onClick={() => onToggleTacticalDisplayMode('off')}
-                className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase transition-all ${
-                  tacticalDisplayMode === 'off'
-                    ? 'bg-slate-700 text-white shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
-                }`}
-              >
-                🔘 Padrão (T)
-              </button>
-            </div>
-          </div>
-        )}
+
 
       </div>
 

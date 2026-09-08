@@ -24,7 +24,7 @@ interface HeaderProps {
   onCreateMonth: () => void;
   onApplyFolgas: () => void;
   onSortearDomingo: () => void;
-  onDistributePositions: () => void;
+  onDistributePositions?: () => void;
   showNotes: boolean;
   onToggleNotes: () => void;
   canGoNext: boolean;
@@ -69,7 +69,7 @@ export const Header: React.FC<HeaderProps> = ({
   onCreateMonth,
   onApplyFolgas,
   onSortearDomingo,
-  onDistributePositions,
+  onDistributePositions = () => {},
   onOptimizePeakWeek,
   showNotes,
   onToggleNotes,
@@ -86,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({
   diffCount = 0,
   onOpenDiffModal,
   onOpenPresetModal,
-  tacticalDisplayMode = 'positions',
+  tacticalDisplayMode = 'off',
   onToggleTacticalDisplayMode,
   onManualSave,
   isSaving = false,

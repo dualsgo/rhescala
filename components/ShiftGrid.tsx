@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings, ScheduleDiffItem, TacticalDisplayMode, ProtectedDaysConfig } from '../types';
 import { Icon } from './Icon';
-import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, DEFAULT_JORNADA_SETTINGS, isEmployeeActiveInMonth, normalizeProtectedDaysConfig, getTacticalLabel, getTacticalCellCode, getTacticalEmoji } from '../constants';
+import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, isEmployeeActiveInMonth, normalizeProtectedDaysConfig, getTacticalLabel, getTacticalCellCode, getTacticalEmoji } from '../constants';
 import { getShiftClassification, isWorkingShift, getPrevMonthWorkStreak, getPrevMonthConsecutive } from '../hooks/useScheduleEngine';
 import { OperationalGuideModal } from './OperationalGuideModal';
 import { MobileDayScheduleView } from './MobileDayScheduleView';
@@ -84,7 +84,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onShareWhatsApp,
   diffs = [],
   onOpenPresetForEmployee,
-  tacticalDisplayMode = 'positions',
+  tacticalDisplayMode = 'off',
   onToggleTacticalDisplayMode,
   highlightedEmpId,
   onHighlightEmp,
@@ -133,15 +133,13 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     return count;
   }, [onlyWorkingToday, selectedGroup, contractFilter, hidePastDays, mobileSearchQuery]);
 
-  // Auto-scroll to today on mount or when month changes to current month
+  // Auto-scroll logic to today's day on initial render
   useEffect(() => {
-    const todayDate = new Date();
-    const isCurrent = currentMY.year === todayDate.getFullYear() && currentMY.month === todayDate.getMonth();
-    
-    if (isCurrent && scrollContainerRef.current && !hidePastDays) {
-      const todayDay = todayDate.getDate();
+    if (!hasScrolled && isCurrentMonth && !hidePastDays) {
+      const todayDay = new Date().getDate();
       if (todayDay > 1) {
-        const colWidth = isCompactMode ? 48 : 60;
+        setHasScrolled(true);
+        const colWidth = isCompactMode ? 38 : 52;
         const scrollPos = (todayDay - 1) * colWidth;
         
         const timeout = setTimeout(() => {
@@ -156,6 +154,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
   const legendItems = useMemo(() => {
     const baseItems = [
+      { code: 'T', label: 'Trabalho Normal', color: 'bg-emerald-600' },
       { code: 'F', label: 'Folga Comum', color: 'bg-rose-500' },
       { code: 'FF', label: 'Folga de Feriado', color: 'bg-amber-500' },
       { code: 'FE', label: 'Férias', color: 'bg-emerald-500' },
@@ -166,6 +165,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       { code: '3D', label: '3º Domingo (Limite CLT)', color: 'bg-rose-600' },
       { code: '2D', label: '2º Domingo Trabalhado', color: 'bg-amber-500' },
     ];
+
+    if (tacticalDisplayMode === 'off') {
+      return baseItems;
+    }
 
     const tacticalItems = tacticalDisplayMode === 'roles' ? [
       { code: 'CX', label: 'Caixa', color: 'bg-red-600' },
@@ -247,12 +250,16 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
     if (selectedGroup) {
       list = list.filter(emp => {
-        const s = (emp.shifts[monthKey]?.[selectedDayIdx] || '').toUpperCase();
-        if (selectedGroup === 'folgas') return ['F', 'FF', 'FE', 'DO', 'C', 'AT', 'N/A'].includes(s);
-        if (selectedGroup === 'abertura') return s === 'A' || s.startsWith('09:') || s.startsWith('08:') || emp.defaultShift === 'abertura';
-        if (selectedGroup === 'intermediario') return s === 'I' || s.startsWith('11:') || s.startsWith('12:') || emp.defaultShift === 'intermediario';
-        if (selectedGroup === 'fechamento') return s === 'F' || s === 'FECH' || s.startsWith('13:') || s.startsWith('14:') || emp.defaultShift === 'fechamento';
-        return true;
+        const isSun = days[selectedDayIdx]?.isSunday;
+        const isHol = days[selectedDayIdx]?.isHoliday;
+        const shift = (emp.shifts[monthKey] || [])[selectedDayIdx] || 'T';
+        const isOff = !isWorkingShift(shift);
+        const hour = (emp.dailyHours[monthKey] || [])[selectedDayIdx] || emp.workPeriod || getDefaultHourForDay(emp, isHol, isSun);
+        const classification = getShiftClassification(hour, isSun, jornadaSettings);
+
+        if (selectedGroup === 'Folgas/Outros') return isOff;
+        if (isOff) return false;
+        return classification === selectedGroup;
       });
     }
 
@@ -442,16 +449,16 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               </div>
             )}
 
-            {/* Botão WhatsApp do Dia (Apenas Gestores/Admin) */}
-            {!isReadOnly && onShareWhatsApp && (
+            {/* Divulgação Operacional / WhatsApp do Dia */}
+            {onShareWhatsApp && (
               <button
                 type="button"
                 onClick={() => onShareWhatsApp(selectedDayIdx)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shadow-emerald-600/20 active:scale-95 whitespace-nowrap"
-                title="Copiar ou compartilhar escala do dia para o WhatsApp"
+                title="Preparar e compartilhar a divulgação operacional do dia"
               >
-                <Icon name="chat" className="text-xs" />
-                <span>WhatsApp do Dia</span>
+                <Icon name="campaign" className="text-xs" />
+                <span>Divulgação (WhatsApp)</span>
               </button>
             )}
 
@@ -508,47 +515,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
           {/* Lado Direito: Modos de Exibição & Controles */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Alternador de Modo: Posições vs Funções vs Padrão */}
-            {onToggleTacticalDisplayMode && (
-              <div className="flex items-center bg-slate-100 dark:bg-zinc-800 p-0.5 rounded-xl shadow-inner shrink-0">
-                <button
-                  type="button"
-                  onClick={() => onToggleTacticalDisplayMode('positions')}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                    tacticalDisplayMode === 'positions'
-                      ? 'bg-orange-500 text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-zinc-700'
-                  }`}
-                  title="Modo Posições: Exibir códigos P1, P2, P3, P4 e ESTQ"
-                >
-                  <span>🏷️ Posições</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onToggleTacticalDisplayMode('roles')}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                    tacticalDisplayMode === 'roles'
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-zinc-700'
-                  }`}
-                  title="Modo Funções: Exibir funções Caixa, Fiscal, Atendimento, Apoio e Estoque"
-                >
-                  <span>👔 Funções</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onToggleTacticalDisplayMode('off')}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                    tacticalDisplayMode === 'off'
-                      ? 'bg-slate-700 text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-zinc-700'
-                  }`}
-                  title="Modo Padrão: Ocultar posições e exibir apenas T e Folgas"
-                >
-                  <span>🔘 T</span>
-                </button>
-              </div>
-            )}
+
 
             {/* Modo Denso */}
             <button
@@ -698,6 +665,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
         {mobileViewMode === 'daily' && (
           <MobileDayScheduleView
             employees={displayedEmployees}
+            allEmployees={employees}
+            jornadaSettings={jornadaSettings}
             currentMY={currentMY}
             selectedDayIdx={selectedDayIdx}
             monthKey={monthKey}
@@ -737,16 +706,9 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</span>
                 </th>
                 {!isReadOnly && isEditable && (
-                  <>
-                    <th className="hidden sm:table-cell sticky left-[110px] sm:left-[135px] z-[50] bg-slate-50 dark:bg-zinc-900 border-b border-r border-slate-200 dark:border-zinc-800 py-2 px-3 text-left min-w-[115px] w-[115px]">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horário</span>
-                    </th>
-                    <th className="hidden md:table-cell sticky left-[225px] sm:left-[250px] z-[50] bg-slate-50 dark:bg-zinc-900 border-b border-r border-slate-200 dark:border-zinc-800 py-2 px-3 text-left min-w-[90px] w-[90px]">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        {tacticalDisplayMode === 'roles' ? 'Função' : 'Posição'}
-                      </span>
-                    </th>
-                  </>
+                  <th className="hidden sm:table-cell sticky left-[110px] sm:left-[135px] z-[50] bg-slate-50 dark:bg-zinc-900 border-b border-r border-slate-200 dark:border-zinc-800 py-2 px-3 text-left min-w-[115px] w-[115px]">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horário</span>
+                  </th>
                 )}
                 {filteredDays.map(d => {
                   const dayIdx = d.num - 1;
@@ -950,62 +912,41 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                </button>
                              </td>
                               {!isReadOnly && isEditable && (
-                                <>
-                                  {/* Hours Select */}
-                                  <td className="hidden sm:table-cell sticky left-[110px] sm:left-[135px] z-10 bg-white dark:bg-black border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-2 min-w-[115px] w-[115px]">
-                                    <select
-                                      value={emp.dailyHours[monthKey]?.[selectedDayIdx] || ''}
-                                      onChange={(e) => onUpdateEmployeeDailyHour(emp.id, selectedDayIdx, e.target.value)}
-                                      className="w-full bg-transparent border-none p-0 text-[11px] font-black text-orange-600 focus:ring-0 uppercase"
-                                    >
-                                      {(() => {
-                                        const date = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1);
-                                        const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`);
-                                        const isSun = date.getDay() === 0;
-    
-                                        let options = jornadaSettings.shiftHours.weekday;
-                                        if (isHol) options = [...jornadaSettings.shiftHours.holiday, ...(jornadaSettings.shiftHours.extended || [])];
-                                        else if (isSun) options = jornadaSettings.shiftHours.sunday;
-                                        else options = [...jornadaSettings.shiftHours.weekday, ...(jornadaSettings.shiftHours.extended || [])];
-                                        
-                                        if (emp.isYoungApprentice) options = jornadaSettings.shiftHours.apprentice;
-                                        
-                                        const currentVal = emp.dailyHours[monthKey]?.[selectedDayIdx];
-                                        const finalOptions = [...new Set([...options])].filter(Boolean);
-    
-                                        return (
-                                          <>
-                                            <option value="" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">AUTO 🤖</option>
-                                            {finalOptions.map(h => (
-                                              <option key={h} value={h} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">{h}</option>
-                                            ))}
-                                            {currentVal && !finalOptions.includes(currentVal) && (
-                                              <option value={currentVal} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">{currentVal}</option>
-                                            )}
-                                          </>
-                                        );
-                                      })()}
-                                    </select>
-                                  </td>
-                                  {/* Tactical Select */}
-                                  <td className="hidden md:table-cell sticky left-[225px] sm:left-[250px] z-10 bg-white dark:bg-black border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-2 min-w-[90px] w-[90px]">
-                                    <select
-                                      value={emp.tacticalPositions?.[monthKey]?.[selectedDayIdx] || 'AUTO'}
-                                      onChange={(e) => onUpdateTacticalPosition(emp.id, selectedDayIdx, e.target.value)}
-                                      className="w-full bg-transparent border-none p-0 text-[11px] font-black text-slate-900 dark:text-slate-100 focus:ring-0 uppercase"
-                                    >
-                                      <option value="AUTO" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">AUTO 🤖</option>
-                                      {(() => {
-                                        const finalPositions = ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'];
-                                        return finalPositions.map(p => (
-                                          <option key={p} value={p} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">
-                                            {getTacticalLabel(p, tacticalDisplayMode)} {getTacticalEmoji(p)}
-                                          </option>
-                                        ));
-                                      })()}
-                                    </select>
-                                  </td>
-                                </>
+                                <td className="hidden sm:table-cell sticky left-[110px] sm:left-[135px] z-10 bg-white dark:bg-black border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-2 min-w-[115px] w-[115px]">
+                                  <select
+                                    value={emp.dailyHours[monthKey]?.[selectedDayIdx] || ''}
+                                    onChange={(e) => onUpdateEmployeeDailyHour(emp.id, selectedDayIdx, e.target.value)}
+                                    className="w-full bg-transparent border-none p-0 text-[11px] font-black text-orange-600 focus:ring-0 uppercase"
+                                  >
+                                    {(() => {
+                                      const date = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1);
+                                      const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`);
+                                      const isSun = date.getDay() === 0;
+
+                                      let options = jornadaSettings.shiftHours.weekday;
+                                      if (isHol) options = [...jornadaSettings.shiftHours.holiday, ...(jornadaSettings.shiftHours.extended || [])];
+                                      else if (isSun) options = jornadaSettings.shiftHours.sunday;
+                                      else options = [...jornadaSettings.shiftHours.weekday, ...(jornadaSettings.shiftHours.extended || [])];
+                                      
+                                      if (emp.isYoungApprentice) options = jornadaSettings.shiftHours.apprentice;
+                                      
+                                      const currentVal = emp.dailyHours[monthKey]?.[selectedDayIdx];
+                                      const finalOptions = [...new Set([...options])].filter(Boolean);
+
+                                      return (
+                                        <>
+                                          <option value="" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">AUTO 🤖</option>
+                                          {finalOptions.map(h => (
+                                            <option key={h} value={h} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">{h}</option>
+                                          ))}
+                                          {currentVal && !finalOptions.includes(currentVal) && (
+                                            <option value={currentVal} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">{currentVal}</option>
+                                          )}
+                                        </>
+                                      );
+                                    })()}
+                                  </select>
+                                </td>
                               )}
 
                             {/* Shift Cells */}
@@ -1203,12 +1144,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                         shift === 'C' ? 'bg-indigo-100 text-indigo-600' :
                                         shift === 'FE' ? 'bg-emerald-100 text-emerald-600' :
                                         shift === 'DO' ? 'bg-fuchsia-600 text-white shadow-md' :
-                                        (tacticalDisplayMode !== 'off' && shift === 'P1') ? 'bg-red-600 text-white shadow-md ring-2 ring-red-400' :
-                                        (tacticalDisplayMode !== 'off' && shift === 'PC') ? 'bg-orange-500 text-white shadow-md ring-2 ring-orange-400' :
-                                        (tacticalDisplayMode !== 'off' && shift === 'P2') ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300' :
-                                        (tacticalDisplayMode !== 'off' && shift === 'P3') ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400' :
-                                        (tacticalDisplayMode !== 'off' && shift === 'P4') ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400' :
-                                        (tacticalDisplayMode !== 'off' && shift === 'ESTQ') ? 'bg-slate-700 text-white shadow-md ring-2 ring-slate-500' :
                                         (!dayRequest ? 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-zinc-800' : '')
                                       }`}
                                     >
@@ -1242,7 +1177,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                             return null;
                                           })()}
                                         </div>
-                                      ) : shift === 'C' ? <span className="text-[7px]">CURSO</span> : shift === 'N/A' ? <span className="text-[9px] text-slate-400 dark:text-zinc-500 font-mono">-</span> : (shift === 'T' ? (d.isSunday ? 'DOM' : 'T') : (shift.startsWith('FF') ? 'FF' : (['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].includes(shift) ? getTacticalCellCode(shift, tacticalDisplayMode) : shift)))}
+                                      ) : shift === 'C' ? <span className="text-[7px]">CURSO</span> : shift === 'N/A' ? <span className="text-[9px] text-slate-400 dark:text-zinc-500 font-mono">-</span> : (isWorkingShift(shift) ? (d.isSunday ? 'DOM' : 'T') : (shift.startsWith('FF') ? 'FF' : shift))}
                                     </button>
 
                                     
@@ -1250,7 +1185,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                       const pendingCount = (holidayCredits[emp.id] || []).filter(c => c.status === 'pending').length;
                                       return (
                                         <select
-                                          value={shift}
+                                          value={isWorkingShift(shift) ? 'T' : shift}
                                           onChange={(e) => {
                                             const val = e.target.value;
                                             if (val === 'AT_PERIOD') {
@@ -1295,13 +1230,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                           )}
                                           <option value="FE">Férias (FE)</option>
                                           <option value="C">Curso (C)</option>
-                                          <option disabled>──────</option>
-                                          <option value="P1">{getTacticalLabel('P1', tacticalDisplayMode)} 🟥</option>
-                                          <option value="PC">{getTacticalLabel('PC', tacticalDisplayMode)} 🟧</option>
-                                          <option value="P2">{getTacticalLabel('P2', tacticalDisplayMode)} 🟨</option>
-                                          <option value="P3">{getTacticalLabel('P3', tacticalDisplayMode)} 🟩</option>
-                                          <option value="P4">{getTacticalLabel('P4', tacticalDisplayMode)} 🟦</option>
-                                          <option value="ESTQ">{getTacticalLabel('ESTQ', tacticalDisplayMode)} 📦</option>
+                                          <option value="DO">Aniversário / Day Off (DO)</option>
                                         </select>
                                       );
                                     })()}

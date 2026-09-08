@@ -138,7 +138,7 @@ const App: React.FC = () => {
   const [authenticatedEmployeeId, setAuthenticatedEmployeeId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
   const [isDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
-  const [tacticalDisplayMode, setTacticalDisplayMode] = useLocalPreference<TacticalDisplayMode>('rhescala_tactical_display_mode', 'positions');
+  const [tacticalDisplayMode, setTacticalDisplayMode] = useLocalPreference<TacticalDisplayMode>('rhescala_tactical_display_mode', 'off');
   const { showDialog } = useDialog();
   const [waModal, setWaModal] = useState<{ show: boolean; dayIdx: number }>({ show: false, dayIdx: 0 });
   const [showHelp, setShowHelp] = useState(false);
@@ -907,6 +907,23 @@ const App: React.FC = () => {
     setShowProtectedModal(true);
   }, []);
 
+  const handleSaveDayPositions = useCallback((dayIdx: number, posMap: Record<string, string>) => {
+    setEmployees(prev => prev.map(emp => {
+      if (posMap[emp.id] !== undefined) {
+        const existing = [...(emp.tacticalPositions?.[monthKey] || [])];
+        existing[dayIdx] = posMap[emp.id];
+        return {
+          ...emp,
+          tacticalPositions: {
+            ...emp.tacticalPositions,
+            [monthKey]: existing
+          }
+        };
+      }
+      return emp;
+    }));
+  }, [monthKey]);
+
   const handleShareWhatsApp = useCallback((dayIdx: number) => {
     setSelectedDayIdx(dayIdx);
     setWaModal({ show: true, dayIdx });
@@ -1038,29 +1055,6 @@ const App: React.FC = () => {
     });
   };
 
-  const handleDistributePositions = () => {
-    showDialog({
-      title: 'Distribuir Posições',
-      message: 'Deseja substituir turnos "T" por posições táticas (P1-P4) para este mês? Suas folgas não serão alteradas.',
-      type: 'confirm'
-    }).then(ok => {
-      if (ok) {
-        const updatedShifts = distributeTacticalPositions(employees, currentMY, customHolidays, deletedNationalHolidays, jornadaSettings);
-        setEmployees(prev => prev.map(emp => {
-          if (updatedShifts[emp.id]) {
-            return {
-              ...emp,
-              shifts: { ...emp.shifts, [monthKey]: updatedShifts[emp.id].shifts }
-            };
-          }
-          return emp;
-        }));
-        showDialog({ title: 'Sucesso', message: 'Posições distribuídas com sucesso!', type: 'alert' });
-      }
-    });
-  };
-
-
   if (!auth.isAuthenticated) {
     return <Login onLogin={(role) => updateAuth({ isAuthenticated: true, role })} />;
   }
@@ -1088,7 +1082,6 @@ const App: React.FC = () => {
               onCreateMonth={handleCreateMonth}
               onApplyFolgas={handleApplyFolgas}
               onSortearDomingo={handleSortearDomingo}
-              onDistributePositions={handleDistributePositions}
               onOptimizePeakWeek={handleOptimizePeakWeek}
               showNotes={showNotes}
               onToggleNotes={() => setShowNotes(!showNotes)}
@@ -1559,6 +1552,7 @@ const App: React.FC = () => {
            deletedNationalHolidays={deletedNationalHolidays}
            jornadaSettings={activeJornadaSettings}
            tacticalDisplayMode={tacticalDisplayMode}
+           onSaveDayPositions={handleSaveDayPositions}
          />
        )}
 

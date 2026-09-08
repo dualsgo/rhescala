@@ -28,6 +28,7 @@ interface DailyScheduleModulatorModalProps {
   deletedNationalHolidays?: string[];
   jornadaSettings: JornadaSettings;
   tacticalDisplayMode?: TacticalDisplayMode;
+  onSaveDayPositions?: (dayIdx: number, positions: Record<string, string>) => void;
 }
 
 interface ModulatorItem {
@@ -66,6 +67,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
   deletedNationalHolidays = [],
   jornadaSettings,
   tacticalDisplayMode = 'positions',
+  onSaveDayPositions,
 }) => {
   const { showDialog } = useDialog();
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
@@ -373,6 +375,15 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
 
   // Copy action with user feedback
   const handleCopy = async () => {
+    // Save modulated operational positions for this day without altering shifts base
+    if (onSaveDayPositions) {
+      const posMap: Record<string, string> = {};
+      items.forEach(it => {
+        if (it.pos) posMap[it.id] = it.pos;
+      });
+      onSaveDayPositions(dayIdx, posMap);
+    }
+
     const copied = await copyToClipboard(generatedText);
     if (copied) {
       await showDialog({

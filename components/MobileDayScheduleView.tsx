@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { Employee, MonthYear, ShiftType } from '../types';
+import { Employee, MonthYear, ShiftType, JornadaSettings } from '../types';
 import { Icon } from './Icon';
-import { getShortName, isEmployeeActiveOnDay } from '../constants';
+import { getShortName, isEmployeeActiveOnDay, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS } from '../constants';
+import { getShiftClassification, isWorkingShift } from '../hooks/useScheduleEngine';
 
 interface MobileDayScheduleViewProps {
   employees: Employee[];
+  allEmployees?: Employee[];
+  jornadaSettings?: JornadaSettings;
   currentMY: MonthYear;
   selectedDayIdx: number;
   monthKey: string;
@@ -26,6 +29,8 @@ interface MobileDayScheduleViewProps {
 
 export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
   employees,
+  allEmployees,
+  jornadaSettings,
   currentMY,
   selectedDayIdx,
   monthKey,
@@ -55,7 +60,38 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
   const weekDayName = weekDaysFull[dateObj.getDay()];
   const monthsNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-  // Categorize employees for the selected day
+  const activePool = allEmployees || employees;
+  const settings = jornadaSettings || DEFAULT_JORNADA_SETTINGS;
+
+  // Global day stats computed across all active store employees
+  const dayStats = React.useMemo(() => {
+    let opening = 0;
+    let intermediate = 0;
+    let closing = 0;
+    let folgasCount = 0;
+
+    activePool.forEach(emp => {
+      if (emp.status === 'inactive' || emp.isHidden) return;
+      if (!isEmployeeActiveOnDay(emp, dateStr, monthKey, selectedDayIdx)) return;
+
+      const shift = emp.shifts?.[monthKey]?.[selectedDayIdx] || 'T';
+      const isOff = !isWorkingShift(shift);
+
+      if (isOff) {
+        folgasCount++;
+      } else {
+        const hour = emp.dailyHours?.[monthKey]?.[selectedDayIdx] || emp.workPeriod || getDefaultHourForDay(emp, isHoliday, isSunday);
+        const classification = getShiftClassification(hour, isSunday, settings);
+        if (classification === 'Abertura') opening++;
+        else if (classification === 'Intermediário') intermediate++;
+        else closing++;
+      }
+    });
+
+    return { opening, intermediate, closing, folgasCount, totalWorking: opening + intermediate + closing };
+  }, [activePool, dateStr, monthKey, selectedDayIdx, isHoliday, isSunday, settings]);
+
+  // Categorize displayed employees for the selected day
   const categorized = React.useMemo(() => {
     const abertura: Array<{ emp: Employee; shift: string; hour: string; pos: string }> = [];
     const intermediario: Array<{ emp: Employee; shift: string; hour: string; pos: string }> = [];
@@ -68,26 +104,20 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
       if (!isEmployeeActiveOnDay(emp, dateStr, monthKey, selectedDayIdx)) return;
 
       const shift = emp.shifts?.[monthKey]?.[selectedDayIdx] || 'T';
-      const hour = emp.dailyHours?.[monthKey]?.[selectedDayIdx] || '';
+      const hour = emp.dailyHours?.[monthKey]?.[selectedDayIdx] || emp.workPeriod || getDefaultHourForDay(emp, isHoliday, isSunday);
       const pos = resolvedPositions[emp.id] || emp.tacticalPositions?.[monthKey]?.[selectedDayIdx] || '';
 
-      const isOff = ['F', 'FF', 'FE', 'DO', 'C', 'AT', 'N/A'].includes(shift);
+      const isOff = !isWorkingShift(shift);
 
       if (isOff) {
         folgas.push({ emp, shift, hour, pos });
       } else {
-        const s = shift.toUpperCase();
-        if (s === 'A' || s === 'AB' || s.startsWith('A-') || s.startsWith('09:') || s.startsWith('08:') || s.startsWith('07:') || s.startsWith('10:')) {
+        const classification = getShiftClassification(hour, isSunday, settings);
+        if (classification === 'Abertura') {
           abertura.push({ emp, shift, hour, pos });
-        } else if (s === 'I' || s === 'INT' || s.startsWith('I-') || s.startsWith('11:') || s.startsWith('12:')) {
+        } else if (classification === 'Intermediário') {
           intermediario.push({ emp, shift, hour, pos });
-        } else if (s === 'F' && !isOff) {
-          fechamento.push({ emp, shift, hour, pos });
-        } else if (s === 'FECH' || s.startsWith('13:') || s.startsWith('14:') || s.startsWith('15:')) {
-          fechamento.push({ emp, shift, hour, pos });
-        } else if (emp.defaultShift === 'abertura' || emp.defaultShift === 'A') {
-          abertura.push({ emp, shift, hour, pos });
-        } else if (emp.defaultShift === 'fechamento' || emp.defaultShift === 'F') {
+        } else if (classification === 'Fechamento') {
           fechamento.push({ emp, shift, hour, pos });
         } else {
           outrosTrabalho.push({ emp, shift, hour, pos });
@@ -96,10 +126,7 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
     });
 
     return { abertura, intermediario, fechamento, outrosTrabalho, folgas };
-  }, [employees, monthKey, selectedDayIdx, dateStr, resolvedPositions]);
-
-  const totalWorking = categorized.abertura.length + categorized.intermediario.length + categorized.fechamento.length + categorized.outrosTrabalho.length;
-  const totalFolgas = categorized.folgas.length;
+  }, [employees, monthKey, selectedDayIdx, dateStr, resolvedPositions, isHoliday, isSunday, settings]);
 
   const getShiftBadgeColor = (shift: string) => {
     switch (shift) {
@@ -176,28 +203,63 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
 
         {/* Cobertura Rápida em Pílulas */}
         <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-100 dark:border-zinc-800">
-          <div className="p-2 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 text-center">
+          <button
+            type="button"
+            onClick={() => {
+              const el = document.getElementById('sec-abertura');
+              el?.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="p-2 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 text-center transition-all active:scale-95 cursor-pointer"
+            title="Ir para Turno Abertura"
+          >
             <span className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 block">Abertura</span>
-            <span className="text-base font-black text-blue-800 dark:text-blue-200">{categorized.abertura.length}</span>
-          </div>
-          <div className="p-2 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 text-center">
+            <span className="text-base font-black text-blue-800 dark:text-blue-200">{dayStats.opening}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const el = document.getElementById('sec-intermediario');
+              el?.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="p-2 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 text-center transition-all active:scale-95 cursor-pointer"
+            title="Ir para Turno Intermediário"
+          >
             <span className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 block">Intermed.</span>
-            <span className="text-base font-black text-amber-800 dark:text-amber-200">{categorized.intermediario.length}</span>
-          </div>
-          <div className="p-2 rounded-xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/40 text-center">
+            <span className="text-base font-black text-amber-800 dark:text-amber-200">{dayStats.intermediate}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const el = document.getElementById('sec-fechamento');
+              el?.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="p-2 rounded-xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/40 text-center transition-all active:scale-95 cursor-pointer"
+            title="Ir para Turno Fechamento"
+          >
             <span className="text-[10px] font-black uppercase text-purple-600 dark:text-purple-400 block">Fechamento</span>
-            <span className="text-base font-black text-purple-800 dark:text-purple-200">{categorized.fechamento.length}</span>
-          </div>
-          <div className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-center">
+            <span className="text-base font-black text-purple-800 dark:text-purple-200">{dayStats.closing}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowFolgas(true);
+              setTimeout(() => {
+                const el = document.getElementById('sec-folgas');
+                el?.scrollIntoView({ behavior: 'smooth' });
+              }, 50);
+            }}
+            className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-center transition-all active:scale-95 cursor-pointer"
+            title="Ver Folgas e Ausências"
+          >
             <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 block">Folgas</span>
-            <span className="text-base font-black text-slate-700 dark:text-slate-200">{totalFolgas}</span>
-          </div>
+            <span className="text-base font-black text-slate-700 dark:text-slate-200">{dayStats.folgasCount}</span>
+          </button>
         </div>
       </div>
 
       {/* Seção 1: Abertura */}
       {categorized.abertura.length > 0 && (
-        <div className="space-y-2">
+        <div id="sec-abertura" className="space-y-2 scroll-mt-36">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-blue-600 dark:text-blue-400">
               <Icon name="wb_sunny" className="text-sm" />
@@ -215,7 +277,7 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
 
       {/* Seção 2: Intermediário */}
       {categorized.intermediario.length > 0 && (
-        <div className="space-y-2">
+        <div id="sec-intermediario" className="space-y-2 scroll-mt-36">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
               <Icon name="wb_twilight" className="text-sm" />
@@ -233,7 +295,7 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
 
       {/* Seção 3: Fechamento */}
       {categorized.fechamento.length > 0 && (
-        <div className="space-y-2">
+        <div id="sec-fechamento" className="space-y-2 scroll-mt-36">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-purple-600 dark:text-purple-400">
               <Icon name="nights_stay" className="text-sm" />
@@ -251,7 +313,7 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
 
       {/* Seção 4: Outros Presentes */}
       {categorized.outrosTrabalho.length > 0 && (
-        <div className="space-y-2">
+        <div id="sec-outros" className="space-y-2 scroll-mt-36">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
               <Icon name="work" className="text-sm" />
@@ -269,7 +331,7 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
 
       {/* Seção 5: Folgas & Ausências (Acordeão) */}
       {categorized.folgas.length > 0 && (
-        <div className="pt-2">
+        <div id="sec-folgas" className="pt-2 scroll-mt-36">
           <button
             type="button"
             onClick={() => setShowFolgas(!showFolgas)}
@@ -337,9 +399,6 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
                     { code: 'DO', label: 'Aniversário', color: 'bg-fuchsia-600 text-white' },
                     { code: 'AT', label: 'Atestado', color: 'bg-rose-400 text-white' },
                     { code: 'C', label: 'Treinamento', color: 'bg-slate-500 text-white' },
-                    { code: 'A', label: 'Abertura', color: 'bg-blue-600 text-white' },
-                    { code: 'I', label: 'Intermed.', color: 'bg-amber-600 text-white' },
-                    { code: 'FECH', label: 'Fechamento', color: 'bg-purple-600 text-white' },
                   ].map(s => (
                     <button
                       key={s.code}

@@ -2048,8 +2048,12 @@ export function detectScheduleDiffs(
             const offShift = officialShifts[dayIdx] || 'T';
             const curShift = currentShifts[dayIdx] || 'T';
 
-            // 1. Mudança de Turno/Folga
-            if (offShift !== curShift) {
+            // 1. Mudança de Turno/Folga (apenas se alterou o status real de jornada)
+            const offIsWork = isWorkingShift(offShift);
+            const curIsWork = isWorkingShift(curShift);
+            const isSameWorkStatus = offIsWork && curIsWork;
+
+            if (offShift !== curShift && !isSameWorkStatus) {
                 diffs.push({
                     id: `${emp.id}-shift-${dayIdx}`,
                     empId: emp.id,
@@ -2062,7 +2066,7 @@ export function detectScheduleDiffs(
                 });
             }
 
-            // 2. Mudança de Horário (quando ambos trabalham ou se horário foi alterado)
+            // 2. Mudança de Horário (quando trabalha e o horário oficial foi alterado)
             const offHour = officialHours[dayIdx] || emp.workPeriod || '';
             const curHour = currentHours[dayIdx] || emp.workPeriod || '';
             if (isWorkingShift(curShift) && offHour && curHour && offHour !== curHour) {
@@ -2075,22 +2079,6 @@ export function detectScheduleDiffs(
                     type: 'hour',
                     officialVal: offHour,
                     currentVal: curHour
-                });
-            }
-
-            // 3. Mudança de Posição Tática
-            const offP = officialPos[dayIdx];
-            const curP = currentPos[dayIdx];
-            if (offP && curP && offP !== curP && isWorkingShift(curShift)) {
-                diffs.push({
-                    id: `${emp.id}-pos-${dayIdx}`,
-                    empId: emp.id,
-                    empName: emp.name,
-                    dayIdx,
-                    dateStr,
-                    type: 'position',
-                    officialVal: offP,
-                    currentVal: curP
                 });
             }
         }

@@ -190,35 +190,7 @@ export const MobileFilterDrawer: React.FC<MobileFilterDrawerProps> = ({
             </div>
           </div>
 
-          {/* Modo de Exibição Tática */}
-          {onToggleTacticalDisplayMode && (
-            <div>
-              <label className="text-xs font-black uppercase text-slate-400 tracking-wider block mb-2">
-                Exibição de Posições & Funções
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { id: 'positions', label: '🏷️ Posições', desc: 'P1-P4' },
-                  { id: 'roles', label: '👔 Funções', desc: 'Caixa/Fisc' },
-                  { id: 'off', label: '🔘 Padrão', desc: 'Apenas T' },
-                ].map(m => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => onToggleTacticalDisplayMode(m.id as any)}
-                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center gap-0.5 ${
-                      tacticalDisplayMode === m.id 
-                        ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-500 text-orange-600 dark:text-orange-400 shadow-sm' 
-                        : 'bg-slate-50 dark:bg-zinc-800/50 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    <span>{m.label}</span>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500">{m.desc}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+
 
           {/* Outras Opções */}
           <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 space-y-2">
