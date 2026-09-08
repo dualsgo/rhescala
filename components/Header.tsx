@@ -303,8 +303,8 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden sm:inline">{isValidated ? 'Oficial' : 'Rascunho'}</span>
           </button>
 
-          {/* Audit Diff Badge (when officialized and differences exist) */}
-          {isValidated && onOpenDiffModal && diffCount > 0 && (
+          {/* Audit Diff Badge (when officialized and differences exist - Admin only) */}
+          {!isReadOnly && isValidated && onOpenDiffModal && diffCount > 0 && (
             <button
               onClick={onOpenDiffModal}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border bg-amber-500 border-amber-600 text-white shadow-sm font-bold text-[10px] uppercase tracking-wider hover:scale-105 transition-all"
@@ -315,8 +315,8 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Inconsistency / Violation Badge */}
-          {onOpenInconsistencyModal && inconsistencyCount > 0 && (
+          {/* Inconsistency / Violation Badge (Admin only) */}
+          {!isReadOnly && onOpenInconsistencyModal && inconsistencyCount > 0 && (
             <button
               onClick={onOpenInconsistencyModal}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border bg-rose-500 border-rose-600 text-white shadow-sm font-black text-[10px] uppercase tracking-wider animate-pulse hover:scale-105 transition-all"
@@ -356,51 +356,6 @@ export const Header: React.FC<HeaderProps> = ({
                 Ctrl+S
               </span>
             </button>
-          )}
-
-          {/* Seletor de Formato de Escala no Modo Visualizador (Desktop) */}
-          {isReadOnly && onToggleTacticalDisplayMode && (
-            <div className="flex items-center bg-slate-100 dark:bg-zinc-900 border border-slate-200/70 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
-              <button
-                type="button"
-                onClick={() => onToggleTacticalDisplayMode('positions')}
-                className={`px-2 sm:px-2.5 py-1 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all ${
-                  tacticalDisplayMode === 'positions'
-                    ? 'bg-orange-500 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-                title="Exibir posições táticas (P1, P2, P3, P4, ESTQ)"
-              >
-                <span className="hidden sm:inline">🏷️ Posições</span>
-                <span className="inline sm:hidden">🏷️ Pos</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onToggleTacticalDisplayMode('roles')}
-                className={`px-2 sm:px-2.5 py-1 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all ${
-                  tacticalDisplayMode === 'roles'
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-                title="Exibir funções (Caixa, Fiscal, Atendimento, Apoio, Estoque)"
-              >
-                <span className="hidden sm:inline">👔 Funções</span>
-                <span className="inline sm:hidden">👔 Func</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onToggleTacticalDisplayMode('off')}
-                className={`px-2 sm:px-2.5 py-1 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all ${
-                  tacticalDisplayMode === 'off'
-                    ? 'bg-slate-700 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-                title="Exibir apenas T e Folgas"
-              >
-                <span className="hidden sm:inline">🔘 Padrão (T)</span>
-                <span className="inline sm:hidden">🔘 T</span>
-              </button>
-            </div>
           )}
 
           {/* Botão Direto: Modo Edição */}

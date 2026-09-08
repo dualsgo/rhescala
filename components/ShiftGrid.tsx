@@ -47,6 +47,8 @@ interface ShiftGridProps {
   onToggleProtectDay?: (dayNum: number) => void;
   tacticalDisplayMode?: TacticalDisplayMode;
   onToggleTacticalDisplayMode?: (mode?: TacticalDisplayMode) => void;
+  highlightedEmpId?: string;
+  onHighlightEmp?: (empId: string) => void;
 }
 
 export const ShiftGrid: React.FC<ShiftGridProps> = ({
@@ -82,6 +84,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onOpenPresetForEmployee,
   tacticalDisplayMode = 'positions',
   onToggleTacticalDisplayMode,
+  highlightedEmpId,
+  onHighlightEmp,
 }) => {
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
   const [hasScrolled, setHasScrolled] = useState(false);
@@ -212,18 +216,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
   return (
     <div className="flex flex-col gap-4 relative h-full">
-      {/* Top Controls: 3 Clear Semantic Segmented Groups */}
+      {/* Top Controls: Semantic Segmented Groups */}
       <div className="flex flex-col gap-2.5">
-        {isReadOnly && (
-          <button 
-            onClick={() => setShowGuideModal(true)}
-            className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white p-2.5 rounded-2xl shadow-md flex items-center justify-center gap-2.5 transition-transform hover:scale-[1.01] active:scale-95 animate-in fade-in"
-          >
-            <Icon name="menu_book" className="text-lg animate-pulse" />
-            <span className="font-black uppercase tracking-widest text-xs">📖 Manual de Boas Práticas da Loja</span>
-          </button>
-        )}
-
         {/* Linha 1: Contexto Operacional do Dia & Ações Imediatas */}
         <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white dark:bg-zinc-900 p-2 sm:p-2.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-sm w-full">
           {/* Lado Esquerdo: Dia Selecionado & Ações Diárias */}
@@ -246,8 +240,50 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               <Icon name="visibility" className="text-xs text-slate-400 dark:text-zinc-400" />
             </button>
 
-            {/* Botão WhatsApp do Dia */}
-            {onShareWhatsApp && (
+            {/* Identificação Rápida do Colaborador no Modo Visualizador */}
+            {isReadOnly && (
+              <div className="flex items-center gap-1.5 bg-orange-50/80 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/60 p-1 rounded-xl shadow-xs">
+                <div className="flex items-center gap-1 pl-1 text-[10px] font-black uppercase text-orange-700 dark:text-orange-400">
+                  <Icon name="person" className="text-xs" />
+                  <span className="hidden sm:inline">Meu Nome:</span>
+                </div>
+                <select
+                  value={highlightedEmpId || ''}
+                  onChange={(e) => onHighlightEmp?.(e.target.value)}
+                  className="bg-white dark:bg-zinc-900 border border-orange-200/80 dark:border-zinc-700 text-slate-800 dark:text-zinc-100 text-[11px] font-bold rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer max-w-[140px] sm:max-w-[180px] truncate"
+                  title="Selecione seu nome para destacar sua linha na grade"
+                >
+                  <option value="">Destacar meu nome...</option>
+                  {employees
+                    .filter(e => !e.isHidden && e.status === 'active')
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map(emp => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name}
+                      </option>
+                    ))}
+                </select>
+
+                {highlightedEmpId && (() => {
+                  const myEmp = employees.find(e => e.id === highlightedEmpId);
+                  if (!myEmp) return null;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => onOpenEmployeeCard(myEmp, 'mes')}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-xs shrink-0 active:scale-95"
+                      title="Abrir meu cartão individual de escala e horários"
+                    >
+                      <Icon name="badge" className="text-xs" />
+                      <span>Meu Cartão</span>
+                    </button>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Botão WhatsApp do Dia (Apenas Gestores/Admin) */}
+            {!isReadOnly && onShareWhatsApp && (
               <button
                 type="button"
                 onClick={() => onShareWhatsApp(selectedDayIdx)}
@@ -648,20 +684,47 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
                       {/* Employee Rows */}
                       {emps.map(emp => {
+                        const isHighlighted = highlightedEmpId === emp.id;
                         return (
-                          <tr key={emp.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group/row">
-                             <td className="sticky left-0 z-[10] bg-white dark:bg-black border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-1.5 sm:py-1.5 sm:px-2 min-w-[110px] sm:min-w-[135px] w-[110px] sm:w-[135px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]">
+                          <tr 
+                            key={emp.id} 
+                            className={`transition-colors group/row ${
+                              isHighlighted 
+                                ? 'bg-orange-50/50 dark:bg-orange-950/20 hover:bg-orange-100/50 dark:hover:bg-orange-900/30' 
+                                : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/50'
+                            }`}
+                          >
+                             <td className={`sticky left-0 z-[10] border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-1.5 sm:py-1.5 sm:px-2 min-w-[110px] sm:min-w-[135px] w-[110px] sm:w-[135px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)] transition-all ${
+                               isHighlighted
+                                 ? 'border-l-4 border-l-orange-500 bg-orange-50/90 dark:bg-zinc-900'
+                                 : 'bg-white dark:bg-black'
+                             }`}>
                                <button 
                                  onClick={() => onOpenEmployeeCard(emp)}
                                  title={`${emp.name.toUpperCase()} • Clique para ver escala completa, solicitações ou lançar atestado médico por período`}
-                                 className="flex items-center gap-1.5 sm:gap-2 w-full text-left hover:bg-orange-50 dark:hover:bg-orange-950/20 p-0.5 sm:p-1 rounded-lg sm:rounded-xl transition-all group/name"
+                                 className={`flex items-center gap-1.5 sm:gap-2 w-full text-left p-0.5 sm:p-1 rounded-lg sm:rounded-xl transition-all group/name ${
+                                   isHighlighted
+                                     ? 'bg-orange-100/70 dark:bg-orange-950/40'
+                                     : 'hover:bg-orange-50 dark:hover:bg-orange-950/20'
+                                 }`}
                                >
-                                 <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-slate-100 dark:bg-zinc-900 flex items-center justify-center text-[8px] sm:text-[10px] font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-zinc-800 group-hover/name:bg-orange-100 group-hover/name:text-orange-600 group-hover/name:border-orange-200 transition-colors shrink-0">
+                                 <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] font-bold border shrink-0 transition-colors ${
+                                   isHighlighted
+                                     ? 'bg-orange-500 text-white border-orange-600 shadow-xs'
+                                     : 'bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-zinc-800 group-hover/name:bg-orange-100 group-hover/name:text-orange-600 group-hover/name:border-orange-200'
+                                 }`}>
                                    {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                                  </div>
                                  <div className="flex flex-col min-w-0 flex-1">
-                                   <div className="flex items-center gap-1">
-                                     <span className="text-[10px] sm:text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase truncate group-hover/name:text-orange-600 transition-colors" title={emp.name.toUpperCase()}>{getShortName(emp.name, employees)}</span>
+                                   <div className="flex items-center gap-1 flex-wrap">
+                                     <span className={`text-[10px] sm:text-[11px] font-black uppercase truncate transition-colors ${
+                                       isHighlighted ? 'text-orange-600 dark:text-orange-400' : 'text-slate-900 dark:text-slate-100 group-hover/name:text-orange-600'
+                                     }`} title={emp.name.toUpperCase()}>{getShortName(emp.name, employees)}</span>
+                                     {isHighlighted && (
+                                       <span className="px-1.5 py-0.2 rounded-md bg-orange-500 text-white text-[8px] font-black uppercase tracking-wider shrink-0 shadow-xs">
+                                         Você
+                                       </span>
+                                     )}
                                      {(() => {
                                        if (isReadOnly) return null;
                                        const reqs = emp.requests || [];

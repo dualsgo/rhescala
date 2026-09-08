@@ -894,48 +894,6 @@ const App: React.FC = () => {
                  );
                 }
 
-                if (isReadOnly && viewerModeType === 'personal') {
-                  return (
-                    <MobileEmployerViewer
-                      employees={employees}
-                      currentMY={currentMY}
-                      customHolidays={customHolidays}
-                      deletedNationalHolidays={deletedNationalHolidays}
-                      jornadaSettings={jornadaSettings}
-                      holidayCredits={holidayCredits}
-                      selectedEmployeeId={viewerSelectedEmpId || (employees.find(e => !e.isHidden && e.status === 'active')?.id)}
-                      onSelectEmployee={(empId) => setViewerSelectedEmpId(empId)}
-                      onOpenEmployeeCard={async (emp, tab = 'mes', initialDate) => {
-                        if (auth.role === 'admin' || authenticatedEmployeeId === emp.id) {
-                          setEmployeeCardInitialTab(tab);
-                          setEmployeeCardInitialDate(initialDate);
-                          setSelectedEmployeeForCard(emp);
-                        } else {
-                          const password = await showDialog({
-                            type: 'prompt',
-                            title: `Acesso Individual: ${emp.name}`,
-                            message: 'Digite sua senha pessoal para acessar seus dados e enviar pedidos.'
-                          });
-
-                          if (password === emp.password || (!emp.password && password === '1234')) {
-                            setAuthenticatedEmployeeId(emp.id);
-                            setEmployeeCardInitialTab(tab);
-                            setEmployeeCardInitialDate(initialDate);
-                            setSelectedEmployeeForCard(emp);
-                          } else if (password !== null) {
-                            showDialog({ title: 'Erro', message: 'Senha individual incorreta.', type: 'alert' });
-                          }
-                        }
-                      }}
-                      onSwitchToFullGrid={() => setViewerModeType('grid')}
-                      onMonthChange={setCurrentMY}
-                      onUpdateEmployee={onUpdateEmployee}
-                      tacticalDisplayMode={tacticalDisplayMode}
-                      onToggleTacticalDisplayMode={setTacticalDisplayMode}
-                    />
-                  );
-                }
-
                 return (
                   <ShiftGrid
                    employees={employees}
@@ -1008,8 +966,13 @@ const App: React.FC = () => {
                      setPresetInitialEmpId(empId);
                      setShowPresetModal(true);
                    }}
+                   highlightedEmpId={viewerSelectedEmpId || authenticatedEmployeeId || ''}
+                   onHighlightEmp={(empId) => {
+                     setViewerSelectedEmpId(empId);
+                     setAuthenticatedEmployeeId(empId);
+                   }}
                    onOpenEmployeeCard={async (emp, tab = 'mes', initialDate) => {
-                     if (auth.role === 'admin' || authenticatedEmployeeId === emp.id) {
+                     if (auth.role === 'admin' || authenticatedEmployeeId === emp.id || viewerSelectedEmpId === emp.id || isReadOnly) {
                        setEmployeeCardInitialTab(tab);
                        setEmployeeCardInitialDate(initialDate);
                        setSelectedEmployeeForCard(emp);
