@@ -29,6 +29,7 @@ interface DataManagerProps {
   setProtectedDaysMap?: (val: any) => void;
   auditLogs?: AuditLogEntry[];
   setAuditLogs?: (val: AuditLogEntry[] | ((prev: AuditLogEntry[]) => AuditLogEntry[])) => void;
+  onExportScheduleCsv?: () => void;
   onClose: () => void;
   role: 'admin' | 'viewer';
 }
@@ -57,6 +58,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
   setProtectedDaysMap,
   auditLogs,
   setAuditLogs,
+  onExportScheduleCsv,
   onClose, 
   role 
 }) => {
@@ -349,6 +351,13 @@ export const DataManager: React.FC<DataManagerProps> = ({
                 <Icon name="analytics" className="text-base" />
                 Exportar Escala para Vendas (.json)
               </button>
+              
+              {onExportScheduleCsv && (
+                <button onClick={onExportScheduleCsv} className="flex items-center justify-center gap-2 w-full py-3 bg-slate-900 hover:bg-black dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white rounded-xl font-bold uppercase text-[11px] tracking-widest transition-all shadow-sm group">
+                  <Icon name="table_view" className="text-base text-emerald-400 group-hover:scale-110 transition-transform" />
+                  Salvar Escala em CSV (.csv)
+                </button>
+              )}
               
               <button onClick={() => fileInputRef.current?.click()} className="flex items-center justify-center gap-2 w-full py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-orange-500 text-slate-700 dark:text-slate-300 rounded-xl font-bold uppercase text-[11px] tracking-widest transition-all shadow-sm">
                 <Icon name="upload" className="text-base" />

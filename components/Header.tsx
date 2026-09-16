@@ -47,6 +47,7 @@ interface HeaderProps {
   isJustSaved?: boolean;
   isMobileMenuOpen?: boolean;
   onToggleMobileMenu?: (open: boolean) => void;
+  onExportCsv?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -93,6 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
   isJustSaved = false,
   isMobileMenuOpen,
   onToggleMobileMenu,
+  onExportCsv,
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);
   const [showActionsModal, setShowActionsModal] = useState(false);
@@ -498,6 +500,25 @@ export const Header: React.FC<HeaderProps> = ({
                         </div>
                       </button>
 
+                      {onExportCsv && (
+                        <button
+                          onClick={() => {
+                            onExportCsv();
+                            setShowShareMenu(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-all text-left group"
+                          title="Salvar escala mensal em arquivo CSV para Excel e Google Sheets"
+                        >
+                          <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 group-hover:scale-105 transition-transform">
+                            <Icon name="table_view" className="text-sm" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-black uppercase text-[11px] text-emerald-700 dark:text-emerald-300">Salvar Escala (CSV)</span>
+                            <span className="text-[9px] text-slate-400">planilha Excel / Google Sheets</span>
+                          </div>
+                        </button>
+                      )}
+
                       <button
                         onClick={() => {
                           onToggleNotes();
@@ -871,6 +892,7 @@ export const Header: React.FC<HeaderProps> = ({
         onOptimizePeakWeek={onOptimizePeakWeek}
         tacticalDisplayMode={tacticalDisplayMode}
         onToggleTacticalDisplayMode={onToggleTacticalDisplayMode}
+        onExportCsv={onExportCsv}
       />
     </header>
   );

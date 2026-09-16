@@ -51,6 +51,7 @@ interface ShiftGridProps {
   onToggleTacticalDisplayMode?: (mode?: TacticalDisplayMode) => void;
   highlightedEmpId?: string;
   onHighlightEmp?: (empId: string) => void;
+  onExportCsv?: () => void;
 }
 
 export const ShiftGrid: React.FC<ShiftGridProps> = ({
@@ -88,6 +89,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onToggleTacticalDisplayMode,
   highlightedEmpId,
   onHighlightEmp,
+  onExportCsv,
 }) => {
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
   const [hasScrolled, setHasScrolled] = useState(false);
@@ -302,8 +304,19 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             </button>
           </div>
 
-          {/* Ações Rápidas: WhatsApp do Dia e Filtros */}
+          {/* Ações Rápidas: WhatsApp do Dia, Salvar CSV e Filtros */}
           <div className="flex items-center gap-1.5">
+            {onExportCsv && (
+              <button
+                type="button"
+                onClick={onExportCsv}
+                className="p-2 rounded-xl bg-slate-800 text-white dark:bg-zinc-800 shadow-sm active:scale-95 transition-all"
+                title="Salvar Escala Completa em CSV (.csv)"
+              >
+                <Icon name="table_view" className="text-base text-emerald-400" />
+              </button>
+            )}
+
             {!isReadOnly && onShareWhatsApp && (
               <button
                 type="button"
@@ -459,6 +472,19 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               >
                 <Icon name="campaign" className="text-xs" />
                 <span>Divulgação (WhatsApp)</span>
+              </button>
+            )}
+
+            {/* Salvar Escala em CSV */}
+            {onExportCsv && (
+              <button
+                type="button"
+                onClick={onExportCsv}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-slate-700 dark:border-zinc-700 text-[10px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-95 whitespace-nowrap group"
+                title="Salvar escala mensal em planilha CSV para Excel e Google Sheets"
+              >
+                <Icon name="table_view" className="text-xs text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span>Salvar CSV</span>
               </button>
             )}
 

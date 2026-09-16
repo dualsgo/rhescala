@@ -24,6 +24,7 @@ import {
 
 import { Header } from './components/Header';
 import { copyToClipboard } from './src/utils/clipboard';
+import { downloadScheduleCsv } from './src/utils/exportScheduleCsv';
 import { toPng } from 'html-to-image';
 import { apiStore, getConfiguredApiUrl } from './src/gas-api';
 
@@ -1022,6 +1023,19 @@ const App: React.FC = () => {
     }
   }, [currentMY, employees, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, showDialog]);
 
+  const handleExportScheduleCsv = useCallback(() => {
+    try {
+      downloadScheduleCsv(employees, currentMY, activeJornadaSettings);
+    } catch (err: any) {
+      console.error('Erro ao exportar escala em CSV:', err);
+      showDialog({
+        title: 'Erro de Exportação',
+        message: `Não foi possível gerar o arquivo CSV: ${err?.message || String(err)}`,
+        type: 'alert'
+      });
+    }
+  }, [employees, currentMY, activeJornadaSettings, showDialog]);
+
   const handleCreateMonth = () => {
     const nextDate = new Date(currentMY.year, currentMY.month + 1, 1);
     const nextMY = { month: nextDate.getMonth(), year: nextDate.getFullYear() };
@@ -1115,6 +1129,7 @@ const App: React.FC = () => {
               isJustSaved={isJustSaved}
               isMobileMenuOpen={isMobileMenuOpen}
               onToggleMobileMenu={setIsMobileMenuOpen}
+              onExportCsv={handleExportScheduleCsv}
             />
 
        <main className="flex-1 overflow-y-auto p-2 sm:p-4 pb-24 lg:pb-4">
@@ -1200,6 +1215,7 @@ const App: React.FC = () => {
                      setPresetInitialEmpId(empId);
                      setShowPresetModal(true);
                    }}
+                   onExportCsv={handleExportScheduleCsv}
                    highlightedEmpId={viewerSelectedEmpId || authenticatedEmployeeId || ''}
                    onHighlightEmp={(empId) => {
                      setViewerSelectedEmpId(empId);
@@ -1310,6 +1326,7 @@ const App: React.FC = () => {
                    setProtectedDaysMap={setProtectedDaysMap}
                    auditLogs={auditLogs}
                    setAuditLogs={setAuditLogs}
+                   onExportScheduleCsv={handleExportScheduleCsv}
                    onClose={() => setCurrentView('grid')} 
                    role={auth.role}
                  />

@@ -18,6 +18,7 @@ interface ActionsOptionsModalProps {
   onOptimizePeakWeek?: () => void;
   tacticalDisplayMode?: TacticalDisplayMode;
   onToggleTacticalDisplayMode?: (mode?: TacticalDisplayMode) => void;
+  onExportCsv?: () => void;
 }
 
 export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
@@ -36,6 +37,7 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
   onOptimizePeakWeek,
   tacticalDisplayMode = 'off',
   onToggleTacticalDisplayMode,
+  onExportCsv,
 }) => {
   if (!isOpen) return null;
 
@@ -267,6 +269,31 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
                     </span>
                   </div>
                   <Icon name="chevron_right" className="text-amber-400 group-hover:translate-x-0.5 transition-transform shrink-0 text-base" />
+                </button>
+              )}
+
+              {/* Exportar Escala em CSV */}
+              {onExportCsv && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onExportCsv();
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/60 dark:hover:bg-emerald-950/40 text-left transition-all group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm shrink-0 group-hover:scale-105 transition-transform">
+                    <Icon name="table_view" className="text-xl" />
+                  </div>
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <span className="text-xs font-black uppercase text-emerald-700 dark:text-emerald-300">
+                      Salvar Escala em CSV (.csv)
+                    </span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                      Exporta a grade completa preservando colunas e linhas para Excel
+                    </span>
+                  </div>
+                  <Icon name="download" className="text-emerald-500 group-hover:translate-y-0.5 transition-transform shrink-0 text-base" />
                 </button>
               )}
             </div>
