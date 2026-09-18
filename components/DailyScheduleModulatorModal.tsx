@@ -98,6 +98,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
   // Free text override (optional user manual edit)
   const [isFreeTextMode, setIsFreeTextMode] = useState(false);
   const [manualText, setManualText] = useState('');
+  const [isCopied, setIsCopied] = useState(false);
 
   // Date Information
   const dateInfo = useMemo(() => {
@@ -384,8 +385,11 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
       onSaveDayPositions(dayIdx, posMap);
     }
 
-    const copied = await copyToClipboard(generatedText);
+    const textToCopy = isFreeTextMode ? manualText : generatedText;
+    const copied = await copyToClipboard(textToCopy);
     if (copied) {
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2500);
       await showDialog({
         title: 'Escala Copiada!',
         message: 'O texto formatado da escala foi copiado para a área de transferência. Você já pode colá-lo no grupo do WhatsApp da loja.'
@@ -466,10 +470,10 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
         </div>
 
         {/* Modal Body: 2 Columns on Desktop */}
-        <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-12">
+        <div className="flex-1 min-h-0 overflow-hidden grid grid-cols-1 md:grid-cols-12">
           
           {/* Column 1: Modulation Controls (Desktop: 7 cols) */}
-          <div className={`md:col-span-7 h-full overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-6 border-r border-slate-100 dark:border-zinc-800 ${
+          <div className={`md:col-span-7 h-full min-h-0 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-6 pb-12 border-r border-slate-100 dark:border-zinc-800 ${
             activeMobileTab === 'preview' ? 'hidden md:block' : 'block'
           }`}>
             
@@ -797,12 +801,12 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
             </div>
           </div>
 
-          {/* Column 2: Live Preview & Action Bar (Desktop: 5 cols) */}
-          <div className={`md:col-span-5 h-full flex flex-col bg-slate-50/50 dark:bg-zinc-950/50 ${
+          {/* Column 2: Live Preview (Desktop: 5 cols) */}
+          <div className={`md:col-span-5 h-full min-h-0 flex flex-col bg-slate-50/50 dark:bg-zinc-950/50 ${
             activeMobileTab === 'modulator' ? 'hidden md:flex' : 'flex'
           }`}>
             {/* Preview Header */}
-            <div className="p-4 border-b border-slate-200/70 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900">
+            <div className="p-4 border-b border-slate-200/70 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900 shrink-0">
               <div className="flex items-center gap-2">
                 <Icon name="visibility" className="text-emerald-600 text-sm" />
                 <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-zinc-200">
@@ -810,58 +814,82 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
                 </span>
               </div>
 
-              <button
-                type="button"
-                onClick={handleToggleFreeText}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-wider transition-all ${
-                  isFreeTextMode
-                    ? 'bg-amber-500 text-white border-amber-500'
-                    : 'bg-white dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-50'
-                }`}
-                title={isFreeTextMode ? 'Voltar para o modo de modulação automática' : 'Permitir digitação direta no texto'}
-              >
-                <Icon name={isFreeTextMode ? 'lock_open' : 'edit_note'} className="text-xs" />
-                <span>{isFreeTextMode ? 'Edição Livre' : 'Editar Texto'}</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleToggleFreeText}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-wider transition-all ${
+                    isFreeTextMode
+                      ? 'bg-amber-500 text-white border-amber-500 shadow-xs'
+                      : 'bg-white dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-50'
+                  }`}
+                  title={isFreeTextMode ? 'Voltar para o modo de modulação automática' : 'Permitir digitação direta no texto'}
+                >
+                  <Icon name={isFreeTextMode ? 'lock_open' : 'edit_note'} className="text-xs" />
+                  <span>{isFreeTextMode ? 'Edição Livre' : 'Editar Texto'}</span>
+                </button>
+              </div>
             </div>
 
             {/* Preview Content Area */}
-            <div className="flex-1 p-4 overflow-y-auto custom-scrollbar">
+            <div className="flex-1 min-h-0 p-4 overflow-y-auto custom-scrollbar">
               {isFreeTextMode ? (
                 <textarea
                   value={manualText}
                   onChange={(e) => setManualText(e.target.value)}
-                  className="w-full h-full min-h-[300px] bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-2xl p-4 text-xs font-mono font-medium focus:ring-2 focus:ring-emerald-500 outline-none resize-none text-slate-800 dark:text-zinc-200 leading-relaxed custom-scrollbar"
+                  className="w-full h-full min-h-0 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-2xl p-4 text-xs font-mono font-medium focus:ring-2 focus:ring-emerald-500 outline-none resize-none text-slate-800 dark:text-zinc-200 leading-relaxed custom-scrollbar shadow-inner"
                   placeholder="Edite o texto diretamente aqui..."
                 />
               ) : (
-                <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 text-xs font-mono font-medium text-slate-800 dark:text-zinc-200 whitespace-pre-wrap leading-relaxed shadow-sm">
+                <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 text-xs font-mono font-medium text-slate-800 dark:text-zinc-200 whitespace-pre-wrap leading-relaxed shadow-sm break-words select-text">
                   {generatedText}
                 </div>
               )}
             </div>
-
-            {/* Action Footer */}
-            <div className="p-4 bg-white dark:bg-zinc-900 border-t border-slate-200/70 dark:border-zinc-800 flex flex-col sm:flex-row items-center gap-3">
-              <button
-                type="button"
-                onClick={handleCopy}
-                className="w-full flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider py-3.5 px-4 rounded-xl shadow-lg shadow-emerald-600/20 active:scale-95 transition-all flex items-center justify-center gap-2"
-              >
-                <Icon name="content_copy" className="text-base" />
-                <span>Copiar Escala (WhatsApp)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-full sm:w-auto px-4 py-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
-              >
-                Fechar
-              </button>
-            </div>
           </div>
 
+        </div>
+
+        {/* Global Action Footer - Sempre visível independente de modo ou tab */}
+        <div className="p-3.5 sm:p-4 bg-white dark:bg-zinc-900 border-t border-slate-200/80 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-zinc-400 w-full sm:w-auto justify-between sm:justify-start">
+            <div className="flex items-center gap-2">
+              <span className={`w-2.5 h-2.5 rounded-full ${isFreeTextMode ? 'bg-amber-500' : 'bg-emerald-500'} animate-pulse`} />
+              <span>{isFreeTextMode ? 'Modo de edição livre ativado' : 'Texto formatado pronto para WhatsApp'}</span>
+            </div>
+            {isFreeTextMode && (
+              <button
+                type="button"
+                onClick={() => setIsFreeTextMode(false)}
+                className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 hover:underline"
+              >
+                Descartar edição
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 sm:flex-none px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
+            >
+              Fechar
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCopy}
+              className={`flex-[2] sm:flex-none px-6 py-3 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95 ${
+                isCopied
+                  ? 'bg-emerald-700 text-white shadow-emerald-700/30'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+              }`}
+            >
+              <Icon name={isCopied ? 'check' : 'content_copy'} className="text-base" />
+              <span>{isCopied ? 'Copiado para WhatsApp!' : 'Copiar Escala (WhatsApp)'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

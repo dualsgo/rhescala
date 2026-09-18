@@ -930,7 +930,7 @@ const App: React.FC = () => {
     setWaModal({ show: true, dayIdx });
   }, []);
 
-  const handleShareApoioWhatsApp = useCallback((dayIdx: number) => {
+  const handleShareApoioWhatsApp = useCallback(async (dayIdx: number) => {
     try {
       const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
       const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(dateStr);
@@ -1012,7 +1012,19 @@ const App: React.FC = () => {
       text += `🟦 Apoio\n`;
       text += `📦 Estoque\n`;
 
-      setWaModal({ show: true, text });
+      const copied = await copyToClipboard(text);
+      if (copied) {
+        await showDialog({
+          title: 'Apoio Operacional Copiado!',
+          message: 'O roteiro de apoio operacional e posicionamento diário foi copiado para a área de transferência. Você já pode colá-lo no grupo do WhatsApp da loja.'
+        });
+      } else {
+        await showDialog({
+          title: 'Cópia Manual',
+          message: 'Não foi possível copiar automaticamente para a área de transferência.',
+          type: 'alert'
+        });
+      }
     } catch (err: any) {
       console.error('Erro ao gerar apoio para WhatsApp:', err);
       showDialog({
@@ -1021,7 +1033,7 @@ const App: React.FC = () => {
         type: 'alert'
       });
     }
-  }, [currentMY, employees, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, showDialog]);
+  }, [currentMY, employees, monthKey, customHolidays, deletedNationalHolidays, tacticalDisplayMode, activeJornadaSettings, showDialog]);
 
   const handleExportScheduleCsv = useCallback(() => {
     try {
