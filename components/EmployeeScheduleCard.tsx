@@ -16,6 +16,7 @@ interface EmployeeScheduleCardProps {
   isAdmin?: boolean;
   isValidated?: boolean;
   onClose: () => void;
+  onLockSession?: () => void;
   initialTab?: 'mes' | 'atual' | 'pedidos' | 'atestado' | 'historico';
   initialDate?: string;
   auditLogs?: AuditLogEntry[];
@@ -31,6 +32,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   isAdmin,
   isValidated,
   onClose,
+  onLockSession,
   initialTab = 'mes',
   initialDate,
   auditLogs = [],
@@ -174,12 +176,25 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
               <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{employee.cargo || 'Colaborador'} • {months[currentMY.month]} {currentMY.year}</p>
             </div>
           </div>
-          <button 
-            onClick={onClose}
-            className="w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-zinc-900 flex items-center justify-center text-slate-400 transition-colors"
-          >
-            <Icon name="close" className="text-2xl" />
-          </button>
+          <div className="flex items-center gap-2">
+            {!isAdmin && onLockSession && (
+              <button 
+                type="button"
+                onClick={onLockSession}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 dark:hover:bg-rose-950/40 dark:hover:text-rose-300 text-slate-600 dark:text-slate-300 text-xs font-bold transition-all shadow-xs"
+                title="Bloquear sessão individual e exigir senha no próximo acesso"
+              >
+                <Icon name="lock" className="text-sm text-orange-500" />
+                <span className="hidden sm:inline">Bloquear</span>
+              </button>
+            )}
+            <button 
+              onClick={onClose}
+              className="w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-zinc-900 flex items-center justify-center text-slate-400 transition-colors"
+            >
+              <Icon name="close" className="text-2xl" />
+            </button>
+          </div>
         </div>
 
         {/* Tab Navigation */}

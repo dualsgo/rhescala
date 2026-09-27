@@ -467,10 +467,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     <button
                       type="button"
                       onClick={() => onOpenEmployeeCard(myEmp, 'mes')}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-xs shrink-0 active:scale-95"
-                      title="Abrir meu cartão individual de escala e horários"
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-xs shrink-0 active:scale-95"
+                      title="Acessar com senha pessoal meu cartão individual de escala e solicitações"
                     >
-                      <Icon name="badge" className="text-xs" />
+                      <Icon name="lock" className="text-xs" />
                       <span>Meu Cartão</span>
                     </button>
                   );
@@ -478,8 +478,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               </div>
             )}
 
-            {/* Divulgação Operacional / WhatsApp do Dia */}
-            {onShareWhatsApp && (
+            {/* Divulgação Operacional / WhatsApp do Dia (Apenas Gestão) */}
+            {!isReadOnly && onShareWhatsApp && (
               <button
                 type="button"
                 onClick={() => onShareWhatsApp(selectedDayIdx)}
@@ -491,8 +491,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               </button>
             )}
 
-            {/* Salvar Escala em CSV */}
-            {onExportCsv && (
+            {/* Salvar Escala em CSV (Apenas Gestão) */}
+            {!isReadOnly && onExportCsv && (
               <button
                 type="button"
                 onClick={onExportCsv}
@@ -915,7 +915,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                              }`}>
                                <button 
                                  onClick={() => onOpenEmployeeCard(emp)}
-                                 title={`${emp.name.toUpperCase()} • Clique para ver escala completa, solicitações ou lançar atestado médico por período`}
+                                 title={isReadOnly ? `${emp.name.toUpperCase()} • Clique para acessar cartão individual (requer senha pessoal)` : `${emp.name.toUpperCase()} • Clique para ver escala completa, solicitações ou lançar atestado médico por período`}
                                  className={`flex items-center gap-1.5 sm:gap-2 w-full text-left p-0.5 sm:p-1 rounded-lg sm:rounded-xl transition-all group/name ${
                                    isHighlighted
                                      ? 'bg-orange-100/70 dark:bg-orange-950/40'

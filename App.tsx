@@ -151,6 +151,12 @@ const App: React.FC = () => {
   const isReadOnly = auth.role === 'viewer';
   const isValidated = validatedMonths[monthKey] || false;
 
+  useEffect(() => {
+    if (isReadOnly && currentView !== 'grid') {
+      setCurrentView('grid');
+    }
+  }, [isReadOnly, currentView]);
+
   const activeProtectedDays = useMemo<ProtectedDaysConfig>(() => {
     return protectedDaysMap[monthKey] ?? getDefaultProtectedDays(currentMY.month);
   }, [protectedDaysMap, monthKey, currentMY.month]);
@@ -1227,31 +1233,49 @@ const App: React.FC = () => {
                      setPresetInitialEmpId(empId);
                      setShowPresetModal(true);
                    }}
-                   onExportCsv={handleExportScheduleCsv}
-                   highlightedEmpId={viewerSelectedEmpId || authenticatedEmployeeId || ''}
+                   onExportCsv={isReadOnly ? undefined : handleExportScheduleCsv}
+                   highlightedEmpId={viewerSelectedEmpId || ''}
                    onHighlightEmp={(empId) => {
                      setViewerSelectedEmpId(empId);
-                     setAuthenticatedEmployeeId(empId);
                    }}
                    onOpenEmployeeCard={async (emp, tab = 'mes', initialDate) => {
-                     if (auth.role === 'admin' || authenticatedEmployeeId === emp.id || viewerSelectedEmpId === emp.id || isReadOnly) {
+                     // Administrador acessa diretamente qualquer cartão
+                     if (auth.role === 'admin') {
                        setEmployeeCardInitialTab(tab);
                        setEmployeeCardInitialDate(initialDate);
                        setSelectedEmployeeForCard(emp);
-                     } else {
-                       const password = await showDialog({
-                         type: 'prompt',
-                         title: `Acesso Individual: ${emp.name}`,
-                         message: 'Digite sua senha pessoal para acessar seus dados e enviar pedidos.'
-                       });
+                       return;
+                     }
 
-                       if (password === emp.password || (!emp.password && password === '1234')) {
+                     // Se já autenticado para este colaborador nesta sessão
+                     if (authenticatedEmployeeId === emp.id) {
+                       setEmployeeCardInitialTab(tab);
+                       setEmployeeCardInitialDate(initialDate);
+                       setSelectedEmployeeForCard(emp);
+                       return;
+                     }
+
+                     // Solicitar senha pessoal do colaborador
+                     const password = await showDialog({
+                       type: 'prompt',
+                       title: `🔒 Acesso Individual: ${emp.name}`,
+                       message: 'Digite sua senha pessoal de colaborador para acessar seu cartão individual e dados de solicitações:'
+                     });
+
+                     if (password !== null) {
+                       const entered = password.trim();
+                       const expected = (emp.password || '1234').trim();
+                       if (entered === expected) {
                          setAuthenticatedEmployeeId(emp.id);
                          setEmployeeCardInitialTab(tab);
                          setEmployeeCardInitialDate(initialDate);
                          setSelectedEmployeeForCard(emp);
-                       } else if (password !== null) {
-                         showDialog({ title: 'Erro', message: 'Senha individual incorreta.', type: 'alert' });
+                       } else {
+                         showDialog({ 
+                           title: 'Senha Incorreta', 
+                           message: 'A senha informada não confere. Caso tenha esquecido, solicite a redefinição ao seu gerente.', 
+                           type: 'alert' 
+                         });
                        }
                      }
                    }}
@@ -1508,10 +1532,14 @@ const App: React.FC = () => {
            holidayCredits={holidayCredits[selectedEmployeeForCard.id] || []}
            onUpdateEmployee={onUpdateEmployee}
            isAdmin={auth.role === 'admin'}
-           isValidated={isReadOnly}
+           isValidated={isValidated}
            initialTab={employeeCardInitialTab}
            initialDate={employeeCardInitialDate}
            auditLogs={auditLogs}
+           onLockSession={() => {
+             setAuthenticatedEmployeeId(null);
+             setSelectedEmployeeForCard(null);
+           }}
            onClose={() => setSelectedEmployeeForCard(null)}
          />
        )}

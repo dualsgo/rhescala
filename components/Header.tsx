@@ -160,7 +160,7 @@ export const Header: React.FC<HeaderProps> = ({
         
         {/* Left: Brand on Mobile, Nav on Large Screens */}
         <div className="flex items-center gap-2 lg:gap-4">
-          <div className="flex items-center gap-2 lg:hidden">
+          <div className={`flex items-center gap-2 ${isReadOnly ? '' : 'lg:hidden'}`}>
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-sm font-black text-xs">
               RH
             </div>
@@ -341,8 +341,43 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Right: Desktop Actions (>= lg) */}
-        <div className="hidden lg:flex items-center gap-1.5 sm:gap-2">
+        {/* Right: Desktop Actions (>= lg) or Minimal Viewer Actions */}
+        {isReadOnly ? (
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Indicador de Nuvem / Sync */}
+            <div className="flex items-center px-2 py-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800/80 border border-slate-200/50 dark:border-zinc-700/50">
+              <div className={`w-2 h-2 rounded-full ${
+                syncStatus.state === 'idle' || syncStatus.state === 'synced' ? 'bg-emerald-500' :
+                syncStatus.state === 'syncing' ? 'bg-amber-500 animate-pulse' :
+                syncStatus.state === 'error' ? 'bg-rose-500' : 'bg-slate-400'
+              }`} title={`Sincronização Nuvem: ${syncStatus.state}`} />
+            </div>
+
+            {/* Botão Acesso Gerencial (Admin) */}
+            <button
+              type="button"
+              onClick={onSwitchRole}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 hover:bg-orange-50 hover:border-orange-300 dark:hover:bg-orange-950/40 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all shadow-xs"
+              title="Entrar com a senha de Administrador/Gerente da loja"
+            >
+              <Icon name="admin_panel_settings" className="text-sm text-orange-500" />
+              <span className="hidden sm:inline">Acesso Gerencial</span>
+              <span className="inline sm:hidden">Admin</span>
+            </button>
+
+            {/* Sair da Conta */}
+            <button
+              type="button"
+              onClick={onLogout}
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/60 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-xs font-bold hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all shadow-xs"
+              title="Sair do modo de visualização"
+            >
+              <Icon name="logout" className="text-sm" />
+              <span className="hidden sm:inline">Sair</span>
+            </button>
+          </div>
+        ) : (
+          <div className="hidden lg:flex items-center gap-1.5 sm:gap-2">
           
           {/* Botão de Salvar Manual com Atalho Ctrl+S */}
           {!isReadOnly && onManualSave && (
@@ -617,46 +652,48 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
           </div>
-
         </div>
+        )}
 
-        {/* Right: Mobile Alerts & Menu Trigger (< lg) */}
-        <div className="flex items-center gap-1.5 lg:hidden">
-          {!isReadOnly && isValidated && onOpenDiffModal && diffCount > 0 && (
+        {/* Right: Mobile Alerts & Menu Trigger (< lg) - Apenas Gestão */}
+        {!isReadOnly && (
+          <div className="flex items-center gap-1.5 lg:hidden">
+            {isValidated && onOpenDiffModal && diffCount > 0 && (
+              <button
+                onClick={onOpenDiffModal}
+                className="flex items-center gap-1 px-2 py-1 rounded-xl bg-amber-500 text-white font-black text-[10px] shadow-sm"
+                title="Divergências pós-oficialização"
+              >
+                <Icon name="difference" className="text-xs" />
+                <span>{diffCount}</span>
+              </button>
+            )}
+
+            {onOpenInconsistencyModal && inconsistencyCount > 0 && (
+              <button
+                onClick={onOpenInconsistencyModal}
+                className="flex items-center gap-1 px-2 py-1 rounded-xl bg-rose-500 text-white font-black text-[10px] shadow-sm animate-pulse"
+                title="Alertas CLT"
+              >
+                <Icon name="warning" className="text-xs" />
+                <span>{inconsistencyCount}</span>
+              </button>
+            )}
+
             <button
-              onClick={onOpenDiffModal}
-              className="flex items-center gap-1 px-2 py-1 rounded-xl bg-amber-500 text-white font-black text-[10px] shadow-sm"
-              title="Divergências pós-oficialização"
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
+              title="Menu da Loja"
             >
-              <Icon name="difference" className="text-xs" />
-              <span>{diffCount}</span>
+              <Icon name={showMobileMenu ? 'close' : 'menu'} className="text-lg" />
             </button>
-          )}
-
-          {!isReadOnly && onOpenInconsistencyModal && inconsistencyCount > 0 && (
-            <button
-              onClick={onOpenInconsistencyModal}
-              className="flex items-center gap-1 px-2 py-1 rounded-xl bg-rose-500 text-white font-black text-[10px] shadow-sm animate-pulse"
-              title="Alertas CLT"
-            >
-              <Icon name="warning" className="text-xs" />
-              <span>{inconsistencyCount}</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => setShowMobileMenu(!showMobileMenu)}
-            className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
-            title="Menu da Loja"
-          >
-            <Icon name={showMobileMenu ? 'close' : 'menu'} className="text-lg" />
-          </button>
-        </div>
+          </div>
+        )}
 
       </div>
 
-      {/* Mobile Navigation Drawer Overlay */}
-      {showMobileMenu && (
+      {/* Mobile Navigation Drawer Overlay - Apenas Gestão */}
+      {!isReadOnly && showMobileMenu && (
         <div className="lg:hidden fixed inset-0 z-[60] bg-slate-950/60 backdrop-blur-sm animate-fade-in flex flex-col justify-end">
           <div className="bg-white dark:bg-zinc-900 rounded-t-3xl p-5 border-t border-slate-200 dark:border-zinc-800 max-h-[85vh] overflow-y-auto space-y-4 custom-scrollbar">
             {/* Handle */}
