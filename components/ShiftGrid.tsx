@@ -102,6 +102,19 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   const [onlyWorkingToday, setOnlyWorkingToday] = useState(false);
   const [isCompactMode, setIsCompactMode] = useState(false);
   const [focusSelectedDay, setFocusSelectedDay] = useState(false);
+  const [cycleBadgesMode, setCycleBadgesMode] = useState<'all' | 'alerts' | 'off'>(() => {
+    try {
+      const saved = localStorage.getItem('rhescala_cycle_badges_mode');
+      if (saved === 'all' || saved === 'alerts' || saved === 'off') return saved;
+    } catch {}
+    return 'all';
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('rhescala_cycle_badges_mode', cycleBadgesMode);
+    } catch {}
+  }, [cycleBadgesMode]);
 
   // Mobile Redesign States
   const [mobileViewMode, setMobileViewMode] = useState<'daily' | 'table'>('daily');
@@ -163,9 +176,12 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       { code: 'DO', label: 'Aniversário / Especial', color: 'bg-fuchsia-600' },
       { code: 'C', label: 'Curso / Treinamento', color: 'bg-slate-500' },
       { code: 'AT', label: 'Atestado Médico', color: 'bg-rose-400' },
-      { code: '7º', label: '7º Dia (Limite 6x1)', color: 'bg-rose-600' },
-      { code: '3D', label: '3º Domingo (Limite CLT)', color: 'bg-rose-600' },
-      { code: '2D', label: '2º Domingo Trabalhado', color: 'bg-amber-500' },
+      { code: '1/6..6/6', label: 'Dias Seguidos 6x1 (Canto Sup. Esq.)', color: 'bg-slate-600' },
+      { code: '7º', label: '7º Dia: Violação 6x1', color: 'bg-rose-600' },
+      { code: '1D / 2D', label: 'Domingos Trabalhados (Canto Sup. Dir.)', color: 'bg-amber-500' },
+      { code: '3D', label: '3º Domingo: Violação CLT', color: 'bg-rose-600' },
+      { code: '3D✓', label: '3º Dom: Folga Cumprida!', color: 'bg-emerald-600' },
+      { code: '2D✓ / 1D✓', label: 'Dom Folga (Apto Troca)', color: 'bg-emerald-500' },
     ];
 
     if (tacticalDisplayMode === 'off') {
@@ -542,6 +558,28 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           {/* Lado Direito: Modos de Exibição & Controles */}
           <div className="flex flex-wrap items-center gap-2">
 
+            {/* Alternar Badges de Ciclo (6x1 e Domingos) */}
+            <button
+              type="button"
+              onClick={() => setCycleBadgesMode(prev => prev === 'all' ? 'alerts' : prev === 'alerts' ? 'off' : 'all')}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
+                cycleBadgesMode === 'all'
+                  ? 'bg-blue-600 border-blue-600 text-white shadow-blue-500/20'
+                  : cycleBadgesMode === 'alerts'
+                  ? 'bg-amber-500 border-amber-500 text-white shadow-amber-500/20'
+                  : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
+              }`}
+              title={
+                cycleBadgesMode === 'all'
+                  ? 'Ciclos Ativos: Exibindo 1/6..6/6 e 1D..3D✓ em todos os dias. Clique para ver apenas alertas.'
+                  : cycleBadgesMode === 'alerts'
+                  ? 'Ciclos Alertas: Exibindo 6/6, 7º, 2D, 3D e 3D✓. Clique para ocultar.'
+                  : 'Ciclos Ocultos: Apenas violações mínimas. Clique para ativar todos os indicadores.'
+              }
+            >
+              <Icon name="tag" className="text-xs" />
+              <span>{cycleBadgesMode === 'all' ? 'Ciclos: Todos' : cycleBadgesMode === 'alerts' ? 'Ciclos: Alertas' : 'Ciclos: Mínimo'}</span>
+            </button>
 
             {/* Modo Denso */}
             <button
@@ -1063,10 +1101,124 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                 }
                               }
 
+                              // 6x1 / 5x2 Cycle Badge (Canto Superior Esquerdo)
+                              const isWorkingDay = isWorkingShift(shift) || shift === 'C';
+                              const maxStreak = emp.jornada === '5x2' ? 5 : 6;
+                              let sixByOneBadge: { text: string; className: string; title: string } | null = null;
+
+                              if (shift !== 'N/A' && isWorkingDay) {
+                                if (streak > maxStreak) {
+                                  sixByOneBadge = {
+                                    text: `${streak}º`,
+                                    className: 'bg-rose-600 text-white shadow-md ring-2 ring-white dark:ring-slate-900 animate-pulse',
+                                    title: `VIOLAÇÃO CLT: ${streak}º dia consecutivo sem folga! Limite legal da escala é de ${maxStreak} dias seguidos.`
+                                  };
+                                } else if (streak === maxStreak) {
+                                  if (cycleBadgesMode === 'all' || cycleBadgesMode === 'alerts') {
+                                    sixByOneBadge = {
+                                      text: `${streak}/${maxStreak}`,
+                                      className: 'bg-amber-500 text-white shadow-xs ring-1 ring-white dark:ring-slate-900',
+                                      title: `${streak}º dia consecutivo de trabalho: LIMITE DO CICLO ${maxStreak}x1! O próximo dia DEVE ser folga!`
+                                    };
+                                  }
+                                } else if (streak === maxStreak - 1) {
+                                  if (cycleBadgesMode === 'all') {
+                                    sixByOneBadge = {
+                                      text: `${streak}/${maxStreak}`,
+                                      className: 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-2xs',
+                                      title: `${streak}º dia consecutivo de trabalho (${streak}/${maxStreak}): Penúltimo dia antes do descanso semanal obrigatório.`
+                                    };
+                                  }
+                                } else if (streak >= 1) {
+                                  if (cycleBadgesMode === 'all') {
+                                    sixByOneBadge = {
+                                      text: `${streak}/${maxStreak}`,
+                                      className: 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 shadow-2xs',
+                                      title: `${streak}º dia consecutivo de trabalho no ciclo ${maxStreak}x1.`
+                                    };
+                                  }
+                                }
+                              }
+
+                              // Sunday Streak & Compliance Badge (Canto Superior Direito)
+                              let sundayBadge: { text: string; className: string; title: string } | null = null;
+
+                              if (isSunday && shift !== 'N/A') {
+                                if (emp.isYoungApprentice) {
+                                  const isApprenticeWorking = isWorkingShift(shift) || shift === 'C';
+                                  if (isApprenticeWorking) {
+                                    sundayBadge = {
+                                      text: 'D!',
+                                      className: 'bg-rose-600 text-white shadow-md ring-2 ring-white dark:ring-slate-900 animate-pulse',
+                                      title: 'VIOLAÇÃO LEGAL: Jovem Aprendiz não pode trabalhar aos domingos!'
+                                    };
+                                  } else if (cycleBadgesMode === 'all') {
+                                    sundayBadge = {
+                                      text: 'D✓',
+                                      className: 'bg-slate-500/80 text-white shadow-xs ring-1 ring-white dark:ring-slate-900',
+                                      title: 'Jovem Aprendiz: Folga legal de domingo garantida por lei.'
+                                    };
+                                  }
+                                } else {
+                                  const isCurrentSundayWorking = isWorkingShift(shift) || shift === 'C';
+                                  
+                                  if (isCurrentSundayWorking) {
+                                    if (finalSundayStreak >= 3) {
+                                      sundayBadge = {
+                                        text: `${finalSundayStreak}D`,
+                                        className: 'bg-rose-600 text-white shadow-md ring-2 ring-white dark:ring-slate-900 animate-pulse',
+                                        title: `${finalSundayStreak}º Domingo Consecutivo Trabalhado: VIOLAÇÃO CLT! Proibido trabalhar 3 domingos consecutivos.`
+                                      };
+                                    } else if (finalSundayStreak === 2) {
+                                      sundayBadge = {
+                                        text: '2D',
+                                        className: 'bg-amber-500 text-white shadow-xs ring-1 ring-white dark:ring-slate-900',
+                                        title: '2º Domingo Consecutivo Trabalhado: Atenção ao limite CLT (o próximo domingo deve ser folga obrigatória)!'
+                                      };
+                                    } else if (finalSundayStreak === 1) {
+                                      if (cycleBadgesMode === 'all') {
+                                        sundayBadge = {
+                                          text: '1D',
+                                          className: 'bg-slate-700 dark:bg-zinc-700 text-white shadow-xs ring-1 ring-white dark:ring-slate-900',
+                                          title: '1º Domingo Consecutivo Trabalhado: Pode trabalhar mais 1 domingo antes da folga obrigatória.'
+                                        };
+                                      }
+                                    }
+                                  } else {
+                                    // Colaborador de folga no domingo (F, FF, DO, FE, AT, etc.)
+                                    if (currentSunCount >= 2) {
+                                      if (cycleBadgesMode === 'all' || cycleBadgesMode === 'alerts') {
+                                        sundayBadge = {
+                                          text: '3D✓',
+                                          className: 'bg-emerald-600 text-white shadow-xs ring-1 ring-white dark:ring-slate-900 font-black',
+                                          title: '3º Domingo: Folga Obrigatória Cumprida! (Respeitou o ciclo CLT após 2 domingos trabalhados — NÃO alterar para trabalho).'
+                                        };
+                                      }
+                                    } else if (currentSunCount === 1) {
+                                      if (cycleBadgesMode === 'all') {
+                                        sundayBadge = {
+                                          text: '2D✓',
+                                          className: 'bg-emerald-500 text-white shadow-xs ring-1 ring-white dark:ring-slate-900 font-black',
+                                          title: 'Folga no 2º Domingo: Trabalhou o domingo anterior e folgou este (Oportunidade para troca/cobertura se a loja precisar de reforço).'
+                                        };
+                                      }
+                                    } else {
+                                      if (cycleBadgesMode === 'all') {
+                                        sundayBadge = {
+                                          text: '1D✓',
+                                          className: 'bg-teal-600 text-white shadow-xs ring-1 ring-white dark:ring-slate-900 font-black',
+                                          title: 'Folga no Domingo: Sem domingos anteriores trabalhados (Totalmente livre/disponível para troca/cobertura).'
+                                        };
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+
                               const is7thDay = streak === 7;
-                              const hasAlert = streak >= 7 && (isWorkingShift(shift) || shift === 'C');
+                              const hasAlert = streak > maxStreak && isWorkingDay;
                               const hasCellViolation = hasAlert || isSundayViolation;
-                              const hasTopRightBadge = !isReadOnly && isSunday && (isSundayViolation || isSundayWarning);
+                              const hasTopRightBadge = Boolean(sundayBadge);
 
                               const todayStr = new Date().toISOString().split('T')[0];
                               const isPast = d.dateStr < todayStr;
@@ -1087,31 +1239,25 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                           title={`Alteração pós-oficialização (${cellDiff.type}): Oficial [${cellDiff.officialVal}] ➔ Atual [${cellDiff.currentVal}]`}
                                         />
                                     )}
-                                    {/* Badge 1: 7º Dia Consecutivo de Trabalho (Canto Superior Esquerdo) - Apenas em alerta de violação CLT */}
-                                    {!isReadOnly && hasAlert && (
+                                    {/* Badge 1: 6x1 Ciclo de Trabalho (Canto Superior Esquerdo) */}
+                                    {sixByOneBadge && (
                                       <span
-                                        className="absolute -top-1.5 -left-1.5 px-1 py-0.2 text-[8px] font-black rounded-full shadow-md z-30 transition-all bg-rose-600 text-white ring-2 ring-white dark:ring-slate-900 animate-pulse"
-                                        title={`7º Dia Consecutivo: Trabalho sem folga! (${streak} dias seguidos)`}
+                                        onClick={() => onSelectDay(d.num - 1)}
+                                        className={`absolute -top-1.5 -left-1.5 px-1 py-0.5 text-[7px] sm:text-[8px] font-black rounded-full z-30 transition-all cursor-help leading-none tracking-tighter ${sixByOneBadge.className}`}
+                                        title={sixByOneBadge.title}
                                       >
-                                        7º
+                                        {sixByOneBadge.text}
                                       </span>
                                     )}
 
-                                    {/* Badge 2: Domingos Consecutivos (Canto Superior Direito) - Apenas em violação (3D) ou aviso prévio (2D) */}
-                                    {!isReadOnly && isSunday && (isSundayViolation || isSundayWarning) && (
+                                    {/* Badge 2: Domingos Consecutivos e Folgas (Canto Superior Direito) */}
+                                    {sundayBadge && (
                                       <span
-                                        className={`absolute -top-1.5 -right-1.5 px-1 py-0.2 text-[8px] font-black rounded-full shadow-md z-30 transition-all ${
-                                          isSundayViolation
-                                            ? 'bg-rose-600 text-white ring-2 ring-white dark:ring-slate-900 animate-pulse'
-                                            : 'bg-amber-500 text-white ring-1 ring-white dark:ring-slate-900'
-                                        }`}
-                                        title={
-                                          isSundayViolation
-                                            ? `${finalSundayStreak}º Domingo Consecutivo Trabalhado: Violação CLT (máximo 2 domingos consecutivos)!`
-                                            : `2º Domingo Consecutivo Trabalhado: Atenção ao limite CLT (o próximo domingo deve ser folga)!`
-                                        }
+                                        onClick={() => onSelectDay(d.num - 1)}
+                                        className={`absolute -top-1.5 -right-1.5 px-1 py-0.5 text-[7px] sm:text-[8px] font-black rounded-full z-30 transition-all cursor-help leading-none tracking-tighter ${sundayBadge.className}`}
+                                        title={sundayBadge.title}
                                       >
-                                        {isSundayViolation ? `${finalSundayStreak}D` : '2D'}
+                                        {sundayBadge.text}
                                       </span>
                                     )}
 
@@ -1325,6 +1471,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
         hidePastDays={hidePastDays}
         setHidePastDays={setHidePastDays}
         isCurrentMonth={isCurrentMonth}
+        cycleBadgesMode={cycleBadgesMode}
+        setCycleBadgesMode={setCycleBadgesMode}
         searchQuery={mobileSearchQuery}
         setSearchQuery={setMobileSearchQuery}
         onResetFilters={() => {

@@ -18,6 +18,8 @@ interface MobileFilterDrawerProps {
   hidePastDays: boolean;
   setHidePastDays: (val: boolean) => void;
   isCurrentMonth: boolean;
+  cycleBadgesMode?: 'all' | 'alerts' | 'off';
+  setCycleBadgesMode?: (val: 'all' | 'alerts' | 'off') => void;
   // Search
   searchQuery: string;
   setSearchQuery: (val: string) => void;
@@ -40,6 +42,8 @@ export const MobileFilterDrawer: React.FC<MobileFilterDrawerProps> = ({
   hidePastDays,
   setHidePastDays,
   isCurrentMonth,
+  cycleBadgesMode = 'all',
+  setCycleBadgesMode,
   searchQuery,
   setSearchQuery,
   onResetFilters,
@@ -191,6 +195,36 @@ export const MobileFilterDrawer: React.FC<MobileFilterDrawerProps> = ({
           </div>
 
 
+
+          {/* Indicadores de Ciclo (6x1 e Domingos) */}
+          {setCycleBadgesMode && (
+            <div>
+              <label className="text-xs font-black uppercase text-slate-400 tracking-wider block mb-2">
+                Indicadores de Ciclo (6x1 & Domingos)
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'all', label: 'Todos (1/6 e 1D)', icon: 'visibility' },
+                  { id: 'alerts', label: 'Alertas (6/6 e 3D)', icon: 'warning' },
+                  { id: 'off', label: 'Mínimo (Apenas violações)', icon: 'visibility_off' },
+                ].map(b => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => setCycleBadgesMode(b.id as any)}
+                    className={`p-2 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center gap-1 ${
+                      cycleBadgesMode === b.id
+                        ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm'
+                        : 'bg-slate-50 dark:bg-zinc-800/50 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    <Icon name={b.icon} className="text-base shrink-0" />
+                    <span className="text-[10px] leading-tight">{b.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Outras Opções */}
           <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 space-y-2">
