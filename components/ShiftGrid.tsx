@@ -1063,10 +1063,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               let isSundayWarning = false;
                               let isSundayRestAfterStreak = false;
                               let finalSundayStreak = 0;
+                              let currentSunCount = 0;
 
                               if (isSunday && !emp.isYoungApprentice) {
                                 const initialSundayStreak = prevMonthConsecs.get(emp.id) || 0;
-                                let currentSunCount = initialSundayStreak;
+                                currentSunCount = initialSundayStreak;
                                 
                                 for (let i = 0; i < d.num - 1; i++) {
                                   const dDate = new Date(currentMY.year, currentMY.month, i + 1);
