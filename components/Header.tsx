@@ -586,7 +586,7 @@ export const Header: React.FC<HeaderProps> = ({
                   className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all text-left"
                 >
                   <Icon name="badge" className="text-base text-orange-500" />
-                  <span>Guia de Posições & Funções</span>
+                  <span>Guia de Funções (Correlatas)</span>
                 </button>
 
                 <button

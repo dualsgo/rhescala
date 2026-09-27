@@ -821,7 +821,7 @@ const App: React.FC = () => {
         }
         return emp;
       }));
-      showDialog({ title: 'Sucesso', message: 'Posições táticas (P1 a P4 e Estoque) redistribuídas com sucesso!' });
+      showDialog({ title: 'Sucesso', message: 'Funções da equipe (Caixa, Pacote, Reposição, Vendas, Fiscal e Estoque) redistribuídas com sucesso!' });
     } else if (applyMode === 'full') {
       const updatedData = applyMonthUpdate(employees, currentMY.year, currentMY.month, customHolidays, deletedNationalHolidays, activeJornadaSettings, activeProtectedDays);
       setEmployees(prev => prev.map(emp => {
@@ -940,41 +940,41 @@ const App: React.FC = () => {
 
       let text = `🛠️ *Apoio Operacional*\n\n`;
 
-      text += `📍 *Posicionamento Diário*\n`;
+      text += `📍 *Funções Diárias (Correlatas)*\n`;
       text += isRoles
-        ? `🟥 *Caixa (P1)*\n`
-        : `🟥 *P1 – Caixa*\n`;
+        ? `🟥 *Caixa*\n`
+        : `🟥 *Caixa (P1)*\n`;
       text += `• Só deixa o posto quando houver rendição.\n`;
       text += `• Sem filas: não ficar parado. Adiantar saquinhos de presente e alinhar produtos próximos.\n\n`;
 
       text += isRoles
-        ? `🟧 *Pacote (PC)*\n`
-        : `🟧 *PC – Pacote*\n`;
+        ? `🟧 *Pacote*\n`
+        : `🟧 *Pacote (P1)*\n`;
       text += `• Apoio direto no balcão de embrulhos e embalagens.\n`;
       text += `• Agilizar o fluxo do caixa nos horários de maior movimento.\n\n`;
       
       text += isRoles
-        ? `🟨 *Fiscal (P2)*\n`
-        : `🟨 *P2 – Porta*\n`;
-      text += `• Foco 100% no fluxo. Tocar o sino em ondas de clientes.\n`;
+        ? `🟨 *Reposição / Organização*\n`
+        : `🟨 *Reposição / Organização (P2)*\n`;
+      text += `• Organização das seções, reposição contínua e frenteamento de gôndolas.\n`;
       text += `• Quando assumir rendição, retornar imediatamente ao posto de origem depois.\n\n`;
       
       text += isRoles
-        ? `🟩 *Atendimento (P3)*\n`
-        : `🟩 *P3 – Salão / Anfitrião*\n`;
+        ? `🟩 *Vendas / Atendimento*\n`
+        : `🟩 *Vendas / Atendimento (P3)*\n`;
       text += `• Largar qualquer tarefa de arrumação imediatamente se visualizar um cliente.\n`;
-      text += `• 2º nível de apoio ao caixa (acionado quando Apoio não der conta).\n\n`;
+      text += `• Foco total em consultoria, demonstração de brinquedos e encantamento.\n\n`;
 
       text += isRoles
-        ? `🟦 *Apoio (P4)*\n`
-        : `🟦 *P4 – Suporte Flexível*\n`;
-      text += `• Atendimento digital (WhatsApp da loja), precificação e abastecimento (só sem clientes).\n`;
-      text += `• 1º nível de apoio ao caixa: largar tudo e ir se o sino tocar.\n\n`;
+        ? `🟦 *Fiscal*\n`
+        : `🟦 *Fiscal (Prevenção e Entrada)*\n`;
+      text += `• Recepção acolhedora, porta de loja e prevenção de perdas.\n`;
+      text += `• Apoio e suporte operacional nos momentos de alta demanda.\n\n`;
 
       text += `⚡ *Dança de Cobertura*\n`;
       text += isRoles
-        ? `• Ida p/ Caixa: Apoio (P4) > Atendimento (P3) > Fiscal (P2) (emergência extrema).\n• Retorno: Fiscal (P2) > Atendimento (P3) > Apoio (P4).\n\n`
-        : `• Ida p/ Caixa: Vai o P4 > P3 > P2 (emergência extrema).\n• Retorno: P2 > P3 > P4.\n\n`;
+        ? `• Ida p/ Caixa: Fiscal > Vendas / Atendimento > Reposição (emergência extrema).\n• Retorno: Reposição > Vendas / Atendimento > Fiscal.\n\n`
+        : `• Ida p/ Caixa: Vai o Fiscal > Vendas (P3) > Reposição (P2) (emergência extrema).\n• Retorno: P2 > P3 > Fiscal.\n\n`;
 
       const activeEmps = (employees || []).filter(e => e && !e.isHidden && e.status === 'active');
       const resolvedPositions = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, activeJornadaSettings);
@@ -992,31 +992,31 @@ const App: React.FC = () => {
         allWorkingEmps.push({ ...e, firstName: getShortName(e.name, activeEmps), pos, shiftName });
       });
 
-      const p1Abertura = allWorkingEmps.find(e => e.pos === 'P1' && e.shiftName === 'Abertura');
-      const p1Fechamento = allWorkingEmps.find(e => e.pos === 'P1' && e.shiftName !== 'Abertura');
+      const p1Abertura = allWorkingEmps.find(e => (e.pos === 'P1' || e.pos === 'CX') && e.shiftName === 'Abertura');
+      const p1Fechamento = allWorkingEmps.find(e => (e.pos === 'P1' || e.pos === 'CX') && e.shiftName !== 'Abertura');
 
       if (p1Abertura && p1Fechamento) {
-        text += `🤝 *Revezamento (P1)*\n`;
+        text += `🤝 *Revezamento (Caixa)*\n`;
         text += `• O(a) ${p1Fechamento.firstName} (Fechamento) rende o almoço do(a) ${p1Abertura.firstName} (Abertura). Quando o(a) ${p1Abertura.firstName} retornar, o(a) ${p1Fechamento.firstName} almoça.\n`;
-        text += `• Quando ambos presentes, o(a) ${p1Abertura.firstName} tem prioridade no P1, e o(a) ${p1Fechamento.firstName} atua no P3/P4.\n\n`;
+        text += `• Quando ambos presentes, o(a) ${p1Abertura.firstName} tem prioridade no Caixa, e o(a) ${p1Fechamento.firstName} atua em Vendas/Atendimento.\n\n`;
       }
 
-      text += `*Tempo Ocioso:* P1 abastece o balcão/saquinhos. Se tiver muitos no P3, foquem em arrumar a seção e abastecer no baixo fluxo.\n`;
+      text += `*Tempo Ocioso:* Caixa abastece o balcão/saquinhos. No salão, foquem em arrumar a seção e abastecer no baixo fluxo.\n`;
 
       // Legenda de Funções no rodapé do texto de Apoio
       text += `\n📋 *Legenda de Funções:*\n`;
-      text += `🟥 Caixa\n`;
-      text += `🟧 Pacote\n`;
-      text += `🟨 Fiscal\n`;
-      text += `🟩 Atendimento\n`;
-      text += `🟦 Apoio\n`;
+      text += `🟥 Caixa (P1)\n`;
+      text += `🟧 Pacote (P1)\n`;
+      text += `🟨 Reposição / Organização (P2)\n`;
+      text += `🟩 Vendas / Atendimento (P3)\n`;
+      text += `🟦 Fiscal\n`;
       text += `📦 Estoque\n`;
 
       const copied = await copyToClipboard(text);
       if (copied) {
         await showDialog({
           title: 'Apoio Operacional Copiado!',
-          message: 'O roteiro de apoio operacional e posicionamento diário foi copiado para a área de transferência. Você já pode colá-lo no grupo do WhatsApp da loja.'
+          message: 'O roteiro de apoio operacional e funções diárias foi copiado para a área de transferência. Você já pode colá-lo no grupo do WhatsApp da loja.'
         });
       } else {
         await showDialog({

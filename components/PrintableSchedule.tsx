@@ -209,11 +209,11 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
         </div>
       </div>
 
-      {/* FOOTER 2: POSIÇÕES TÁTICAS E RECADOS */}
+      {/* FOOTER 2: FUNÇÕES DA EQUIPE E RECADOS */}
       <div className="grid grid-cols-2 gap-4 text-[9px]">
-        {/* Bloco: POSIÇÕES TÁTICAS */}
+        {/* Bloco: FUNÇÕES DA EQUIPE */}
         <div className="border-2 border-black p-2 flex flex-col justify-between">
-           <h3 className="font-black uppercase mb-1 text-[11px] border-b border-black pb-0.5 text-center">POSIÇÕES TÁTICAS & OBSERVAÇÕES</h3>
+           <h3 className="font-black uppercase mb-1 text-[11px] border-b border-black pb-0.5 text-center">FUNÇÕES DA EQUIPE (CORRELATAS) & OBSERVAÇÕES</h3>
            <div className="grid grid-cols-2 gap-2 mt-1">
              <div className="border border-black p-1">
                 <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Horários de Saída</h4>
@@ -225,13 +225,13 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
              </div>
              <div className="flex flex-col gap-1.5">
                 <div className="border border-black p-1">
-                  <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Posições Táticas</h4>
+                  <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Funções (Correlatas)</h4>
                   <div className="text-[8px] font-bold space-y-1">
-                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-red-400 border border-black"></div><span>P1 (Caixa)</span></div>
+                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-red-400 border border-black"></div><span>CX (Caixa)</span></div>
                       <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-orange-400 border border-black"></div><span>PC (Pacote)</span></div>
-                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-amber-400 border border-black"></div><span>P2 (Porta/Entrada)</span></div>
-                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-green-400 border border-black"></div><span>P3 (Salão)</span></div>
-                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-blue-400 border border-black"></div><span>P4 (Flexível)</span></div>
+                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-amber-400 border border-black"></div><span>REP (Reposição/Org.)</span></div>
+                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-green-400 border border-black"></div><span>VEND (Vendas/Atendimento)</span></div>
+                      <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-blue-400 border border-black"></div><span>FISC (Fiscal)</span></div>
                        <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-slate-400 border border-black"></div><span>ESTQ (Estoque)</span></div>
                   </div>
                 </div>

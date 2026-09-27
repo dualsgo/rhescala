@@ -216,7 +216,7 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
                     Aplicar Pré-definições
                   </span>
                   <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                    Reaplicar seletivamente apenas horários, folgas ou posições
+                    Reaplicar seletivamente apenas horários, folgas ou funções
                   </span>
                 </div>
                 <Icon name="chevron_right" className="text-indigo-400 group-hover:translate-x-0.5 transition-transform shrink-0 text-base" />

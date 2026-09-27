@@ -176,12 +176,12 @@ export const OperationalNotices: React.FC<OperationalNoticesProps> = ({ onClose 
                   <div className="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center">
                     <Icon name="shield" className="text-2xl" />
                   </div>
-                  <h3 className="text-sm font-black uppercase tracking-widest">Posicionamento Tático</h3>
+                  <h3 className="text-sm font-black uppercase tracking-widest">Funções & Atribuições da Equipe</h3>
                 </div>
                 <div className="grid grid-cols-1 gap-3">
                   <div className="flex items-start gap-3 p-4 bg-rose-50/30 rounded-2xl border border-rose-100/50">
                     <div className="w-1.5 h-1.5 bg-rose-500 rounded-full mt-1.5 shrink-0"></div>
-                    <p className="text-xs font-bold text-slate-700 leading-relaxed uppercase tracking-tight"><b>Fiscais:</b> Prioridade absoluta na <b>P2 (Porta)</b></p>
+                    <p className="text-xs font-bold text-slate-700 leading-relaxed uppercase tracking-tight"><b>Fiscais:</b> Prioridade na <b>Porta e Prevenção</b></p>
                   </div>
                   <div className="flex items-start gap-3 p-4 bg-rose-50/30 rounded-2xl border border-rose-100/50">
                     <div className="w-1.5 h-1.5 bg-rose-500 rounded-full mt-1.5 shrink-0"></div>
@@ -189,7 +189,7 @@ export const OperationalNotices: React.FC<OperationalNoticesProps> = ({ onClose 
                   </div>
                   <div className="flex items-start gap-3 p-4 bg-rose-50/30 rounded-2xl border border-rose-100/50">
                     <div className="w-1.5 h-1.5 bg-rose-500 rounded-full mt-1.5 shrink-0"></div>
-                    <p className="text-xs font-bold text-slate-700 leading-relaxed uppercase tracking-tight"><b>Mandatórios:</b> P1 e P2 devem estar sempre ativos</p>
+                    <p className="text-xs font-bold text-slate-700 leading-relaxed uppercase tracking-tight"><b>Essenciais:</b> Caixa e Reposição devem estar sempre ativos</p>
                   </div>
                 </div>
               </div>

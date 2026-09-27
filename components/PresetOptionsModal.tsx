@@ -178,7 +178,7 @@ export const PresetOptionsModal: React.FC<PresetOptionsModalProps> = ({
                 </div>
               </label>
 
-              {/* Só Posições Táticas */}
+              {/* Só Funções */}
               <label
                 onClick={() => setApplyMode('tactical_only')}
                 className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
@@ -195,9 +195,9 @@ export const PresetOptionsModal: React.FC<PresetOptionsModalProps> = ({
                   className="mt-1 text-indigo-600 focus:ring-indigo-500"
                 />
                 <div className="flex-1">
-                  <span className="text-xs font-black text-slate-800 dark:text-slate-100">Apenas Posições Táticas (P1, P2, P3, P4, ESTQ)</span>
+                  <span className="text-xs font-black text-slate-800 dark:text-slate-100">Apenas Funções Correlatas (Caixa, Pacote, Reposição, Vendas, Fiscal, Estoque)</span>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
-                    Redistribui as posições na loja para todos os dias sem alterar nem turnos nem horários.
+                    Redistribui as funções da equipe na loja para todos os dias sem alterar turnos nem horários.
                   </p>
                 </div>
               </label>

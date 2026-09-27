@@ -404,13 +404,13 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
             {todayDetails.isWorking && (
               <div className="grid grid-cols-2 gap-2 pt-3 border-t border-white/20">
                 <div className="bg-white/10 rounded-2xl p-2.5 backdrop-blur-sm">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-white/70 block mb-1">Posto Tático</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-white/70 block mb-1">Função na Loja</span>
                   <div className="text-sm font-black text-white">
                     {tacticalDisplayMode === 'off'
                       ? 'Trabalho Regular (T)'
                       : todayDetails.tacticalPos
-                      ? `${todayDetails.tacticalPos} • ${getTacticalLabel(todayDetails.tacticalPos, tacticalDisplayMode)}`
-                      : 'Padrão / Apoio'}
+                      ? `${getTacticalLabel(todayDetails.tacticalPos, 'roles')}`
+                      : 'Vendas / Apoio'}
                   </div>
                 </div>
 

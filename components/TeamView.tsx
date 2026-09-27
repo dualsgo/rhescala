@@ -731,7 +731,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
             {/* Tactical Positions */}
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Posição / Função Preferencial 1</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Função Preferencial 1 (Correlata)</label>
                 <select
                   disabled={isReadOnly}
                   value={employee.preferredPosition1 || ''}
@@ -746,7 +746,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
               </div>
 
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Posição / Função Preferencial 2</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Função Preferencial 2 (Correlata)</label>
                 <select
                   disabled={isReadOnly}
                   value={employee.preferredPosition2 || ''}

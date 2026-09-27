@@ -10,10 +10,11 @@ export const HelpCenter: React.FC<HelpCenterProps> = ({ onClose }) => {
 
   const tacticalPositions = [
     {
-      code: 'P1',
-      name: 'Caixa / Frente de Loja',
-      color: 'bg-rose-500 text-white',
-      badgeBg: 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/50',
+      code: 'CX',
+      posCode: 'P1',
+      name: 'Caixa (Equivalente a P1)',
+      color: 'bg-red-600 text-white',
+      badgeBg: 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900/50',
       icon: 'point_of_sale',
       desc: 'Responsável principal pela abertura do caixa, atendimento no checkout, organização do balcão, conferência de sangrias e fundo de troco.',
       responsibilities: [
@@ -25,7 +26,8 @@ export const HelpCenter: React.FC<HelpCenterProps> = ({ onClose }) => {
     },
     {
       code: 'PC',
-      name: 'Pacote / Fechamento de Vendas',
+      posCode: 'P1',
+      name: 'Pacote (Equivalente a P1)',
       color: 'bg-orange-500 text-white',
       badgeBg: 'bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-900/50',
       icon: 'inventory_2',
@@ -38,49 +40,53 @@ export const HelpCenter: React.FC<HelpCenterProps> = ({ onClose }) => {
       ]
     },
     {
-      code: 'P2',
-      name: 'Fiscal de Salão / Recepção',
+      code: 'REP',
+      posCode: 'P2',
+      name: 'Reposição / Organização (Equivalente a P2)',
       color: 'bg-amber-500 text-white',
       badgeBg: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/50',
-      icon: 'shield_person',
-      desc: 'Porta de entrada e recepção dos clientes, monitoramento do fluxo de salão, prevenção de perdas e suporte operacional geral.',
+      icon: 'inventory',
+      desc: 'Organização e reposição contínua do salão de vendas, frenteamento das gôndolas, precificação correta e suporte à entrada da loja.',
       responsibilities: [
-        'Boas-vindas acolhedoras aos clientes e direcionamento no salão',
-        'Monitoramento atento de pontos cegos e prevenção de perdas',
-        'Conferência de mercadorias que entram e saem da loja',
-        'Comunicação rápida com a gerência sobre movimentações atípicas'
+        'Reposição contínua e alinhamento de gôndolas (frenteamento)',
+        'Organização de corredores, cestos e recolhimento de devoluções',
+        'Conferência de precificação e etiquetagem correta dos brinquedos',
+        'Suporte visual e organização das pontas de gôndola e ilhas'
       ]
     },
     {
-      code: 'P3',
-      name: 'Atendimento & Brinquedos (Salão)',
-      color: 'bg-emerald-500 text-white',
+      code: 'VEND',
+      posCode: 'P3',
+      name: 'Vendas / Atendimento (Equivalente a P3)',
+      color: 'bg-emerald-600 text-white',
       badgeBg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900/50',
       icon: 'toys',
-      desc: 'Atendimento ativo, consultoria aos clientes, demonstração de brinquedos, reposição diária e manutenção visual das gôndolas.',
+      desc: 'Atendimento ativo, consultoria aos clientes, demonstração de brinquedos e encantamento de crianças e famílias no salão.',
       responsibilities: [
         'Abordagem consultiva e encantamento de crianças e famílias',
         'Demonstração interativa de lançamentos e produtos em destaque',
-        'Reposição contínua e alinhamento de gôndolas (frenteamento)',
-        'Verificação de etiquetagem de preços e precificação correta'
+        'Atendimento às dúvidas dos clientes e suporte na escolha de presentes',
+        'Venda assistida em todos os setores da loja'
       ]
     },
     {
-      code: 'P4',
-      name: 'Apoio Flexível / Fechamento',
-      color: 'bg-sky-500 text-white',
-      badgeBg: 'bg-sky-50 dark:bg-sky-950/40 border-sky-200 dark:border-sky-900/50',
-      icon: 'support_agent',
-      desc: 'Posição móvel e coringa que dá suporte aos caixas nos picos de movimento, ajuda no salão e atua nas rotinas de fechamento.',
+      code: 'FISC',
+      posCode: 'FISC',
+      name: 'Fiscal de Loja & Prevenção',
+      color: 'bg-blue-600 text-white',
+      badgeBg: 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-900/50',
+      icon: 'shield_person',
+      desc: 'Porta de entrada, recepção dos clientes, prevenção de perdas, monitoramento do fluxo de salão e suporte operacional geral.',
       responsibilities: [
-        'Suporte emergencial aos caixas quando a fila aumentar',
-        'Organização de carrinhos, cestos e devoluções espalhadas',
-        'Apoio na contagem de estoque e arrumação de seções',
-        'Rotinas de encerramento do expediente e limpeza rápida'
+        'Boas-vindas acolhedoras aos clientes e direcionamento no salão',
+        'Monitoramento atento de pontos cegos e prevenção de perdas',
+        'Conferência de mercadorias e suporte à segurança da unidade',
+        'Comunicação rápida com a liderança sobre movimentações atípicas'
       ]
     },
     {
       code: 'ESTQ',
+      posCode: 'ESTQ',
       name: 'Estoque / Depósito & Abastecimento',
       color: 'bg-slate-700 text-white',
       badgeBg: 'bg-slate-50 dark:bg-zinc-800/60 border-slate-200 dark:border-zinc-700/50',
@@ -145,7 +151,7 @@ export const HelpCenter: React.FC<HelpCenterProps> = ({ onClose }) => {
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-black uppercase text-slate-800 dark:text-slate-100 tracking-tight">
-                Guia de Posições & Funções
+                Guia de Funções (Correlatas)
               </h2>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                 Ri Happy Shift Management • Padrões Operacionais
@@ -170,8 +176,8 @@ export const HelpCenter: React.FC<HelpCenterProps> = ({ onClose }) => {
                 : 'border-transparent text-slate-400 hover:text-slate-600'
             }`}
           >
-            <Icon name="view_in_ar" className="text-sm" />
-            Posições Táticas (P1 a P4)
+            <Icon name="badge" className="text-sm" />
+            Funções (Correlatas)
           </button>
           <button 
             onClick={() => setActiveTab('funcoes')}

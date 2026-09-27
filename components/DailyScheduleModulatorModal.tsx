@@ -348,12 +348,12 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
 
     // Legenda de Funções
     if (showLegend && showPositions) {
-      text += `\n📋 *Legenda de Funções:*\n`;
+      text += `\n📋 *Funções da Equipe:*\n`;
       text += `🟥 Caixa\n`;
       text += `🟧 Pacote\n`;
-      text += `🟨 Fiscal\n`;
-      text += `🟩 Atendimento\n`;
-      text += `🟦 Apoio\n`;
+      text += `🟨 Reposição / Organização\n`;
+      text += `🟩 Vendas / Atendimento\n`;
+      text += `🟦 Fiscal\n`;
       text += `📦 Estoque\n`;
     }
 
@@ -557,10 +557,10 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
                         </div>
                       </div>
 
-                      {/* Controles de Modulação: Posição e Almoço */}
+                      {/* Controles de Modulação: Função e Almoço */}
                       {item.included && (
                         <div className="flex items-center gap-2 flex-wrap">
-                          {/* Posição Tática */}
+                          {/* Função na Loja */}
                           <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 px-2 py-1 rounded-xl border border-slate-200 dark:border-zinc-700">
                             <span className="text-xs">{item.posEmoji}</span>
                             <select
@@ -571,7 +571,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
                                 setItems(prev => prev.map(it => it.id === item.id ? { ...it, pos: newPos, posEmoji: newEmoji } : it));
                               }}
                               className="bg-transparent text-[11px] font-black uppercase text-slate-800 dark:text-zinc-200 outline-none cursor-pointer"
-                              title="Alterar posto tático"
+                              title="Alterar função na loja"
                             >
                               {TACTICAL_POSITIONS.map(pos => (
                                 <option key={pos} value={pos}>
@@ -739,7 +739,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
                     onChange={(e) => setShowPositions(e.target.checked)}
                     className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
                   />
-                  <span className="text-xs font-bold text-slate-700 dark:text-zinc-300">🏷️ Postos Táticos</span>
+                  <span className="text-xs font-bold text-slate-700 dark:text-zinc-300">🏷️ Funções da Equipe</span>
                 </label>
 
                 <label className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/60 dark:border-zinc-700/60 cursor-pointer select-none">

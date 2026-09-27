@@ -135,7 +135,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
         } else if (it.type === 'hour') {
           text += `  • Dia ${it.dateStr}: Horário Oficial [${it.officialVal}] ➔ Atual [${it.currentVal}]\n`;
         } else if (it.type === 'position') {
-          text += `  • Dia ${it.dateStr}: Posição Oficial [${it.officialVal}] ➔ Atual [${it.currentVal}]\n`;
+          text += `  • Dia ${it.dateStr}: Função Oficial [${it.officialVal}] ➔ Atual [${it.currentVal}]\n`;
         }
       });
       text += `\n`;
@@ -268,7 +268,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
               {stats.posCount}
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase text-slate-400">Posições</p>
+              <p className="text-[10px] font-black uppercase text-slate-400">Funções</p>
               <p className="text-xs font-black text-slate-800 dark:text-slate-200">{stats.posCount} ajustes</p>
             </div>
           </div>
@@ -313,7 +313,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
                 onClick={() => setTypeFilter('position')}
                 className={`px-2.5 py-1 rounded-lg transition-all ${typeFilter === 'position' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500'}`}
               >
-                Posições
+                Funções
               </button>
             </div>
           </div>
@@ -467,13 +467,13 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
                             diff.type === 'hour' ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-600' :
                             'bg-blue-100 dark:bg-blue-950/50 text-blue-600'
                           }`}>
-                            {diff.type === 'shift' ? 'Turno / Folga' : diff.type === 'hour' ? 'Horário' : 'Posição Tática'}
+                            {diff.type === 'shift' ? 'Turno / Folga' : diff.type === 'hour' ? 'Horário' : 'Função Correlata'}
                           </span>
                         </div>
                         <p className="text-[11px] text-slate-400 mt-0.5">
                           {diff.type === 'shift' && 'Alteração no status de trabalho/folga'}
                           {diff.type === 'hour' && 'Mudança no horário da jornada diária'}
-                          {diff.type === 'position' && 'Troca de setor/posição tática'}
+                          {diff.type === 'position' && 'Troca de função na loja'}
                         </p>
                       </div>
                     </div>

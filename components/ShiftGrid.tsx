@@ -605,7 +605,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   ? 'bg-orange-500 border-orange-500 text-white shadow-orange-500/20' 
                   : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
               }`}
-              title="Exibir ou ocultar legenda de turnos e posições"
+              title="Exibir ou ocultar legenda de turnos e funções correlatas"
             >
               <Icon name="info" className="text-xs" />
               <span>Legenda</span>
