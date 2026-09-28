@@ -20,9 +20,6 @@ interface MobileFilterDrawerProps {
   isCurrentMonth: boolean;
   cycleBadgesMode?: 'all' | 'alerts' | 'off';
   setCycleBadgesMode?: (val: 'all' | 'alerts' | 'off') => void;
-  // Search (opcional/legado)
-  searchQuery?: string;
-  setSearchQuery?: (val: string) => void;
   onResetFilters: () => void;
 }
 
@@ -44,8 +41,6 @@ export const MobileFilterDrawer: React.FC<MobileFilterDrawerProps> = ({
   isCurrentMonth,
   cycleBadgesMode = 'all',
   setCycleBadgesMode,
-  searchQuery,
-  setSearchQuery,
   onResetFilters,
 }) => {
   if (!isOpen) return null;

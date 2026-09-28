@@ -134,14 +134,12 @@ const App: React.FC = () => {
   const [contractFilter, setContractFilter] = useState<'all' | 'clt' | 'sazonal'>('all');
   const [onlyWorkingToday, setOnlyWorkingToday] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
 
   const handleClearFilters = useCallback(() => {
     setFilter('all');
     setContractFilter('all');
     setOnlyWorkingToday(false);
     setSelectedGroup(null);
-    setSearchQuery('');
   }, []);
   const [isDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
   const [tacticalDisplayMode, setTacticalDisplayMode] = useLocalPreference<TacticalDisplayMode>('rhescala_tactical_display_mode', 'off');
@@ -1105,8 +1103,6 @@ const App: React.FC = () => {
               onToggleOnlyWorkingToday={() => setOnlyWorkingToday(prev => !prev)}
               selectedGroup={selectedGroup}
               onSelectedGroupChange={setSelectedGroup}
-              searchQuery={searchQuery}
-              onSearchQueryChange={setSearchQuery}
               onClearFilters={handleClearFilters}
             />
 
@@ -1160,8 +1156,6 @@ const App: React.FC = () => {
                    onToggleOnlyWorkingToday={() => setOnlyWorkingToday(prev => !prev)}
                    selectedGroup={selectedGroup}
                    onSelectedGroupChange={setSelectedGroup}
-                   searchQuery={searchQuery}
-                   onSearchQueryChange={setSearchQuery}
                    isReadOnly={isReadOnly}
                    isEditable={isEditable}
                    allowRetroactive={allowRetroactive}

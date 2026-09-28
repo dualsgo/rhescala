@@ -54,8 +54,6 @@ interface HeaderProps {
   onToggleOnlyWorkingToday?: () => void;
   selectedGroup?: string | null;
   onSelectedGroupChange?: (g: string | null) => void;
-  searchQuery?: string;
-  onSearchQueryChange?: (q: string) => void;
   onClearFilters?: () => void;
 }
 
@@ -109,8 +107,6 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleOnlyWorkingToday,
   selectedGroup = null,
   onSelectedGroupChange,
-  searchQuery = '',
-  onSearchQueryChange,
   onClearFilters,
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);

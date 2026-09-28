@@ -55,8 +55,6 @@ interface ShiftGridProps {
   onToggleOnlyWorkingToday?: () => void;
   selectedGroup?: string | null;
   onSelectedGroupChange?: (g: string | null) => void;
-  searchQuery?: string;
-  onSearchQueryChange?: (q: string) => void;
 }
 
 export const ShiftGrid: React.FC<ShiftGridProps> = ({
@@ -98,8 +96,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onToggleOnlyWorkingToday,
   selectedGroup: propSelectedGroup,
   onSelectedGroupChange,
-  searchQuery: propSearchQuery,
-  onSearchQueryChange,
 }) => {
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
   const [hasScrolled, setHasScrolled] = useState(false);
@@ -280,11 +276,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       });
     }
 
-    if (mobileSearchQuery.trim()) {
-      const q = mobileSearchQuery.toLowerCase();
-      list = list.filter(emp => emp.name.toLowerCase().includes(q) || (emp.role && emp.role.toLowerCase().includes(q)));
-    }
-
     if (selectedGroup) {
       list = list.filter(emp => {
         const isSun = days[selectedDayIdx]?.isSunday;
@@ -301,7 +292,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     }
 
     return list.sort((a, b) => (a.workPeriod || '').localeCompare(b.workPeriod || '') || a.name.localeCompare(b.name));
-  }, [employees, contractFilter, onlyWorkingToday, mobileSearchQuery, selectedGroup, monthKey, selectedDayIdx]);
+  }, [employees, contractFilter, onlyWorkingToday, selectedGroup, monthKey, selectedDayIdx]);
 
   return (
     <div className="flex flex-col gap-3 sm:gap-4 relative h-full">
