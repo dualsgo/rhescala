@@ -308,7 +308,7 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
   );
 
   function renderEmployeeCard(item: { emp: Employee; shift: string; hour: string; pos: string }, isFolga = false) {
-    const isHighlighted = highlightedEmpId === item.emp.id;
+    const isHighlighted = false;
     const shortName = getShortName(item.emp.name);
     const hasDiff = diffs.some(d => d.empId === item.emp.id && d.dayIdx === selectedDayIdx);
 

@@ -136,7 +136,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       const saved = localStorage.getItem('rhescala_cycle_badges_mode');
       if (saved === 'all' || saved === 'alerts' || saved === 'off') return saved;
     } catch {}
-    return 'all';
+    return 'alerts';
   });
 
   useEffect(() => {
@@ -148,9 +148,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   // Mobile Redesign States
   const [mobileViewMode, setMobileViewMode] = useState<'daily' | 'table'>('daily');
   const [showMobileFilterDrawer, setShowMobileFilterDrawer] = useState(false);
-  const [internalSearchQuery, setInternalSearchQuery] = useState('');
-  const mobileSearchQuery = propSearchQuery !== undefined ? propSearchQuery : internalSearchQuery;
-  const setMobileSearchQuery = onSearchQueryChange || setInternalSearchQuery;
   const mobileCarouselRef = useRef<HTMLDivElement>(null);
 
   const protectedConfig = useMemo(() => normalizeProtectedDaysConfig(protectedDays), [protectedDays]);
@@ -175,9 +172,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     if (selectedGroup) count++;
     if (contractFilter !== 'all') count++;
     if (hidePastDays) count++;
-    if (mobileSearchQuery.trim()) count++;
     return count;
-  }, [onlyWorkingToday, selectedGroup, contractFilter, hidePastDays, mobileSearchQuery]);
+  }, [onlyWorkingToday, selectedGroup, contractFilter, hidePastDays]);
 
   // Auto-scroll logic to today's day on initial render
   useEffect(() => {
@@ -468,47 +464,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               <Icon name="visibility" className="text-xs text-slate-400 dark:text-zinc-400" />
             </button>
 
-            {/* Identificação Rápida do Colaborador no Modo Visualizador */}
-            {isReadOnly && (
-              <div className="flex items-center gap-1.5 bg-orange-50/80 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/60 p-1 rounded-xl shadow-xs">
-                <div className="flex items-center gap-1 pl-1 text-[10px] font-black uppercase text-orange-700 dark:text-orange-400">
-                  <Icon name="person" className="text-xs" />
-                  <span className="hidden sm:inline">Meu Nome:</span>
-                </div>
-                <select
-                  value={highlightedEmpId || ''}
-                  onChange={(e) => onHighlightEmp?.(e.target.value)}
-                  className="bg-white dark:bg-zinc-900 border border-orange-200/80 dark:border-zinc-700 text-slate-800 dark:text-zinc-100 text-[11px] font-bold rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer max-w-[140px] sm:max-w-[180px] truncate"
-                  title="Selecione seu nome para destacar sua linha na grade"
-                >
-                  <option value="">Destacar meu nome...</option>
-                  {employees
-                    .filter(e => !e.isHidden && e.status === 'active')
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map(emp => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name}
-                      </option>
-                    ))}
-                </select>
-
-                {highlightedEmpId && (() => {
-                  const myEmp = employees.find(e => e.id === highlightedEmpId);
-                  if (!myEmp) return null;
-                  return (
-                    <button
-                      type="button"
-                      onClick={() => onOpenEmployeeCard(myEmp, 'mes')}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-xs shrink-0 active:scale-95"
-                      title="Acessar com senha pessoal meu cartão individual de escala e solicitações"
-                    >
-                      <Icon name="lock" className="text-xs" />
-                      <span>Meu Cartão</span>
-                    </button>
-                  );
-                })()}
-              </div>
-            )}
 
             {/* Divulgação Operacional / WhatsApp do Dia (Apenas Gestão) */}
             {!isReadOnly && onShareWhatsApp && (
@@ -931,47 +886,23 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
                       {/* Employee Rows */}
                       {emps.map(emp => {
-                        const isHighlighted = highlightedEmpId === emp.id;
                         return (
                           <tr 
                             key={emp.id} 
-                            className={`transition-colors group/row ${
-                              isHighlighted 
-                                ? 'bg-orange-50/50 dark:bg-orange-950/20 hover:bg-orange-100/50 dark:hover:bg-orange-900/30' 
-                                : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/50'
-                            }`}
+                            className="transition-colors group/row hover:bg-slate-50/50 dark:hover:bg-slate-800/50"
                           >
-                             <td className={`sticky left-0 z-[10] border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-1.5 sm:py-1.5 sm:px-2 min-w-[110px] sm:min-w-[135px] w-[110px] sm:w-[135px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)] transition-all ${
-                               isHighlighted
-                                 ? 'border-l-4 border-l-orange-500 bg-orange-50/90 dark:bg-zinc-900'
-                                 : 'bg-white dark:bg-black'
-                             }`}>
+                             <td className="sticky left-0 z-[10] border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-1.5 sm:py-1.5 sm:px-2 min-w-[110px] sm:min-w-[135px] w-[110px] sm:w-[135px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)] transition-all bg-white dark:bg-black">
                                <button 
                                  onClick={() => onOpenEmployeeCard(emp)}
                                  title={isReadOnly ? `${emp.name.toUpperCase()} • Clique para acessar cartão individual (requer senha pessoal)` : `${emp.name.toUpperCase()} • Clique para ver escala completa, solicitações ou lançar atestado médico por período`}
-                                 className={`flex items-center gap-1.5 sm:gap-2 w-full text-left p-0.5 sm:p-1 rounded-lg sm:rounded-xl transition-all group/name ${
-                                   isHighlighted
-                                     ? 'bg-orange-100/70 dark:bg-orange-950/40'
-                                     : 'hover:bg-orange-50 dark:hover:bg-orange-950/20'
-                                 }`}
+                                 className="flex items-center gap-1.5 sm:gap-2 w-full text-left p-0.5 sm:p-1 rounded-lg sm:rounded-xl transition-all group/name hover:bg-orange-50 dark:hover:bg-orange-950/20"
                                >
-                                 <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] font-bold border shrink-0 transition-colors ${
-                                   isHighlighted
-                                     ? 'bg-orange-500 text-white border-orange-600 shadow-xs'
-                                     : 'bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-zinc-800 group-hover/name:bg-orange-100 group-hover/name:text-orange-600 group-hover/name:border-orange-200'
-                                 }`}>
+                                 <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] font-bold border shrink-0 transition-colors bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-zinc-800 group-hover/name:bg-orange-100 group-hover/name:text-orange-600 group-hover/name:border-orange-200">
                                    {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                                  </div>
                                  <div className="flex flex-col min-w-0 flex-1">
                                    <div className="flex items-center gap-1 flex-wrap">
-                                     <span className={`text-[10px] sm:text-[11px] font-black uppercase truncate transition-colors ${
-                                       isHighlighted ? 'text-orange-600 dark:text-orange-400' : 'text-slate-900 dark:text-slate-100 group-hover/name:text-orange-600'
-                                     }`} title={emp.name.toUpperCase()}>{getShortName(emp.name, employees)}</span>
-                                     {isHighlighted && (
-                                       <span className="px-1.5 py-0.2 rounded-md bg-orange-500 text-white text-[8px] font-black uppercase tracking-wider shrink-0 shadow-xs">
-                                         Você
-                                       </span>
-                                     )}
+                                     <span className="text-[10px] sm:text-[11px] font-black uppercase truncate transition-colors text-slate-900 dark:text-slate-100 group-hover/name:text-orange-600" title={emp.name.toUpperCase()}>{getShortName(emp.name, employees)}</span>
                                      {(() => {
                                        if (isReadOnly) return null;
                                        const reqs = emp.requests || [];
@@ -1140,7 +1071,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const maxStreak = emp.jornada === '5x2' ? 5 : 6;
                               let sixByOneBadge: { text: string; className: string; title: string } | null = null;
 
-                              if (shift !== 'N/A' && isWorkingDay) {
+                              if (!isReadOnly && shift !== 'N/A' && isWorkingDay) {
                                 if (streak > maxStreak) {
                                   sixByOneBadge = {
                                     text: `${streak}º`,
@@ -1177,7 +1108,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               // Sunday Streak & Compliance Badge (Canto Superior Direito)
                               let sundayBadge: { text: string; className: string; title: string } | null = null;
 
-                              if (isSunday && shift !== 'N/A') {
+                              if (!isReadOnly && isSunday && shift !== 'N/A') {
                                 if (emp.isYoungApprentice) {
                                   const isApprenticeWorking = isWorkingShift(shift) || shift === 'C';
                                   if (isApprenticeWorking) {
@@ -1507,13 +1438,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
         isCurrentMonth={isCurrentMonth}
         cycleBadgesMode={cycleBadgesMode}
         setCycleBadgesMode={setCycleBadgesMode}
-        searchQuery={mobileSearchQuery}
-        setSearchQuery={setMobileSearchQuery}
         onResetFilters={() => {
           setOnlyWorkingToday(false);
           setSelectedGroup(null);
           setContractFilter('all');
-          setMobileSearchQuery('');
           setHidePastDays(false);
         }}
       />

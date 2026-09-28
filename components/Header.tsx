@@ -120,6 +120,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [internalMobileMenu, setInternalMobileMenu] = useState(false);
   const showMobileMenu = isMobileMenuOpen !== undefined ? isMobileMenuOpen : internalMobileMenu;
   const setShowMobileMenu = onToggleMobileMenu || setInternalMobileMenu;
@@ -128,8 +129,7 @@ export const Header: React.FC<HeaderProps> = ({
     (filter !== 'all' ? 1 : 0) +
     (contractFilter !== 'all' ? 1 : 0) +
     (onlyWorkingToday ? 1 : 0) +
-    (selectedGroup ? 1 : 0) +
-    (searchQuery.trim() ? 1 : 0)
+    (selectedGroup ? 1 : 0)
   );
 
   const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -223,31 +223,6 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </div>
 
-            {/* 1. Busca rápida por nome */}
-            {onSearchQueryChange && (
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Buscar Colaborador</label>
-                <div className="relative">
-                  <Icon name="search" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs" />
-                  <input
-                    type="text"
-                    value={searchQuery || ''}
-                    onChange={(e) => onSearchQueryChange(e.target.value)}
-                    placeholder="Nome do colaborador..."
-                    className="w-full pl-7 pr-7 py-1.5 bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 rounded-xl text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => onSearchQueryChange('')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* 2. Período da Grade */}
             <div className="space-y-1">
@@ -365,7 +340,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="bg-white dark:bg-black border-b border-slate-200 dark:border-zinc-800 sticky top-0 z-50 shadow-sm transition-colors h-14">
       {/* Backdrop overlay to prevent clicking behind open dropdowns */}
-      {(showConfigMenu || showShareMenu || showProfileMenu || showFilterMenu) && (
+      {(showConfigMenu || showShareMenu || showProfileMenu || showFilterMenu || showActionsMenu) && (
         <div 
           className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[0.5px]" 
           onClick={(e) => {
@@ -374,6 +349,7 @@ export const Header: React.FC<HeaderProps> = ({
             setShowShareMenu(false);
             setShowProfileMenu(false);
             setShowFilterMenu(false);
+            setShowActionsMenu(false);
           }}
         />
       )}
@@ -633,68 +609,100 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Botão Direto: Modo Edição */}
-          {!isReadOnly && currentView === 'grid' && (
-            <button
-              type="button"
-              onClick={onToggleEdit}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all shadow-sm ${
-                isEditable
-                  ? 'bg-indigo-600 border-indigo-700 text-white shadow-indigo-500/20'
-                  : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-200 hover:border-indigo-300'
-              }`}
-              title={isEditable ? 'Modo de Edição Ativo: clique para bloquear edição das células' : 'Clique para ativar o modo de edição das células'}
-            >
-              <Icon name={isEditable ? 'lock_open' : 'edit'} className="text-xs sm:text-sm" />
-              <span className="hidden sm:inline">{isEditable ? 'Edição Ativa' : 'Modo Edição'}</span>
-              <span className="inline sm:hidden">{isEditable ? 'Edição' : 'Editar'}</span>
-            </button>
-          )}
-
-          {/* Botão: Painel de Ações & Opções da Escala (Abre Modal) */}
-          {!isReadOnly && currentView === 'grid' && (
-            <button
-              type="button"
-              onClick={() => {
-                setShowActionsModal(true);
-                setShowShareMenu(false);
-                setShowConfigMenu(false);
-              }}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all shadow-sm bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-200 hover:border-orange-300 hover:bg-orange-50/50 dark:hover:bg-zinc-800"
-              title="Abrir painel de ações inteligentes e opções da escala"
-            >
-              <Icon name="auto_fix_high" className="text-xs sm:text-sm text-orange-500" />
-              <span className="hidden md:inline">Ações & Opções</span>
-              <span className="inline md:hidden">Opções</span>
-            </button>
-          )}
-
-          {/* 2. Menu: Compartilhar & Exportar (Segmentado) */}
+          {/* Menu Unificado de Ações & Ferramentas (Gestão) */}
           {!isReadOnly && (
             <div className="relative">
               <button
+                type="button"
                 onClick={() => {
-                  setShowShareMenu(!showShareMenu);
+                  setShowActionsMenu(!showActionsMenu);
+                  setShowConfigMenu(false);
+                  setShowFilterMenu(false);
+                  setShowProfileMenu(false);
+                  setShowShareMenu(false);
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 border shadow-sm ${
-                  showShareMenu
-                    ? 'bg-slate-900 text-white border-slate-900'
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all shadow-xs ${
+                  showActionsMenu
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
                     : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-200 hover:border-slate-300'
                 }`}
-                title="Opções de envio WhatsApp, impressão e PDF"
+                title="Ações, Ferramentas e Exportação da Escala"
               >
-                <Icon name="share" className="text-sm" />
-                <span className="hidden md:inline">Compartilhar</span>
-                <Icon name={showShareMenu ? 'expand_less' : 'expand_more'} className="text-xs" />
+                <Icon name="more_vert" className="text-sm text-slate-500 dark:text-slate-400" />
+                <span>Ações</span>
+                <Icon name={showActionsMenu ? 'expand_less' : 'expand_more'} className="text-xs opacity-70" />
               </button>
 
-              {showShareMenu && (
+              {showActionsMenu && (
                 <div 
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-200"
+                  className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 flex flex-col gap-1.5 animate-in fade-in slide-in-from-top-1 duration-150 text-slate-800 dark:text-slate-100"
                 >
-                  
-                  {/* WhatsApp */}
+                  {/* Seção 1: Edição & Automações */}
+                  <div>
+                    <div className="px-2.5 py-1 text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest flex items-center gap-1">
+                      <Icon name="auto_fix_high" className="text-xs text-orange-500" />
+                      <span>Edição & Inteligência</span>
+                    </div>
+
+                    <div className="space-y-1 mt-1">
+                      {/* Modo Edição */}
+                      {currentView === 'grid' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onToggleEdit();
+                          }}
+                          className={`w-full flex items-center justify-between p-2 rounded-xl text-xs font-bold transition-all text-left ${
+                            isEditable
+                              ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300'
+                              : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className={`p-1.5 rounded-lg ${isEditable ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-slate-300'}`}>
+                              <Icon name={isEditable ? 'lock_open' : 'edit'} className="text-sm" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="font-black uppercase text-[11px]">Modo Edição</span>
+                              <span className="text-[9px] text-slate-400">
+                                {isEditable ? 'Edição liberada nas células' : 'Bloqueado contra cliques acidentais'}
+                              </span>
+                            </div>
+                          </div>
+                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                            isEditable ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-slate-300'
+                          }`}>
+                            {isEditable ? 'Ativo' : 'Bloq.'}
+                          </span>
+                        </button>
+                      )}
+
+                      {/* Abrir Painel de Ações Inteligentes (Modal) */}
+                      {currentView === 'grid' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowActionsModal(true);
+                            setShowActionsMenu(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-orange-50 dark:hover:bg-orange-950/40 transition-all text-left"
+                        >
+                          <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-900/50 text-orange-600">
+                            <Icon name="psychology" className="text-sm" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-black uppercase text-[11px]">Opções & Automações</span>
+                            <span className="text-[9px] text-slate-400">folgas, domingos e posições táticas</span>
+                          </div>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-slate-100 dark:bg-zinc-800" />
+
+                  {/* Seção 2: Comunicação & WhatsApp */}
                   <div>
                     <div className="px-2.5 py-1 text-[9px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-widest flex items-center gap-1">
                       <Icon name="chat" className="text-xs" />
@@ -703,9 +711,10 @@ export const Header: React.FC<HeaderProps> = ({
 
                     <div className="space-y-1 mt-1">
                       <button
+                        type="button"
                         onClick={() => {
                           onShareWhatsApp();
-                          setShowShareMenu(false);
+                          setShowActionsMenu(false);
                         }}
                         className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-all text-left"
                       >
@@ -714,14 +723,15 @@ export const Header: React.FC<HeaderProps> = ({
                         </div>
                         <div className="flex flex-col">
                           <span className="font-black uppercase text-[11px]">Escala do Dia</span>
-                          <span className="text-[9px] text-slate-400">resumo diário para a equipe</span>
+                          <span className="text-[9px] text-slate-400">resumo diário com almoços para a equipe</span>
                         </div>
                       </button>
 
                       <button
+                        type="button"
                         onClick={() => {
                           onShareApoioWhatsApp();
-                          setShowShareMenu(false);
+                          setShowActionsMenu(false);
                         }}
                         className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all text-left"
                       >
@@ -738,18 +748,19 @@ export const Header: React.FC<HeaderProps> = ({
 
                   <div className="h-px bg-slate-100 dark:bg-zinc-800" />
 
-                  {/* Impressão e PDF */}
+                  {/* Seção 3: Documentos & Relatórios */}
                   <div>
                     <div className="px-2.5 py-1 text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest flex items-center gap-1">
-                      <Icon name="print" className="text-xs" />
+                      <Icon name="description" className="text-xs" />
                       <span>Documentos & Relatórios</span>
                     </div>
 
                     <div className="space-y-1 mt-1">
                       <button
+                        type="button"
                         onClick={() => {
                           onPrint();
-                          setShowShareMenu(false);
+                          setShowActionsMenu(false);
                         }}
                         className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all text-left"
                       >
@@ -758,18 +769,18 @@ export const Header: React.FC<HeaderProps> = ({
                         </div>
                         <div className="flex flex-col">
                           <span className="font-black uppercase text-[11px]">Imprimir / PDF</span>
-                          <span className="text-[9px] text-slate-400">escala mensal impressa</span>
+                          <span className="text-[9px] text-slate-400">layout oficial A4 paisagem</span>
                         </div>
                       </button>
 
                       {onExportCsv && (
                         <button
+                          type="button"
                           onClick={() => {
                             onExportCsv();
-                            setShowShareMenu(false);
+                            setShowActionsMenu(false);
                           }}
                           className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-all text-left group"
-                          title="Salvar escala mensal em arquivo CSV para Excel e Google Sheets"
                         >
                           <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 group-hover:scale-105 transition-transform">
                             <Icon name="table_view" className="text-sm" />
@@ -782,9 +793,10 @@ export const Header: React.FC<HeaderProps> = ({
                       )}
 
                       <button
+                        type="button"
                         onClick={() => {
                           onToggleNotes();
-                          setShowShareMenu(false);
+                          setShowActionsMenu(false);
                         }}
                         className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold transition-all text-left ${
                           showNotes ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800'

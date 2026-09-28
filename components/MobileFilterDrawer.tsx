@@ -20,9 +20,9 @@ interface MobileFilterDrawerProps {
   isCurrentMonth: boolean;
   cycleBadgesMode?: 'all' | 'alerts' | 'off';
   setCycleBadgesMode?: (val: 'all' | 'alerts' | 'off') => void;
-  // Search
-  searchQuery: string;
-  setSearchQuery: (val: string) => void;
+  // Search (opcional/legado)
+  searchQuery?: string;
+  setSearchQuery?: (val: string) => void;
   onResetFilters: () => void;
 }
 
@@ -78,31 +78,6 @@ export const MobileFilterDrawer: React.FC<MobileFilterDrawerProps> = ({
 
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5 custom-scrollbar">
-          {/* Busca Rápida por Nome */}
-          <div>
-            <label className="text-xs font-black uppercase text-slate-400 tracking-wider block mb-2">
-              Buscar Colaborador
-            </label>
-            <div className="relative">
-              <Icon name="search" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Nome do colaborador..."
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-zinc-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-zinc-700 focus:outline-none focus:border-orange-500"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm"
-                >
-                  <Icon name="close" className="text-sm" />
-                </button>
-              )}
-            </div>
-          </div>
 
           {/* Presença Diária */}
           <div>

@@ -1256,7 +1256,7 @@ const App: React.FC = () => {
                      setShowPresetModal(true);
                    }}
                    onExportCsv={isReadOnly ? undefined : handleExportScheduleCsv}
-                   highlightedEmpId={viewerSelectedEmpId || ''}
+                   highlightedEmpId=""
                    onHighlightEmp={(empId) => {
                      setViewerSelectedEmpId(empId);
                    }}
