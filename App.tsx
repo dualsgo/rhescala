@@ -136,8 +136,19 @@ const App: React.FC = () => {
       return next;
     });
   }, []);
-  const [authenticatedEmployeeId, setAuthenticatedEmployeeId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
+  const [contractFilter, setContractFilter] = useState<'all' | 'clt' | 'sazonal'>('all');
+  const [onlyWorkingToday, setOnlyWorkingToday] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleClearFilters = useCallback(() => {
+    setFilter('all');
+    setContractFilter('all');
+    setOnlyWorkingToday(false);
+    setSelectedGroup(null);
+    setSearchQuery('');
+  }, []);
   const [isDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
   const [tacticalDisplayMode, setTacticalDisplayMode] = useLocalPreference<TacticalDisplayMode>('rhescala_tactical_display_mode', 'off');
   const { showDialog } = useDialog();
@@ -1142,6 +1153,15 @@ const App: React.FC = () => {
               isMobileMenuOpen={isMobileMenuOpen}
               onToggleMobileMenu={setIsMobileMenuOpen}
               onExportCsv={handleExportScheduleCsv}
+              contractFilter={contractFilter}
+              onContractFilterChange={setContractFilter}
+              onlyWorkingToday={onlyWorkingToday}
+              onToggleOnlyWorkingToday={() => setOnlyWorkingToday(prev => !prev)}
+              selectedGroup={selectedGroup}
+              onSelectedGroupChange={setSelectedGroup}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              onClearFilters={handleClearFilters}
             />
 
        <main className="flex-1 overflow-y-auto p-2 sm:p-4 pb-24 lg:pb-4">
@@ -1188,6 +1208,14 @@ const App: React.FC = () => {
                    holidayCredits={holidayCredits}
                    filter={filter}
                    onFilterChange={setFilter}
+                   contractFilter={contractFilter}
+                   onContractFilterChange={setContractFilter}
+                   onlyWorkingToday={onlyWorkingToday}
+                   onToggleOnlyWorkingToday={() => setOnlyWorkingToday(prev => !prev)}
+                   selectedGroup={selectedGroup}
+                   onSelectedGroupChange={setSelectedGroup}
+                   searchQuery={searchQuery}
+                   onSearchQueryChange={setSearchQuery}
                    isReadOnly={isReadOnly}
                    isEditable={isEditable}
                    allowRetroactive={allowRetroactive}

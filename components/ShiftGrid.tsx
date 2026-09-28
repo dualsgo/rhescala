@@ -52,6 +52,14 @@ interface ShiftGridProps {
   highlightedEmpId?: string;
   onHighlightEmp?: (empId: string) => void;
   onExportCsv?: () => void;
+  contractFilter?: 'all' | 'clt' | 'sazonal';
+  onContractFilterChange?: (c: 'all' | 'clt' | 'sazonal') => void;
+  onlyWorkingToday?: boolean;
+  onToggleOnlyWorkingToday?: () => void;
+  selectedGroup?: string | null;
+  onSelectedGroupChange?: (g: string | null) => void;
+  searchQuery?: string;
+  onSearchQueryChange?: (q: string) => void;
 }
 
 export const ShiftGrid: React.FC<ShiftGridProps> = ({
@@ -90,16 +98,37 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   highlightedEmpId,
   onHighlightEmp,
   onExportCsv,
+  contractFilter: propContractFilter,
+  onContractFilterChange,
+  onlyWorkingToday: propOnlyWorkingToday,
+  onToggleOnlyWorkingToday,
+  selectedGroup: propSelectedGroup,
+  onSelectedGroupChange,
+  searchQuery: propSearchQuery,
+  onSearchQueryChange,
 }) => {
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
   const [hasScrolled, setHasScrolled] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [internalSelectedGroup, setInternalSelectedGroup] = useState<string | null>(null);
+  const selectedGroup = propSelectedGroup !== undefined ? propSelectedGroup : internalSelectedGroup;
+  const setSelectedGroup = onSelectedGroupChange || setInternalSelectedGroup;
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLegend, setShowLegend] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
-  const [contractFilter, setContractFilter] = useState<'all' | 'clt' | 'sazonal'>('all');
+
+  const [internalContractFilter, setInternalContractFilter] = useState<'all' | 'clt' | 'sazonal'>('all');
+  const contractFilter = propContractFilter !== undefined ? propContractFilter : internalContractFilter;
+  const setContractFilter = onContractFilterChange || setInternalContractFilter;
+
   const [hidePastDays, setHidePastDays] = useState(false);
-  const [onlyWorkingToday, setOnlyWorkingToday] = useState(false);
+
+  const [internalOnlyWorkingToday, setInternalOnlyWorkingToday] = useState(false);
+  const onlyWorkingToday = propOnlyWorkingToday !== undefined ? propOnlyWorkingToday : internalOnlyWorkingToday;
+  const setOnlyWorkingToday = onToggleOnlyWorkingToday ? (val: boolean) => {
+    if (val !== onlyWorkingToday) onToggleOnlyWorkingToday();
+  } : setInternalOnlyWorkingToday;
+
   const [isCompactMode, setIsCompactMode] = useState(false);
   const [focusSelectedDay, setFocusSelectedDay] = useState(false);
   const [cycleBadgesMode, setCycleBadgesMode] = useState<'all' | 'alerts' | 'off'>(() => {
@@ -119,7 +148,9 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   // Mobile Redesign States
   const [mobileViewMode, setMobileViewMode] = useState<'daily' | 'table'>('daily');
   const [showMobileFilterDrawer, setShowMobileFilterDrawer] = useState(false);
-  const [mobileSearchQuery, setMobileSearchQuery] = useState('');
+  const [internalSearchQuery, setInternalSearchQuery] = useState('');
+  const mobileSearchQuery = propSearchQuery !== undefined ? propSearchQuery : internalSearchQuery;
+  const setMobileSearchQuery = onSearchQueryChange || setInternalSearchQuery;
   const mobileCarouselRef = useRef<HTMLDivElement>(null);
 
   const protectedConfig = useMemo(() => normalizeProtectedDaysConfig(protectedDays), [protectedDays]);
@@ -412,8 +443,9 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
         </div>
       </div>
 
-      {/* Top Controls: Desktop Semantic Segmented Groups */}
-      <div className="hidden lg:flex flex-col gap-2.5">
+      {/* Top Controls: Desktop Semantic Segmented Groups (Apenas Gestão) */}
+      {!isReadOnly && (
+        <div className="hidden lg:flex flex-col gap-2.5">
         {/* Linha 1: Contexto Operacional do Dia & Ações Imediatas */}
         <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white dark:bg-zinc-900 p-2 sm:p-2.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-sm w-full">
           {/* Lado Esquerdo: Dia Selecionado & Ações Diárias */}
@@ -614,8 +646,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           </div>
         </div>
 
-        {/* Linha 2: Barra de Filtros & Segmentação da Equipe */}
-        <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50/90 dark:bg-zinc-900/80 p-1.5 sm:p-2 rounded-2xl border border-slate-200/70 dark:border-zinc-800 w-full">
+        {/* Linha 2: Barra de Filtros (Oculta no Desktop - agora unificada no menu superior) */}
+        <div className="hidden">
           {/* Lado Esquerdo: Filtros de Equipe e Presença */}
           <div className="flex flex-wrap items-center gap-2">
             {/* Filtro: Presença Diária */}
@@ -723,6 +755,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           </div>
         )}
       </div>
+      )}
 
       {/* Mobile Day Schedule View (< lg) */}
       <div className="lg:hidden">

@@ -46,8 +46,17 @@ interface HeaderProps {
   isSaving?: boolean;
   isJustSaved?: boolean;
   isMobileMenuOpen?: boolean;
-  onToggleMobileMenu?: (open: boolean) => void;
   onExportCsv?: () => void;
+  onManualSave?: () => void;
+  contractFilter?: 'all' | 'clt' | 'sazonal';
+  onContractFilterChange?: (c: 'all' | 'clt' | 'sazonal') => void;
+  onlyWorkingToday?: boolean;
+  onToggleOnlyWorkingToday?: () => void;
+  selectedGroup?: string | null;
+  onSelectedGroupChange?: (g: string | null) => void;
+  searchQuery?: string;
+  onSearchQueryChange?: (q: string) => void;
+  onClearFilters?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -93,16 +102,33 @@ export const Header: React.FC<HeaderProps> = ({
   isSaving = false,
   isJustSaved = false,
   isMobileMenuOpen,
-  onToggleMobileMenu,
   onExportCsv,
+  contractFilter = 'all',
+  onContractFilterChange,
+  onlyWorkingToday = false,
+  onToggleOnlyWorkingToday,
+  selectedGroup = null,
+  onSelectedGroupChange,
+  searchQuery = '',
+  onSearchQueryChange,
+  onClearFilters,
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);
   const [showActionsModal, setShowActionsModal] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [internalMobileMenu, setInternalMobileMenu] = useState(false);
   const showMobileMenu = isMobileMenuOpen !== undefined ? isMobileMenuOpen : internalMobileMenu;
   const setShowMobileMenu = onToggleMobileMenu || setInternalMobileMenu;
+
+  const activeFiltersCount = (
+    (filter !== 'all' ? 1 : 0) +
+    (contractFilter !== 'all' ? 1 : 0) +
+    (onlyWorkingToday ? 1 : 0) +
+    (selectedGroup ? 1 : 0) +
+    (searchQuery.trim() ? 1 : 0)
+  );
 
   const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
   const currentMonthName = months[currentMY.month];
@@ -141,10 +167,203 @@ export const Header: React.FC<HeaderProps> = ({
 
   const configItems = operationsSections.flatMap(s => s.items);
 
+  const renderFilterDropdown = () => {
+    if (currentView !== 'grid') return null;
+
+    return (
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => {
+            setShowFilterMenu(!showFilterMenu);
+            setShowConfigMenu(false);
+            setShowShareMenu(false);
+            setShowProfileMenu(false);
+          }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all shadow-xs ${
+            activeFiltersCount > 0
+              ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-500 text-orange-600 dark:text-orange-400 font-black shadow-sm'
+              : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-200 hover:border-orange-400'
+          }`}
+          title="Filtros da Escala (Turnos, Presença, Contrato e Período)"
+        >
+          <Icon name="tune" className={`text-sm ${activeFiltersCount > 0 ? 'text-orange-500' : 'text-slate-500 dark:text-slate-400'}`} />
+          <span>Filtros</span>
+          {activeFiltersCount > 0 && (
+            <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-black flex items-center justify-center">
+              {activeFiltersCount}
+            </span>
+          )}
+          <Icon name={showFilterMenu ? 'expand_less' : 'expand_more'} className="text-xs opacity-70" />
+        </button>
+
+        {showFilterMenu && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute top-full right-0 mt-2 w-80 max-w-[90vw] bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-3.5 space-y-3 animate-in fade-in slide-in-from-top-1 duration-150 text-slate-800 dark:text-slate-100"
+          >
+            {/* Header do Menu Filtros */}
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-zinc-800">
+              <div className="flex items-center gap-1.5 font-black text-xs uppercase tracking-wider text-slate-800 dark:text-slate-100">
+                <Icon name="tune" className="text-sm text-orange-500" />
+                <span>Filtros da Grade</span>
+              </div>
+              {activeFiltersCount > 0 && onClearFilters && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClearFilters();
+                  }}
+                  className="text-[10px] font-bold text-rose-500 hover:text-rose-600 hover:underline uppercase tracking-wider"
+                >
+                  Limpar Todos
+                </button>
+              )}
+            </div>
+
+            {/* 1. Busca rápida por nome */}
+            {onSearchQueryChange && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Buscar Colaborador</label>
+                <div className="relative">
+                  <Icon name="search" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs" />
+                  <input
+                    type="text"
+                    value={searchQuery || ''}
+                    onChange={(e) => onSearchQueryChange(e.target.value)}
+                    placeholder="Nome do colaborador..."
+                    className="w-full pl-7 pr-7 py-1.5 bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 rounded-xl text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => onSearchQueryChange('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 2. Período da Grade */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Período da Grade</label>
+              <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-zinc-800/70 p-1 rounded-xl">
+                {[
+                  { id: 'all', label: 'Mês Todo' },
+                  { id: 'sunday', label: 'Domingos' },
+                  { id: 'holiday', label: 'Feriados' }
+                ].map(p => (
+                  <button
+                    type="button"
+                    key={p.id}
+                    onClick={() => onFilterChange(p.id)}
+                    className={`py-1 text-[11px] font-black uppercase rounded-lg transition-all text-center ${
+                      filter === p.id
+                        ? 'bg-orange-500 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. Presença Diária */}
+            {onToggleOnlyWorkingToday && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Presença no Dia</label>
+                <button
+                  type="button"
+                  onClick={onToggleOnlyWorkingToday}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-bold transition-all ${
+                    onlyWorkingToday
+                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-xs'
+                      : 'bg-slate-50 dark:bg-zinc-800/60 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon name={onlyWorkingToday ? 'check_circle' : 'group'} className="text-sm text-emerald-600 dark:text-emerald-400" />
+                    <span>Apenas quem trabalha no dia</span>
+                  </div>
+                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                    onlyWorkingToday ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-slate-300'
+                  }`}>
+                    {onlyWorkingToday ? 'Ativo' : 'Todos'}
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {/* 4. Turnos da Equipe */}
+            {onSelectedGroupChange && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Turno</label>
+                <div className="grid grid-cols-2 gap-1 bg-slate-100 dark:bg-zinc-800/70 p-1 rounded-xl text-center">
+                  <button
+                    type="button"
+                    onClick={() => onSelectedGroupChange(null)}
+                    className={`col-span-2 py-1 text-[11px] font-black uppercase rounded-lg transition-all ${
+                      !selectedGroup ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    }`}
+                  >
+                    Todos os Turnos
+                  </button>
+                  {['Abertura', 'Intermediário', 'Fechamento', 'Folgas/Outros'].map(group => (
+                    <button
+                      type="button"
+                      key={group}
+                      onClick={() => onSelectedGroupChange(group)}
+                      className={`py-1 text-[11px] font-bold rounded-lg transition-all ${
+                        selectedGroup === group ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                    >
+                      {group.split('/')[0]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 5. Tipo de Contrato */}
+            {onContractFilterChange && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Tipo de Contrato</label>
+                <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-zinc-800/70 p-1 rounded-xl">
+                  {[
+                    { id: 'all', label: 'Todos' },
+                    { id: 'clt', label: 'CLT' },
+                    { id: 'sazonal', label: 'Sazonais' }
+                  ].map(c => (
+                    <button
+                      type="button"
+                      key={c.id}
+                      onClick={() => onContractFilterChange(c.id as any)}
+                      className={`py-1 text-[11px] font-black uppercase rounded-lg transition-all text-center ${
+                        contractFilter === c.id
+                          ? 'bg-orange-500 text-white shadow-sm'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <header className="bg-white dark:bg-black border-b border-slate-200 dark:border-zinc-800 sticky top-0 z-50 shadow-sm transition-colors h-14">
       {/* Backdrop overlay to prevent clicking behind open dropdowns */}
-      {(showConfigMenu || showShareMenu || showProfileMenu) && (
+      {(showConfigMenu || showShareMenu || showProfileMenu || showFilterMenu) && (
         <div 
           className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[0.5px]" 
           onClick={(e) => {
@@ -152,6 +371,7 @@ export const Header: React.FC<HeaderProps> = ({
             setShowConfigMenu(false);
             setShowShareMenu(false);
             setShowProfileMenu(false);
+            setShowFilterMenu(false);
           }}
         />
       )}
@@ -353,6 +573,9 @@ export const Header: React.FC<HeaderProps> = ({
               }`} title={`Sincronização Nuvem: ${syncStatus.state}`} />
             </div>
 
+            {/* Menu de Filtros (Colaborador) */}
+            {renderFilterDropdown()}
+
             {/* Botão Acesso Gerencial (Admin) */}
             <button
               type="button"
@@ -378,6 +601,8 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         ) : (
           <div className="hidden lg:flex items-center gap-1.5 sm:gap-2">
+            {/* Menu de Filtros (Gestão) */}
+            {renderFilterDropdown()}
           
           {/* Botão de Salvar Manual com Atalho Ctrl+S */}
           {!isReadOnly && onManualSave && (
