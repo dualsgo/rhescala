@@ -55,7 +55,7 @@ export const CleaningSchedule: React.FC<CleaningScheduleProps> = ({ employees, c
   };
 
   const firstDayOfMonth = new Date(currentMY.year, currentMY.month, 1).getDay();
-  const calendarCells = [];
+  const calendarCells: Array<typeof assignments[number] | null> = [];
   for (let i = 0; i < firstDayOfMonth; i++) calendarCells.push(null);
   assignments.forEach(a => calendarCells.push(a));
 

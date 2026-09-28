@@ -21,7 +21,7 @@ interface MobileDayScheduleViewProps {
   onUpdateShift: (empId: string, dayIdx: number, shift: ShiftType) => void;
   onUpdateEmployeeDailyHour: (empId: string, dayIdx: number, hour: string) => void;
   onUpdateTacticalPosition: (empId: string, dayIdx: number, position: string) => void;
-  onOpenEmployeeCard: (employee: Employee, tab?: string, initialDate?: string) => void;
+  onOpenEmployeeCard: (employee: Employee, tab?: 'mes' | 'atual' | 'pedidos' | 'atestado', initialDate?: string) => void;
   onOpenDayDetail: (dayIdx: number) => void;
   diffs?: any[];
 }
@@ -52,6 +52,7 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
 
   const dayNum = selectedDayIdx + 1;
   const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+  const weekDayName = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][new Date(currentMY.year, currentMY.month, dayNum).getDay()];
   const settings = jornadaSettings || DEFAULT_JORNADA_SETTINGS;
   // Categorize displayed employees for the selected day
   const categorized = React.useMemo(() => {
@@ -340,14 +341,14 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
               <span className="text-sm font-black text-slate-800 dark:text-slate-100 truncate">
                 {shortName}
               </span>
-              {item.emp.contractType === 'sazonal' && (
+              {item.emp.contractType === 'Sazonal' && (
                 <span className="px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 text-[9px] font-black uppercase">
                   Sazonal
                 </span>
               )}
             </div>
             <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate font-medium">
-              {item.emp.role || 'Colaborador'}
+              {item.emp.cargo || 'Colaborador'}
             </p>
           </div>
         </div>

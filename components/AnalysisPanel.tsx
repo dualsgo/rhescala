@@ -673,7 +673,7 @@ const TeamMonthlyCalendar: React.FC<{
                   </span>
                 </div>
                 <div className="space-y-1.5">
-                  {cell.dayData.map((d, i) => (
+                  {cell.dayData && cell.dayData.map((d, i) => (
                     <div key={i} className={`flex items-center justify-between gap-1 p-2 print:p-1 rounded-xl print:rounded-md border ${d.isCourse ? 'bg-teal-50 border-teal-100 text-teal-700' : 'bg-slate-50 border-slate-100/50 text-slate-800'}`}>
                        <span className="text-[9px] print:text-[8px] font-black uppercase truncate">{d.name}</span>
                        <span className={`text-[8px] font-bold shrink-0 ${d.isCourse ? 'mt-[-2px]' : 'hidden'}`}>{d.isCourse && <Icon name="school" className="text-[10px]" />}</span>

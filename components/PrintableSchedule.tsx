@@ -59,7 +59,7 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
     }
     return false;
   }).sort((a, b) => {
-    return parseInt(a.birthday.split('-')[2], 10) - parseInt(b.birthday.split('-')[2], 10);
+    return parseInt(a.birthday!.split('-')[2], 10) - parseInt(b.birthday!.split('-')[2], 10);
   });
 
   // Feriados do mês (Nacionais + Customizados)
@@ -163,7 +163,7 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
               <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Aniversariantes</h4>
               <div className="space-y-0.5 flex-1">
                 {birthdaysInMonth.length > 0 ? birthdaysInMonth.map(e => (
-                  <div key={e.id} className="text-[8px] font-bold uppercase">Dia {e.birthday.split('-')[2]} - {getShortName(e.name, employees)}</div>
+                  <div key={e.id} className="text-[8px] font-bold uppercase">Dia {e.birthday?.split('-')[2]} - {getShortName(e.name, employees)}</div>
                 )) : <div className="text-[8px] font-medium text-center">Nenhum no mês</div>}
               </div>
             </div>

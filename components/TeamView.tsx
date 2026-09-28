@@ -92,7 +92,7 @@ function handleVacationStart(emp: Employee, startDate: string, onUpdate: (id: st
   
   const newShifts = { ...emp.shifts };
   
-  let current = new Date(startObj.getFullYear(), startObj.getMonth(), 1);
+  const current = new Date(startObj.getFullYear(), startObj.getMonth(), 1);
   while (current <= endObj) {
     const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
     const shifts = [...(newShifts[monthKey] || [])];
@@ -128,7 +128,7 @@ function handleAtestadoSave(emp: Employee, startDate: string, durationDays: numb
   const endObj = new Date(endDate + 'T00:00:00');
   
   const newShifts = { ...emp.shifts };
-  let current = new Date(startObj.getFullYear(), startObj.getMonth(), 1);
+  const current = new Date(startObj.getFullYear(), startObj.getMonth(), 1);
   while (current <= endObj) {
     const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
     const shifts = [...(newShifts[monthKey] || [])];

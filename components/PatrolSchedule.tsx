@@ -120,7 +120,7 @@ export const PatrolSchedule: React.FC<PatrolScheduleProps> = ({ employees, curre
   };
 
   const firstDayOfMonth = new Date(currentMY.year, currentMY.month, 1).getDay();
-  const calendarCells = [];
+  const calendarCells: Array<typeof assignments[number] | null> = [];
   for (let i = 0; i < firstDayOfMonth; i++) calendarCells.push(null);
   assignments.forEach(a => calendarCells.push(a));
 

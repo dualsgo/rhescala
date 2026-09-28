@@ -246,7 +246,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       const dow = date.getDay();
       const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
       const isHoliday = holidaySet.has(dateStr);
-      return { num: i + 1, weekday: ['DOM','SEG','TER','QUA','QUI','SEX','SAB'][dow], isSunday: dow === 0, isHoliday, dateStr };
+      const holidayObj = allHolidays.find(h => h.date === dateStr);
+      return { num: i + 1, weekday: ['DOM','SEG','TER','QUA','QUI','SEX','SAB'][dow], isSunday: dow === 0, isHoliday, holidayName: holidayObj?.name, dateStr };
     });
   }, [currentMY, daysInMonth, holidaySet]);
 
@@ -900,7 +901,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                       const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`);
                                       const isSun = date.getDay() === 0;
 
-                                      let options = jornadaSettings.shiftHours.weekday;
+                                      let options: string[];
                                       if (isHol) options = [...jornadaSettings.shiftHours.holiday, ...(jornadaSettings.shiftHours.extended || [])];
                                       else if (isSun) options = jornadaSettings.shiftHours.sunday;
                                       else options = [...jornadaSettings.shiftHours.weekday, ...(jornadaSettings.shiftHours.extended || [])];

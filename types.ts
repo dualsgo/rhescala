@@ -1,5 +1,32 @@
+export type TacticalShiftType = 'P1' | 'PC' | 'P2' | 'P3' | 'P4' | 'ESTQ';
 
-export type ShiftType = 'T' | 'P1' | 'PC' | 'P2' | 'P3' | 'P4' | 'ESTQ' | 'F' | 'FF' | 'FE' | 'C' | 'DO' | 'N/A' | string; // Trabalho (ou Posição), Folga, Feriado/Folga Especial, Férias, Curso, Day Off (Birthday), Not Available
+export type StandardShiftType = 
+  | 'T'    // Trabalho regular
+  | 'F'    // Folga regular semanal
+  | 'FF'   // Folga Feriado compensatória
+  | 'FE'   // Férias
+  | 'AT'   // Atestado médico
+  | 'C'    // Curso (Jovem Aprendiz)
+  | 'DO'   // Day Off (Aniversário)
+  | 'N/A'; // Fora de vigência (antes da admissão ou após demissão)
+
+export type HolidayCreditShiftType = `FF ${string}`;
+
+export type ShiftType = StandardShiftType | TacticalShiftType | HolidayCreditShiftType;
+
+export function isShiftType(val: unknown): val is ShiftType {
+  if (typeof val !== 'string') return false;
+  const standard: string[] = ['T', 'F', 'FF', 'FE', 'AT', 'C', 'DO', 'N/A', 'P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'];
+  return standard.includes(val) || val.startsWith('FF');
+}
+
+export function normalizeShiftCode(raw: unknown): ShiftType {
+  if (typeof raw !== 'string') return 'T';
+  const trimmed = raw.trim();
+  if (isShiftType(trimmed)) return trimmed;
+  if (trimmed.startsWith('FF')) return trimmed as HolidayCreditShiftType;
+  return 'T';
+}
 
 export type TacticalDisplayMode = 'positions' | 'roles' | 'off';
 

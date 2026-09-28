@@ -91,7 +91,7 @@ export const HolidayCreditPanel: React.FC<HolidayCreditPanelProps> = ({
             if (WEEKDAY_NAMES[dow] === emp.preferredDayOff) continue;
             // 4. Must not be currently off or on vacation
             const currentShiftArr = emp.shifts[monthKey] || [];
-            let currentShift = currentShiftArr[d] || 'F';
+            const currentShift = currentShiftArr[d] || 'F';
             const isOnVacation = emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd;
             if (currentShift === 'F' || currentShift === 'FE' || isOnVacation) continue;
 

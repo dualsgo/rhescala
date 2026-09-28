@@ -42,7 +42,7 @@ import { Login } from './components/Login';
 import { PrintableSchedule } from './components/PrintableSchedule';
 import { useHolidayCredits } from './hooks/useHolidayCredits';
 import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay, getNationalHolidays, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth, getTacticalEmoji, getTacticalLabel } from './constants';
-import { Employee, MonthYear, Holiday, JornadaSettings, OfficialScheduleSnapshot, ScheduleDiffItem, TacticalDisplayMode, AuditLogEntry, AuditChangeType, ShiftType } from './types';
+import { Employee, MonthYear, Holiday, JornadaSettings, OfficialScheduleSnapshot, ScheduleDiffItem, TacticalDisplayMode, ProtectedDaysMap, AuditLogEntry, AuditChangeType, ShiftType } from './types';
 import { HelpCenter } from './components/HelpCenter';
 import { JornadaManager } from './components/JornadaManager';
 import { EmployeeScheduleCard } from './components/EmployeeScheduleCard';
@@ -130,6 +130,7 @@ const App: React.FC = () => {
       return next;
     });
   }, []);
+  const [authenticatedEmployeeId, setAuthenticatedEmployeeId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'sunday' | 'holiday' | 'week'>('all');
   const [contractFilter, setContractFilter] = useState<'all' | 'clt' | 'sazonal'>('all');
   const [onlyWorkingToday, setOnlyWorkingToday] = useState(false);
@@ -159,8 +160,6 @@ const App: React.FC = () => {
       setCurrentView('grid');
     }
   }, [isReadOnly, currentView]);
-
-  const {}: any = {};
 
   
 
@@ -453,9 +452,9 @@ const App: React.FC = () => {
 
       const newShifts = { ...emp.shifts };
       Object.keys(newShifts).forEach(key => {
-        const row = newShifts[key];
+        const row = newShifts[key] as unknown as string[];
         if (row && row.includes('ESTOQUE')) {
-          newShifts[key] = row.map(v => v === 'ESTOQUE' ? 'ESTQ' : v);
+          newShifts[key] = row.map(v => (v === 'ESTOQUE' ? 'ESTQ' : v) as ShiftType);
           empChanged = true;
         }
       });
@@ -1090,7 +1089,7 @@ const App: React.FC = () => {
                 setShowPresetModal(true);
               }}
               tacticalDisplayMode={tacticalDisplayMode}
-              onToggleTacticalDisplayMode={setTacticalDisplayMode}
+              onToggleTacticalDisplayMode={(mode) => { if (mode) setTacticalDisplayMode(mode); else setTacticalDisplayMode(prev => prev === "off" ? "positions" : prev === "positions" ? "roles" : "off"); }}
               onManualSave={handleManualSave}
               isSaving={isSaving}
               isJustSaved={isJustSaved}
@@ -1164,7 +1163,7 @@ const App: React.FC = () => {
                    resolvedPositions={selectedDayResolvedPositions}
                    onSelectDay={setSelectedDayIdx}
                    tacticalDisplayMode={tacticalDisplayMode}
-                   onToggleTacticalDisplayMode={setTacticalDisplayMode}
+                   onToggleTacticalDisplayMode={(mode) => { if (mode) setTacticalDisplayMode(mode); else setTacticalDisplayMode(prev => prev === "off" ? "positions" : prev === "positions" ? "roles" : "off"); }}
                    onUpdateShift={handleUpdateShift}
                    onUpdateShifts={handleUpdateShifts}
                    onUpdateEmployeeDailyHour={onUpdateEmployeeDailyHour}
@@ -1188,7 +1187,6 @@ const App: React.FC = () => {
                    }}
                    jornadaSettings={jornadaSettings}
                    diffs={scheduleDiffs}
-                   protectedDays={{}}
                    onOpenPresetForEmployee={(empId) => {
                      setPresetInitialEmpId(empId);
                      setShowPresetModal(true);
@@ -1222,8 +1220,8 @@ const App: React.FC = () => {
                        message: 'Digite sua senha pessoal de colaborador para acessar seu cartão individual e dados de solicitações:'
                      });
 
-                     if (password !== null) {
-                       const entered = password.trim();
+                     if (typeof password === 'string') {
+                        const entered = password.trim();
                        const expected = (emp.password || '1234').trim();
                        if (entered === expected) {
                          setAuthenticatedEmployeeId(emp.id);
@@ -1567,9 +1565,6 @@ const App: React.FC = () => {
                    currentMY={currentMY} 
                    customHolidays={customHolidays} 
                    jornadaSettings={jornadaSettings}
-                   isProtected={{}[selectedDayIdx + 1] !== undefined}
-                   maxFolgas={typeof {}[selectedDayIdx + 1] === 'number' ? ({}[selectedDayIdx + 1] as number) : ({}[selectedDayIdx + 1] as any)?.maxFolgas ?? 0}
-                   onToggleProtectDay={() => handleToggleProtectDay(selectedDayIdx + 1)}
                  />
                </div>
              </div>

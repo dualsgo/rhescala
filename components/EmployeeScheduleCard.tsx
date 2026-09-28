@@ -91,7 +91,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
     const endObj = new Date(endDate + 'T00:00:00');
     
     const newShifts = { ...(employee.shifts || {}) };
-    let current = new Date(startObj.getFullYear(), startObj.getMonth(), 1);
+    const current = new Date(startObj.getFullYear(), startObj.getMonth(), 1);
     
     while (current <= endObj) {
       const mKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;

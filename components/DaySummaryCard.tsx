@@ -82,10 +82,6 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({
   currentMY,
   customHolidays,
   jornadaSettings = DEFAULT_JORNADA_SETTINGS,
-  isProtected = false,
-  maxFolgas = 0,
-  onOpenProtectedModal,
-  onToggleProtectDay,
 }) => {
   const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
   const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;

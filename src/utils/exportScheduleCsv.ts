@@ -111,17 +111,17 @@ export function generateScheduleCsvContent(
         let rawShift = emp.shifts[monthKey]?.[dayIdx] || 'T';
 
         if (emp.hiredAt && d.dateStr < emp.hiredAt) {
-          rawShift = '-';
+          rawShift = 'N/A';
         } else if (emp.firedAt && d.dateStr > emp.firedAt) {
-          rawShift = '-';
+          rawShift = 'N/A';
         } else if (emp.atestadoStart && emp.atestadoEnd && d.dateStr >= emp.atestadoStart && d.dateStr <= emp.atestadoEnd) {
           rawShift = 'AT';
         } else if (emp.vacationStart && emp.vacationEnd && d.dateStr >= emp.vacationStart && d.dateStr <= emp.vacationEnd) {
           rawShift = 'FE';
         }
 
-        let cellValue = 'T';
-        if (rawShift === '-' || rawShift === 'N/A') {
+        let cellValue: string;
+        if (rawShift === 'N/A') {
           cellValue = '-';
         } else if (rawShift === 'AT') {
           cellValue = 'AT';

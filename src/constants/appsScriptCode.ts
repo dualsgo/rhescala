@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-escape */
 export const APPS_SCRIPT_CODE = `/**
  * Backend do Google Apps Script para Gestão de Escala
  * Versão: Multi-Loja (GitHub Pages) com Autenticação Dinâmica
