@@ -46,6 +46,7 @@ interface HeaderProps {
   isSaving?: boolean;
   isJustSaved?: boolean;
   isMobileMenuOpen?: boolean;
+  onToggleMobileMenu?: (open: boolean) => void;
   onExportCsv?: () => void;
   onManualSave?: () => void;
   contractFilter?: 'all' | 'clt' | 'sazonal';
@@ -102,6 +103,7 @@ export const Header: React.FC<HeaderProps> = ({
   isSaving = false,
   isJustSaved = false,
   isMobileMenuOpen,
+  onToggleMobileMenu,
   onExportCsv,
   contractFilter = 'all',
   onContractFilterChange,
