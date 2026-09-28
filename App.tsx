@@ -1010,13 +1010,7 @@ const App: React.FC = () => {
       text += `*Tempo Ocioso:* Caixa abastece o balcão/saquinhos. No salão, foquem em arrumar a seção e abastecer no baixo fluxo.\n`;
 
       // Legenda de Funções no rodapé do texto de Apoio
-      text += `\n📋 *Legenda de Funções:*\n`;
-      text += `🟥 Caixa (P1)\n`;
-      text += `🟧 Pacote (P1)\n`;
-      text += `🟨 Reposição / Organização (P2)\n`;
-      text += `🟩 Vendas / Atendimento (P3)\n`;
-      text += `🟦 Fiscal\n`;
-      text += `📦 Estoque\n`;
+      text += `\n📋 🟥 Caixa · 🟧 Pacote · 🟨 Fiscal · 🟩 Vendas · 🟦 Apoio · 📦 Estoque\n`;
 
       const copied = await copyToClipboard(text);
       if (copied) {

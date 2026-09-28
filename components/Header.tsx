@@ -160,7 +160,7 @@ export const Header: React.FC<HeaderProps> = ({
         
         {/* Left: Brand on Mobile, Nav on Large Screens */}
         <div className="flex items-center gap-2 lg:gap-4">
-          <div className={`flex items-center gap-2 ${isReadOnly ? '' : 'lg:hidden'}`}>
+          <div className="flex items-center gap-2 lg:hidden">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-sm font-black text-xs">
               RH
             </div>

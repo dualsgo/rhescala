@@ -348,13 +348,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
 
     // Legenda de Funções
     if (showLegend && showPositions) {
-      text += `\n📋 *Funções da Equipe:*\n`;
-      text += `🟥 Caixa\n`;
-      text += `🟧 Pacote\n`;
-      text += `🟨 Reposição / Organização\n`;
-      text += `🟩 Vendas / Atendimento\n`;
-      text += `🟦 Fiscal\n`;
-      text += `📦 Estoque\n`;
+      text += `\n📋 🟥 Caixa · 🟧 Pacote · 🟨 Fiscal · 🟩 Vendas · 🟦 Apoio · 📦 Estoque\n`;
     }
 
     return text;
