@@ -39,5 +39,34 @@ describe('ShiftType & Normalization Domain Rules', () => {
     expect(normalizeShiftCode('FF 2026-10-12')).toBe('FF 2026-10-12');
     expect(normalizeShiftCode('unknown')).toBe('T');
     expect(normalizeShiftCode(null)).toBe('T');
+    expect(normalizeShiftCode('  F  ')).toBe('F');
+  });
+
+  describe('Tabela de Casos de Turnos (Entrada -> Saída)', () => {
+    const shiftTestCases = [
+      { input: 'T', isWorking: true, valid: true },
+      { input: 'P1', isWorking: true, valid: true },
+      { input: 'PC', isWorking: true, valid: true },
+      { input: 'P2', isWorking: true, valid: true },
+      { input: 'P3', isWorking: true, valid: true },
+      { input: 'P4', isWorking: true, valid: true },
+      { input: 'ESTQ', isWorking: true, valid: true },
+      { input: 'F', isWorking: false, valid: true },
+      { input: 'FF', isWorking: false, valid: true },
+      { input: 'FF 2026-12-25', isWorking: false, valid: true },
+      { input: 'FE', isWorking: false, valid: true },
+      { input: 'AT', isWorking: false, valid: true },
+      { input: 'C', isWorking: false, valid: true },
+      { input: 'DO', isWorking: false, valid: true },
+      { input: 'N/A', isWorking: false, valid: true },
+      { input: 'DESCONHECIDO', isWorking: false, valid: false }
+    ];
+
+    shiftTestCases.forEach(({ input, isWorking, valid }) => {
+      it(`verifica código '${input}': isWorkingShift=${isWorking}, isShiftType=${valid}`, () => {
+        expect(isWorkingShift(input)).toBe(isWorking);
+        expect(isShiftType(input)).toBe(valid);
+      });
+    });
   });
 });
