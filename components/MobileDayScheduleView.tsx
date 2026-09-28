@@ -14,7 +14,6 @@ interface MobileDayScheduleViewProps {
   isHoliday: boolean;
   holidayName?: string;
   isSunday: boolean;
-  isProtected?: boolean;
   resolvedPositions: Record<string, string>;
   tacticalDisplayMode: 'positions' | 'roles' | 'off';
   isReadOnly: boolean;
@@ -37,7 +36,6 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
   isHoliday,
   holidayName,
   isSunday,
-  isProtected,
   resolvedPositions,
   tacticalDisplayMode,
   isReadOnly,

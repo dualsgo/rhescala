@@ -40,7 +40,6 @@ interface HeaderProps {
   diffCount?: number;
   onOpenDiffModal?: () => void;
   onOpenPresetModal?: () => void;
-  onOptimizePeakWeek?: () => void;
   tacticalDisplayMode?: TacticalDisplayMode;
   onToggleTacticalDisplayMode?: (mode?: TacticalDisplayMode) => void;
   isSaving?: boolean;
@@ -81,7 +80,6 @@ export const Header: React.FC<HeaderProps> = ({
   onApplyFolgas,
   onSortearDomingo,
   onDistributePositions = () => {},
-  onOptimizePeakWeek,
   showNotes,
   onToggleNotes,
   canGoNext,
@@ -1165,7 +1163,6 @@ export const Header: React.FC<HeaderProps> = ({
         onApplyFolgas={onApplyFolgas}
         onSortearDomingo={onSortearDomingo}
         onDistributePositions={onDistributePositions}
-        onOptimizePeakWeek={onOptimizePeakWeek}
         tacticalDisplayMode={tacticalDisplayMode}
         onToggleTacticalDisplayMode={onToggleTacticalDisplayMode}
         onExportCsv={onExportCsv}

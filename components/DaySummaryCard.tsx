@@ -12,10 +12,6 @@ interface DaySummaryCardProps {
   currentMY: MonthYear;
   customHolidays: Holiday[];
   jornadaSettings?: JornadaSettings;
-  isProtected?: boolean;
-  maxFolgas?: number;
-  onOpenProtectedModal?: () => void;
-  onToggleProtectDay?: () => void;
 }
 
 // ─── Lunch interval definitions ───────────────────────────────────────────────
@@ -246,26 +242,7 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({
             </div>
           )}
 
-          {isProtected ? (
-            <button
-              onClick={onOpenProtectedModal || onToggleProtectDay}
-              title="Configurar proteção e limite de folgas deste dia"
-              className="flex items-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[8px] font-black uppercase ring-1 ring-inset ring-amber-300 transition-colors shadow-xs"
-            >
-              <Icon name="shield" className="text-[10px] text-amber-600" /> 
-              {maxFolgas === 0 ? 'PROTEGIDO (100%)' : `PROTEGIDO (MÁX ${maxFolgas}F)`}
-            </button>
-          ) : (
-            (onOpenProtectedModal || onToggleProtectDay) && (
-              <button
-                onClick={onOpenProtectedModal || onToggleProtectDay}
-                title="Clique para proteger este dia e definir limite de folgas"
-                className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full text-[8px] font-bold uppercase transition-colors"
-              >
-                <Icon name="shield" className="text-[10px] text-slate-400" /> PROTEGER
-              </button>
-            )
-          )}
+          
         </div>
       </div>
 

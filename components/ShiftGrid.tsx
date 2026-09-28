@@ -44,9 +44,6 @@ interface ShiftGridProps {
   onOpenEmployeeCard: (emp: Employee, tab?: 'mes' | 'atual' | 'pedidos' | 'atestado', initialDate?: string) => void;
   diffs?: ScheduleDiffItem[];
   onOpenPresetForEmployee?: (empId: string) => void;
-  protectedDays?: ProtectedDaysConfig | number[];
-  onOpenProtectedModal?: () => void;
-  onToggleProtectDay?: (dayNum: number) => void;
   tacticalDisplayMode?: TacticalDisplayMode;
   onToggleTacticalDisplayMode?: (mode?: TacticalDisplayMode) => void;
   highlightedEmpId?: string;
@@ -76,9 +73,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onUpdateEmployeeDailyHour,
   onUpdateTacticalPosition,
   onOpenDayDetail = () => {},
-  protectedDays = {},
-  onOpenProtectedModal,
-  onToggleProtectDay,
   monthNotes = '',
   onUpdateMonthNotes = () => {},
   isReadOnly = false,
@@ -149,8 +143,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   const [mobileViewMode, setMobileViewMode] = useState<'daily' | 'table'>('daily');
   const [showMobileFilterDrawer, setShowMobileFilterDrawer] = useState(false);
   const mobileCarouselRef = useRef<HTMLDivElement>(null);
-
-  const protectedConfig = useMemo(() => normalizeProtectedDaysConfig(protectedDays), [protectedDays]);
 
   const isCurrentMonth = currentMY.year === today.getFullYear() && currentMY.month === today.getMonth();
   const todayDayNum = today.getDate();
@@ -523,23 +515,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               </button>
             )}
 
-            {/* Dias Protegidos (Apenas Admin) */}
-            {!isReadOnly && onOpenProtectedModal && (
-              <button
-                type="button"
-                onClick={onOpenProtectedModal}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap"
-                title="Configurar dias protegidos e limite de folgas"
-              >
-                <Icon name="shield" className="text-xs text-amber-500" />
-                <span>Dias Protegidos</span>
-                {Object.keys(protectedConfig).length > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 text-[9px] font-black">
-                    {Object.keys(protectedConfig).length}
-                  </span>
-                )}
-              </button>
-            )}
+            
           </div>
 
           {/* Lado Direito: Modos de Exibição & Controles */}
@@ -725,7 +701,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             isHoliday={days[selectedDayIdx]?.isHoliday || false}
             holidayName={days[selectedDayIdx]?.holidayName}
             isSunday={days[selectedDayIdx]?.isSunday || false}
-            isProtected={Boolean(protectedConfig[selectedDayIdx + 1])}
             resolvedPositions={resolvedPositions}
             tacticalDisplayMode={tacticalDisplayMode}
             isReadOnly={Boolean(isReadOnly)}
@@ -786,34 +761,17 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   const blurClass = isBlurred ? 'opacity-25 blur-[0.6px] grayscale-[30%] hover:opacity-80 hover:blur-none transition-all duration-200' : '';
                   const focusHighlight = isSelected && focusSelectedDay ? 'bg-orange-500/20 ring-2 ring-orange-500 shadow-md scale-[1.02] z-20' : isSelected ? 'bg-orange-500/10 ring-2 ring-inset ring-orange-500/30' : '';
 
-                  const isDayProtected = protectedConfig[d.num] !== undefined;
-                  const maxFolgas = isDayProtected ? protectedConfig[d.num] : 0;
-
                   return (
                     <th 
                       key={d.num} 
                       onClick={() => isSelected ? onOpenDayDetail(dayIdx) : onSelectDay(dayIdx)}
-                      className={`p-3 border-b border-slate-200 dark:border-zinc-800 min-w-[60px] cursor-pointer transition-all ${dimClass} ${blurClass} ${focusHighlight ? focusHighlight : d.isSunday ? 'bg-rose-50 dark:bg-rose-950/40' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-950/40' : isDayProtected ? 'bg-amber-50/50 dark:bg-amber-950/30' : ''}`}
+                      className={`p-3 border-b border-slate-200 dark:border-zinc-800 min-w-[60px] cursor-pointer transition-all ${dimClass} ${blurClass} ${focusHighlight ? focusHighlight : d.isSunday ? 'bg-rose-50 dark:bg-rose-950/40' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-950/40' : ''}`}
                     >
                       <div className="flex flex-col items-center gap-1 relative">
                         <span className="text-[9px] font-black text-slate-400 uppercase">{d.weekday}</span>
                         <div className="flex items-center gap-1">
-                          <span className={`text-sm font-black ${d.isSunday ? 'text-rose-600' : isDayProtected ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-slate-100'}`}>{d.num}</span>
-                          {isDayProtected && (
-                            <span 
-                              onClick={(e) => {
-                                if (onOpenProtectedModal) {
-                                  e.stopPropagation();
-                                  onOpenProtectedModal();
-                                }
-                              }}
-                              title={`Dia Protegido: ${maxFolgas === 0 ? '100% da Equipe (0 Folgas)' : `Máximo de ${maxFolgas} folgas`}`} 
-                              className="text-amber-500 hover:text-amber-600 flex items-center gap-0.5"
-                            >
-                              <Icon name="shield" className="text-xs" />
-                              {maxFolgas > 0 && <span className="text-[7px] font-black">{maxFolgas}F</span>}
-                            </span>
-                          )}
+                          <span className={`text-sm font-black ${d.isSunday ? 'text-rose-600' : 'text-slate-900 dark:text-slate-100'}`}>{d.num}</span>
+                          
                         </div>
                         <div className="mt-1 text-[8px] font-bold text-slate-400 flex items-center gap-1">
                            <span>T:{stats.total}</span>

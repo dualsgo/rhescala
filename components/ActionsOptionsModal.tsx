@@ -15,7 +15,6 @@ interface ActionsOptionsModalProps {
   onApplyFolgas: () => void;
   onSortearDomingo: () => void;
   onDistributePositions?: () => void;
-  onOptimizePeakWeek?: () => void;
   tacticalDisplayMode?: TacticalDisplayMode;
   onToggleTacticalDisplayMode?: (mode?: TacticalDisplayMode) => void;
   onExportCsv?: () => void;
@@ -34,7 +33,6 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
   onApplyFolgas,
   onSortearDomingo,
   onDistributePositions,
-  onOptimizePeakWeek,
   tacticalDisplayMode = 'off',
   onToggleTacticalDisplayMode,
   onExportCsv,
@@ -247,30 +245,7 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
 
 
 
-              {/* Dias Protegidos & Limite de Folgas */}
-              {onOptimizePeakWeek && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    onOptimizePeakWeek();
-                  }}
-                  className="w-full flex items-center gap-3 p-3 rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 hover:bg-amber-100/60 dark:hover:bg-amber-950/40 text-left transition-all group"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-sm shrink-0 group-hover:scale-105 transition-transform">
-                    <Icon name={currentMY.month === 9 ? 'celebration' : 'shield'} className="text-xl" />
-                  </div>
-                  <div className="flex flex-col flex-1 min-w-0">
-                    <span className="text-xs font-black uppercase text-amber-700 dark:text-amber-300">
-                      Dias Protegidos & Limite de Folgas
-                    </span>
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                      Definir teto de folgas em datas sazonais e de alta demanda
-                    </span>
-                  </div>
-                  <Icon name="chevron_right" className="text-amber-400 group-hover:translate-x-0.5 transition-transform shrink-0 text-base" />
-                </button>
-              )}
+              
 
               {/* Exportar Escala em CSV */}
               {onExportCsv && (
