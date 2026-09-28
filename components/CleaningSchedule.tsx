@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { Employee, MonthYear, Holiday } from '../types';
 import { getCleaningSchedule } from '../hooks/useScheduleEngine';
-import { buildHolidaySet } from '../constants';
+import { buildHolidaySet, getShortName } from '../constants';
 import { Icon } from './Icon';
 import { toPng } from 'html-to-image';
 
@@ -29,7 +29,9 @@ export const CleaningSchedule: React.FC<CleaningScheduleProps> = ({ employees, c
       const isSunday = date.getDay() === 0;
       const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(item.day).padStart(2, '0')}`;
       const isHoliday = holidaySet.has(dateStr);
-      return { day: item.day, empName: item.empName, isSunday, isHoliday };
+      const emp = employees.find(e => e.id === item.empId);
+      const empName = emp ? getShortName(emp.name, employees) : item.empName;
+      return { day: item.day, empName, isSunday, isHoliday };
     });
   }, [employees, currentMY, customHolidays, deletedNationalHolidays, holidaySet]);
 

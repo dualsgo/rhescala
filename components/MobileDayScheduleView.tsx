@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Employee, MonthYear, ShiftType, JornadaSettings } from '../types';
 import { Icon } from './Icon';
 import { getShortName, isEmployeeActiveOnDay, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS } from '../constants';
-import { getShiftClassification, isWorkingShift } from '../hooks/useScheduleEngine';
+import { getShiftClassification, isWorkingShift } from '../src/engine/shifts/shift-predicates';
 
 interface MobileDayScheduleViewProps {
   employees: Employee[];

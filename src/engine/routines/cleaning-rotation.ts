@@ -2,9 +2,8 @@ import { Employee, MonthYear, Holiday } from '../../../types';
 import {
     isEmployeeActiveInMonth,
     isEmployeeActiveOnDay,
-    buildHolidaySet,
-    getShortName
-} from '../../../constants';
+    buildHolidaySet
+} from '../config/schedule-constants';
 import { isWorkingShift } from '../clt/clt-rules';
 
 /**
@@ -53,7 +52,7 @@ export function getCleaningSchedule(
         });
 
         const selected = workingToday[0];
-        schedule.push({ day: d + 1, empName: getShortName(selected.name, employees), empId: selected.id });
+        schedule.push({ day: d + 1, empName: selected.name, empId: selected.id });
 
         cleanCounts.set(selected.id, (cleanCounts.get(selected.id) || 0) + 1);
         lastCleanDay.set(selected.id, d);

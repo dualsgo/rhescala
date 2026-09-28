@@ -1,6 +1,6 @@
-import { Employee, ShiftType, Holiday, JornadaSettings } from '../../../types';
-import { DEFAULT_JORNADA_SETTINGS } from '../../../constants';
+import { DEFAULT_JORNADA_SETTINGS } from '../config/schedule-constants';
 import { getPrevMonthWorkStreak } from '../clt/clt-rules';
+import { isProtectedShift } from '../clt/legal-overrides';
 
 /**
  * Otimiza a semana de pico do Dia das Crianças (8 a 12 de Outubro) para concentrar
@@ -47,10 +47,7 @@ export function optimizeOctoberPeak(
         const maxStreak = is5x2 ? 5 : 6;
 
         // Status protegidos que nunca são sobrescritos (Férias, Atestado, Aniversário, Não-admitido)
-        const isProtected = (idx: number) => {
-            const s = shifts[idx];
-            return ['FE', 'AT', 'DO', 'N/A'].includes(s);
-        };
+        const isProtected = (idx: number) => isProtectedShift(shifts[idx]);
 
         // 1. Limpa folgas comuns 'F' nos 5 dias de pico (8 a 12) -> presença 100%!
         criticalIndices.forEach(idx => {
@@ -192,10 +189,7 @@ export function optimizeDecemberPeak(
         const is5x2 = emp.jornada === '5x2';
         const maxStreak = is5x2 ? 5 : 6;
 
-        const isProtected = (idx: number) => {
-            const s = shifts[idx];
-            return ['FE', 'AT', 'DO', 'N/A'].includes(s);
-        };
+        const isProtected = (idx: number) => isProtectedShift(shifts[idx]);
 
         // 1. Limpa folgas comuns 'F' nos 5 dias de pico do Natal (20 a 24)
         criticalIndices.forEach(idx => {

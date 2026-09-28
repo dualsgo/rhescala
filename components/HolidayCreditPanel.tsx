@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { Employee, MonthYear, ShiftType, Holiday } from '../types';
 import { Icon } from './Icon';
 import { buildHolidaySet, isEmployeeActiveInMonth } from '../constants';
-import { isWorkingShift } from '../hooks/useScheduleEngine';
+import { isWorkingShift } from '../src/engine/shifts/shift-predicates';
 
 
 interface HolidayCreditPanelProps {

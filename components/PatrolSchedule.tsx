@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Employee, MonthYear, Holiday, JornadaSettings } from '../types';
-import { isWorkingShift, getShiftClassification } from '../hooks/useScheduleEngine';
+import { isWorkingShift, getShiftClassification } from '../src/engine/shifts/shift-predicates';
 import { buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth, isEmployeeActiveOnDay } from '../constants';
 import { Icon } from './Icon';
 import { toPng } from 'html-to-image';

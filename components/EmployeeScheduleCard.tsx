@@ -3,7 +3,7 @@ import React from 'react';
 import { Employee, MonthYear, Holiday, ShiftType, AuditLogEntry } from '../types';
 import { Icon } from './Icon';
 import { HolidayCredit } from '../hooks/useHolidayCredits';
-import { isWorkingShift } from '../hooks/useScheduleEngine';
+import { isWorkingShift } from '../src/engine/shifts/shift-predicates';
 import { buildHolidaySet, getShortName, isEmployeeActiveInMonth } from '../constants';
 
 interface EmployeeScheduleCardProps {

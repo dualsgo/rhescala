@@ -1,34 +1,9 @@
 import { Employee, ShiftType, Holiday, JornadaSettings, MonthYear } from '../../../types';
-import { DEFAULT_JORNADA_SETTINGS, getDefaultHourForDay, buildHolidaySet } from '../../../constants';
+import { DEFAULT_JORNADA_SETTINGS, getDefaultHourForDay, buildHolidaySet } from '../config/schedule-constants';
 import { isWorkingShift } from '../clt/clt-rules';
 
-export function getShiftClassification(
-  hourRange: string,
-  isSunday?: boolean,
-  settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
-): 'Abertura' | 'Intermediário' | 'Fechamento' | 'N/A' {
-  if (!hourRange || hourRange === 'OFF' || hourRange === 'FOLGA') return 'N/A';
-
-  // Apprentice is always considered 'Abertura' for positioning purposes
-  if (settings.shiftHours.apprentice.includes(hourRange)) return 'Abertura';
-
-  const match = hourRange.match(/^(\d{1,2})[h:]/);
-  if (!match) return 'Intermediário';
-  const startHour = parseInt(match[1]);
-
-  if (isSunday) {
-    if (startHour <= 12) return 'Abertura';
-    return 'Fechamento';
-  }
-
-  // Novas regras baseadas na solicitação:
-  // 10h as 18h20 abertura
-  // 12h as 20h20 intermediario
-  // 13h40 as 22h fechamento
-  if (startHour <= 10) return 'Abertura';
-  if (startHour >= 13) return 'Fechamento';
-  return 'Intermediário';
-}
+import { getShiftClassification } from '../shifts/shift-predicates';
+export { getShiftClassification };
 
 export function resolveTacticalDay(
   activeEmps: Employee[],

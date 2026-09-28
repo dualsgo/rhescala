@@ -3,7 +3,8 @@ import React, { useMemo } from 'react';
 import { Icon } from './Icon';
 import { Employee, MonthYear, Holiday, JornadaSettings } from '../types';
 import { buildHolidaySet, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth } from '../constants';
-import { isWorkingShift, calculateLunches } from '../hooks/useScheduleEngine';
+import { isWorkingShift } from '../src/engine/shifts/shift-predicates';
+import { calculateLunches } from '../hooks/useScheduleEngine';
 
 
 interface DaySummaryCardProps {

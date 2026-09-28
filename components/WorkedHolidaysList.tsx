@@ -4,7 +4,7 @@ import { buildHolidaySet, getNationalHolidays, isEmployeeActiveInMonth } from '.
 import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { Icon } from './Icon';
 import { useDialog } from '../contexts/DialogContext';
-import { isWorkingShift } from '../hooks/useScheduleEngine';
+import { isWorkingShift } from '../src/engine/shifts/shift-predicates';
 import { copyToClipboard } from '../src/utils/clipboard';
 
 interface WorkedHolidaysListProps {

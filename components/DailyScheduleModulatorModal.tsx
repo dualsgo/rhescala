@@ -11,10 +11,9 @@ import {
   getTacticalLabel, 
   isEmployeeActiveInMonth 
 } from '../constants';
+import { isWorkingShift, getShiftClassification } from '../src/engine/shifts/shift-predicates';
 import { 
   calculateLunches, 
-  getShiftClassification, 
-  isWorkingShift, 
   resolveTacticalDay 
 } from '../hooks/useScheduleEngine';
 

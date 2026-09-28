@@ -1,5 +1,5 @@
 import { Employee, JornadaSettings, ProtectedDayDetail } from '../../../types';
-import { DEFAULT_JORNADA_SETTINGS, normalizeProtectedDaysDetails } from '../../../constants';
+import { DEFAULT_JORNADA_SETTINGS, normalizeProtectedDaysDetails } from '../config/schedule-constants';
 import { isWorkingShift, isBirthday } from './clt-rules';
 
 /**

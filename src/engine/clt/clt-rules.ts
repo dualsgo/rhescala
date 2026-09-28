@@ -1,17 +1,13 @@
 import { Employee, ShiftType, Holiday, JornadaSettings } from '../../../types';
-import { DEFAULT_JORNADA_SETTINGS, APPRENTICE_WORK_PERIOD, buildHolidaySet } from '../../../constants';
+import { DEFAULT_JORNADA_SETTINGS, APPRENTICE_WORK_PERIOD, buildHolidaySet } from '../config/schedule-constants';
 
 export const WEEKDAY_NAMES = [
   'Domingo', 'Segunda', 'Terça', 'Quarta',
   'Quinta', 'Sexta', 'Sábado',
 ];
 
-export function isWorkingShift(s: string | undefined): boolean {
-  if (!s) return false;
-  if (s === 'T') return true;
-  if (['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].includes(s)) return true;
-  return false;
-}
+import { isWorkingShift } from '../shifts/shift-predicates';
+export { isWorkingShift };
 
 export function isBirthday(emp: Employee, dateStr: string): boolean {
   if (!emp.birthday) return false;

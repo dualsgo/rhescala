@@ -9,16 +9,16 @@ import {
     DEFAULT_JORNADA_SETTINGS,
     buildHolidaySet,
     normalizeProtectedDaysDetails
-} from '../../../constants';
+} from '../config/schedule-constants';
 import {
     WEEKDAY_NAMES,
-    isBirthday,
     getPrevMonthWorkStreak
 } from '../clt/clt-rules';
 import {
     getPrevMonthConsecutive,
     buildSundayAssignments
 } from '../clt/sunday-rotation';
+import { getLegalOverrideForDay } from '../clt/legal-overrides';
 
 /**
  * Otimiza a escala para QUALQUER conjunto customizado de Dias Protegidos / Períodos Sazonais.
@@ -99,14 +99,8 @@ export function optimizeProtectedDays(
     }
 
     // Helper para verificar status legal/especial
-    const getLegalOverride = (emp: Employee, dayIdx: number): ShiftType | null => {
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
-        if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) return 'FE';
-        if (emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd) return 'AT';
-        if (isBirthday(emp, dateStr)) return 'DO';
-        if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) return 'N/A';
-        return null;
-    };
+    const getLegalOverride = (emp: Employee, dayIdx: number): ShiftType | null =>
+        getLegalOverrideForDay(emp, year, month, dayIdx);
 
     // 1. Processa Jovens Aprendizes conforme legislação estrita
     activeApprentices.forEach(app => {
