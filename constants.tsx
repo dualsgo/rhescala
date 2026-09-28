@@ -186,7 +186,7 @@ export const PLACEHOLDER_EMPLOYEE: Employee = {
   hiredAt: new Date().toISOString().split('T')[0],
 };
 
-export {
+import {
   APPRENTICE_WORK_PERIOD,
   SHIFT_HOURS,
   DEFAULT_JORNADA_SETTINGS,
@@ -200,6 +200,21 @@ export {
   getNationalHolidays,
   buildHolidaySet,
 } from './src/engine/config/schedule-constants';
+
+export {
+  APPRENTICE_WORK_PERIOD,
+  SHIFT_HOURS,
+  DEFAULT_JORNADA_SETTINGS,
+  getDefaultProtectedDays,
+  getSeasonalPresetProtectedDays,
+  normalizeProtectedDaysDetails,
+  normalizeProtectedDaysConfig,
+  getDefaultHourForDay,
+  isEmployeeActiveInMonth,
+  isEmployeeActiveOnDay,
+  getNationalHolidays,
+  buildHolidaySet,
+};
 
 
 /**
