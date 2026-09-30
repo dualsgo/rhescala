@@ -131,12 +131,15 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                                         lastCloudValue.current = dataStr;
                                         isDirty.current = false;
                                         updateGlobalSync('synced', key, 'Nuvem Restaurada', false);
-                                        try { new BroadcastChannel(`sync_${key}`).postMessage(cloudData); } catch (e) { }
+                                        try {
+                                            window.localStorage.setItem(key, dataStr);
+                                            new BroadcastChannel(`sync_${key}`).postMessage(cloudData);
+                                        } catch (e) { }
                                     } else {
+                                        // Usuário optou por manter as alterações locais
                                         lastCloudValue.current = dataStr; 
                                         isDirty.current = true;
-                                        setStoredValue(prev => (Array.isArray(prev) ? [...prev] : {...prev}) as any); 
-                                        updateGlobalSync('syncing', key, 'Salvando Alterações...', true);
+                                        updateGlobalSync('error', key, 'Alterações Locais Preservadas', false);
                                     }
                                 }
                             }
@@ -154,7 +157,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                     } catch (e) { }
                     updateGlobalSync('synced', key, force ? 'Dados Atualizados' : 'Salvo na Planilha', !force);
                 } else {
-                    updateGlobalSync('synced', key, 'Salvo na Planilha', !force);
+                    updateGlobalSync(isDirty.current ? 'error' : 'synced', key, isDirty.current ? 'Alterações Locais Pendentes' : 'Salvo na Planilha', !force);
                 }
             } else {
                 // Caso cloudData seja null (planilha nova)

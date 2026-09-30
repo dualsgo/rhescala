@@ -20,9 +20,6 @@ import {
 } from './hooks/useScheduleEngine';
 
 import { Header } from './components/Header';
-import { copyToClipboard } from './src/utils/clipboard';
-import { downloadScheduleCsv } from './src/utils/exportScheduleCsv';
-import { toPng } from 'html-to-image';
 
 import { ShiftGrid } from './components/ShiftGrid';
 import { TeamView } from './components/TeamView';
@@ -58,7 +55,8 @@ import { DailyScheduleModulatorModal } from './components/DailyScheduleModulator
 import { AuditJustificationModal, AuditImpactPreview } from './components/AuditJustificationModal';
 import { MobileNavBar } from './components/MobileNavBar';
 import { migrateLegacyEmployeeData } from './src/services/scheduleMigrationService';
-import { generateOperationalNotice } from './src/services/operationalNoticeService';
+import { useScheduleExport } from './hooks/useScheduleExport';
+import { useHolidayHandlers } from './hooks/useHolidayHandlers';
 import { useScheduleCommands } from './hooks/useScheduleCommands';
 import { STORAGE_KEYS } from './src/infrastructure/storage/storageKeys';
 import { getAuthSession, setAuthSession, AuthSession } from './src/infrastructure/storage/sessionAuthAdapter';
@@ -239,6 +237,47 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleManualSave, auth.role]);
 
+  // Listeners globais para eventos de conflito e falha persistente de sincronização
+  useEffect(() => {
+    const handleSyncConflict = async (event: Event) => {
+      const customEvent = event as CustomEvent<{ key: string; resolve: (useCloud: boolean) => void }>;
+      if (!customEvent.detail || typeof customEvent.detail.resolve !== 'function') return;
+
+      const { key, resolve } = customEvent.detail;
+      const keyLabel = key === STORAGE_KEYS.employees ? 'Colaboradores / Escala' : key;
+
+      const userChoseCloud = await showDialog({
+        title: 'Conflito de Sincronização',
+        message: `Os dados de "${keyLabel}" foram alterados na planilha remota enquanto você possuía modificações locais pendentes. Deseja carregar a versão da planilha (descartando as alterações locais deste computador) ou manter as alterações locais?`,
+        type: 'confirm',
+        confirmText: 'Usar Dados da Planilha',
+        cancelText: 'Manter Alterações Locais'
+      });
+
+      resolve(Boolean(userChoseCloud));
+    };
+
+    const handleSyncPersistentError = (event: Event) => {
+      const customEvent = event as CustomEvent<{ key: string; data?: unknown }>;
+      const key = customEvent.detail?.key || 'dados';
+      const keyLabel = key === STORAGE_KEYS.employees ? 'Colaboradores / Escala' : key;
+
+      showDialog({
+        title: 'Falha na Sincronização em Nuvem',
+        message: `Não foi possível enviar os dados de "${keyLabel}" para a planilha após várias tentativas. As alterações continuam salvas com segurança no cache local deste computador. Verifique a conexão com a internet ou realize um backup no Painel de Dados.`,
+        type: 'alert'
+      });
+    };
+
+    window.addEventListener('sync-conflict', handleSyncConflict);
+    window.addEventListener('sync-persistent-error', handleSyncPersistentError);
+
+    return () => {
+      window.removeEventListener('sync-conflict', handleSyncConflict);
+      window.removeEventListener('sync-persistent-error', handleSyncPersistentError);
+    };
+  }, [showDialog]);
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleGoToToday = useCallback(() => {
@@ -363,27 +402,10 @@ const App: React.FC = () => {
     setEmployees(prev => [...prev.filter(e => e.id !== PLACEHOLDER_EMPLOYEE_ID), newEmp]);
   }, [setEmployees]);
 
-  const onAddHoliday = useCallback((h: Omit<Holiday, 'id'>) => {
-    const newHoliday: Holiday = { ...h, id: Math.random().toString(36).substring(2, 9) };
-    setCustomHolidays(prev => [...prev, newHoliday]);
-  }, [setCustomHolidays]);
-
-  const onRemoveHoliday = useCallback((id: string) => {
-    if (id.startsWith('national-')) {
-      setDeletedNationalHolidays(prev => [...prev, id]);
-    } else {
-      setCustomHolidays(prev => prev.filter(h => h.id !== id));
-    }
-  }, [setCustomHolidays, setDeletedNationalHolidays]);
-
-  const onEditHoliday = useCallback((id: string, updatedHoliday: Omit<Holiday, 'id'>) => {
-    if (id.startsWith('national-')) {
-      setDeletedNationalHolidays(prev => [...prev, id]);
-      onAddHoliday(updatedHoliday);
-    } else {
-      setCustomHolidays(prev => prev.map(h => h.id === id ? { ...h, ...updatedHoliday } : h));
-    }
-  }, [setDeletedNationalHolidays, onAddHoliday, setCustomHolidays]);
+  const { onAddHoliday, onRemoveHoliday, onEditHoliday } = useHolidayHandlers({
+    setCustomHolidays,
+    setDeletedNationalHolidays,
+  });
 
   const [isEditable, setIsEditable] = useState(false);
   const [allowRetroactive, setAllowRetroactive] = useState(false);
@@ -443,6 +465,19 @@ const App: React.FC = () => {
     jornadaSettings,
   });
 
+  const {
+    handleShareApoioWhatsApp,
+    handleExportScheduleCsv,
+    handleExportDayImage,
+  } = useScheduleExport({
+    employees,
+    currentMY,
+    jornadaSettings: activeJornadaSettings,
+    customHolidays,
+    deletedNationalHolidays,
+    tacticalDisplayMode,
+    showDialog,
+  });
 
   const handleApplyGranularPresets = useCallback((options: {
     scope: 'all' | 'single';
@@ -560,54 +595,7 @@ const App: React.FC = () => {
     setWaModal({ show: true, dayIdx });
   }, []);
 
-  const handleShareApoioWhatsApp = useCallback(async (dayIdx: number) => {
-    try {
-      const text = generateOperationalNotice({
-        dayIdx,
-        currentMY,
-        employees,
-        customHolidays,
-        deletedNationalHolidays,
-        tacticalDisplayMode,
-        jornadaSettings: activeJornadaSettings,
-      });
 
-      const copied = await copyToClipboard(text);
-      if (copied) {
-        await showDialog({
-          title: 'Apoio Operacional Copiado!',
-          message: 'O roteiro de apoio operacional e funções diárias foi copiado para a área de transferência. Você já pode colá-lo no grupo do WhatsApp da loja.'
-        });
-      } else {
-        await showDialog({
-          title: 'Cópia Manual',
-          message: 'Não foi possível copiar automaticamente para a área de transferência.',
-          type: 'alert'
-        });
-      }
-    } catch (err: any) {
-      console.error('Erro ao gerar apoio para WhatsApp:', err);
-      showDialog({
-        title: 'Erro de Geração',
-        message: `Ocorreu um erro ao gerar o texto de apoio: ${err?.message || String(err)}`,
-        type: 'alert'
-      });
-    }
-  }, [currentMY, employees, customHolidays, deletedNationalHolidays, tacticalDisplayMode, activeJornadaSettings, showDialog]);
-
-
-  const handleExportScheduleCsv = useCallback(() => {
-    try {
-      downloadScheduleCsv(employees, currentMY, activeJornadaSettings);
-    } catch (err: any) {
-      console.error('Erro ao exportar escala em CSV:', err);
-      showDialog({
-        title: 'Erro de Exportação',
-        message: `Não foi possível gerar o arquivo CSV: ${err?.message || String(err)}`,
-        type: 'alert'
-      });
-    }
-  }, [employees, currentMY, activeJornadaSettings, showDialog]);
 
   const handleCreateMonth = () => {
     const nextDate = new Date(currentMY.year, currentMY.month + 1, 1);
@@ -1127,26 +1115,7 @@ const App: React.FC = () => {
                </div>
                <div className="flex items-center gap-2">
                  <button 
-                   onClick={async () => {
-                     const el = document.getElementById('day-detail-screenshot');
-                     if (el) {
-                       const dataUrl = await toPng(el, { 
-                         backgroundColor: '#ffffff', 
-                         pixelRatio: 2,
-                         style: { 
-                           padding: '30px', 
-                           borderRadius: '32px',
-                           transform: 'scale(0.9)',
-                           transformOrigin: 'center'
-                         } 
-                       });
-                       const link = document.createElement('a');
-                       const date = `${String(selectedDayIdx + 1).padStart(2, '0')}-${String(currentMY.month + 1).padStart(2, '0')}`;
-                       link.download = `escala-dia-${date}.png`;
-                       link.href = dataUrl;
-                       link.click();
-                     }
-                   }}
+                   onClick={() => handleExportDayImage('day-detail-screenshot', selectedDayIdx)}
                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md active:scale-95"
                    title="Baixar Imagem"
                  >
