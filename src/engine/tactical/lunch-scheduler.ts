@@ -1,4 +1,5 @@
 import { DEFAULT_JORNADA_SETTINGS } from '../config/schedule-constants';
+import { JornadaSettings } from '../../../types';
 
 export function calculateLunches(
     members: any[],

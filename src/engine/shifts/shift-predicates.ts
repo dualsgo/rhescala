@@ -1,4 +1,5 @@
 import { DEFAULT_JORNADA_SETTINGS } from '../config/schedule-constants';
+import { JornadaSettings } from '../../../types';
 
 export const WORKING_TACTICAL_CODES = ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'] as const;
 

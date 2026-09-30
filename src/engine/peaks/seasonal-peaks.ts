@@ -1,6 +1,7 @@
 import { DEFAULT_JORNADA_SETTINGS } from '../config/schedule-constants';
 import { getPrevMonthWorkStreak } from '../clt/clt-rules';
 import { isProtectedShift } from '../clt/legal-overrides';
+import { Employee, Holiday, JornadaSettings, ShiftType } from '../../../types';
 
 /**
  * Otimiza a semana de pico do Dia das Crianças (8 a 12 de Outubro) para concentrar
