@@ -9,24 +9,7 @@ const GLOBAL_SYNC_STATUS: SyncStatus = {
     history: []
 };
 
-// Global lock to prevent concurrent syncs
-let isGlobalSyncing = false;
-const syncQueue: Array<() => Promise<void>> = [];
-
-async function processSyncQueue() {
-    if (isGlobalSyncing || syncQueue.length === 0) return;
-    isGlobalSyncing = true;
-    const nextSync = syncQueue.shift();
-    if (nextSync) {
-        try {
-            await nextSync();
-        } finally {
-            isGlobalSyncing = false;
-            // Process next after a small gap
-            setTimeout(processSyncQueue, 100);
-        }
-    }
-}
+import { globalSyncQueue } from '../src/infrastructure/sync/syncQueue';
 
 function updateGlobalSync(state: SyncState, key: string, message?: string, isSilent = false) {
     GLOBAL_SYNC_STATUS.state = state;
@@ -224,8 +207,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                         retryCount.current++;
                         updateGlobalSync('error', key, `Tentando Salvar... (${retryCount.current}/2)`, false);
                         setTimeout(() => {
-                            syncQueue.push(syncTask);
-                            processSyncQueue();
+                            globalSyncQueue.enqueue(syncTask);
                         }, 5000);
                     } else {
                         updateGlobalSync('error', key, 'Salvo Apenas Localmente', false);
@@ -239,8 +221,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                 }
             };
 
-            syncQueue.push(syncTask);
-            processSyncQueue();
+            globalSyncQueue.enqueue(syncTask);
         }, 2500);
 
         return () => clearTimeout(timer);

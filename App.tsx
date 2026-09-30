@@ -23,7 +23,6 @@ import { Header } from './components/Header';
 import { copyToClipboard } from './src/utils/clipboard';
 import { downloadScheduleCsv } from './src/utils/exportScheduleCsv';
 import { toPng } from 'html-to-image';
-import { apiStore, getConfiguredApiUrl } from './src/gas-api';
 
 import { ShiftGrid } from './components/ShiftGrid';
 import { TeamView } from './components/TeamView';
@@ -61,8 +60,9 @@ import { MobileNavBar } from './components/MobileNavBar';
 import { migrateLegacyEmployeeData } from './src/services/scheduleMigrationService';
 import { generateOperationalNotice } from './src/services/operationalNoticeService';
 import { useScheduleCommands } from './hooks/useScheduleCommands';
-import { STORAGE_KEYS, BROADCAST_CHANNELS } from './src/infrastructure/storage/storageKeys';
+import { STORAGE_KEYS } from './src/infrastructure/storage/storageKeys';
 import { getAuthSession, setAuthSession, AuthSession } from './src/infrastructure/storage/sessionAuthAdapter';
+import { executeManualSave } from './src/infrastructure/storage/persistenceCoordinator';
 
 const App: React.FC = () => {
   const [employees, setEmployees] = useLocalStorage<Employee[]>(STORAGE_KEYS.employees, [PLACEHOLDER_EMPLOYEE]);
@@ -173,41 +173,19 @@ const App: React.FC = () => {
     setIsSaving(true);
 
     try {
-      // 1. Gravação síncrona imediata no localStorage para proteção instantânea contra perda
-      window.localStorage.setItem(STORAGE_KEYS.employees, JSON.stringify(employees));
-      window.localStorage.setItem(STORAGE_KEYS.jornadaSettings, JSON.stringify(jornadaSettings));
-      window.localStorage.setItem(STORAGE_KEYS.customHolidays, JSON.stringify(customHolidays));
-      window.localStorage.setItem(STORAGE_KEYS.deletedNationalHolidays, JSON.stringify(deletedNationalHolidays));
-      window.localStorage.setItem(STORAGE_KEYS.monthNotes, JSON.stringify(monthNotes));
-      window.localStorage.setItem(STORAGE_KEYS.trackingStart, JSON.stringify(trackingStartDate));
-      window.localStorage.setItem(STORAGE_KEYS.officialSnapshots, JSON.stringify(officialSnapshots));
-      window.localStorage.setItem(STORAGE_KEYS.protectedDays, JSON.stringify(protectedDaysMap));
-      window.localStorage.setItem(STORAGE_KEYS.sectionAssignments, JSON.stringify(sectionAssignments));
-      window.localStorage.setItem(STORAGE_KEYS.validatedMonths, JSON.stringify(validatedMonths));
-      window.localStorage.setItem(STORAGE_KEYS.auditLogs, JSON.stringify(auditLogs));
-
-      // 2. Transmissão imediata via BroadcastChannel para outras abas abertas
-      try {
-        new BroadcastChannel(BROADCAST_CHANNELS.employeesSync).postMessage(employees);
-        new BroadcastChannel(BROADCAST_CHANNELS.validatedMonthsSync).postMessage(validatedMonths);
-      } catch (e) {}
-
-      // 3. Força envio imediato para a nuvem GAS caso a URL esteja configurada
-      const url = getConfiguredApiUrl();
-      if (url) {
-        await Promise.allSettled([
-          apiStore.set(STORAGE_KEYS.employees, employees),
-          apiStore.set(STORAGE_KEYS.validatedMonths, validatedMonths),
-          apiStore.set(STORAGE_KEYS.protectedDays, protectedDaysMap),
-          apiStore.set(STORAGE_KEYS.monthNotes, monthNotes),
-          apiStore.set(STORAGE_KEYS.officialSnapshots, officialSnapshots),
-          apiStore.set(STORAGE_KEYS.customHolidays, customHolidays),
-          apiStore.set(STORAGE_KEYS.deletedNationalHolidays, deletedNationalHolidays),
-          apiStore.set(STORAGE_KEYS.jornadaSettings, jornadaSettings),
-          apiStore.set(STORAGE_KEYS.sectionAssignments, sectionAssignments),
-          apiStore.set(STORAGE_KEYS.auditLogs, auditLogs)
-        ]);
-      }
+      await executeManualSave({
+        employees,
+        jornadaSettings,
+        customHolidays,
+        deletedNationalHolidays,
+        monthNotes,
+        trackingStartDate,
+        officialSnapshots,
+        protectedDaysMap,
+        sectionAssignments,
+        validatedMonths,
+        auditLogs
+      });
 
       setIsJustSaved(true);
       setTimeout(() => setIsJustSaved(false), 3000);
@@ -232,6 +210,7 @@ const App: React.FC = () => {
     protectedDaysMap,
     sectionAssignments,
     validatedMonths,
+    auditLogs,
     isSaving,
     showDialog
   ]);
