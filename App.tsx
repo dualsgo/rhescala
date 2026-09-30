@@ -62,7 +62,7 @@ import { generateOperationalNotice } from './src/services/operationalNoticeServi
 import { useScheduleCommands } from './hooks/useScheduleCommands';
 import { STORAGE_KEYS } from './src/infrastructure/storage/storageKeys';
 import { getAuthSession, setAuthSession, AuthSession } from './src/infrastructure/storage/sessionAuthAdapter';
-import { executeManualSave } from './src/infrastructure/storage/persistenceCoordinator';
+import { executeManualSave, determineSaveFeedback } from './src/infrastructure/storage/persistenceCoordinator';
 
 const App: React.FC = () => {
   const [employees, setEmployees] = useLocalStorage<Employee[]>(STORAGE_KEYS.employees, [PLACEHOLDER_EMPLOYEE]);
@@ -173,7 +173,7 @@ const App: React.FC = () => {
     setIsSaving(true);
 
     try {
-      await executeManualSave({
+      const saveResult = await executeManualSave({
         employees,
         jornadaSettings,
         customHolidays,
@@ -187,13 +187,23 @@ const App: React.FC = () => {
         auditLogs
       });
 
-      setIsJustSaved(true);
-      setTimeout(() => setIsJustSaved(false), 3000);
+      const feedback = determineSaveFeedback(saveResult);
+
+      if (feedback.status === 'full_success') {
+        setIsJustSaved(true);
+        setTimeout(() => setIsJustSaved(false), 3000);
+      } else {
+        showDialog({
+          title: feedback.title || 'Aviso de Sincronização',
+          message: feedback.message || '',
+          type: 'alert'
+        });
+      }
     } catch (err) {
-      console.error('Erro ao salvar:', err);
+      console.error('Erro no salvamento local:', err);
       showDialog({
-        title: 'Aviso de Sincronização',
-        message: 'As alterações foram salvas com segurança no cache local deste computador, mas houve uma oscilação na conexão com o servidor/planilha.',
+        title: 'Erro de Salvamento Local',
+        message: 'Não foi possível concluir o salvamento local das alterações. O armazenamento do navegador pode estar indisponível ou esgotado. Tente novamente.',
         type: 'alert'
       });
     } finally {

@@ -11,6 +11,16 @@ const GLOBAL_SYNC_STATUS: SyncStatus = {
 
 import { globalSyncQueue } from '../src/infrastructure/sync/syncQueue';
 
+/**
+ * Mapa em memória que controla a geração/versão atual de cada chave persistida.
+ * Permite invalidar tarefas de auto-sync e retry obsoletas no momento exato de sua execução.
+ */
+export const keyGenerationMap = new Map<string, number>();
+
+export function getLocalKeyGeneration(key: string): number {
+    return keyGenerationMap.get(key) || 0;
+}
+
 function updateGlobalSync(state: SyncState, key: string, message?: string, isSilent = false) {
     GLOBAL_SYNC_STATUS.state = state;
     GLOBAL_SYNC_STATUS.isSilent = isSilent;
@@ -182,8 +192,18 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
 
         isDirty.current = true;
 
+        // Avança a geração local da chave. Qualquer retry de geração anterior torna-se obsoleto.
+        const taskGeneration = (keyGenerationMap.get(key) || 0) + 1;
+        keyGenerationMap.set(key, taskGeneration);
+        retryCount.current = 0;
+
         const timer = setTimeout(() => {
             const syncTask = async () => {
+                // Validação no momento em que a tarefa inicia execução
+                if (taskGeneration !== (keyGenerationMap.get(key) || 0)) {
+                    return;
+                }
+
                 if (syncInProgress.current) return;
                 syncInProgress.current = true;
 
@@ -192,6 +212,11 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
 
                 try {
                     await apiStore.set(key, JSON.parse(dataToSync));
+
+                    // Validação pós-rede: descarta finalização se nova alteração ocorreu durante a requisição
+                    if (taskGeneration !== (keyGenerationMap.get(key) || 0)) {
+                        return;
+                    }
 
                     lastCloudValue.current = dataToSync;
                     isDirty.current = false;
@@ -203,11 +228,20 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                     } catch (e) { }
                 } catch (err) {
                     console.error('Sync failure:', err);
+
+                    // Validação no catch: se a versão ficou obsoleta, não agenda retries
+                    if (taskGeneration !== (keyGenerationMap.get(key) || 0)) {
+                        return;
+                    }
+
                     if (retryCount.current < 2) {
                         retryCount.current++;
                         updateGlobalSync('error', key, `Tentando Salvar... (${retryCount.current}/2)`, false);
                         setTimeout(() => {
-                            globalSyncQueue.enqueue(syncTask);
+                            // Validação no disparo do timer: enfileira somente se ainda for a versão atual
+                            if (taskGeneration === (keyGenerationMap.get(key) || 0)) {
+                                globalSyncQueue.enqueue(syncTask);
+                            }
                         }, 5000);
                     } else {
                         updateGlobalSync('error', key, 'Salvo Apenas Localmente', false);

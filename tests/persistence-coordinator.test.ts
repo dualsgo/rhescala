@@ -5,6 +5,8 @@ import {
   broadcastPersistenceSync, 
   flushCloudStorage, 
   executeManualSave, 
+  determineSaveFeedback,
+  ManualSaveResult,
   PersistencePayload 
 } from '../src/infrastructure/storage/persistenceCoordinator';
 import { STORAGE_KEYS, BROADCAST_CHANNELS } from '../src/infrastructure/storage/storageKeys';
@@ -79,15 +81,18 @@ describe('persistenceCoordinator', () => {
     const apiSetSpy = vi.spyOn(apiStore, 'set').mockResolvedValue(undefined);
     window.localStorage.removeItem(STORAGE_KEYS.gasApiUrl);
 
-    await flushCloudStorage(dummyPayload);
+    const result = await flushCloudStorage(dummyPayload);
     expect(apiSetSpy).not.toHaveBeenCalled();
+    expect(result.skipped).toBe(true);
+    expect(result.total).toBe(0);
+    expect(result.failed).toBe(0);
   });
 
-  it('flushCloudStorage deve enviar 10 chaves para a nuvem quando a URL estiver configurada', async () => {
+  it('flushCloudStorage deve enviar 10 chaves para a nuvem quando a URL estiver configurada e retornar sucesso total', async () => {
     window.localStorage.setItem(STORAGE_KEYS.gasApiUrl, 'https://script.google.com/macros/s/test/exec');
     const apiSetSpy = vi.spyOn(apiStore, 'set').mockResolvedValue(undefined);
 
-    await flushCloudStorage(dummyPayload);
+    const result = await flushCloudStorage(dummyPayload);
 
     expect(apiSetSpy).toHaveBeenCalledTimes(10);
     expect(apiSetSpy).toHaveBeenCalledWith(STORAGE_KEYS.employees, dummyPayload.employees);
@@ -100,17 +105,119 @@ describe('persistenceCoordinator', () => {
     expect(apiSetSpy).toHaveBeenCalledWith(STORAGE_KEYS.jornadaSettings, dummyPayload.jornadaSettings);
     expect(apiSetSpy).toHaveBeenCalledWith(STORAGE_KEYS.sectionAssignments, dummyPayload.sectionAssignments);
     expect(apiSetSpy).toHaveBeenCalledWith(STORAGE_KEYS.auditLogs, dummyPayload.auditLogs);
+
+    expect(result.total).toBe(10);
+    expect(result.succeeded).toBe(10);
+    expect(result.failed).toBe(0);
+    expect(result.failedKeys).toEqual([]);
+    expect(result.errors).toEqual([]);
   });
 
-  it('executeManualSave deve orquestrar localStorage, broadcast e cloud sync', async () => {
+  it('flushCloudStorage deve retornar falha parcial estruturada sem lançar exceção quando 1 ou mais chaves falham', async () => {
+    window.localStorage.setItem(STORAGE_KEYS.gasApiUrl, 'https://script.google.com/macros/s/test/exec');
+    vi.spyOn(apiStore, 'set').mockImplementation(async (key) => {
+      if (key === STORAGE_KEYS.employees || key === STORAGE_KEYS.auditLogs) {
+        throw new Error(`Timeout ao sincronizar ${key}`);
+      }
+      return undefined;
+    });
+
+    const result = await flushCloudStorage(dummyPayload);
+
+    expect(result.total).toBe(10);
+    expect(result.succeeded).toBe(8);
+    expect(result.failed).toBe(2);
+    expect(result.failedKeys).toEqual([STORAGE_KEYS.employees, STORAGE_KEYS.auditLogs]);
+    expect(result.errors).toHaveLength(2);
+    expect((result.errors[0].error as Error).message).toContain(STORAGE_KEYS.employees);
+    expect((result.errors[1].error as Error).message).toContain(STORAGE_KEYS.auditLogs);
+  });
+
+  it('executeManualSave deve orquestrar localStorage, broadcast e retornar resultado estruturado', async () => {
     window.localStorage.setItem(STORAGE_KEYS.gasApiUrl, 'https://script.google.com/macros/s/test/exec');
     const apiSetSpy = vi.spyOn(apiStore, 'set').mockResolvedValue(undefined);
 
-    await executeManualSave(dummyPayload);
+    const result = await executeManualSave(dummyPayload);
 
     // 1. Verificou gravação local
     expect(window.localStorage.getItem(STORAGE_KEYS.employees)).toBeDefined();
     // 2. Verificou chamada de rede
     expect(apiSetSpy).toHaveBeenCalledTimes(10);
+    // 3. Verificou retorno estruturado
+    expect(result.localSuccess).toBe(true);
+    expect(result.cloudResult.succeeded).toBe(10);
+    expect(result.cloudResult.failed).toBe(0);
+  });
+
+  describe('determineSaveFeedback (Correção Semântica do Feedback)', () => {
+    it('1. skipped === true não produz feedback full_success (Salvo na Planilha)', () => {
+      const offlineResult: ManualSaveResult = {
+        localSuccess: true,
+        cloudResult: {
+          total: 0,
+          succeeded: 0,
+          failed: 0,
+          failedKeys: [],
+          errors: [],
+          skipped: true
+        }
+      };
+
+      const feedback = determineSaveFeedback(offlineResult);
+
+      expect(feedback.status).toBe('local_only');
+      expect(feedback.status).not.toBe('full_success');
+      expect(feedback.title).toBe('Salvo Apenas Localmente');
+      expect(feedback.message).toContain('sincronizar posteriormente');
+      expect(feedback.message).not.toContain('Salvo na Planilha');
+    });
+
+    it('2. sincronização remota com 100% de sucesso produz status full_success', () => {
+      const fullSuccessResult: ManualSaveResult = {
+        localSuccess: true,
+        cloudResult: {
+          total: 10,
+          succeeded: 10,
+          failed: 0,
+          failedKeys: [],
+          errors: [],
+          skipped: false
+        }
+      };
+
+      const feedback = determineSaveFeedback(fullSuccessResult);
+
+      expect(feedback.status).toBe('full_success');
+    });
+
+    it('3. falha parcial remota produz status partial_failure com quantidade de itens', () => {
+      const partialFailureResult: ManualSaveResult = {
+        localSuccess: true,
+        cloudResult: {
+          total: 10,
+          succeeded: 8,
+          failed: 2,
+          failedKeys: [STORAGE_KEYS.employees, STORAGE_KEYS.auditLogs],
+          errors: [],
+          skipped: false
+        }
+      };
+
+      const feedback = determineSaveFeedback(partialFailureResult);
+
+      expect(feedback.status).toBe('partial_failure');
+      expect(feedback.message).toContain('2 item(ns) não puderam ser sincronizados');
+    });
+  });
+
+  describe('Falha Real de flushLocalStorage (Problema 2)', () => {
+    it('falha real ao gravar no localStorage lança exceção e impede que seja dado como salvo', () => {
+      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new DOMException('QuotaExceededError', 'QuotaExceededError');
+      });
+
+      expect(() => flushLocalStorage(dummyPayload)).toThrow(DOMException);
+      setItemSpy.mockRestore();
+    });
   });
 });
