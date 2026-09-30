@@ -100,7 +100,7 @@ const App: React.FC = () => {
   const [validatedMonths, setValidatedMonths] = useLocalStorage<Record<string, boolean>>(STORAGE_KEYS.validatedMonths, {});
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
   const [showInconsistencyModal, setShowInconsistencyModal] = useState(false);
-  const [viewerModeType, setViewerModeType] = useLocalStorage<'personal' | 'grid'>(STORAGE_KEYS.viewerModeType, 'grid');
+  const [viewerModeType, setViewerModeType] = useLocalStorage<'personal' | 'grid'>(STORAGE_KEYS.viewerModeType, 'personal');
   const [viewerSelectedEmpId, setViewerSelectedEmpId] = useLocalStorage<string>(STORAGE_KEYS.viewerSelectedEmpId, '');
   const [auditLogs, setAuditLogs] = useLocalStorage<AuditLogEntry[]>(STORAGE_KEYS.auditLogs, []);
   const [pendingAuditAction, setPendingAuditAction] = useState<{
@@ -630,6 +630,52 @@ const App: React.FC = () => {
     });
   };
 
+  const handleOpenEmployeeCard = useCallback(async (
+    emp: Employee, 
+    tab: 'mes' | 'atual' | 'pedidos' | 'atestado' = 'mes', 
+    initialDate?: string
+  ) => {
+    // Administrador acessa diretamente qualquer cartão
+    if (auth.role === 'admin') {
+      setEmployeeCardInitialTab(tab);
+      setEmployeeCardInitialDate(initialDate);
+      setSelectedEmployeeForCard(emp);
+      return;
+    }
+
+    // Se já autenticado para este colaborador nesta sessão
+    if (authenticatedEmployeeId === emp.id) {
+      setEmployeeCardInitialTab(tab);
+      setEmployeeCardInitialDate(initialDate);
+      setSelectedEmployeeForCard(emp);
+      return;
+    }
+
+    // Solicitar senha pessoal do colaborador
+    const password = await showDialog({
+      type: 'prompt',
+      title: `🔒 Acesso Individual: ${emp.name}`,
+      message: 'Digite sua senha pessoal de colaborador para acessar seu cartão individual e dados de solicitações:'
+    });
+
+    if (typeof password === 'string') {
+      const entered = password.trim();
+      const expected = (emp.password || '1234').trim();
+      if (entered === expected) {
+        setAuthenticatedEmployeeId(emp.id);
+        setEmployeeCardInitialTab(tab);
+        setEmployeeCardInitialDate(initialDate);
+        setSelectedEmployeeForCard(emp);
+      } else {
+        showDialog({ 
+          title: 'Senha Incorreta', 
+          message: 'A senha informada não confere. Caso tenha esquecido, solicite a redefinição ao seu gerente.', 
+          type: 'alert' 
+        });
+      }
+    }
+  }, [auth.role, authenticatedEmployeeId, showDialog]);
+
   if (!auth.isAuthenticated) {
     return <Login onLogin={(role) => updateAuth({ isAuthenticated: true, role })} />;
   }
@@ -714,7 +760,7 @@ const App: React.FC = () => {
              );
 
            switch (currentView) {
-             case 'grid':
+             case 'grid': {
                if (isReadOnly && !isValidated) {
                  return (
                    <div className="h-full flex flex-col items-center justify-center p-8 text-center animate-fade-in">
@@ -733,107 +779,98 @@ const App: React.FC = () => {
                  );
                 }
 
-                return (
+                const renderShiftGrid = () => (
                   <ShiftGrid
-                   employees={employees}
-                   currentMY={currentMY}
-                   selectedDayIdx={selectedDayIdx}
-                   today={new Date()}
-                   customHolidays={customHolidays}
-                   holidayCredits={holidayCredits}
-                   filter={filter}
-                   onFilterChange={setFilter}
-                   contractFilter={contractFilter}
-                   onContractFilterChange={setContractFilter}
-                   onlyWorkingToday={onlyWorkingToday}
-                   onToggleOnlyWorkingToday={() => setOnlyWorkingToday(prev => !prev)}
-                   selectedGroup={selectedGroup}
-                   onSelectedGroupChange={setSelectedGroup}
-                   isReadOnly={isReadOnly}
-                   isEditable={isEditable}
-                   allowRetroactive={allowRetroactive}
-                   showNotes={showNotes}
-                   onCloseNotes={() => setShowNotes(false)}
-                   resolvedPositions={selectedDayResolvedPositions}
-                   onSelectDay={setSelectedDayIdx}
-                   tacticalDisplayMode={tacticalDisplayMode}
-                   onToggleTacticalDisplayMode={(mode) => { if (mode) setTacticalDisplayMode(mode); else setTacticalDisplayMode(prev => prev === "off" ? "positions" : prev === "positions" ? "roles" : "off"); }}
-                   onUpdateShift={handleUpdateShift}
-                   onUpdateShifts={handleUpdateShifts}
-                   onUpdateEmployeeDailyHour={onUpdateEmployeeDailyHour}
-                   onUpdateTacticalPosition={onUpdateTacticalPosition}
-                   onShareWhatsApp={handleShareWhatsApp}
-                   onOpenDayDetail={(idx) => {
-                     setSelectedDayIdx(idx);
-                     setShowDayDetail(true);
-                   }}
-                   onResetMonth={handleCreateMonth}
-                   onApplyFolgas={handleApplyFolgas}
-                   onSortearDomingo={handleSortearDomingo}
-                   onOpenAnalysis={() => setCurrentView('analysis')}
-                   onShowHolidayManager={() => setCurrentView('feriados')}
-                   onNextMonth={() => setCurrentMY(prev => prev.month === 11 ? { month: 0, year: prev.year + 1 } : { ...prev, month: prev.month + 1 })}
-                   onPrevMonth={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })}
-                   monthNotes={monthNotes[monthKey] || ''}
+                    employees={employees}
+                    currentMY={currentMY}
+                    selectedDayIdx={selectedDayIdx}
+                    today={new Date()}
+                    customHolidays={customHolidays}
+                    holidayCredits={holidayCredits}
+                    filter={filter}
+                    onFilterChange={setFilter}
+                    contractFilter={contractFilter}
+                    onContractFilterChange={setContractFilter}
+                    onlyWorkingToday={onlyWorkingToday}
+                    onToggleOnlyWorkingToday={() => setOnlyWorkingToday(prev => !prev)}
+                    selectedGroup={selectedGroup}
+                    onSelectedGroupChange={setSelectedGroup}
+                    isReadOnly={isReadOnly}
+                    isEditable={isEditable}
+                    allowRetroactive={allowRetroactive}
+                    showNotes={showNotes}
+                    onCloseNotes={() => setShowNotes(false)}
+                    resolvedPositions={selectedDayResolvedPositions}
+                    onSelectDay={setSelectedDayIdx}
+                    tacticalDisplayMode={tacticalDisplayMode}
+                    onToggleTacticalDisplayMode={(mode) => { if (mode) setTacticalDisplayMode(mode); else setTacticalDisplayMode(prev => prev === "off" ? "positions" : prev === "positions" ? "roles" : "off"); }}
+                    onUpdateShift={handleUpdateShift}
+                    onUpdateShifts={handleUpdateShifts}
+                    onUpdateEmployeeDailyHour={onUpdateEmployeeDailyHour}
+                    onUpdateTacticalPosition={onUpdateTacticalPosition}
+                    onShareWhatsApp={handleShareWhatsApp}
+                    onOpenDayDetail={(idx) => {
+                      setSelectedDayIdx(idx);
+                      setShowDayDetail(true);
+                    }}
+                    onResetMonth={handleCreateMonth}
+                    onApplyFolgas={handleApplyFolgas}
+                    onSortearDomingo={handleSortearDomingo}
+                    onOpenAnalysis={() => setCurrentView('analysis')}
+                    onShowHolidayManager={() => setCurrentView('feriados')}
+                    onNextMonth={() => setCurrentMY(prev => prev.month === 11 ? { month: 0, year: prev.year + 1 } : { ...prev, month: prev.month + 1 })}
+                    onPrevMonth={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })}
+                    monthNotes={monthNotes[monthKey] || ''}
                     onUpdateMonthNotes={(text) => {
-                     if (isReadOnly) return;
-                     setMonthNotes(prev => ({ ...prev, [monthKey]: text }));
-                   }}
-                   jornadaSettings={jornadaSettings}
-                   diffs={scheduleDiffs}
-                   onOpenPresetForEmployee={(empId) => {
-                     setPresetInitialEmpId(empId);
-                     setShowPresetModal(true);
-                   }}
-                   onExportCsv={isReadOnly ? undefined : handleExportScheduleCsv}
-                   highlightedEmpId=""
-                   onHighlightEmp={(empId) => {
-                     setViewerSelectedEmpId(empId);
-                   }}
-                   onOpenEmployeeCard={async (emp, tab = 'mes', initialDate) => {
-                     // Administrador acessa diretamente qualquer cartão
-                     if (auth.role === 'admin') {
-                       setEmployeeCardInitialTab(tab);
-                       setEmployeeCardInitialDate(initialDate);
-                       setSelectedEmployeeForCard(emp);
-                       return;
-                     }
-
-                     // Se já autenticado para este colaborador nesta sessão
-                     if (authenticatedEmployeeId === emp.id) {
-                       setEmployeeCardInitialTab(tab);
-                       setEmployeeCardInitialDate(initialDate);
-                       setSelectedEmployeeForCard(emp);
-                       return;
-                     }
-
-                     // Solicitar senha pessoal do colaborador
-                     const password = await showDialog({
-                       type: 'prompt',
-                       title: `🔒 Acesso Individual: ${emp.name}`,
-                       message: 'Digite sua senha pessoal de colaborador para acessar seu cartão individual e dados de solicitações:'
-                     });
-
-                     if (typeof password === 'string') {
-                        const entered = password.trim();
-                       const expected = (emp.password || '1234').trim();
-                       if (entered === expected) {
-                         setAuthenticatedEmployeeId(emp.id);
-                         setEmployeeCardInitialTab(tab);
-                         setEmployeeCardInitialDate(initialDate);
-                         setSelectedEmployeeForCard(emp);
-                       } else {
-                         showDialog({ 
-                           title: 'Senha Incorreta', 
-                           message: 'A senha informada não confere. Caso tenha esquecido, solicite a redefinição ao seu gerente.', 
-                           type: 'alert' 
-                         });
-                       }
-                     }
-                   }}
-                 />
+                      if (isReadOnly) return;
+                      setMonthNotes(prev => ({ ...prev, [monthKey]: text }));
+                    }}
+                    jornadaSettings={jornadaSettings}
+                    diffs={scheduleDiffs}
+                    onOpenPresetForEmployee={(empId) => {
+                      setPresetInitialEmpId(empId);
+                      setShowPresetModal(true);
+                    }}
+                    onExportCsv={isReadOnly ? undefined : handleExportScheduleCsv}
+                    highlightedEmpId=""
+                    onHighlightEmp={(empId) => {
+                      setViewerSelectedEmpId(empId);
+                    }}
+                    onOpenEmployeeCard={handleOpenEmployeeCard}
+                  />
                 );
-             case 'analysis':
+
+                if (isReadOnly && viewerModeType === 'personal') {
+                  return (
+                    <>
+                      <div className="lg:hidden flex-1 overflow-y-auto px-2 pt-2">
+                        <MobileEmployerViewer
+                          employees={employees}
+                          currentMY={currentMY}
+                          customHolidays={customHolidays}
+                          deletedNationalHolidays={deletedNationalHolidays}
+                          jornadaSettings={jornadaSettings}
+                          holidayCredits={holidayCredits}
+                          selectedEmployeeId={viewerSelectedEmpId}
+                          onSelectEmployee={(empId) => setViewerSelectedEmpId(empId)}
+                          onOpenEmployeeCard={handleOpenEmployeeCard}
+                          onSwitchToFullGrid={() => setViewerModeType('grid')}
+                          onMonthChange={setCurrentMY}
+                          onUpdateEmployee={onUpdateEmployee}
+                          tacticalDisplayMode={tacticalDisplayMode}
+                          onToggleTacticalDisplayMode={(mode) => { if (mode) setTacticalDisplayMode(mode); else setTacticalDisplayMode(prev => prev === "off" ? "positions" : prev === "positions" ? "roles" : "off"); }}
+                        />
+                      </div>
+                      <div className="hidden lg:block h-full">
+                        {renderShiftGrid()}
+                      </div>
+                    </>
+                  );
+                }
+
+                return renderShiftGrid();
+              }
+              case 'analysis':
                if (isReadOnly) {
                  return (
                    <div className="h-full flex flex-col items-center justify-center p-8 text-center animate-fade-in">
@@ -1165,7 +1202,7 @@ const App: React.FC = () => {
 
        {/* Floating Manager Toolbar for Mobile */}
        {!isReadOnly && currentView === 'grid' && (
-         <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-slate-200 dark:border-zinc-800 rounded-full p-2 shadow-2xl shadow-black/20">
+         <div className="hidden lg:flex fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] items-center gap-2 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-slate-200 dark:border-zinc-800 rounded-full p-2 shadow-2xl shadow-black/20">
             <button 
              onClick={() => setIsEditable(!isEditable)}
              className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${isEditable ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300'}`}
@@ -1269,6 +1306,8 @@ const App: React.FC = () => {
           onOpenMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           onGoToToday={handleGoToToday}
           isReadOnly={isReadOnly}
+          viewerModeType={viewerModeType}
+          onToggleViewerMode={() => setViewerModeType(prev => prev === 'personal' ? 'grid' : 'personal')}
         />
 
         <SyncBlockingOverlay syncStatus={syncStatus} />

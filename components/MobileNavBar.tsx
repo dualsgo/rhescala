@@ -9,6 +9,8 @@ interface MobileNavBarProps {
   onOpenMenu: () => void;
   onGoToToday: () => void;
   isReadOnly?: boolean;
+  viewerModeType?: 'personal' | 'grid';
+  onToggleViewerMode?: () => void;
 }
 
 export const MobileNavBar: React.FC<MobileNavBarProps> = ({
@@ -19,6 +21,8 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({
   onOpenMenu,
   onGoToToday,
   isReadOnly = false,
+  viewerModeType = 'personal',
+  onToggleViewerMode,
 }) => {
   const isEscalaActive = currentView === 'grid';
   const isRequestsActive = currentView === 'requests';
@@ -30,20 +34,32 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({
       className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-t border-slate-200 dark:border-zinc-800 px-2 py-1.5 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] pb-[max(env(safe-area-inset-bottom),0.5rem)]"
     >
       <div className={`grid ${isReadOnly ? 'grid-cols-2 max-w-[200px]' : 'grid-cols-5 max-w-md'} items-center gap-1 mx-auto`}>
-        {/* 1. Escala (Grade) */}
+        {/* 1. Alternador Modo Pessoal / Grade da Loja (Viewer) ou Escala (Admin) */}
         <button
           type="button"
-          onClick={() => onViewChange('grid')}
+          onClick={() => {
+            if (isReadOnly && onToggleViewerMode) {
+              onToggleViewerMode();
+            } else {
+              onViewChange('grid');
+            }
+          }}
           className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all relative ${
             isEscalaActive 
               ? 'text-orange-600 dark:text-orange-400 font-black' 
               : 'text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-slate-200'
           }`}
+          title={isReadOnly ? (viewerModeType === 'personal' ? 'Ver Grade da Loja' : 'Voltar para Meu Dia') : 'Ver Escala'}
         >
           <div className={`p-1 rounded-xl transition-all ${isEscalaActive ? 'bg-orange-50 dark:bg-orange-950/50 scale-105' : ''}`}>
-            <Icon name="calendar_month" className="text-xl" />
+            <Icon 
+              name={isReadOnly ? (viewerModeType === 'personal' ? 'grid_view' : 'badge') : 'calendar_month'} 
+              className="text-xl" 
+            />
           </div>
-          <span className="text-[10px] tracking-tight truncate mt-0.5">Escala</span>
+          <span className="text-[10px] tracking-tight truncate mt-0.5">
+            {isReadOnly ? (viewerModeType === 'personal' ? 'Grade' : 'Meu Dia') : 'Escala'}
+          </span>
           {isEscalaActive && (
             <span className="w-1.5 h-1.5 rounded-full bg-orange-500 absolute bottom-0"></span>
           )}

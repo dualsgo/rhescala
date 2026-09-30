@@ -46,10 +46,26 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
   tacticalDisplayMode = 'off',
   onToggleTacticalDisplayMode,
 }) => {
-  const [activeTab, setActiveTab] = useState<'hoje' | 'semana' | 'equipe' | 'mes' | 'pedidos'>('hoje');
+  const [activeTab, setActiveTab] = useState<'hoje' | 'semana' | 'equipe' | 'mes'>('hoje');
   const [searchTerm, setSearchTerm] = useState('');
   const [showEmpSelector, setShowEmpSelector] = useState(false);
   const { showDialog } = useDialog();
+
+  const handlePrevMonth = () => {
+    if (currentMY.month === 0) {
+      onMonthChange({ month: 11, year: currentMY.year - 1 });
+    } else {
+      onMonthChange({ month: currentMY.month - 1, year: currentMY.year });
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (currentMY.month === 11) {
+      onMonthChange({ month: 0, year: currentMY.year + 1 });
+    } else {
+      onMonthChange({ month: currentMY.month + 1, year: currentMY.year });
+    }
+  };
 
   const activeEmployees = useMemo(() => {
     return employees.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
@@ -306,14 +322,38 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
 
         {/* Quick Month Bar */}
         <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-zinc-800 text-xs font-black uppercase">
-          <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-            <Icon name="calendar_month" className="text-orange-500 text-sm" />
-            <span>{new Date(currentMY.year, currentMY.month, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</span>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handlePrevMonth}
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700 active:scale-95 transition-all"
+              title="Mês anterior"
+              aria-label="Mês anterior"
+            >
+              <Icon name="chevron_left" className="text-base" />
+            </button>
+
+            <div className="flex items-center gap-1 text-slate-700 dark:text-slate-200 px-1">
+              <Icon name="calendar_month" className="text-orange-500 text-sm" />
+              <span className="capitalize">
+                {new Date(currentMY.year, currentMY.month, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleNextMonth}
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700 active:scale-95 transition-all"
+              title="Próximo mês"
+              aria-label="Próximo mês"
+            >
+              <Icon name="chevron_right" className="text-base" />
+            </button>
           </div>
 
           {/* Holiday Credit Chip */}
           {pendingCreditsCount > 0 && (
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800 text-[10px] font-black">
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800 text-[10px] font-black shrink-0">
               <Icon name="stars" className="text-xs text-amber-500" />
               <span>Saldo Folgas: {pendingCreditsCount}d</span>
             </div>
@@ -334,7 +374,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
         ].map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => setActiveTab(tab.id as 'hoje' | 'semana' | 'equipe' | 'mes')}
             className={`flex-1 min-w-[70px] py-2 px-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
               activeTab === tab.id
                 ? 'bg-white dark:bg-zinc-800 text-orange-600 dark:text-orange-400 shadow-sm'
@@ -346,6 +386,21 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
           </button>
         ))}
       </div>
+
+      {/* Empty State when no active collaborator is available */}
+      {!currentEmp && (
+        <div className="bg-white dark:bg-zinc-900 rounded-3xl p-8 border border-slate-200 dark:border-zinc-800 text-center flex flex-col items-center justify-center gap-2 shadow-sm animate-fade-in">
+          <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-zinc-800 text-slate-400 flex items-center justify-center">
+            <Icon name="person_off" className="text-2xl" />
+          </div>
+          <span className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase">
+            Nenhum colaborador disponível
+          </span>
+          <span className="text-xs font-bold text-slate-400 max-w-xs">
+            Não há colaboradores ativos cadastrados para este mês na loja.
+          </span>
+        </div>
+      )}
 
       {/* TAB 1: MEU DIA HOJE (CARD PRINCIPAL) */}
       {activeTab === 'hoje' && todayDetails && (
@@ -426,8 +481,9 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
 
           {/* Quick Action: Solicitations / Autoatendimento */}
           <button
+            type="button"
             onClick={() => {
-              if (currentEmp) onOpenEmployeeCard(currentEmp);
+              if (currentEmp) onOpenEmployeeCard(currentEmp, 'pedidos');
             }}
             className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm flex items-center justify-between hover:border-orange-400 transition-all text-left group"
           >
@@ -729,3 +785,5 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     </div>
   );
 };
+
+export default MobileEmployerViewer;
