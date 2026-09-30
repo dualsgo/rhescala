@@ -484,7 +484,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   ? 'bg-amber-500 border-amber-500 text-white shadow-amber-500/20' 
                   : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
               }`}
-              title={focusSelectedDay ? 'Desativar efeito de foco' : 'Ofuscar os outros dias com blur e focar apenas neste dia'}
+              title={focusSelectedDay ? 'Desativar modo foco' : 'Destacar coluna do dia selecionado e suavizar as demais'}
             >
               <Icon name={focusSelectedDay ? 'filter_center_focus' : 'center_focus_weak'} className="text-xs" />
               <span>{focusSelectedDay ? `Dia ${selectedDayIdx + 1}` : 'Foco'}</span>
@@ -748,16 +748,15 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   const isSelected = selectedDayIdx === dayIdx;
                   const todayStr = new Date().toISOString().split('T')[0];
                   const isPast = d.dateStr < todayStr;
-                  const dimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale pointer-events-none select-none' : '';
-                  const isBlurred = focusSelectedDay && !isSelected;
-                  const blurClass = isBlurred ? 'opacity-25 blur-[0.6px] grayscale-[30%] hover:opacity-80 hover:blur-none transition-all duration-200' : '';
-                  const focusHighlight = isSelected && focusSelectedDay ? 'bg-orange-500/20 ring-2 ring-orange-500 shadow-md scale-[1.02] z-20' : isSelected ? 'bg-orange-500/10 ring-2 ring-inset ring-orange-500/30' : '';
+                  const pastDimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale pointer-events-none select-none' : '';
+                  const focusDimClass = focusSelectedDay && !isSelected ? 'opacity-40 hover:opacity-100 transition-opacity duration-150' : '';
+                  const focusHighlight = isSelected && focusSelectedDay ? 'bg-orange-500/15 ring-2 ring-orange-500 shadow-sm z-20' : isSelected ? 'bg-orange-500/10 ring-2 ring-inset ring-orange-500/30' : '';
 
                   return (
                     <th 
                       key={d.num} 
                       onClick={() => isSelected ? onOpenDayDetail(dayIdx) : onSelectDay(dayIdx)}
-                      className={`p-3 border-b border-slate-200 dark:border-zinc-800 min-w-[60px] cursor-pointer transition-all ${dimClass} ${blurClass} ${focusHighlight ? focusHighlight : d.isSunday ? 'bg-rose-50 dark:bg-rose-950/40' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-950/40' : ''}`}
+                      className={`p-3 border-b border-slate-200 dark:border-zinc-800 min-w-[60px] cursor-pointer transition-all ${pastDimClass} ${focusDimClass} ${focusHighlight ? focusHighlight : d.isSunday ? 'bg-rose-50 dark:bg-rose-950/40' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-950/40' : ''}`}
                     >
                       <div className="flex flex-col items-center gap-1 relative">
                         <span className="text-[9px] font-black text-slate-400 uppercase">{d.weekday}</span>
@@ -1133,107 +1132,119 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const is7thDay = streak === 7;
                               const hasAlert = streak > maxStreak && isWorkingDay;
                               const hasCellViolation = hasAlert || isSundayViolation;
-                              const hasTopRightBadge = Boolean(sundayBadge);
-
                               const todayStr = new Date().toISOString().split('T')[0];
-                              const isPast = d.dateStr < todayStr;
-                              const dimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
-                              const dayRequest = !isReadOnly ? (emp.requests || []).find(r => r.date === fullDate) : undefined;
-                              const cellDiff = diffs?.find(diff => diff.empId === emp.id && diff.dayIdx === d.num - 1);
-                              const isSelectedCol = selectedDayIdx === d.num - 1;
-                              const isBlurredCol = focusSelectedDay && !isSelectedCol;
-                              const blurClass = isBlurredCol ? 'opacity-20 blur-[0.7px] grayscale-[40%] hover:opacity-90 hover:blur-none transition-all duration-200' : '';
-                              const focusHighlight = isSelectedCol && focusSelectedDay ? 'ring-2 ring-inset ring-orange-500 bg-orange-50/80 dark:bg-orange-950/40' : isSelectedCol ? 'ring-2 ring-inset ring-orange-400/50' : '';
+                               const isPast = d.dateStr < todayStr;
+                               const pastDimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
+                               const dayRequest = !isReadOnly ? (emp.requests || []).find(r => r.date === fullDate) : undefined;
+                               const cellDiff = diffs?.find(diff => diff.empId === emp.id && diff.dayIdx === d.num - 1);
+                               const isSelectedCol = selectedDayIdx === d.num - 1;
+                               const focusDimColClass = focusSelectedDay && !isSelectedCol ? 'opacity-40 hover:opacity-100 transition-opacity duration-150' : '';
+                               const focusHighlight = isSelectedCol && focusSelectedDay ? 'ring-2 ring-inset ring-orange-500 bg-orange-500/10 dark:bg-orange-950/30' : isSelectedCol ? 'ring-2 ring-inset ring-orange-400/40' : '';
 
-                              return (
-                                <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all relative ${dimClass} ${blurClass} ${focusHighlight} ${(!isReadOnly && hasCellViolation) ? 'ring-2 ring-inset ring-rose-500 bg-rose-50/50 dark:bg-rose-950/30' : (!isReadOnly && isSundayWarning) ? 'ring-2 ring-inset ring-amber-500/50 bg-amber-50/20' : ''}`}>
-                                  <div className="relative group flex flex-col items-center gap-1">
-                                    {!isReadOnly && cellDiff && (
-                                        <span 
-                                          className="absolute -bottom-1 -left-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-900 shadow-md z-30 cursor-help"
-                                          title={`Alteração pós-oficialização (${cellDiff.type}): Oficial [${cellDiff.officialVal}] ➔ Atual [${cellDiff.currentVal}]`}
-                                        />
-                                    )}
-                                    {/* Badge 1: 6x1 Ciclo de Trabalho (Canto Superior Esquerdo) */}
-                                    {sixByOneBadge && (
-                                      <span
-                                        onClick={() => onSelectDay(d.num - 1)}
-                                        className={`absolute -top-1.5 -left-1.5 px-1 py-0.5 text-[7px] sm:text-[8px] font-black rounded-full z-30 transition-all cursor-help leading-none tracking-tighter ${sixByOneBadge.className}`}
-                                        title={sixByOneBadge.title}
-                                      >
-                                        {sixByOneBadge.text}
-                                      </span>
-                                    )}
+                               return (
+                                 <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all relative ${pastDimClass} ${focusDimColClass} ${focusHighlight} ${(!isReadOnly && hasCellViolation) ? 'ring-2 ring-inset ring-rose-500 bg-rose-50/50 dark:bg-rose-950/30' : (!isReadOnly && isSundayWarning) ? 'ring-2 ring-inset ring-amber-500/50 bg-amber-50/20' : ''}`}>
+                                   <div className="relative group flex flex-col items-center justify-center">
+                                     {/* Indicador 4: Diferença pós-oficialização (Canto Inferior Esquerdo) */}
+                                     {!isReadOnly && cellDiff && (
+                                       <span 
+                                         className="absolute -bottom-0.5 -left-0.5 w-2 h-2 rounded-full bg-amber-500 ring-1.5 ring-white dark:ring-slate-900 shadow-sm z-30 cursor-help"
+                                         title={`Alteração pós-oficialização (${cellDiff.type}): Oficial [${cellDiff.officialVal}] ➔ Atual [${cellDiff.currentVal}]`}
+                                         aria-label={`Alteração pós-oficialização (${cellDiff.type}): Oficial [${cellDiff.officialVal}] para Atual [${cellDiff.currentVal}]`}
+                                         role="status"
+                                       />
+                                     )}
 
-                                    {/* Badge 2: Domingos Consecutivos e Folgas (Canto Superior Direito) */}
-                                    {sundayBadge && (
-                                      <span
-                                        onClick={() => onSelectDay(d.num - 1)}
-                                        className={`absolute -top-1.5 -right-1.5 px-1 py-0.5 text-[7px] sm:text-[8px] font-black rounded-full z-30 transition-all cursor-help leading-none tracking-tighter ${sundayBadge.className}`}
-                                        title={sundayBadge.title}
-                                      >
-                                        {sundayBadge.text}
-                                      </span>
-                                    )}
+                                     {/* Indicador 3: Ciclo 6x1 / 5x2 (Canto Superior Esquerdo) */}
+                                     {sixByOneBadge && (
+                                       <span
+                                         onClick={(e) => { e.stopPropagation(); onSelectDay(d.num - 1); }}
+                                         className={`absolute -top-1 -left-1 px-1 py-0 text-[7px] font-black rounded-full z-30 transition-all cursor-help leading-tight tracking-tighter ring-1 ring-white dark:ring-slate-900 ${sixByOneBadge.className}`}
+                                         title={sixByOneBadge.title}
+                                         aria-label={sixByOneBadge.title}
+                                         role="status"
+                                       >
+                                         {sixByOneBadge.text}
+                                       </span>
+                                     )}
 
-                                    {/* Badge 3: Pedido de Colaborador */}
-                                    {dayRequest && (
-                                      <div className={`absolute ${hasTopRightBadge ? '-bottom-1 -right-1' : '-top-1 -right-1'} w-2.5 h-2.5 rounded-full z-10 border-2 border-white dark:border-slate-900 cursor-help flex items-center justify-center group/balloon`}>
-                                        <div className={`w-full h-full rounded-full ${
-                                          dayRequest.status === 'granted' ? 'bg-emerald-500' : 
-                                          dayRequest.status === 'refused' ? 'bg-red-500' :
-                                          dayRequest.status === 'seen' ? 'bg-blue-500' : 
-                                          'bg-orange-500 animate-pulse'
-                                        }`} />
-                                        
-                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-900 dark:bg-slate-800 text-white p-3 rounded-2xl shadow-xl opacity-0 invisible group-hover/balloon:opacity-100 group-hover/balloon:visible transition-all z-[100] pointer-events-none scale-95 group-hover/balloon:scale-100 origin-bottom">
-                                          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800" />
-                                          <p className="text-[10px] font-black uppercase text-slate-400 mb-1 border-b border-slate-700 pb-1">Pedido do Colaborador</p>
-                                          <p className="text-xs font-bold leading-snug">{dayRequest.text}</p>
-                                          {dayRequest.feedback && (
-                                            <div className="mt-2 pt-2 border-t border-slate-700">
-                                              <p className="text-[9px] font-black uppercase text-orange-400 mb-0.5">Resposta do Gerente</p>
-                                              <p className="text-[10px] font-bold text-slate-300 italic">{dayRequest.feedback}</p>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    )}
-                                    <button
-                                      onClick={() => onSelectDay(d.num - 1)}
-                                      title={
-                                        shift === 'N/A' 
-                                          ? (emp.hiredAt && fullDate < emp.hiredAt 
-                                              ? `Não admitido nesta data (Início: ${emp.hiredAt.split('-').reverse().join('/')})` 
-                                              : emp.firedAt && fullDate > emp.firedAt 
-                                              ? `Contrato encerrado nesta data (Término: ${emp.firedAt.split('-').reverse().join('/')})`
-                                              : 'Desconsiderado (N/A)') 
-                                          : shift?.startsWith('FF')
-                                          ? (() => {
-                                              const explicit = shift.split(' ')[1];
-                                              const matched = (holidayCredits[emp.id] || []).find(c => c.id === explicit || c.holidayDate === explicit);
-                                              return matched ? `Folga Feriado: ${matched.holidayName}` : 'Folga Feriado (FF)';
-                                            })()
-                                          : undefined
-                                      }
-                                      className={`${isCompactMode ? 'w-8 h-8 rounded-lg text-[9px]' : 'w-10 h-10 rounded-xl text-[10px]'} flex items-center justify-center font-black transition-all shadow-sm relative ${
-                                        dayRequest ? (
-                                          dayRequest.status === 'granted' ? 'ring-2 ring-emerald-500 bg-emerald-50' :
-                                          dayRequest.status === 'refused' ? 'ring-2 ring-red-500 bg-red-50' :
-                                          dayRequest.status === 'seen' ? 'ring-2 ring-blue-500 bg-blue-50' :
-                                          'ring-4 ring-orange-500 bg-orange-50 animate-pulse z-20'
-                                        ) : ''
-                                      } ${
-                                        shift === 'N/A' ? 'bg-slate-100/70 dark:bg-zinc-800/40 text-slate-400 dark:text-zinc-600 border border-dashed border-slate-200 dark:border-zinc-800 opacity-60' :
-                                        shift === 'AT' ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50' :
-                                        shift === 'F' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
-                                        shift.startsWith('FF') ? 'bg-amber-100 text-amber-600' :
-                                        shift === 'C' ? 'bg-indigo-100 text-indigo-600' :
-                                        shift === 'FE' ? 'bg-emerald-100 text-emerald-600' :
-                                        shift === 'DO' ? 'bg-fuchsia-600 text-white shadow-md' :
-                                        (!dayRequest ? 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-zinc-800' : '')
-                                      }`}
-                                    >
+                                     {/* Indicador 3: Domingos Consecutivos (Canto Superior Direito) */}
+                                     {sundayBadge && (
+                                       <span
+                                         onClick={(e) => { e.stopPropagation(); onSelectDay(d.num - 1); }}
+                                         className={`absolute -top-1 -right-1 px-1 py-0 text-[7px] font-black rounded-full z-30 transition-all cursor-help leading-tight tracking-tighter ring-1 ring-white dark:ring-slate-900 ${sundayBadge.className}`}
+                                         title={sundayBadge.title}
+                                         aria-label={sundayBadge.title}
+                                         role="status"
+                                       >
+                                         {sundayBadge.text}
+                                       </span>
+                                     )}
+
+                                     {/* Indicador 4: Pedido de Colaborador (Canto Inferior Direito) */}
+                                     {dayRequest && (
+                                       <div 
+                                         className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full z-30 ring-1.5 ring-white dark:ring-slate-900 cursor-help flex items-center justify-center group/balloon"
+                                         role="status"
+                                         aria-label={`Pedido do colaborador: ${dayRequest.text} (${dayRequest.status})`}
+                                       >
+                                         <div className={`w-full h-full rounded-full ${
+                                           dayRequest.status === 'granted' ? 'bg-emerald-500' : 
+                                           dayRequest.status === 'refused' ? 'bg-red-500' :
+                                           dayRequest.status === 'seen' ? 'bg-blue-500' : 
+                                           'bg-orange-500 animate-pulse'
+                                         }`} />
+                                         
+                                         <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-900 dark:bg-slate-800 text-white p-3 rounded-2xl shadow-xl opacity-0 invisible group-hover/balloon:opacity-100 group-hover/balloon:visible transition-all z-[100] pointer-events-none scale-95 group-hover/balloon:scale-100 origin-bottom-right">
+                                           <div className="absolute top-full right-2 -mt-1 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800" />
+                                           <p className="text-[10px] font-black uppercase text-slate-400 mb-1 border-b border-slate-700 pb-1">Pedido do Colaborador</p>
+                                           <p className="text-xs font-bold leading-snug">{dayRequest.text}</p>
+                                           {dayRequest.feedback && (
+                                             <div className="mt-2 pt-2 border-t border-slate-700">
+                                               <p className="text-[9px] font-black uppercase text-orange-400 mb-0.5">Resposta do Gerente</p>
+                                               <p className="text-[10px] font-bold text-slate-300 italic">{dayRequest.feedback}</p>
+                                             </div>
+                                           )}
+                                         </div>
+                                       </div>
+                                     )}
+
+                                     {/* Botão Principal de Turno */}
+                                     <button
+                                       type="button"
+                                       onClick={() => onSelectDay(d.num - 1)}
+                                       aria-label={`${emp.name}: Dia ${d.num}, ${d.weekday}. Turno: ${shift === 'N/A' ? 'Fora de vigência' : shift}`}
+                                       title={
+                                         shift === 'N/A' 
+                                           ? (emp.hiredAt && fullDate < emp.hiredAt 
+                                               ? `Não admitido nesta data (Início: ${emp.hiredAt.split('-').reverse().join('/')})` 
+                                               : emp.firedAt && fullDate > emp.firedAt 
+                                               ? `Contrato encerrado nesta data (Término: ${emp.firedAt.split('-').reverse().join('/')})`
+                                               : 'Desconsiderado (N/A)') 
+                                           : shift?.startsWith('FF')
+                                           ? (() => {
+                                               const explicit = shift.split(' ')[1];
+                                               const matched = (holidayCredits[emp.id] || []).find(c => c.id === explicit || c.holidayDate === explicit);
+                                               return matched ? `Folga Feriado: ${matched.holidayName}` : 'Folga Feriado (FF)';
+                                             })()
+                                           : undefined
+                                       }
+                                       className={`${isCompactMode ? 'w-8 h-8 rounded-lg text-[9px]' : 'w-10 h-10 rounded-xl text-[10px]'} flex items-center justify-center font-black transition-all shadow-xs relative ${
+                                         dayRequest ? (
+                                           dayRequest.status === 'granted' ? 'ring-1.5 ring-emerald-500/80' :
+                                           dayRequest.status === 'refused' ? 'ring-1.5 ring-red-500/80' :
+                                           dayRequest.status === 'seen' ? 'ring-1.5 ring-blue-500/80' :
+                                           'ring-2 ring-orange-500 animate-pulse'
+                                         ) : ''
+                                       } ${
+                                         shift === 'N/A' ? 'bg-slate-100/70 dark:bg-zinc-800/40 text-slate-400 dark:text-zinc-600 border border-dashed border-slate-200 dark:border-zinc-800 opacity-60' :
+                                         shift === 'AT' ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50' :
+                                         shift === 'F' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
+                                         shift.startsWith('FF') ? 'bg-amber-100 text-amber-600' :
+                                         shift === 'C' ? 'bg-indigo-100 text-indigo-600' :
+                                         shift === 'FE' ? 'bg-emerald-100 text-emerald-600' :
+                                         shift === 'DO' ? 'bg-fuchsia-600 text-white shadow-md' :
+                                         'bg-white dark:bg-zinc-900 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-zinc-800'
+                                       }`}>
                                       {shift === 'AT' ? (
                                         <div className="flex flex-col items-center justify-center text-rose-500 font-black leading-none">
                                           <Icon name="add" className="text-sm" />
