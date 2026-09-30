@@ -61,10 +61,12 @@ import { MobileNavBar } from './components/MobileNavBar';
 import { migrateLegacyEmployeeData } from './src/services/scheduleMigrationService';
 import { generateOperationalNotice } from './src/services/operationalNoticeService';
 import { useScheduleCommands } from './hooks/useScheduleCommands';
+import { STORAGE_KEYS, BROADCAST_CHANNELS } from './src/infrastructure/storage/storageKeys';
+import { getAuthSession, setAuthSession, AuthSession } from './src/infrastructure/storage/sessionAuthAdapter';
 
 const App: React.FC = () => {
-  const [employees, setEmployees] = useLocalStorage<Employee[]>('riHappyEmployeesData', [PLACEHOLDER_EMPLOYEE]);
-  const [jornadaSettings, setJornadaSettings] = useLocalStorage<JornadaSettings>('riHappyJornadaSettings', DEFAULT_JORNADA_SETTINGS);
+  const [employees, setEmployees] = useLocalStorage<Employee[]>(STORAGE_KEYS.employees, [PLACEHOLDER_EMPLOYEE]);
+  const [jornadaSettings, setJornadaSettings] = useLocalStorage<JornadaSettings>(STORAGE_KEYS.jornadaSettings, DEFAULT_JORNADA_SETTINGS);
   const [showCreateMonthModal, setShowCreateMonthModal] = useState(false);
   const [createMonthTargetMY, setCreateMonthTargetMY] = useState<MonthYear | null>(null);
 
@@ -81,12 +83,12 @@ const App: React.FC = () => {
     }
   }), [jornadaSettings]);
 
-  const [customHolidays, setCustomHolidays] = useLocalStorage<Holiday[]>('riHappyCustomHolidays', []);
-  const [deletedNationalHolidays, setDeletedNationalHolidays] = useLocalStorage<string[]>('riHappyDeletedNationalHolidays', []);
-  const [monthNotes, setMonthNotes] = useLocalStorage<Record<string, string>>('riHappyMonthNotes', {});
-  const [trackingStartDate, setTrackingStartDate] = useLocalStorage<string>('riHappyTrackingStart', `${new Date().getFullYear()}-01-01`);
-  const [officialSnapshots, setOfficialSnapshots] = useLocalStorage<Record<string, OfficialScheduleSnapshot>>('riHappyOfficialSnapshots', {});
-  const [protectedDaysMap, setProtectedDaysMap] = useLocalStorage<ProtectedDaysMap>('riHappyProtectedDays', {});
+  const [customHolidays, setCustomHolidays] = useLocalStorage<Holiday[]>(STORAGE_KEYS.customHolidays, []);
+  const [deletedNationalHolidays, setDeletedNationalHolidays] = useLocalStorage<string[]>(STORAGE_KEYS.deletedNationalHolidays, []);
+  const [monthNotes, setMonthNotes] = useLocalStorage<Record<string, string>>(STORAGE_KEYS.monthNotes, {});
+  const [trackingStartDate, setTrackingStartDate] = useLocalStorage<string>(STORAGE_KEYS.trackingStart, `${new Date().getFullYear()}-01-01`);
+  const [officialSnapshots, setOfficialSnapshots] = useLocalStorage<Record<string, OfficialScheduleSnapshot>>(STORAGE_KEYS.officialSnapshots, {});
+  const [protectedDaysMap, setProtectedDaysMap] = useLocalStorage<ProtectedDaysMap>(STORAGE_KEYS.protectedDays, {});
   
   const syncStatus = useSyncStatus();
   const [showHolidayManager, setShowHolidayManager] = useState(false);
@@ -96,40 +98,23 @@ const App: React.FC = () => {
   const [showDiffModal, setShowDiffModal] = useState(false);
   const [currentView, setCurrentView] = useState<string>('grid');
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
-  const [sectionAssignments, setSectionAssignments] = useLocalStorage<Record<string, any>>('riHappySectionAssignments', {});
-  const [validatedMonths, setValidatedMonths] = useLocalStorage<Record<string, boolean>>('riHappyValidatedMonths', {});
+  const [sectionAssignments, setSectionAssignments] = useLocalStorage<Record<string, any>>(STORAGE_KEYS.sectionAssignments, {});
+  const [validatedMonths, setValidatedMonths] = useLocalStorage<Record<string, boolean>>(STORAGE_KEYS.validatedMonths, {});
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
   const [showInconsistencyModal, setShowInconsistencyModal] = useState(false);
-  const [viewerModeType, setViewerModeType] = useLocalStorage<'personal' | 'grid'>('rhescala_viewer_mode_type', 'grid');
-  const [viewerSelectedEmpId, setViewerSelectedEmpId] = useLocalStorage<string>('rhescala_viewer_selected_emp_id', '');
-  const [auditLogs, setAuditLogs] = useLocalStorage<AuditLogEntry[]>('rhescala_audit_logs', []);
+  const [viewerModeType, setViewerModeType] = useLocalStorage<'personal' | 'grid'>(STORAGE_KEYS.viewerModeType, 'grid');
+  const [viewerSelectedEmpId, setViewerSelectedEmpId] = useLocalStorage<string>(STORAGE_KEYS.viewerSelectedEmpId, '');
+  const [auditLogs, setAuditLogs] = useLocalStorage<AuditLogEntry[]>(STORAGE_KEYS.auditLogs, []);
   const [pendingAuditAction, setPendingAuditAction] = useState<{
     impacts: AuditImpactPreview[];
     onConfirm: (justification: string) => void;
   } | null>(null);
-  const [auth, setAuth] = useState<{ isAuthenticated: boolean, role: 'admin' | 'viewer' }>(() => {
-    try {
-      const saved = sessionStorage.getItem('rhescala_auth_session');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed.isAuthenticated === 'boolean' && (parsed.role === 'admin' || parsed.role === 'viewer')) {
-          return parsed;
-        }
-      }
-    } catch (e) {}
-    return { isAuthenticated: false, role: 'viewer' };
-  });
+  const [auth, setAuth] = useState<AuthSession>(() => getAuthSession());
 
-  const updateAuth = useCallback((newAuth: { isAuthenticated: boolean, role: 'admin' | 'viewer' } | ((prev: { isAuthenticated: boolean, role: 'admin' | 'viewer' }) => { isAuthenticated: boolean, role: 'admin' | 'viewer' })) => {
+  const updateAuth = useCallback((newAuth: AuthSession | ((prev: AuthSession) => AuthSession)) => {
     setAuth(prev => {
       const next = typeof newAuth === 'function' ? newAuth(prev) : newAuth;
-      try {
-        if (next.isAuthenticated) {
-          sessionStorage.setItem('rhescala_auth_session', JSON.stringify(next));
-        } else {
-          sessionStorage.removeItem('rhescala_auth_session');
-        }
-      } catch (e) {}
+      setAuthSession(next);
       return next;
     });
   }, []);
@@ -147,8 +132,8 @@ const App: React.FC = () => {
     clearFilters: handleClearFilters,
   } = useScheduleFilters();
 
-  const [isDarkMode] = useLocalPreference<boolean>('riHappyDarkMode', false);
-  const [tacticalDisplayMode, setTacticalDisplayMode] = useLocalPreference<TacticalDisplayMode>('rhescala_tactical_display_mode', 'off');
+  const [isDarkMode] = useLocalPreference<boolean>(STORAGE_KEYS.darkMode, false);
+  const [tacticalDisplayMode, setTacticalDisplayMode] = useLocalPreference<TacticalDisplayMode>(STORAGE_KEYS.tacticalDisplayMode, 'off');
   const { showDialog } = useDialog();
   const [waModal, setWaModal] = useState<{ show: boolean; dayIdx: number }>({ show: false, dayIdx: 0 });
   const [showHelp, setShowHelp] = useState(false);
@@ -189,38 +174,38 @@ const App: React.FC = () => {
 
     try {
       // 1. Gravação síncrona imediata no localStorage para proteção instantânea contra perda
-      window.localStorage.setItem('riHappyEmployeesData', JSON.stringify(employees));
-      window.localStorage.setItem('riHappyJornadaSettings', JSON.stringify(jornadaSettings));
-      window.localStorage.setItem('riHappyCustomHolidays', JSON.stringify(customHolidays));
-      window.localStorage.setItem('riHappyDeletedNationalHolidays', JSON.stringify(deletedNationalHolidays));
-      window.localStorage.setItem('riHappyMonthNotes', JSON.stringify(monthNotes));
-      window.localStorage.setItem('riHappyTrackingStart', JSON.stringify(trackingStartDate));
-      window.localStorage.setItem('riHappyOfficialSnapshots', JSON.stringify(officialSnapshots));
-      window.localStorage.setItem('riHappyProtectedDays', JSON.stringify(protectedDaysMap));
-      window.localStorage.setItem('riHappySectionAssignments', JSON.stringify(sectionAssignments));
-      window.localStorage.setItem('riHappyValidatedMonths', JSON.stringify(validatedMonths));
-      window.localStorage.setItem('rhescala_audit_logs', JSON.stringify(auditLogs));
+      window.localStorage.setItem(STORAGE_KEYS.employees, JSON.stringify(employees));
+      window.localStorage.setItem(STORAGE_KEYS.jornadaSettings, JSON.stringify(jornadaSettings));
+      window.localStorage.setItem(STORAGE_KEYS.customHolidays, JSON.stringify(customHolidays));
+      window.localStorage.setItem(STORAGE_KEYS.deletedNationalHolidays, JSON.stringify(deletedNationalHolidays));
+      window.localStorage.setItem(STORAGE_KEYS.monthNotes, JSON.stringify(monthNotes));
+      window.localStorage.setItem(STORAGE_KEYS.trackingStart, JSON.stringify(trackingStartDate));
+      window.localStorage.setItem(STORAGE_KEYS.officialSnapshots, JSON.stringify(officialSnapshots));
+      window.localStorage.setItem(STORAGE_KEYS.protectedDays, JSON.stringify(protectedDaysMap));
+      window.localStorage.setItem(STORAGE_KEYS.sectionAssignments, JSON.stringify(sectionAssignments));
+      window.localStorage.setItem(STORAGE_KEYS.validatedMonths, JSON.stringify(validatedMonths));
+      window.localStorage.setItem(STORAGE_KEYS.auditLogs, JSON.stringify(auditLogs));
 
       // 2. Transmissão imediata via BroadcastChannel para outras abas abertas
       try {
-        new BroadcastChannel('sync_riHappyEmployeesData').postMessage(employees);
-        new BroadcastChannel('sync_riHappyValidatedMonths').postMessage(validatedMonths);
+        new BroadcastChannel(BROADCAST_CHANNELS.employeesSync).postMessage(employees);
+        new BroadcastChannel(BROADCAST_CHANNELS.validatedMonthsSync).postMessage(validatedMonths);
       } catch (e) {}
 
       // 3. Força envio imediato para a nuvem GAS caso a URL esteja configurada
       const url = getConfiguredApiUrl();
       if (url) {
         await Promise.allSettled([
-          apiStore.set('riHappyEmployeesData', employees),
-          apiStore.set('riHappyValidatedMonths', validatedMonths),
-          apiStore.set('riHappyProtectedDays', protectedDaysMap),
-          apiStore.set('riHappyMonthNotes', monthNotes),
-          apiStore.set('riHappyOfficialSnapshots', officialSnapshots),
-          apiStore.set('riHappyCustomHolidays', customHolidays),
-          apiStore.set('riHappyDeletedNationalHolidays', deletedNationalHolidays),
-          apiStore.set('riHappyJornadaSettings', jornadaSettings),
-          apiStore.set('riHappySectionAssignments', sectionAssignments),
-          apiStore.set('rhescala_audit_logs', auditLogs)
+          apiStore.set(STORAGE_KEYS.employees, employees),
+          apiStore.set(STORAGE_KEYS.validatedMonths, validatedMonths),
+          apiStore.set(STORAGE_KEYS.protectedDays, protectedDaysMap),
+          apiStore.set(STORAGE_KEYS.monthNotes, monthNotes),
+          apiStore.set(STORAGE_KEYS.officialSnapshots, officialSnapshots),
+          apiStore.set(STORAGE_KEYS.customHolidays, customHolidays),
+          apiStore.set(STORAGE_KEYS.deletedNationalHolidays, deletedNationalHolidays),
+          apiStore.set(STORAGE_KEYS.jornadaSettings, jornadaSettings),
+          apiStore.set(STORAGE_KEYS.sectionAssignments, sectionAssignments),
+          apiStore.set(STORAGE_KEYS.auditLogs, auditLogs)
         ]);
       }
 
