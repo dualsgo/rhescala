@@ -181,16 +181,17 @@ export const Header: React.FC<HeaderProps> = ({
               ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-500 text-orange-600 dark:text-orange-400 font-black shadow-sm'
               : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-200 hover:border-orange-400'
           }`}
+          aria-label={`Filtros da Escala${activeFiltersCount > 0 ? ` (${activeFiltersCount} ativo${activeFiltersCount === 1 ? '' : 's'})` : ''}`}
           title="Filtros da Escala (Turnos, Presença, Contrato e Período)"
         >
-          <Icon name="tune" className={`text-sm ${activeFiltersCount > 0 ? 'text-orange-500' : 'text-slate-500 dark:text-slate-400'}`} />
+          <Icon name="tune" className={`text-sm shrink-0 ${activeFiltersCount > 0 ? 'text-orange-500' : 'text-slate-500 dark:text-slate-400'}`} />
           <span>Filtros</span>
           {activeFiltersCount > 0 && (
-            <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-black flex items-center justify-center">
+            <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-black flex items-center justify-center shrink-0">
               {activeFiltersCount}
             </span>
           )}
-          <Icon name={showFilterMenu ? 'expand_less' : 'expand_more'} className="text-xs opacity-70" />
+          <Icon name={showFilterMenu ? 'expand_less' : 'expand_more'} className="text-xs opacity-70 shrink-0" />
         </button>
 
         {showFilterMenu && (
@@ -365,21 +366,26 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {!isReadOnly && (
-            <nav className="hidden lg:flex items-center gap-1 bg-slate-100 dark:bg-zinc-900 p-1 rounded-xl border border-slate-200/50 dark:border-zinc-800">
+            <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 bg-slate-100 dark:bg-zinc-900 p-1 rounded-xl border border-slate-200/50 dark:border-zinc-800">
               {navItems.map(item => (
                 <button
                   key={item.id}
                   onClick={() => onViewChange(item.id as any)}
-                  className={`relative px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                  aria-label={item.label}
+                  title={`Visualizar ${item.label}`}
+                  className={`relative px-2.5 xl:px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
                     currentView === item.id 
                       ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600 dark:text-orange-400' 
                       : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
-                  <Icon name={item.icon} className="text-sm" />
+                  <Icon name={item.icon} className="text-sm shrink-0" />
                   <span>{item.label}</span>
                   {item.id === 'requests' && pendingRequestsCount > 0 && (
-                    <span className="flex h-4 w-4 ml-0.5">
+                    <span 
+                      className="flex h-4 w-4 ml-0.5" 
+                      aria-label={`${pendingRequestsCount} solicitações pendentes`}
+                    >
                       <span className="animate-ping absolute inline-flex h-4 w-4 rounded-full bg-rose-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 items-center justify-center text-[8px] font-black text-white shadow-sm">
                         {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
@@ -394,15 +400,18 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   onClick={() => setShowConfigMenu(!showConfigMenu)}
                   onBlur={() => setTimeout(() => setShowConfigMenu(false), 200)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                  aria-label="Menu Operações & Loja"
+                  title="Menu Operações & Loja (Rotinas, Equipe, Jornada, Feriados e Dados)"
+                  className={`px-2.5 xl:px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
                     ['team','jornada','data','feriados','worked-holidays','cleaning','patrol','sections'].includes(currentView) 
                       ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600 dark:text-orange-400' 
                       : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
-                  <Icon name="tune" className="text-sm" />
-                  <span>Operações & Loja</span>
-                  <Icon name={showConfigMenu ? 'expand_less' : 'expand_more'} className="text-xs" />
+                  <Icon name="tune" className="text-sm shrink-0" />
+                  <span className="hidden 2xl:inline">Operações & Loja</span>
+                  <span className="inline 2xl:hidden">Operações</span>
+                  <Icon name={showConfigMenu ? 'expand_less' : 'expand_more'} className="text-xs shrink-0" />
                 </button>
 
                 {showConfigMenu && (
@@ -460,6 +469,7 @@ export const Header: React.FC<HeaderProps> = ({
               }}
               className="p-1 sm:p-1.5 rounded-lg hover:bg-white dark:hover:bg-zinc-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-all"
               title="Mês Anterior"
+              aria-label="Mês Anterior"
             >
               <Icon name="chevron_left" className="text-sm sm:text-base" />
             </button>
@@ -489,6 +499,7 @@ export const Header: React.FC<HeaderProps> = ({
                 canGoNext ? 'hover:bg-white dark:hover:bg-zinc-800 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer' : 'opacity-30 cursor-not-allowed'
               }`}
               title={canGoNext ? 'Próximo Mês' : 'Avanço restrito pelo perfil'}
+              aria-label={canGoNext ? 'Próximo Mês' : 'Avanço restrito pelo perfil'}
             >
               <Icon name="chevron_right" className="text-sm sm:text-base" />
             </button>
@@ -497,6 +508,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Scale Status: Official vs Draft (Desktop & Tablet) */}
           <button
             onClick={isReadOnly ? undefined : onToggleValidation}
+            aria-label={`Status da Escala: ${isValidated ? 'Oficializada' : 'Modo Rascunho'}`}
             className={`hidden sm:flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border font-bold text-[10px] uppercase tracking-wider transition-all shadow-sm ${
               isValidated
                 ? 'bg-emerald-500 text-white border-emerald-600 shadow-emerald-500/20'
@@ -504,7 +516,7 @@ export const Header: React.FC<HeaderProps> = ({
             } ${isReadOnly ? 'cursor-default' : 'hover:scale-[1.02] active:scale-95'}`}
             title={isReadOnly ? 'Status da Escala' : (isValidated ? 'Oficializada! Clique para alternar para Rascunho' : 'Rascunho. Clique para oficializar escala')}
           >
-            <Icon name={isValidated ? 'verified' : 'pending_actions'} className="text-xs sm:text-sm" />
+            <Icon name={isValidated ? 'verified' : 'pending_actions'} className="text-xs sm:text-sm shrink-0" />
             <span>{isValidated ? 'Oficial' : 'Rascunho'}</span>
           </button>
 
@@ -512,11 +524,13 @@ export const Header: React.FC<HeaderProps> = ({
           {!isReadOnly && isValidated && onOpenDiffModal && diffCount > 0 && (
             <button
               onClick={onOpenDiffModal}
-              className="hidden lg:flex items-center gap-1 px-2.5 py-1.5 rounded-xl border bg-amber-500 border-amber-600 text-white shadow-sm font-bold text-[10px] uppercase tracking-wider hover:scale-105 transition-all"
-              title="Auditoria: Existem divergências em relação à versão oficial impressa"
+              aria-label={`${diffCount} divergência${diffCount === 1 ? '' : 's'} pós-oficialização`}
+              className="hidden lg:flex items-center gap-1 px-2 xl:px-2.5 py-1.5 rounded-xl border bg-amber-500 border-amber-600 text-white shadow-sm font-bold text-[10px] uppercase tracking-wider hover:scale-105 transition-all"
+              title={`Auditoria: ${diffCount} divergência${diffCount === 1 ? '' : 's'} em relação à versão oficial impressa`}
             >
-              <Icon name="difference" className="text-xs" />
-              <span>{diffCount} {diffCount === 1 ? 'Alt.' : 'Alts.'}</span>
+              <Icon name="difference" className="text-xs shrink-0" />
+              <span className="font-black">{diffCount}</span>
+              <span className="hidden xl:inline">{diffCount === 1 ? 'Alt.' : 'Alts.'}</span>
             </button>
           )}
 
@@ -524,11 +538,13 @@ export const Header: React.FC<HeaderProps> = ({
           {!isReadOnly && onOpenInconsistencyModal && inconsistencyCount > 0 && (
             <button
               onClick={onOpenInconsistencyModal}
-              className="hidden lg:flex items-center gap-1 px-2.5 py-1.5 rounded-xl border bg-rose-500 border-rose-600 text-white shadow-sm font-black text-[10px] uppercase tracking-wider animate-pulse hover:scale-105 transition-all"
-              title="Central de Alertas e Regras CLT"
+              aria-label={`${inconsistencyCount} alerta${inconsistencyCount === 1 ? '' : 's'} de inconsistência CLT`}
+              className="hidden lg:flex items-center gap-1 px-2 xl:px-2.5 py-1.5 rounded-xl border bg-rose-500 border-rose-600 text-white shadow-sm font-black text-[10px] uppercase tracking-wider animate-pulse hover:scale-105 transition-all"
+              title={`Central de Alertas: ${inconsistencyCount} inconformidade${inconsistencyCount === 1 ? '' : 's'} com regras da CLT ou escalas`}
             >
-              <Icon name="warning" className="text-xs" />
-              <span>{inconsistencyCount} {inconsistencyCount === 1 ? 'Alerta' : 'Alertas'}</span>
+              <Icon name="warning" className="text-xs shrink-0" />
+              <span className="font-black">{inconsistencyCount}</span>
+              <span className="hidden xl:inline">{inconsistencyCount === 1 ? 'Alerta' : 'Alertas'}</span>
             </button>
           )}
         </div>
@@ -552,10 +568,11 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onSwitchRole}
+              aria-label="Entrar com acesso gerencial de Administrador"
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 hover:bg-orange-50 hover:border-orange-300 dark:hover:bg-orange-950/40 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all shadow-xs"
               title="Entrar com a senha de Administrador/Gerente da loja"
             >
-              <Icon name="admin_panel_settings" className="text-sm text-orange-500" />
+              <Icon name="admin_panel_settings" className="text-sm text-orange-500 shrink-0" />
               <span className="hidden sm:inline">Acesso Gerencial</span>
               <span className="inline sm:hidden">Admin</span>
             </button>
@@ -564,10 +581,11 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onLogout}
+              aria-label="Sair da conta"
               className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/60 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-xs font-bold hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all shadow-xs"
               title="Sair do modo de visualização"
             >
-              <Icon name="logout" className="text-sm" />
+              <Icon name="logout" className="text-sm shrink-0" />
               <span className="hidden sm:inline">Sair</span>
             </button>
           </div>
@@ -581,6 +599,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onManualSave}
               disabled={isSaving}
+              aria-label={isSaving ? 'Salvando escala...' : isJustSaved ? 'Escala salva com sucesso' : 'Salvar escala agora (Atalho Ctrl+S)'}
               className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border font-black text-[10px] sm:text-xs uppercase tracking-wider transition-all shadow-sm ${
                 isJustSaved
                   ? 'bg-emerald-600 border-emerald-700 text-white shadow-emerald-500/30 scale-[1.02]'
@@ -592,12 +611,12 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Icon 
                 name={isJustSaved ? 'check_circle' : isSaving ? 'sync' : 'save'} 
-                className={`text-xs sm:text-sm ${isSaving ? 'animate-spin' : ''}`} 
+                className={`text-xs sm:text-sm shrink-0 ${isSaving ? 'animate-spin' : ''}`} 
               />
               <span className="inline">
                 {isJustSaved ? 'Salvo!' : isSaving ? 'Salvando...' : 'Salvar'}
               </span>
-              <span className="hidden xl:inline text-[8px] sm:text-[9px] opacity-80 bg-black/25 px-1 py-0.5 rounded font-mono">
+              <span className="hidden 2xl:inline text-[8px] sm:text-[9px] opacity-80 bg-black/25 px-1 py-0.5 rounded font-mono">
                 Ctrl+S
               </span>
             </button>
@@ -615,6 +634,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setShowProfileMenu(false);
                   setShowShareMenu(false);
                 }}
+                aria-label="Menu de Ações, Ferramentas e Exportação da Escala"
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all shadow-xs ${
                   showActionsMenu
                     ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
@@ -622,9 +642,9 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
                 title="Ações, Ferramentas e Exportação da Escala"
               >
-                <Icon name="more_vert" className="text-sm text-slate-500 dark:text-slate-400" />
+                <Icon name="more_vert" className="text-sm text-slate-500 dark:text-slate-400 shrink-0" />
                 <span>Ações</span>
-                <Icon name={showActionsMenu ? 'expand_less' : 'expand_more'} className="text-xs opacity-70" />
+                <Icon name={showActionsMenu ? 'expand_less' : 'expand_more'} className="text-xs opacity-70 shrink-0" />
               </button>
 
               {showActionsMenu && (
@@ -824,15 +844,17 @@ export const Header: React.FC<HeaderProps> = ({
           {/* 4. Menu do Usuário & Perfil */}
           <div className="relative">
             <button
+              type="button"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               onBlur={() => setTimeout(() => setShowProfileMenu(false), 200)}
+              aria-label="Menu de Conta e Sessão"
               className="flex items-center gap-1.5 p-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-all border border-slate-200 dark:border-zinc-700"
               title="Conta e Sessão"
             >
-              <div className="w-6 h-6 rounded-lg bg-orange-500 text-white flex items-center justify-center font-black text-[10px] uppercase shadow-sm">
+              <div className="w-6 h-6 rounded-lg bg-orange-500 text-white flex items-center justify-center font-black text-[10px] uppercase shadow-sm shrink-0">
                 RH
               </div>
-              <Icon name="expand_more" className="text-xs text-slate-400" />
+              <Icon name="expand_more" className="text-xs text-slate-400 shrink-0" />
             </button>
 
             {showProfileMenu && (
