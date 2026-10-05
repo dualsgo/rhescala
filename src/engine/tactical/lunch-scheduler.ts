@@ -183,7 +183,6 @@ export function calculateDetailedLunches(
       if (isApprentice) {
         classification = 'Abertura';
       } else if (isOpeningHint !== undefined) {
-        // Fallback apenas para membros sem horário definido
         classification = isOpeningHint ? 'Abertura' : 'Fechamento';
       } else {
         classification = 'Abertura';
@@ -247,19 +246,20 @@ export function calculateDetailedLunches(
     };
   });
 
-  // Linha do tempo: rastreia colaboradores e caixas em almoço por minuto
+  // Linha do tempo: rastreia colaboradores e caixas em almoço
   const activeLunches: { startMin: number; endMin: number; isCaixa: boolean; candidateId: string }[] = [];
 
+  // Rastreia a capacidade considerando estritamente as pessoas efetivamente presentes naquele minuto t
   const getCapacityAt = (t: number) => {
-    let working = 0;
-    let onLunch = 0;
-    let caixasWorking = 0;
+    let present = 0; // Pessoas em jornada efetiva naquele minuto t (já entraram e ainda não saíram)
+    let onLunch = 0; // Pessoas em intervalo naquele minuto t
+    let caixasPresent = 0;
     let caixasOnLunch = 0;
 
     for (const c of normalized) {
       if (c.startMin <= t && c.endMin > t) {
-        working++;
-        if (c.isCaixa) caixasWorking++;
+        present++;
+        if (c.isCaixa) caixasPresent++;
       }
     }
 
@@ -270,22 +270,28 @@ export function calculateDetailedLunches(
       }
     }
 
+    const available = present - onLunch; // Pessoas trabalhando naquele momento
+    const coverageRatio = present > 0 ? available / present : 1;
+
     return {
-      working,
+      present,
+      working: present, // Compatibilidade com leituras de presença
       onLunch,
-      available: working - onLunch,
-      caixasWorking,
+      available,
+      coverageRatio,
+      caixasPresent,
+      caixasWorking: caixasPresent,
       caixasOnLunch,
-      caixasAvailable: caixasWorking - caixasOnLunch,
+      caixasAvailable: caixasPresent - caixasOnLunch,
     };
   };
 
-  // Meta operacional de cobertura (orientação ~70% trabalhando, priorizando cobertura em equipe pequena)
-  const getMaxAllowedLunch = (working: number) => {
-    if (working <= 3) return 1; // Equipe pequena: cobertura estrita, no máximo 1 em almoço
-    if (working <= 5) return 1; // Equipe média-pequena: preferencialmente 1
-    if (working <= 7) return 2; // Equipe média: até 2 pessoas
-    return Math.max(1, Math.floor(working * 0.33)); // Equipe maior: meta ~30% em almoço
+  // Meta operacional de cobertura baseada nas pessoas EFETIVAMENTE PRESENTES no momento
+  const getMaxAllowedLunch = (present: number) => {
+    if (present <= 3) return 1; // Equipe pequena presente: cobertura prioritária, máx 1 em almoço
+    if (present <= 5) return 1; // Equipe média-pequena presente: ideal 1
+    if (present <= 7) return 2; // Equipe média presente: até 2 pessoas
+    return Math.max(2, Math.floor(present * 0.33)); // Equipe maior presente: meta de ~30% em almoço (~70% presente trabalhando)
   };
 
   const recordAllocation = (cand: Candidate, startMin: number) => {
@@ -312,7 +318,7 @@ export function calculateDetailedLunches(
   const caixas = normalized.filter(c => c.isCaixa);
   caixas.sort((a, b) => a.startMin - b.startMin);
 
-  // 3. Janelas operacionais candidatas
+  // 3. Janelas operacionais candidatas baseadas nas configurações do sistema
   const getCandidateSlots = (cand: Candidate): number[] => {
     const slots: number[] = [];
     const step = 15;
@@ -321,14 +327,28 @@ export function calculateDetailedLunches(
     let searchEnd: number;
 
     if (isHoliday) {
-      // Feriado: pausa de 15 minutos.
-      // Regras: nunca antes da entrada do colaborador e respeitando sua jornada real.
-      searchStart = cand.startMin;
-      searchEnd = cand.endMin - cand.durationMin;
+      // Feriado: intervalo de 15 minutos utilizando as janelas operacionais configuradas
+      // - Abertura (entra 12h): janela preferencial 13h30 - 15h30
+      // - Intermediário 1 (entra 13h): janela preferencial 14h30 - 16h30
+      // - Intermediário 2 (entra 14h): janela preferencial 15h30 - 17h30
+      // - Fechamento (entra 15h): janela preferencial 16h30 - 18h30
+      if (cand.startMin <= 12 * 60) {
+        searchStart = 13 * 60 + 30;
+        searchEnd = 15 * 60 + 30;
+      } else if (cand.startMin <= 13 * 60) {
+        searchStart = 14 * 60 + 30;
+        searchEnd = 16 * 60 + 30;
+      } else if (cand.startMin <= 14 * 60) {
+        searchStart = 15 * 60 + 30;
+        searchEnd = 17 * 60 + 30;
+      } else {
+        searchStart = 16 * 60 + 30;
+        searchEnd = 18 * 60 + 30;
+      }
     } else if (isSunday) {
       // Domingo:
-      // Abertura (entra às 12h): janela preferencial 14h00 - 15h30 (não sai às 13h após apenas 1h de trabalho)
-      // Fechamento (entra às 13h): janela 15h30 - 17h30
+      // Abertura (entra às 12h): janela preferencial 14h00 - 15h30 (evita sair às 13h após apenas 1h de trabalho)
+      // Fechamento (entra às 13h): janela preferencial 15h30 - 17h30
       if (cand.classification === 'Abertura') {
         searchStart = 14 * 60;
         searchEnd = 15 * 60 + 30;
@@ -350,13 +370,13 @@ export function calculateDetailedLunches(
       }
     }
 
-    // Estoquista possui flexibilidade de preenchimento dentro de sua jornada
+    // Estoquista possui flexibilidade dentro de sua jornada
     if (cand.isEstoquista) {
       searchStart = Math.max(searchStart - 30, cand.startMin + 60);
       searchEnd = Math.min(searchEnd + 30, cand.endMin - cand.durationMin);
     }
 
-    // Garante que o slot respeita entrada e saída reais do colaborador
+    // Garante que o slot respeita rigorosamente entrada e saída reais do colaborador
     searchStart = Math.max(searchStart, cand.startMin);
     searchEnd = Math.min(searchEnd, cand.endMin - cand.durationMin);
 
@@ -380,7 +400,10 @@ export function calculateDetailedLunches(
     // Centro preferencial por turno
     let idealCenter: number;
     if (isHoliday) {
-      idealCenter = Math.round((cand.startMin + cand.endMin) / 2);
+      if (cand.startMin <= 12 * 60) idealCenter = 14 * 60;
+      else if (cand.startMin <= 13 * 60) idealCenter = 15 * 60;
+      else if (cand.startMin <= 14 * 60) idealCenter = 16 * 60;
+      else idealCenter = 17 * 60;
     } else if (isSunday) {
       idealCenter = cand.classification === 'Abertura' ? 14 * 60 + 30 : 16 * 60;
     } else {
@@ -395,6 +418,12 @@ export function calculateDetailedLunches(
 
     penalty += Math.abs(startSlot - idealCenter) * 0.1;
 
+    // Regra: Evitar deliberadamente intervalo imediatamente após a entrada quando houver alternativa válida
+    // Se o slot for nos primeiros 45 minutos após a entrada e a jornada tiver slots posteriores:
+    if (startSlot < cand.startMin + 45 && cand.endMin - cand.durationMin >= cand.startMin + 60) {
+      penalty += 1500;
+    }
+
     // Regra de alternância dinâmica entre Caixas:
     // Se há múltiplos Caixas no dia:
     // - O Caixa com entrada mais cedo não deve sair antes da entrada real do segundo Caixa
@@ -402,13 +431,11 @@ export function calculateDetailedLunches(
     if (cand.isCaixa && caixas.length >= 2) {
       const otherCaixa = caixas.find(c => c.id !== cand.id);
       if (otherCaixa) {
-        // Se este colaborador é o primeiro Caixa e o segundo entra mais tarde:
         if (cand.startMin < otherCaixa.startMin) {
           if (startSlot < otherCaixa.startMin) {
             penalty += 5000; // Aguarda a entrada real do segundo Caixa
           }
         } else if (cand.startMin > otherCaixa.startMin) {
-          // Se este colaborador é o segundo Caixa:
           if (otherCaixa.allocatedEndMin !== undefined && startSlot < otherCaixa.allocatedEndMin) {
             penalty += 5000; // Aguarda o retorno do primeiro Caixa
           }
@@ -416,35 +443,33 @@ export function calculateDetailedLunches(
       }
     }
 
-    // Avaliação minuto a minuto (amostras de 15 min)
+    // Avaliação da cobertura minuto a minuto (amostras de 15 min)
     for (let t = startSlot; t < endSlot; t += 15) {
       const cap = getCapacityAt(t);
-      const maxAllowed = getMaxAllowedLunch(cap.working);
+      const maxAllowed = getMaxAllowedLunch(cap.present);
 
-      // Meta operacional de cobertura geral
+      // Meta operacional de cobertura geral: penaliza se exceder o teto seguro para as pessoas presentes
       if (cap.onLunch >= maxAllowed) {
         penalty += 2000 * (cap.onLunch - maxAllowed + 1);
       }
 
-      // Proteção de equipe pequena
-      if (cap.working >= 3 && cap.available <= 1) {
+      // Proteção de equipe pequena presente
+      if (cap.present >= 3 && cap.available <= 1) {
         penalty += 3000;
       }
 
-      // Cobertura da função Caixa:
-      // Se há mais de 1 Caixa trabalhando naquele instante, não permitir 0 Caixas disponíveis
-      if (cand.isCaixa && cap.caixasWorking > 1 && cap.caixasAvailable <= 0) {
+      // Cobertura específica da função Caixa:
+      // Se há mais de 1 Caixa presente trabalhando naquele instante, não permitir 0 Caixas disponíveis
+      if (cand.isCaixa && cap.caixasPresent > 1 && cap.caixasAvailable <= 0) {
         penalty += 5000;
       }
-
-      penalty += cap.onLunch * 15;
     }
 
     return penalty;
   };
 
   // 4. ORDEM DE PRIORIDADE DE ALOCAÇÃO:
-  // 1º Primeiro Caixa (para determinar o ponto de alternância)
+  // 1º Primeiro Caixa (estabelece o ponto de alternância)
   // 2º Intermediário (prioridade sobre Fechamento na janela de transição)
   // 3º Segundo Caixa (alterna após retorno do primeiro)
   // 4º Restante da Abertura
