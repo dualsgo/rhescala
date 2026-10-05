@@ -88,6 +88,12 @@ describe('Header — Responsividade e Acessibilidade (Fase 7.7.2)', () => {
     expect(saveBtn).not.toBeNull();
     expect(saveBtn?.textContent).toContain('Salvar');
 
+    // Validação cirúrgica do breakpoint do atalho Ctrl+S (>= 1440px e não 2xl/1536px)
+    const ctrlSSpan = Array.from(saveBtn?.querySelectorAll('span') || []).find(el => el.textContent?.includes('Ctrl+S'));
+    expect(ctrlSSpan).toBeDefined();
+    expect(ctrlSSpan?.className).toContain('min-[1440px]:inline');
+    expect(ctrlSSpan?.className).not.toContain('2xl:inline');
+
     act(() => {
       saveBtn?.click();
     });
