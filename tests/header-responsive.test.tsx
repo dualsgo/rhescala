@@ -138,4 +138,50 @@ describe('Header — Responsividade e Acessibilidade (Fase 7.7.2)', () => {
     const adminBtn = container.querySelector('button[aria-label="Entrar com acesso gerencial de Administrador"]');
     expect(adminBtn).not.toBeNull();
   });
+
+  it('deve implementar navegação esquerda compacta para faixa lg (< xl) preservando descoberta e contador', async () => {
+    await act(async () => {
+      root.render(<Header {...baseProps} pendingRequestsCount={3} />);
+    });
+
+    // 1. Os quatro itens continuam presentes
+    const navGrade = container.querySelector('button[aria-label="Grade"]');
+    const navAnalise = container.querySelector('button[aria-label="Análise"]');
+    const navRequests = container.querySelector('button[aria-label="Solicitações"]');
+    const navOperacoes = container.querySelector('button[aria-label*="Operações"]');
+
+    expect(navGrade).not.toBeNull();
+    expect(navAnalise).not.toBeNull();
+    expect(navRequests).not.toBeNull();
+    expect(navOperacoes).not.toBeNull();
+
+    // 2 & 3. Classes de padding e gap compactos em lg e normais em xl
+    expect(navGrade?.className).toContain('px-2');
+    expect(navGrade?.className).toContain('xl:px-3.5');
+    expect(navGrade?.className).toContain('gap-1');
+    expect(navGrade?.className).toContain('xl:gap-1.5');
+    expect(navOperacoes?.className).toContain('px-2');
+    expect(navOperacoes?.className).toContain('xl:px-3');
+
+    // 2 & 3. Rótulo compacto em lg ("Pedidos") e completo em xl ("Solicitações")
+    const fullRequestsLabel = navRequests?.querySelector('span.hidden.xl\\:inline');
+    const compactRequestsLabel = navRequests?.querySelector('span.inline.xl\\:hidden');
+    expect(fullRequestsLabel?.textContent).toBe('Solicitações');
+    expect(compactRequestsLabel?.textContent).toBe('Pedidos');
+
+    // 4. Solicitações continua exibindo o contador
+    const badge = navRequests?.querySelector('span[aria-label="3 solicitações pendentes"]');
+    expect(badge).not.toBeNull();
+    expect(badge?.textContent).toContain('3');
+
+    // 5. Operações continua sendo um controle de menu
+    expect(navOperacoes?.getAttribute('title')).toContain('Menu Operações & Loja');
+    expect(navOperacoes?.textContent).toContain('Operações');
+
+    // 6. aria-label e title continuam disponíveis
+    expect(navRequests?.getAttribute('aria-label')).toBe('Solicitações');
+    expect(navRequests?.getAttribute('title')).toBe('Visualizar Solicitações');
+    expect(navGrade?.getAttribute('aria-label')).toBe('Grade');
+    expect(navGrade?.getAttribute('title')).toBe('Visualizar Grade');
+  });
 });

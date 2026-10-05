@@ -373,17 +373,24 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={() => onViewChange(item.id as any)}
                   aria-label={item.label}
                   title={`Visualizar ${item.label}`}
-                  className={`relative px-2.5 xl:px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                  className={`relative px-2 xl:px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 xl:gap-1.5 whitespace-nowrap shrink-0 ${
                     currentView === item.id 
                       ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600 dark:text-orange-400' 
                       : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
                   <Icon name={item.icon} className="text-sm shrink-0" />
-                  <span>{item.label}</span>
+                  {item.id === 'requests' ? (
+                    <>
+                      <span className="hidden xl:inline">{item.label}</span>
+                      <span className="inline xl:hidden">Pedidos</span>
+                    </>
+                  ) : (
+                    <span>{item.label}</span>
+                  )}
                   {item.id === 'requests' && pendingRequestsCount > 0 && (
                     <span 
-                      className="flex h-4 w-4 ml-0.5" 
+                      className="flex h-4 w-4 ml-0.5 shrink-0" 
                       aria-label={`${pendingRequestsCount} solicitações pendentes`}
                     >
                       <span className="animate-ping absolute inline-flex h-4 w-4 rounded-full bg-rose-400 opacity-75"></span>
@@ -402,7 +409,7 @@ export const Header: React.FC<HeaderProps> = ({
                   onBlur={() => setTimeout(() => setShowConfigMenu(false), 200)}
                   aria-label="Menu Operações & Loja"
                   title="Menu Operações & Loja (Rotinas, Equipe, Jornada, Feriados e Dados)"
-                  className={`px-2.5 xl:px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                  className={`px-2 xl:px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 xl:gap-1.5 whitespace-nowrap shrink-0 ${
                     ['team','jornada','data','feriados','worked-holidays','cleaning','patrol','sections'].includes(currentView) 
                       ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600 dark:text-orange-400' 
                       : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
