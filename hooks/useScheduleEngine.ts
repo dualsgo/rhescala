@@ -32,7 +32,8 @@ import {
 } from '../src/engine/tactical/tactical-positions';
 
 import {
-    calculateLunches
+    calculateLunches,
+    calculateDetailedLunches
 } from '../src/engine/tactical/lunch-scheduler';
 
 import {
@@ -87,6 +88,7 @@ export {
     distributeTacticalPositions,
     applyTacticalOnly,
     calculateLunches,
+    calculateDetailedLunches,
     getCleaningSchedule,
     detectScheduleDiffs,
     optimizeOctoberPeak,

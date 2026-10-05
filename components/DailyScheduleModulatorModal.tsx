@@ -169,16 +169,35 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
       return a.localeCompare(b);
     });
 
+    // Coleta todos os colaboradores trabalhando hoje para cálculo coordenado de almoços
+    const allMembersFlat: any[] = [];
+    sortedHours.forEach(hour => {
+      initialGroups[hour].forEach((m: any) => {
+        allMembersFlat.push({ ...m, hour });
+      });
+    });
+
+    const calculatedLunches = calculateLunches(
+      allMembersFlat,
+      isHoliday,
+      isSunday,
+      undefined,
+      jornadaSettings
+    ) || [];
+
+    const memberLunchMap = new Map<string, string>();
+    allMembersFlat.forEach((m, idx) => {
+      memberLunchMap.set(m.id, calculatedLunches[idx] || '13h');
+    });
+
     const initialItems: ModulatorItem[] = [];
 
     sortedHours.forEach(hour => {
       const members = initialGroups[hour];
       const shiftName = getShiftClassification(hour, isSunday, jornadaSettings);
-      const isOpening = shiftName === 'Abertura';
-      const lunches = calculateLunches(members, isHoliday, isSunday, isOpening, jornadaSettings) || [];
 
-      members.forEach((m, idx) => {
-        const lunchTime = lunches[idx] || '13h';
+      members.forEach((m) => {
+        const lunchTime = memberLunchMap.get(m.id) || '13h';
         initialItems.push({
           id: m.id,
           name: m.name,

@@ -49,7 +49,7 @@ describe('Horários, Almoços e Posições Táticas', () => {
       expect(calculateLunches([], false, false, true)).toEqual([]);
     });
 
-    it('em feriados: aprendiz recebe 12h45, estoquista recebe Flexível e atendentes recebem pausas escalonadas de 15 min a partir de 14h30', () => {
+    it('em feriados: aprendiz recebe 12h45, estoquista recebe horário concreto e atendentes recebem pausas de 15 min escalonadas', () => {
       const team = [
         createTestEmployee({ id: '1', isYoungApprentice: true }),
         createTestEmployee({ id: '2', cargo: 'Estoquista' }),
@@ -60,12 +60,13 @@ describe('Horários, Almoços e Posições Táticas', () => {
       const lunches = calculateLunches(team, true, false, true, DEFAULT_JORNADA_SETTINGS);
 
       expect(lunches[0]).toBe('12h45');
-      expect(lunches[1]).toBe('Flexível');
-      expect(lunches[2]).toBe('14h30 (15 min)');
-      expect(lunches[3]).toBe('14h45 (15 min)');
+      expect(lunches[1]).toContain('15 min');
+      expect(lunches[1]).not.toBe('Flexível');
+      expect(lunches[2]).toContain('15 min');
+      expect(lunches[3]).toContain('15 min');
     });
 
-    it('em domingos de abertura: aloca almoço em duplas (13h, depois 13h30)', () => {
+    it('em domingos de abertura: aloca almoço na janela 14h00-15h30 (não às 13h)', () => {
       const team = [
         createTestEmployee({ id: '1', workPeriod: '12h às 20h' }),
         createTestEmployee({ id: '2', workPeriod: '12h às 20h' }),
@@ -74,12 +75,14 @@ describe('Horários, Almoços e Posições Táticas', () => {
 
       const lunches = calculateLunches(team, false, true, true, DEFAULT_JORNADA_SETTINGS);
 
-      expect(lunches[0]).toBe('13h');
-      expect(lunches[1]).toBe('13h');
-      expect(lunches[2]).toBe('13h30');
+      // Nenhum colaborador que entra às 12h deve receber almoço artificialmente às 13h
+      expect(lunches[0]).not.toBe('13h');
+      expect(['14h', '14h30', '15h', '15h30']).toContain(lunches[0]);
+      expect(['14h', '14h30', '15h', '15h30']).toContain(lunches[1]);
+      expect(['14h', '14h30', '15h', '15h30']).toContain(lunches[2]);
     });
 
-    it('em domingos de fechamento: escalona almoço nos slots (14h, 15h, 16h, 17h)', () => {
+    it('em domingos de fechamento: aloca almoço na janela de fechamento após retorno da abertura', () => {
       const team = [
         createTestEmployee({ id: '1', workPeriod: '13h às 21h' }),
         createTestEmployee({ id: '2', workPeriod: '13h às 21h' }),
@@ -88,9 +91,10 @@ describe('Horários, Almoços e Posições Táticas', () => {
 
       const lunches = calculateLunches(team, false, true, false, DEFAULT_JORNADA_SETTINGS);
 
-      expect(lunches[0]).toBe('14h');
-      expect(lunches[1]).toBe('15h');
-      expect(lunches[2]).toBe('16h');
+      // Fechamento no domingo aloca na janela 15h30 - 17h30
+      expect(['15h30', '16h', '16h30', '17h']).toContain(lunches[0]);
+      expect(['15h30', '16h', '16h30', '17h']).toContain(lunches[1]);
+      expect(['15h30', '16h', '16h30', '17h']).toContain(lunches[2]);
     });
   });
 

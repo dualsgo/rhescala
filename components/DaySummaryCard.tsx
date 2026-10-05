@@ -29,53 +29,7 @@ const HOLIDAY_LUNCH_CONFIG = {
   fechamento:    { windowStart: 16.5 * 60, windowEnd: 18.5 * 60, slotDuration: 30, label: 'Fechamento (H)',   icon: 'nightlight',  color: 'rose',    range: '15h–21h' },
 } as const;
 
-/** Formats minutes-from-midnight as "HHhMM" */
-function fmtTime(mins: number): string {
-  const h = Math.floor(mins / 60).toString().padStart(2, '0');
-  const m = (mins % 60).toString().padStart(2, '0');
-  return m === '00' ? `${h}h` : `${h}h${m}`;
-}
 
-/**
- * Returns all discrete possible lunch slot labels for a shift config.
- */
-function getAvailableSlots(config: any): string[] {
-  const slots: string[] = [];
-  for (let t = config.windowStart; t < config.windowEnd; t += config.slotDuration) {
-    slots.push(fmtTime(t));
-  }
-  return slots;
-}
-
-/**
- * Distributes employees across available lunch slots.
- */
-function buildLunchSlots(
-  names: string[],
-  config: any
-): { time: string; names: string[]; isDouble: boolean }[] {
-  const n = names.length;
-  if (n === 0) return [];
-
-  const availableSlots = getAvailableSlots(config);
-  const totalSlots = availableSlots.length;
-
-  const slotMap: Record<string, string[]> = {};
-  availableSlots.forEach(t => { slotMap[t] = []; });
-
-  names.forEach((name, idx) => {
-    const slotLabel = availableSlots[idx % totalSlots];
-    slotMap[slotLabel].push(name);
-  });
-
-  return availableSlots
-    .filter(t => slotMap[t].length > 0)
-    .map(t => ({
-      time: t,
-      names: slotMap[t],
-      isDouble: slotMap[t].length > 1,
-    }));
-}
 
 export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({
   employees,
@@ -163,39 +117,53 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({
   }, [employees, monthKey, selectedDayIdx, isHoliday]);
 
   const { counts, names } = data;
+  const isSun = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1).getDay() === 0;
 
-  const lunchAberta = buildLunchSlots(names.abertura, isHoliday ? { windowStart: 13.5 * 60, windowEnd: 15.5 * 60, slotDuration: 30 } : { windowStart: 12.5 * 60, windowEnd: 14.5 * 60, slotDuration: 30 });
-  const lunchInter  = isHoliday ? [] : buildLunchSlots(names.intermediario, { windowStart: 14 * 60, windowEnd: 16 * 60, slotDuration: 30 });
-  const lunchFecha  = buildLunchSlots(names.fechamento, isHoliday ? { windowStart: 16.5 * 60, windowEnd: 18.5 * 60, slotDuration: 30 } : { windowStart: 15 * 60, windowEnd: 18 * 60, slotDuration: 30 });
+  // Fonte única de verdade: calcula almoços para toda a equipe que trabalha hoje
+  const workingMembers = useMemo(() => {
+    return employees.filter(e => {
+      if (!isEmployeeActiveInMonth(e, currentMY.year, currentMY.month)) return false;
+      const shift = (e.shifts[monthKey] || [])[selectedDayIdx];
+      return isWorkingShift(shift);
+    });
+  }, [employees, monthKey, selectedDayIdx]);
 
-  // Simplified lunch distribution for summary card using the settings
-  const getLunchList = (catNames: string[], category: 'abertura' | 'fechamento' | 'intermediario') => {
-      if (catNames.length === 0) return [];
-      const isSun = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1).getDay() === 0;
-      const isOp = category === 'abertura';
-      
-      const members = employees.filter(e => catNames.includes(getShortName(e.name, employees)));
-      // Note: calculateLunches expects members with some extra fields but we just need it to run
-      const times = calculateLunches(members, isHoliday, isSun, isOp, jornadaSettings);
-      
-      const groups: Record<string, string[]> = {};
-      times.forEach((t, i) => {
-          if (!groups[t]) groups[t] = [];
-          groups[t].push(catNames[i]);
-      });
-      
-      return Object.entries(groups).map(([time, names]) => ({
-          time,
-          names,
-          isDouble: names.length > 1
-      }));
+  const lunchTimes = useMemo(() => {
+    return calculateLunches(workingMembers, isHoliday, isSun, undefined, jornadaSettings, {
+      monthKey,
+      dayIdx: selectedDayIdx,
+    });
+  }, [workingMembers, isHoliday, isSun, jornadaSettings, monthKey, selectedDayIdx]);
+
+  const empLunchMap = useMemo(() => {
+    const map = new Map<string, string>();
+    workingMembers.forEach((emp, i) => {
+      map.set(getShortName(emp.name, employees), lunchTimes[i]);
+    });
+    return map;
+  }, [workingMembers, lunchTimes, employees]);
+
+  const getLunchList = (catNames: string[]) => {
+    if (catNames.length === 0) return [];
+    const groups: Record<string, string[]> = {};
+    catNames.forEach(name => {
+      const time = empLunchMap.get(name) || '13h';
+      if (!groups[time]) groups[time] = [];
+      groups[time].push(name);
+    });
+
+    return Object.entries(groups).map(([time, groupedNames]) => ({
+      time,
+      names: groupedNames,
+      isDouble: groupedNames.length > 1,
+    }));
   };
 
-  const lAberta = getLunchList(names.abertura, 'abertura');
-  const lInter = getLunchList(names.intermediario, 'intermediario');
-  const lFecha = getLunchList(names.fechamento, 'fechamento');
-  const lInter1 = getLunchList(names.interm1, 'intermediario');
-  const lInter2 = getLunchList(names.interm2, 'intermediario');
+  const lAberta = getLunchList(names.abertura);
+  const lInter = getLunchList(names.intermediario);
+  const lFecha = getLunchList(names.fechamento);
+  const lInter1 = getLunchList(names.interm1);
+  const lInter2 = getLunchList(names.interm2);
 
   const hasLunchData = counts.abertura > 0 || counts.intermediario > 0 || counts.fechamento > 0 || counts.interm1 > 0 || counts.interm2 > 0;
 

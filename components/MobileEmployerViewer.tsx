@@ -148,9 +148,11 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     const tacticalPos = resolved[currentEmp.id] || null;
 
     // Calculate lunch
-    const isOpening = classification === 'Abertura';
     const workingToday = activeEmployees.filter(e => isWorkingShift((e.shifts[monthKey] || [])[currentDayIdx]));
-    const lunchTimes = calculateLunches(workingToday, isHoliday, isSunday, isOpening, jornadaSettings);
+    const lunchTimes = calculateLunches(workingToday, isHoliday, isSunday, undefined, jornadaSettings, {
+      monthKey,
+      dayIdx: currentDayIdx,
+    });
     const empIdxInWorking = workingToday.findIndex(e => e.id === currentEmp.id);
     const lunchInfo = empIdxInWorking !== -1 ? lunchTimes[empIdxInWorking] : null;
 
