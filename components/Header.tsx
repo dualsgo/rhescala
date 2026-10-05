@@ -616,7 +616,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="inline">
                 {isJustSaved ? 'Salvo!' : isSaving ? 'Salvando...' : 'Salvar'}
               </span>
-              <span className="hidden 2xl:inline text-[8px] sm:text-[9px] opacity-80 bg-black/25 px-1 py-0.5 rounded font-mono">
+              <span className="hidden min-[1440px]:inline text-[8px] sm:text-[9px] opacity-80 bg-black/25 px-1 py-0.5 rounded font-mono">
                 Ctrl+S
               </span>
             </button>

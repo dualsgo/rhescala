@@ -21,7 +21,7 @@ describe('Header — Responsividade e Acessibilidade (Fase 7.7.2)', () => {
     onFilterChange: vi.fn(),
     onShareWhatsApp: vi.fn(),
     onShareApoioWhatsApp: vi.fn(),
-    syncStatus: { state: 'synced' as const, pendingCount: 0 },
+    syncStatus: { state: 'synced' as const, pendingCount: 0, history: [] },
     selectedDayIdx: 0,
     isReadOnly: false,
     isEditable: false,
