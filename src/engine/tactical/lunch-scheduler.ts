@@ -360,7 +360,7 @@ export function calculateDetailedLunches(
       // Dias de Semana:
       if (cand.classification === 'Abertura') {
         searchStart = 13 * 60;
-        searchEnd = 14 * 60 + 30;
+        searchEnd = 15 * 60; // Estende até 15h00 (término até 16h00) para permitir serialização em equipes pequenas e descompressão de picos
       } else if (cand.classification === 'Intermediário') {
         searchStart = 14 * 60 + 30;
         searchEnd = 15 * 60 + 45;
@@ -392,6 +392,23 @@ export function calculateDetailedLunches(
     return slots;
   };
 
+  // Mapeamento de centros preferenciais para serialização de equipes pequenas de abertura
+  const smallTeamPreferredCenters = new Map<string, number>();
+  const smallAberturaGroup = normalized.filter(
+    c => c.classification === 'Abertura' && c.durationMin >= 60 && !c.fixedTimeStr
+  );
+  if (smallAberturaGroup.length >= 2 && normalized.length <= 4 && !isSunday && !isHoliday) {
+    const sortedCohort = [...smallAberturaGroup].sort((a, b) => {
+      if (a.isCaixa && !b.isCaixa) return -1;
+      if (!a.isCaixa && b.isCaixa) return 1;
+      return a.id.localeCompare(b.id);
+    });
+    // Distribui em blocos de 60 min seriais (13h00, 14h00, 15h00...)
+    sortedCohort.forEach((cand, idx) => {
+      smallTeamPreferredCenters.set(cand.id, (13 + idx) * 60);
+    });
+  }
+
   // Função de pontuação para seleção do melhor horário
   const scoreSlot = (cand: Candidate, startSlot: number): number => {
     let penalty = 0;
@@ -407,7 +424,9 @@ export function calculateDetailedLunches(
     } else if (isSunday) {
       idealCenter = cand.classification === 'Abertura' ? 14 * 60 + 30 : 16 * 60;
     } else {
-      if (cand.classification === 'Abertura') {
+      if (smallTeamPreferredCenters.has(cand.id)) {
+        idealCenter = smallTeamPreferredCenters.get(cand.id)!;
+      } else if (cand.classification === 'Abertura') {
         idealCenter = 13 * 60 + 30;
       } else if (cand.classification === 'Intermediário') {
         idealCenter = 15 * 60;
@@ -446,21 +465,29 @@ export function calculateDetailedLunches(
     // Avaliação da cobertura minuto a minuto (amostras de 15 min)
     for (let t = startSlot; t < endSlot; t += 15) {
       const cap = getCapacityAt(t);
+      const projectedOnLunch = cap.onLunch + 1;
+      const projectedAvailable = cap.present - projectedOnLunch;
       const maxAllowed = getMaxAllowedLunch(cap.present);
 
-      // Meta operacional de cobertura geral: penaliza se exceder o teto seguro para as pessoas presentes
-      if (cap.onLunch >= maxAllowed) {
-        penalty += 2000 * (cap.onLunch - maxAllowed + 1);
+      // FASE 7.8.3 — Regra 3: NUNCA deixar zero pessoas trabalhando se houver alternativa válida
+      if (cap.present > 0 && projectedAvailable <= 0) {
+        penalty += 25000;
       }
 
-      // Proteção de equipe pequena presente
-      if (cap.present >= 3 && cap.available <= 1) {
-        penalty += 3000;
+      // FASE 7.8.3 — Regra 1: Equipe pequena presente (<= 3 pessoas) — evitar fortemente qualquer sobreposição
+      if (cap.present <= 3 && projectedOnLunch > 1) {
+        penalty += 10000;
+      }
+
+      // FASE 7.8.3 — Regra 2: Concentração desnecessária / Meta operacional de ~70%
+      // Uma diferença de 15 minutos (penalidade ~1.5) deve ser preferida a exceder o teto seguro
+      if (projectedOnLunch > maxAllowed) {
+        penalty += 3000 * (projectedOnLunch - maxAllowed);
       }
 
       // Cobertura específica da função Caixa:
       // Se há mais de 1 Caixa presente trabalhando naquele instante, não permitir 0 Caixas disponíveis
-      if (cand.isCaixa && cap.caixasPresent > 1 && cap.caixasAvailable <= 0) {
+      if (cand.isCaixa && cap.caixasPresent > 1 && (cap.caixasAvailable - 1) <= 0) {
         penalty += 5000;
       }
     }

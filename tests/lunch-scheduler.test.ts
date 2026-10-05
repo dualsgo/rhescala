@@ -126,7 +126,7 @@ describe('FASE 7.8.1 — Redesenho do Motor de Alocação de Almoços (lunch-sch
 
   // G. Abertura
   describe('Cenário G: Abertura em dia de semana', () => {
-    it('distribui colaboradores dentro da janela 13h00–14h30', () => {
+    it('distribui colaboradores a partir das 13h00 com serialização em equipe pequena até 15h00', () => {
       const team = [
         createTestEmployee({ id: 'ab1', workPeriod: '10h às 18h20' }),
         createTestEmployee({ id: 'ab2', workPeriod: '10h às 18h20' }),
@@ -136,8 +136,10 @@ describe('FASE 7.8.1 — Redesenho do Motor de Alocação de Almoços (lunch-sch
       const details = calculateDetailedLunches(team, false, false, undefined, DEFAULT_JORNADA_SETTINGS);
       details.forEach(d => {
         expect(d.startMinutes).toBeGreaterThanOrEqual(13 * 60); // >= 13h00
-        expect(d.startMinutes).toBeLessThanOrEqual(14 * 60 + 30); // <= 14h30
+        expect(d.startMinutes).toBeLessThanOrEqual(15 * 60); // <= 15h00 para serialização completa sem sobreposição
       });
+      const { maxConcurrent } = getMaxConcurrentLunches(details);
+      expect(maxConcurrent).toBe(1);
     });
   });
 
@@ -533,6 +535,106 @@ describe('FASE 7.8.1 — Redesenho do Motor de Alocação de Almoços (lunch-sch
           const available = present - onLunch;
           // Cobertura operacional mantida em torno de 70%
           expect(available / present).toBeGreaterThanOrEqual(0.66);
+        }
+      }
+    });
+  });
+
+  describe('FASE 7.8.3 — Validações Cirúrgicas dos Três Problemas Corrigidos', () => {
+    // A. 3 pessoas: Caixa + Vendas + Apoio (10h às 18h20) -> serialização e cobertura mínima 2/3
+    it('Cenário A (3 pessoas: Caixa, Vendas, Apoio): serializa almoços com cobertura de 2/3 e nunca 2 pessoas simultâneas', () => {
+      const team = [
+        createTestEmployee({ id: 'cx', name: 'Caixa', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'v1', name: 'Vendas', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'ap', name: 'Apoio', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
+      ];
+
+      const details = calculateDetailedLunches(team, false, false, undefined, DEFAULT_JORNADA_SETTINGS, {
+        roles: { cx: 'Caixa', v1: 'Vendas', ap: 'Apoio' },
+      });
+
+      expect(details).toHaveLength(3);
+      for (let t = 600; t < 1100; t += 15) {
+        const onLunch = details.filter(d => d.startMinutes <= t && d.endMinutes > t).length;
+        expect(onLunch).toBeLessThanOrEqual(1);
+        const available = 3 - onLunch;
+        expect(available).toBeGreaterThanOrEqual(2); // Cobertura mínima de 2/3 (67%)
+      }
+    });
+
+    // B. 10 pessoas: alternativa de 15 min preserva ~70% e evita concentração de 4 pessoas em almoço
+    it('Cenário B (10 pessoas): alternativa de 15 min preserva ~70% e evita concentração de 4 pessoas em almoço', () => {
+      const team = [
+        createTestEmployee({ id: 'ab_v1', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'ab_pc1', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'ab_ap1', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'ab_v2', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'ab_cx1', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'ab_v3', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'int_ap2', workPeriod: '12h às 20h20' }),
+        createTestEmployee({ id: 'fe_cx2', cargo: 'Atendente', workPeriod: '13h40 às 22h' }),
+        createTestEmployee({ id: 'fe_v4', workPeriod: '13h40 às 22h' }),
+        createTestEmployee({ id: 'fe_pc2', workPeriod: '13h40 às 22h' }),
+      ];
+
+      const details = calculateDetailedLunches(team, false, false, undefined, DEFAULT_JORNADA_SETTINGS, {
+        roles: {
+          ab_cx1: 'Caixa',
+          fe_cx2: 'Caixa',
+        },
+      });
+
+      for (let t = 600; t < 1320; t += 15) {
+        let present = 0;
+        let onLunch = 0;
+        team.forEach((emp, i) => {
+          const isMorning = i < 6;
+          const isInterm = i === 6;
+          const inShift = isMorning ? (t >= 600 && t < 1100) : isInterm ? (t >= 720 && t < 1220) : (t >= 820 && t < 1320);
+          if (inShift) {
+            present++;
+            const d = details.find(x => x.member.id === emp.id);
+            if (d && d.startMinutes <= t && d.endMinutes > t) {
+              onLunch++;
+            }
+          }
+        });
+        if (present > 0) {
+          expect(onLunch).toBeLessThanOrEqual(3); // Nunca 4 pessoas em almoço
+          expect((present - onLunch) / present).toBeGreaterThanOrEqual(0.69); // Preserva ~70%
+        }
+      }
+    });
+
+    // C. 1 pessoa presente + 1 entrando às 13h40: primeiro não almoça enquanto sozinho
+    it('Cenário C (1 presente + 1 entrando às 13h40): primeiro não recebe almoço enquanto estiver sozinho se houver alternativa válida', () => {
+      const team = [
+        createTestEmployee({ id: 'ab_solo', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'fe_chegando', workPeriod: '13h40 às 22h' }),
+      ];
+
+      const details = calculateDetailedLunches(team, false, false, undefined, DEFAULT_JORNADA_SETTINGS);
+      const solo = details.find(d => d.member.id === 'ab_solo')!;
+
+      // Não deve sair para almoço antes das 13h40, pois deixaria o salão com 0 pessoas
+      expect(solo.startMinutes).toBeGreaterThanOrEqual(13 * 60 + 40);
+
+      // Verifica que em nenhum minuto da jornada há 0 pessoas trabalhando
+      for (let t = 600; t < 1320; t += 15) {
+        let present = 0;
+        let onLunch = 0;
+        if (t >= 600 && t < 1100) {
+          present++;
+          if (solo.startMinutes <= t && solo.endMinutes > t) onLunch++;
+        }
+        const fe = details.find(d => d.member.id === 'fe_chegando')!;
+        if (t >= 820 && t < 1320) {
+          present++;
+          if (fe.startMinutes <= t && fe.endMinutes > t) onLunch++;
+        }
+        if (present > 0) {
+          const available = present - onLunch;
+          expect(available).toBeGreaterThan(0); // Nunca 0 pessoas trabalhando
         }
       }
     });
