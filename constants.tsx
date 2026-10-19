@@ -183,7 +183,7 @@ export const PLACEHOLDER_EMPLOYEE: Employee = {
   workPeriod: '10h às 18h20',
   preferredDayOff: 'Segunda-feira',
   shiftName: 'Abertura',
-  hiredAt: new Date().toISOString().split('T')[0],
+  hiredAt: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(),
 };
 
 import {

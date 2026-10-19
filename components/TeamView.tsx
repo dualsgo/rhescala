@@ -3,6 +3,7 @@ import { useDialog } from '../contexts/DialogContext';
 import { Employee, EmployeeCargo } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, getTacticalLabel, getTacticalEmoji } from '../constants';
+import { addDaysToISODate } from '../src/utils/date';
 
 interface TeamViewProps {
   employees: Employee[];
@@ -27,9 +28,7 @@ const CARGO_OPTIONS: EmployeeCargo[] = ['Atendente', 'Estoquista', 'Aprendiz', '
 
 /** Adds `days` calendar days to a YYYY-MM-DD string and returns YYYY-MM-DD */
 function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split('T')[0];
+  return addDaysToISODate(dateStr, days);
 }
 
 /** Formats YYYY-MM-DD to DD/MM/YYYY */

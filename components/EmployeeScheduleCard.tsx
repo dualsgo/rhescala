@@ -5,6 +5,8 @@ import { Icon } from './Icon';
 import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { isWorkingShift } from '../src/engine/shifts/shift-predicates';
 import { buildHolidaySet, getShortName, isEmployeeActiveInMonth } from '../constants';
+import { addDaysToISODate, getDaysInMonthKey } from '../src/utils/date';
+import { useDialog } from '../contexts/DialogContext';
 
 interface EmployeeScheduleCardProps {
   employees?: Employee[];
@@ -37,6 +39,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   initialDate,
   auditLogs = [],
 }) => {
+  const { showDialog } = useDialog();
   const [newRequest, setNewRequest] = React.useState('');
   const [selectedRequestDate, setSelectedRequestDate] = React.useState('');
   const [showSubmitFeedback, setShowSubmitFeedback] = React.useState(false);
@@ -73,12 +76,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
     }
   }, [employee.id, employee.atestadoStart, employee.atestadoEnd, initialDate]);
 
-  const addDaysStr = (dateStr: string, days: number): string => {
-    if (!dateStr) return '';
-    const d = new Date(dateStr + 'T00:00:00');
-    d.setDate(d.getDate() + days);
-    return d.toISOString().split('T')[0];
-  };
+  const addDaysStr = (dateStr: string, days: number): string => addDaysToISODate(dateStr, days);
 
   const handleSaveAtestado = () => {
     if (!onUpdateEmployee) return;
@@ -678,13 +676,20 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                       <p className="w-full text-[9px] font-black uppercase text-slate-400">Ação do Gestor:</p>
                       
                       <button 
-                        onClick={() => {
-                          if(window.confirm('Isto marcará o dia como Folga (F) na escala oficial. Confirmar?')) {
+                        onClick={async () => {
+                          const confirmed = await showDialog({
+                            type: 'confirm',
+                            title: 'Conceder Folga (F)',
+                            message: 'Isto marcará o dia como Folga (F) na escala oficial. Confirmar?',
+                            confirmText: 'Confirmar Folga',
+                            cancelText: 'Cancelar'
+                          });
+                          if (confirmed) {
                             const [year, month, day] = (req.date || '').split('-');
                             if (year && month && day) {
                               const mKey = `${year}-${month}`;
                               const dIdx = parseInt(day, 10) - 1;
-                              const newShifts = [...(employee.shifts[mKey] || Array(31).fill('T'))];
+                              const newShifts = [...(employee.shifts[mKey] || Array(getDaysInMonthKey(mKey)).fill('T'))];
                               newShifts[dIdx] = 'F';
 
                               const updated = (employee.requests || []).map(r => 
@@ -702,8 +707,15 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
 
                       {req.type === 'troca_turno' && req.targetEmployeeId && (
                         <button 
-                          onClick={() => {
-                            if(window.confirm('Isto trocará automaticamente os turnos, horários e posições dos dois colaboradores neste dia. Confirmar?')) {
+                          onClick={async () => {
+                            const confirmed = await showDialog({
+                              type: 'confirm',
+                              title: 'Efetuar Troca de Turno',
+                              message: 'Isto trocará automaticamente os turnos, horários e posições dos dois colaboradores neste dia. Confirmar?',
+                              confirmText: 'Efetuar Troca',
+                              cancelText: 'Cancelar'
+                            });
+                            if (confirmed) {
                               const [year, month, day] = (req.date || '').split('-');
                               if (year && month && day) {
                                 const mKey = `${year}-${month}`;
@@ -721,7 +733,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                                   const theirPos = (targetEmp.tacticalPositions?.[mKey] || [])[dIdx] || null;
                                   
                                   // Set target employee values to mine
-                                  const newTargetShifts = [...(targetEmp.shifts[mKey] || Array(31).fill('T'))];
+                                  const newTargetShifts = [...(targetEmp.shifts[mKey] || Array(getDaysInMonthKey(mKey)).fill('T'))];
                                   newTargetShifts[dIdx] = myShift;
                                   const newTargetHours = [...(targetEmp.dailyHours[mKey] || [])];
                                   newTargetHours[dIdx] = myHour;
@@ -735,7 +747,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                                   });
                                   
                                   // Set my values to theirs
-                                  const newMyShifts = [...(employee.shifts[mKey] || Array(31).fill('T'))];
+                                  const newMyShifts = [...(employee.shifts[mKey] || Array(getDaysInMonthKey(mKey)).fill('T'))];
                                   newMyShifts[dIdx] = theirShift;
                                   const newMyHours = [...(employee.dailyHours[mKey] || [])];
                                   newMyHours[dIdx] = theirHour;
@@ -763,12 +775,19 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                       )}
 
                       <button 
-                        onClick={() => {
-                          const msg = window.prompt('Justificativa da aprovação (ex: Liberado mais cedo):', 'Pedido aprovado.');
-                          if (msg !== null) {
+                        onClick={async () => {
+                          const msg = await showDialog({
+                            type: 'prompt',
+                            title: 'Aprovação de Pedido',
+                            message: 'Justificativa da aprovação (ex: Liberado mais cedo):',
+                            promptDefault: 'Pedido aprovado.',
+                            confirmText: 'Aprovar',
+                            cancelText: 'Cancelar'
+                          });
+                          if (typeof msg === 'string') {
                             const updated = (employee.requests || []).map(r => 
                               (r.createdAt === req.createdAt) 
-                                ? { ...r, status: 'granted' as const, feedback: msg } : r
+                                ? { ...r, status: 'granted' as const, feedback: msg.trim() || 'Pedido aprovado.' } : r
                             );
                             onUpdateEmployee(employee.id, { requests: updated });
                           }
@@ -792,9 +811,15 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                       </button>
 
                       <button 
-                        onClick={() => {
-                          const justification = window.prompt('Por que este pedido está sendo recusado?');
-                          if (justification !== null) {
+                        onClick={async () => {
+                          const justification = await showDialog({
+                            type: 'prompt',
+                            title: 'Recusar Pedido',
+                            message: 'Por que este pedido está sendo recusado?',
+                            confirmText: 'Recusar',
+                            cancelText: 'Cancelar'
+                          });
+                          if (typeof justification === 'string') {
                             const updated = (employee.requests || []).map(r => 
                               (r.createdAt === req.createdAt) 
                                 ? { ...r, status: 'refused' as const, feedback: justification.trim() || undefined } : r

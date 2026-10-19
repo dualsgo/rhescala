@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendário Anual de Férias 2027 - Escala Oficial da Equipe</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Print optimization for A4 Landscape with blocked pages */
+    @page {
+      size: A4 landscape;
+      margin: 6mm 8mm;
+    }
+
+    @media print {
+      html, body {
+        background-color: white !important;
+        color: #0f172a !important;
+        font-size: 11px !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      /* Strict Page Blocking */
+      .page-block-1 {
+        page-break-before: auto !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        min-height: 98vh;
+        box-sizing: border-box;
+      }
+
+      .page-block-2 {
+        page-break-before: always !important;
+        break-before: page !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        min-height: 98vh;
+        box-sizing: border-box;
+      }
+
+      .page-block-3 {
+        page-break-before: always !important;
+        break-before: page !important;
+        page-break-after: auto !important;
+        break-after: auto !important;
+        min-height: 98vh;
+        box-sizing: border-box;
+      }
+
+      .shadow-xs, .shadow-sm, .shadow-md, .shadow-lg {
+        box-shadow: none !important;
+      }
+
+      /* Compact Month Grid specifically for Page 2 */
+      #monthsGrid {
+        display: grid !important;
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        grid-template-rows: repeat(3, auto) !important;
+        gap: 5px !important;
+      }
+
+      .month-card {
+        padding: 4px !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 4px !important;
+        box-shadow: none !important;
+        background-color: white !important;
+      }
+
+      .month-card h3 {
+        font-size: 10px !important;
+        padding-bottom: 2px !important;
+        margin-bottom: 2px !important;
+      }
+
+      .day-cell {
+        height: 15.5px !important;
+        font-size: 8.5px !important;
+        border-radius: 2px !important;
+      }
+
+      table {
+        font-size: 9.5px !important;
+      }
+
+      th, td {
+        padding: 4px 5px !important;
+      }
+    }
+
+    /* Custom hover styling */
+    .day-cell:hover .day-tooltip {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(-4px);
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen antialiased">
+
+  <!-- Top Sticky Navigation Bar (Screen Only) -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+            Escala Oficial 2027 • Equipe de Loja
+          </span>
+          <h1 class="text-lg sm:text-xl font-bold tracking-tight text-slate-900 mt-0.5">
+            Planejamento Anual de Férias 2027
+          </h1>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <button 
+            id="btnResetFilter"
+            onclick="filterByCollab(null)" 
+            class="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1.5"
+            title="Exibir todos os colaboradores">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            Ver Todos
+          </button>
+          <button 
+            onclick="window.print()" 
+            class="px-3.5 py-1.5 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-sm transition-colors flex items-center gap-1.5 font-semibold">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+            </svg>
+            Imprimir em A4 (Paisagem) / Salvar PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-8">
+
+    <!-- ==========================================
+         PÁGINA 1: DIRETRIZES, MOTIVOS E GOVERNANÇA
+         ========================================== -->
+    <section class="page-block-1 bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+      <!-- Cabeçalho Oficial da Página 1 -->
+      <div class="border-b-2 border-slate-900 pb-3 flex items-start justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-900 text-white uppercase tracking-wider">
+              Documento Executivo de Escala
+            </span>
+            <span class="text-xs text-slate-500 font-medium">• Vigência: Exercício 2027</span>
+          </div>
+          <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-1">
+            Planejamento Anual de Férias 2027 • Diretrizes e Motivos
+          </h2>
+          <p class="text-xs text-slate-600 mt-0.5">
+            Escala oficial da equipe operacional de loja • Distribuição por critérios legais (CLT) e equidade interna
+          </p>
+        </div>
+        <div class="text-right text-xs text-slate-500">
+          <span class="block font-bold text-slate-800">Ri Happy Brinquedos</span>
+          <span>Página 1 de 3 (A4 Paisagem)</span>
+        </div>
+      </div>
+
+      <!-- Métricas Resumo -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+          <span class="text-[11px] font-medium text-slate-500">Equipe de Loja Escalonada</span>
+          <div class="text-lg font-bold text-slate-800 mt-0.5">9 Colaboradores <span class="text-xs font-normal text-slate-500">(+1 INSS)</span></div>
+        </div>
+        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+          <span class="text-[11px] font-medium text-slate-500">Total de Dias Concedidos</span>
+          <div class="text-lg font-bold text-emerald-600 mt-0.5">270 Dias <span class="text-xs font-normal text-slate-500">(30d por colaborador)</span></div>
+        </div>
+        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+          <span class="text-[11px] font-medium text-slate-500">Janela de Concessão</span>
+          <div class="text-lg font-bold text-blue-600 mt-0.5">Janeiro a Setembro <span class="text-xs font-normal text-slate-500">/2027</span></div>
+        </div>
+        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+          <span class="text-[11px] font-medium text-slate-500">4º Trimestre (Out/Nov/Dez)</span>
+          <div class="text-lg font-bold text-violet-600 mt-0.5">100% Presente <span class="text-xs font-normal text-slate-500">(0 ausências)</span></div>
+        </div>
+      </div>
+
+      <!-- Os 4 Pilares e Motivos Oficiais -->
+      <div class="space-y-2.5">
+        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
+          <span>📋</span> Regras Oficiais e Critérios de Alocação da Escala
+        </h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          <div class="bg-slate-50/80 p-3 rounded-lg border border-slate-200">
+            <h4 class="font-bold text-slate-900 flex items-center gap-1.5 mb-1 text-[12px]">
+              <span class="text-amber-500">⭐</span> 1. Prioridade por Antiguidade de Gozo (Equidade Interna)
+            </h4>
+            <p class="text-slate-600 text-[11px] leading-relaxed">
+              As colaboradoras <strong>Bianca Rodrigues, Lidiane Barbosa e Thais Marques</strong> não usufruíram férias durante o ano de 2026. Como medida de justiça, recuperação física e equilíbrio de equipe, foram posicionadas com prioridade máxima no <strong>1º Trimestre de 2027</strong> (Janeiro a Março).
+            </p>
+          </div>
+
+          <div class="bg-slate-50/80 p-3 rounded-lg border border-slate-200">
+            <h4 class="font-bold text-slate-900 flex items-center gap-1.5 mb-1 text-[12px]">
+              <span class="text-blue-500">⚖️</span> 2. Conformidade Legal Estrita (Art. 134 e 137 da CLT)
+            </h4>
+            <p class="text-slate-600 text-[11px] leading-relaxed">
+              Todas as férias ocorrem antes do término do período concessivo legal, com margem de segurança de <strong>+100 a +230 dias</strong>, prevenindo qualquer passivo de dobra salarial. As datas de início são sempre alinhadas à abertura da folha (dia 16 ou primeira segunda-feira útil subsequente), sem anteceder repousos semanais remunerados ou feriados (Art. 134, § 3º da CLT).
+            </p>
+          </div>
+
+          <div class="bg-slate-50/80 p-3 rounded-lg border border-slate-200">
+            <h4 class="font-bold text-slate-900 flex items-center gap-1.5 mb-1 text-[12px]">
+              <span class="text-emerald-500">🏪</span> 3. Capacidade Operacional de Loja e Cobertura de Funções
+            </h4>
+            <p class="text-slate-600 text-[11px] leading-relaxed">
+              Teto inegociável de no máximo <strong>duas ausências simultâneas</strong> por período transitório, garantindo um piso de 8 a 9 colaboradores ativos diariamente. As funções críticas de <strong>Estoque (Jheferson)</strong> e <strong>Fiscalização de Loja (Caren)</strong> foram alternadas e nunca coincidem.
+            </p>
+          </div>
+
+          <div class="bg-slate-50/80 p-3 rounded-lg border border-slate-200">
+            <h4 class="font-bold text-slate-900 flex items-center gap-1.5 mb-1 text-[12px]">
+              <span class="text-violet-500">🎯</span> 4. Blindagem Operacional do 4º Trimestre (Pico do Varejo)
+            </h4>
+            <p class="text-slate-600 text-[11px] leading-relaxed">
+              O ciclo completo de férias de toda a equipe encerra em <strong>14 de Setembro de 2027</strong>. Os meses de Outubro (Dia das Crianças), Novembro (Black Friday) e Dezembro (Natal) contam com <strong>100% da equipe presente</strong> no salão e retaguarda de loja.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nota de Governança da Liderança (Supervisor & Gerente) -->
+      <div class="bg-amber-50/80 border border-amber-200 rounded-lg p-3 text-xs text-amber-950 space-y-1">
+        <div class="font-bold flex items-center gap-1.5 text-amber-900 text-[12px]">
+          <span>📌</span> Nota de Governança da Liderança de Loja (Supervisor & Gerente)
+        </div>
+        <p class="text-[11px] leading-relaxed text-amber-900">
+          A escala de férias da liderança (<strong>Maycon - Supervisor</strong> e <strong>Ruan - Gerente</strong>) é gerida e homologada em cronograma corporativo gerencial próprio da rede. <strong>Motivo da não exibição nominal nesta grade:</strong> manter o documento estritamente focado no planejamento operacional da equipe de loja. Os períodos de ausência da liderança (Fevereiro para o Supervisor e Julho/Agosto para o Gerente) foram <strong>rigorosamente considerados na matriz de capacidade</strong>, assegurando que o apoio operacional (Aline), o caixa, a fiscalização e o estoque permaneçam 100% cobertos em todos os turnos.
+        </p>
+      </div>
+
+      <!-- Observação de Afastamento Previdenciário -->
+      <div class="bg-slate-100 border border-slate-200 rounded-lg p-2.5 text-[11px] text-slate-700 flex items-center justify-between">
+        <div>
+          <strong>Observação Legal (Art. 133, IV da CLT):</strong> Lidiane Figueiredo encontra-se em licença médica por tempo indeterminado com contrato de trabalho suspenso perante o INSS. O prazo concessivo de suas férias permanece congelado até eventual alta pericial médica.
+        </div>
+        <span class="px-2 py-0.5 rounded bg-slate-200 font-bold text-slate-800 text-[10px] shrink-0 ml-2">
+          INSS ATIVO
+        </span>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         PÁGINA 2: O CALENDÁRIO COMPLETO (12 MESES)
+         ========================================== -->
+    <section class="page-block-2 bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3">
+      <!-- Cabeçalho Oficial da Página 2 -->
+      <div class="border-b border-slate-200 pb-2 flex items-center justify-between">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <span>📅</span> Grade Anual de Férias 2027 (Meses Tradicionais)
+          </h2>
+          <p class="text-[11px] text-slate-500">
+            Visualização anual completa dos 12 meses • Semana iniciando no domingo • Destaques coloridos por colaborador
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2.5 text-[10px] text-slate-600">
+          <span class="flex items-center gap-1">
+            <span class="w-2.5 h-2.5 rounded-xs bg-slate-100 border border-slate-300"></span> Normal
+          </span>
+          <span class="flex items-center gap-1">
+            <span class="w-2.5 h-2.5 rounded-xs bg-blue-600"></span> Férias ativas
+          </span>
+          <span class="flex items-center gap-1">
+            <span class="w-2.5 h-2.5 rounded-xs" style="background: linear-gradient(135deg, #2563eb 50%, #ea580c 50%);"></span> 2 Simultâneos
+          </span>
+          <span class="flex items-center gap-1 font-semibold text-rose-600 bg-rose-50 px-1 py-0.2 rounded border border-rose-200">
+            🏁 Limite CLT
+          </span>
+          <span class="text-slate-400 font-medium ml-2">Página 2 de 3</span>
+        </div>
+      </div>
+
+      <!-- Mini-Legenda de Cores dos Colaboradores -->
+      <div id="legendContainer" class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 pb-1">
+        <!-- Injetado via JS -->
+      </div>
+
+      <!-- Grade dos 12 Meses: 4 Colunas x 3 Linhas (Cabe 100% Perfeito em A4 Landscape) -->
+      <div id="monthsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <!-- Renderizado via JavaScript -->
+      </div>
+    </section>
+
+    <!-- ==========================================
+         PÁGINA 3: TABELA SINTÉTICA E HOMOLOGAÇÃO
+         ========================================== -->
+    <section class="page-block-3 bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden p-4 space-y-3">
+      <!-- Cabeçalho Oficial da Página 3 -->
+      <div class="border-b border-slate-200 pb-2.5 flex items-center justify-between">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <span>📑</span> Tabela Sintética Oficial de Saídas & Retornos 2027
+          </h2>
+          <p class="text-[11px] text-slate-500">
+            Relação nominal da equipe de loja, prazos legais concessivos e justificativas operacionais
+          </p>
+        </div>
+        <div class="text-right text-xs text-slate-500">
+          <span class="font-bold text-slate-800">Homologação Oficial</span>
+          <span class="block text-[10px]">Página 3 de 3</span>
+        </div>
+      </div>
+
+      <!-- Tabela Completa -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+            <tr>
+              <th class="py-2 px-2.5">#</th>
+              <th class="py-2 px-3">Colaborador(a)</th>
+              <th class="py-2 px-3">Cargo</th>
+              <th class="py-2 px-3">Período de Férias (30 dias)</th>
+              <th class="py-2 px-2.5">Data Retorno</th>
+              <th class="py-2 px-3 text-rose-700 bg-rose-50/50">Limite CLT 🏁</th>
+              <th class="py-2 px-2.5 text-emerald-700">Margem</th>
+              <th class="py-2 px-3">Critério / Motivo da Escala</th>
+              <th class="py-2 px-2 text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody id="scheduleTableBody" class="divide-y divide-slate-100">
+            <!-- Renderizado via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Bloco de Homologação e Assinaturas Formais -->
+      <div class="mt-4 pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-slate-600">
+        <div class="bg-slate-50 p-2.5 rounded border border-slate-200 text-center">
+          <div class="font-semibold text-slate-800">Planejamento Operacional</div>
+          <div class="mt-3 border-t border-slate-300 pt-1 text-[11px] text-slate-500">
+            Maycon • Supervisor de Loja
+          </div>
+        </div>
+        <div class="bg-slate-50 p-2.5 rounded border border-slate-200 text-center">
+          <div class="font-semibold text-slate-800">Validação Gerencial</div>
+          <div class="mt-3 border-t border-slate-300 pt-1 text-[11px] text-slate-500">
+            Ruan • Gerente de Loja
+          </div>
+        </div>
+        <div class="bg-slate-50 p-2.5 rounded border border-slate-200 text-center">
+          <div class="font-semibold text-slate-800">Registro & Homologação</div>
+          <div class="mt-3 border-t border-slate-300 pt-1 text-[11px] text-slate-500">
+            Outubro/2026 • Em vigor para 2027
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="mt-6 py-4 border-t border-slate-200 text-center text-xs text-slate-400 no-print">
+    Calendário e Escala Anual de Férias Corporativas • Planejamento Oficial 2027 • Equipe 100% Regularizada
+  </footer>
+
+  <script>
+    // Relação Oficial de Colaboradores da Equipe de Loja
+    // Ordenada por ordem cronológica de saída e conformidade legal
+    const collaborators = [
+      {
+        id: 1,
+        name: "Bianca dos Santos Rodrigues",
+        shortName: "Bianca Rodrigues",
+        role: "Auxiliar de Loja",
+        start: "2027-01-04",
+        end: "2027-02-02",
+        returnDate: "2027-02-03",
+        deadline: "17/06/2027",
+        deadlineIso: "2027-06-17",
+        safetyMarginDays: 135,
+        reason: "Sem férias em 2026; vencimento no 1º semestre",
+        color: "#2563eb", // Blue 600
+        lightColor: "#dbeafe"
+      },
+      {
+        id: 2,
+        name: "Lidiane Barbosa da Silva",
+        shortName: "Lidiane Barbosa",
+        role: "Auxiliar de Loja",
+        start: "2027-01-18",
+        end: "2027-02-16",
+        returnDate: "2027-02-17",
+        deadline: "17/06/2027",
+        deadlineIso: "2027-06-17",
+        safetyMarginDays: 121,
+        reason: "Sem férias em 2026; vencimento no 1º semestre",
+        color: "#ea580c", // Orange 600
+        lightColor: "#ffedd5"
+      },
+      {
+        id: 3,
+        name: "Thais de Oliveira Marques",
+        shortName: "Thais Marques",
+        role: "Auxiliar de Loja",
+        start: "2027-02-16",
+        end: "2027-03-17",
+        returnDate: "2027-03-18",
+        deadline: "02/11/2027",
+        deadlineIso: "2027-11-02",
+        safetyMarginDays: 230,
+        reason: "Antecipada para abertura da folha (16/02); sem férias em 2026",
+        color: "#db2777", // Pink 600
+        lightColor: "#fce7f3"
+      },
+      {
+        id: 4,
+        name: "Aline dos Santos Formento",
+        shortName: "Aline Formento",
+        role: "Auxiliar de Loja",
+        start: "2027-03-16",
+        end: "2027-04-14",
+        returnDate: "2027-04-15",
+        deadline: "02/09/2027",
+        deadlineIso: "2027-09-02",
+        safetyMarginDays: 141,
+        reason: "Alinhada à folha (16/03); cobertura líder e 1º tri",
+        color: "#16a34a", // Green 600
+        lightColor: "#dcfce7"
+      },
+      {
+        id: 5,
+        name: "Jheferson Israel da Silva",
+        shortName: "Jheferson Israel",
+        role: "Estoquista",
+        start: "2027-04-22",
+        end: "2027-05-21",
+        returnDate: "2027-05-22",
+        deadline: "02/09/2027",
+        deadlineIso: "2027-09-02",
+        safetyMarginDays: 104,
+        reason: "Estoque garantido; ciclo folha pós-Tiradentes; alternado ao fiscal",
+        color: "#dc2626", // Red 600
+        lightColor: "#fee2e2"
+      },
+      {
+        id: 6,
+        name: "Caren Lopes Viana George",
+        shortName: "Caren Lopes",
+        role: "Fiscal de Loja",
+        start: "2027-05-24",
+        end: "2027-06-22",
+        returnDate: "2027-06-23",
+        deadline: "30/09/2027",
+        deadlineIso: "2027-09-30",
+        safetyMarginDays: 100,
+        reason: "Fiscalização ativa; início pós-retorno estoque (sem sobreposição)",
+        color: "#d97706", // Amber 600
+        lightColor: "#fef3c7"
+      },
+      {
+        id: 7,
+        name: "Erika Monique Fonseca da Cunha",
+        shortName: "Erika Monique",
+        role: "Auxiliar de Loja",
+        start: "2027-06-16",
+        end: "2027-07-15",
+        returnDate: "2027-07-16",
+        deadline: "09/11/2027",
+        deadlineIso: "2027-11-09",
+        safetyMarginDays: 117,
+        reason: "Alinhada à folha (16/06); retorno pleno prévio a Pais",
+        color: "#059669", // Emerald 600
+        lightColor: "#d1fae5"
+      },
+      {
+        id: 8,
+        name: "Luiz Claudio Machado Junior",
+        shortName: "Luiz Claudio",
+        role: "Auxiliar de Loja",
+        start: "2027-07-19",
+        end: "2027-08-17",
+        returnDate: "2027-08-18",
+        deadline: "05/03/2028",
+        deadlineIso: "2028-03-05",
+        safetyMarginDays: 201,
+        reason: "Alinhado à folha (19/07 seg pós-16); encerramento em agosto",
+        color: "#0891b2", // Cyan 600
+        lightColor: "#cffafe"
+      },
+      {
+        id: 9,
+        name: "Renata Muniz dos Reis",
+        shortName: "Renata Muniz",
+        role: "Auxiliar de Loja",
+        start: "2027-08-16",
+        end: "2027-09-14",
+        returnDate: "2027-09-15",
+        deadline: "05/03/2028",
+        deadlineIso: "2028-03-05",
+        safetyMarginDays: 173,
+        reason: "Alinhada à folha (16/08); encerra ciclo em 14/09 pré-Dia das Crianças",
+        color: "#4f46e5", // Indigo 600
+        lightColor: "#e0e7ff"
+      },
+      {
+        id: 10,
+        name: "Lidiane Figueiredo de Oliveira",
+        shortName: "Lidiane Figueiredo",
+        role: "Auxiliar de Loja (Afastada INSS)",
+        start: null,
+        end: null,
+        returnDate: null,
+        deadline: "01/08/2027",
+        deadlineIso: "2027-08-01",
+        safetyMarginDays: "Suspenso",
+        reason: "Licença médica indeterminada (Art. 133 CLT)",
+        color: "#64748b", // Slate 500
+        lightColor: "#f1f5f9",
+        isMedicalLeave: true
+      }
+    ];
+
+    // State
+    let selectedCollabId = null;
+
+    // Helper functions for dates
+    function parseDate(isoStr) {
+      if (!isoStr) return null;
+      const [year, month, day] = isoStr.split("-").map(Number);
+      return new Date(year, month - 1, day);
+    }
+
+    function formatDateBR(isoStr) {
+      if (!isoStr) return "-";
+      const [year, month, day] = isoStr.split("-");
+      return `${day}/${month}/${year}`;
+    }
+
+    function renderLegend() {
+      const container = document.getElementById("legendContainer");
+      container.innerHTML = "";
+
+      collaborators.forEach(c => {
+        const isSelected = selectedCollabId === c.id;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `text-left p-1.5 rounded border transition-all flex items-center justify-between ${
+          isSelected 
+            ? "ring-1 ring-slate-900 border-slate-900 bg-slate-100 shadow-xs" 
+            : "border-slate-200 hover:border-slate-300 hover:bg-slate-50 bg-white"
+        }`;
+        btn.onclick = () => filterByCollab(c.id);
+
+        const dateRangeHtml = c.isMedicalLeave
+          ? `<span class="text-amber-600 font-semibold text-[9px]">Afastada INSS</span>`
+          : `<span class="text-[9px] text-slate-500">${formatDateBR(c.start)}➔${formatDateBR(c.end)}</span>`;
+
+        btn.innerHTML = `
+          <div class="flex items-center gap-1.5 truncate">
+            <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style="background-color: ${c.color};"></span>
+            <span class="text-[10px] font-semibold text-slate-800 truncate" title="${c.name}">${c.shortName}</span>
+          </div>
+          <div>
+            ${dateRangeHtml}
+          </div>
+        `;
+        container.appendChild(btn);
+      });
+    }
+
+    function filterByCollab(id) {
+      if (selectedCollabId === id) {
+        selectedCollabId = null;
+      } else {
+        selectedCollabId = id;
+      }
+      renderLegend();
+      renderCalendar();
+      highlightTableRows();
+    }
+
+    const monthNames = [
+      "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    ];
+
+    const weekDays = ["D", "S", "T", "Q", "Q", "S", "S"];
+    const weekDaysFull = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+    function getVacationsForDate(dateObj) {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const d = String(dateObj.getDate()).padStart(2, "0");
+      const iso = `${y}-${m}-${d}`;
+
+      return collaborators.filter(collab => {
+        if (!collab.start || !collab.end) return false;
+        return iso >= collab.start && iso <= collab.end;
+      });
+    }
+
+    function getDeadlinesForDate(dateObj) {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const d = String(dateObj.getDate()).padStart(2, "0");
+      const iso = `${y}-${m}-${d}`;
+
+      return collaborators.filter(collab => !collab.isMedicalLeave && collab.deadlineIso === iso);
+    }
+
+    function renderCalendar() {
+      const container = document.getElementById("monthsGrid");
+      container.innerHTML = "";
+
+      const year = 2027;
+
+      for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
+        const firstDay = new Date(year, monthIndex, 1);
+        const lastDay = new Date(year, monthIndex + 1, 0);
+        const totalDays = lastDay.getDate();
+        const startDayOfWeek = firstDay.getDay();
+
+        const monthCard = document.createElement("div");
+        monthCard.className = "month-card bg-white rounded-lg border border-slate-200 shadow-xs p-2 flex flex-col justify-between";
+
+        const peopleInMonth = new Set();
+        for (let d = 1; d <= totalDays; d++) {
+          const testDate = new Date(year, monthIndex, d);
+          getVacationsForDate(testDate).forEach(c => peopleInMonth.add(c.id));
+        }
+
+        let monthBadge = "";
+        if (monthIndex >= 9) {
+          monthBadge = `<span class="text-[8px] font-semibold px-1 py-0.2 rounded bg-slate-100 text-slate-500">100% Presente</span>`;
+        } else if (peopleInMonth.size === 1) {
+          monthBadge = `<span class="text-[8px] font-semibold px-1 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">1 Saída</span>`;
+        } else if (peopleInMonth.size > 1) {
+          monthBadge = `<span class="text-[8px] font-semibold px-1 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200">${peopleInMonth.size} Saídas</span>`;
+        }
+
+        let html = `
+          <div>
+            <div class="flex items-center justify-between pb-1 mb-1 border-b border-slate-100">
+              <h3 class="font-bold text-slate-900 text-[11px] tracking-tight flex items-center gap-1">
+                <span>${monthNames[monthIndex]}</span>
+                <span class="text-[9px] font-normal text-slate-400">2027</span>
+              </h3>
+              ${monthBadge}
+            </div>
+
+            <div class="grid grid-cols-7 gap-0.5 text-center mb-1">
+              ${weekDays.map((wd, i) => `
+                <div class="text-[9px] font-bold ${i === 0 ? 'text-rose-500' : (i === 6 ? 'text-blue-500' : 'text-slate-400')}" title="${weekDaysFull[i]}">
+                  ${wd}
+                </div>
+              `).join('')}
+            </div>
+
+            <div class="grid grid-cols-7 gap-0.5">
+        `;
+
+        for (let i = 0; i < startDayOfWeek; i++) {
+          html += `<div class="aspect-square rounded-xs bg-slate-50/50"></div>`;
+        }
+
+        for (let d = 1; d <= totalDays; d++) {
+          const currentDate = new Date(year, monthIndex, d);
+          const dayOfWeek = currentDate.getDay();
+          const vacations = getVacationsForDate(currentDate);
+          const deadlines = getDeadlinesForDate(currentDate);
+
+          let activeVacations = vacations;
+          let activeDeadlines = deadlines;
+          if (selectedCollabId) {
+            activeVacations = vacations.filter(v => v.id === selectedCollabId);
+            activeDeadlines = deadlines.filter(v => v.id === selectedCollabId);
+          }
+
+          let bgStyle = "";
+          let textStyle = "text-slate-700 font-medium";
+          let borderStyle = "border border-slate-100";
+          let tooltipContent = "";
+          let deadlineIndicator = "";
+
+          if (deadlines.length > 0) {
+            const names = deadlines.map(x => x.shortName).join(", ");
+            const isRelevant = !selectedCollabId || activeDeadlines.length > 0;
+            if (isRelevant) {
+              deadlineIndicator = `
+                <span class="absolute -top-1 -right-1 flex h-2 w-2 items-center justify-center rounded-full bg-rose-600 text-[6px] text-white font-bold ring-1 ring-white" title="DATA LIMITE CLT: ${names}">
+                  !
+                </span>
+              `;
+              borderStyle = "border border-rose-500 ring-1 ring-rose-200";
+            }
+          }
+
+          if (activeVacations.length === 1) {
+            const v = activeVacations[0];
+            bgStyle = `background-color: ${v.color};`;
+            textStyle = "text-white font-bold";
+            if (!deadlines.length) borderStyle = `border border-${v.color}`;
+            tooltipContent = `${d} de ${monthNames[monthIndex]}: ${v.shortName} em férias`;
+          } else if (activeVacations.length >= 2) {
+            const v1 = activeVacations[0];
+            const v2 = activeVacations[1];
+            bgStyle = `background: linear-gradient(135deg, ${v1.color} 50%, ${v2.color} 50%);`;
+            textStyle = "text-white font-bold drop-shadow-xs";
+            if (!deadlines.length) borderStyle = "border border-slate-400";
+            tooltipContent = `${d} de ${monthNames[monthIndex]}: ${v1.shortName} & ${v2.shortName}`;
+          } else if (vacations.length > 0 && selectedCollabId) {
+            bgStyle = "background-color: #f1f5f9;";
+            textStyle = "text-slate-300";
+            if (!deadlines.length) borderStyle = "border border-slate-100";
+            tooltipContent = `${d} de ${monthNames[monthIndex]}: Outro colaborador em férias`;
+          } else {
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+              bgStyle = "background-color: #f8fafc;";
+              textStyle = dayOfWeek === 0 ? "text-rose-400" : "text-blue-400";
+            }
+          }
+
+          if (deadlines.length > 0) {
+            tooltipContent += ` [🏁 LIMITE CONCESSIVO CLT: ${deadlines.map(x => x.shortName).join(', ')}]`;
+          }
+
+          html += `
+            <div 
+              style="${bgStyle}" 
+              class="day-cell relative aspect-square rounded-xs ${borderStyle} flex items-center justify-center text-[9.5px] cursor-pointer select-none transition-transform hover:scale-105"
+              title="${tooltipContent}">
+              <span class="${textStyle}">${d}</span>
+              ${deadlineIndicator}
+            </div>
+          `;
+        }
+
+        const filledCells = startDayOfWeek + totalDays;
+        const remainingCells = (filledCells % 7 === 0) ? 0 : 7 - (filledCells % 7);
+        for (let i = 0; i < remainingCells; i++) {
+          html += `<div class="aspect-square rounded-xs bg-slate-50/50"></div>`;
+        }
+
+        html += `
+            </div>
+          </div>
+        `;
+
+        monthCard.innerHTML = html;
+        container.appendChild(monthCard);
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById("scheduleTableBody");
+      tbody.innerHTML = "";
+
+      collaborators.forEach((c, index) => {
+        const tr = document.createElement("tr");
+        tr.id = `row-collab-${c.id}`;
+        tr.className = `hover:bg-slate-50 transition-colors cursor-pointer ${c.isMedicalLeave ? 'bg-amber-50/20' : ''}`;
+        tr.onclick = () => filterByCollab(c.id);
+
+        const periodHtml = c.isMedicalLeave
+          ? `<span class="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded font-medium border border-amber-200 text-[10px]">Licença Médica INSS</span>`
+          : `${formatDateBR(c.start)} <span class="text-slate-400 mx-0.5">até</span> ${formatDateBR(c.end)} <span class="text-[10px] text-slate-400 ml-0.5">(30d)</span>`;
+
+        const returnHtml = c.isMedicalLeave
+          ? `<span class="text-slate-400 italic text-[10px]">Aguardando Alta</span>`
+          : formatDateBR(c.returnDate);
+
+        const deadlineHtml = c.isMedicalLeave
+          ? `<span class="flex items-center gap-1 text-slate-500 text-[10px]"><span>⚖️</span><span>Suspenso (Art. 133)</span></span>`
+          : `<span class="flex items-center gap-1 font-semibold text-rose-700"><span>🏁</span><span>${c.deadline}</span></span>`;
+
+        const marginHtml = c.isMedicalLeave
+          ? `<span class="text-[10px] text-slate-400">Congelado</span>`
+          : `<span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800">+${c.safetyMarginDays}d</span>`;
+
+        const statusHtml = c.isMedicalLeave
+          ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-amber-100 text-amber-800 border border-amber-200">Afastamento</span>`
+          : `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">Regular</span>`;
+
+        tr.innerHTML = `
+          <td class="py-2 px-2.5 font-mono text-slate-400">${String(index + 1).padStart(2, "0")}</td>
+          <td class="py-2 px-3 font-semibold text-slate-900">
+            <div class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" style="background-color: ${c.color};"></span>
+              <span>${c.name}</span>
+            </div>
+          </td>
+          <td class="py-2 px-3 text-slate-600 font-medium">
+            ${c.role}
+          </td>
+          <td class="py-2 px-3 font-medium text-slate-700">
+            ${periodHtml}
+          </td>
+          <td class="py-2 px-2.5 font-semibold text-emerald-700">
+            ${returnHtml}
+          </td>
+          <td class="py-2 px-3 ${c.isMedicalLeave ? '' : 'bg-rose-50/30'}">
+            ${deadlineHtml}
+          </td>
+          <td class="py-2 px-2.5 font-medium text-emerald-700">
+            ${marginHtml}
+          </td>
+          <td class="py-2 px-3 text-slate-600 text-[10.5px]">
+            ${c.reason}
+          </td>
+          <td class="py-2 px-2 text-center">
+            ${statusHtml}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function highlightTableRows() {
+      collaborators.forEach(c => {
+        const row = document.getElementById(`row-collab-${c.id}`);
+        if (!row) return;
+
+        if (selectedCollabId === null) {
+          row.classList.remove("bg-blue-50/70", "opacity-40");
+        } else if (selectedCollabId === c.id) {
+          row.classList.add("bg-blue-50/70");
+          row.classList.remove("opacity-40");
+        } else {
+          row.classList.remove("bg-blue-50/70");
+          row.classList.add("opacity-40");
+        }
+      });
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      renderLegend();
+      renderCalendar();
+      renderTable();
+    });
+  </script>
+</body>
+</html>

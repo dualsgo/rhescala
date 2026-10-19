@@ -70,8 +70,9 @@ export const apiStore = {
         const url = getConfiguredApiUrl();
         if (!url) return { success: false, error: 'URL da Planilha não configurada.' };
 
+        let data: { success: boolean, role?: 'admin' | 'viewer', error?: string } | null;
         try {
-            // Tenta login via POST (padrão seguro, evita expor senha na URL e nos logs)
+            // Login via POST (padrão seguro, evita expor senha na URL e nos logs)
             const response = await fetch(`${url}?action=login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -79,21 +80,24 @@ export const apiStore = {
                 redirect: 'follow',
             });
             if (!response.ok) throw new Error('Erro na conexão com o servidor.');
-            const data = await response.json();
-            // Se backend legado retornar erro de chave ausente, fallback para GET
-            if (!data || (data.error && data.error.includes('Key not provided'))) {
-                return await this.loginFallbackGet(url, password);
-            }
-            return data;
+            data = await response.json();
         } catch (e) {
-            // Fallback para GET caso o deployment do GAS seja versão anterior que só aceita GET
+            // Falhas de rede NÃO fazem downgrade para GET (evita vazar a senha na URL).
+            console.error('Erro no login:', e);
+            return { success: false, error: 'Falha na autenticação. Verifique a conexão.' };
+        }
+
+        // Fallback para GET somente quando o backend legado (sem suporte a login via POST)
+        // responde explicitamente que a chave não foi informada.
+        if (!data || (typeof data.error === 'string' && data.error.includes('Key not provided'))) {
             try {
                 return await this.loginFallbackGet(url, password);
             } catch (fallbackErr) {
-                console.error('Erro no login:', fallbackErr);
+                console.error('Erro no login (backend legado):', fallbackErr);
                 return { success: false, error: 'Falha na autenticação. Verifique a conexão.' };
             }
         }
+        return data;
     },
 
     async loginFallbackGet(url: string, password: string): Promise<{ success: boolean, role?: 'admin' | 'viewer', error?: string }> {

@@ -12,6 +12,19 @@ dist
 dist-ssr
 *.local
 
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Planilhas com dados pessoais de colaboradores (LGPD)
+*.xlsx
+*.xls
+*.csv
+
+# Arquivos temporários
+scratch/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -4,6 +4,7 @@ import { Employee, MonthYear, ShiftType } from '../types';
 import { Icon } from './Icon';
 import { getPrevMonthConsecutive, getPrevMonthWorkStreak, isWorkingShift } from '../hooks/useScheduleEngine';
 import { getShortName, isEmployeeActiveInMonth } from '../constants';
+import { addDaysToISODate } from '../src/utils/date';
 
 
 interface InconsistencyPanelProps {
@@ -52,9 +53,8 @@ function getEffectiveShift(emp: Employee, year: number, month: number, dayIdx: n
 
     if (emp.vacationStart) {
         const start = emp.vacationStart;
-        const d = new Date(start + 'T00:00:00');
-        d.setDate(d.getDate() + 30);
-        const end = emp.vacationEnd || d.toISOString().split('T')[0];
+        // Sem vacationEnd: 30 dias corridos incluindo o dia inicial (start + 29)
+        const end = emp.vacationEnd || addDaysToISODate(start, 29);
         if (dateStr >= start && dateStr <= end) return 'FE';
     }
     if (emp.atestadoStart && emp.atestadoEnd) {

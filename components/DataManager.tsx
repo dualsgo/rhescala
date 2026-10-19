@@ -4,6 +4,7 @@ import { isEmployeeActiveOnDay } from '../constants';
 import { Icon } from './Icon';
 import { useDialog } from '../contexts/DialogContext';
 import { apiStore } from '../src/gas-api';
+import { toLocalISODate } from '../src/utils/date';
 
 interface DataManagerProps {
   syncStatus: SyncStatus;
@@ -89,7 +90,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `rhescala_backup_${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `rhescala_backup_${toLocalISODate()}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -152,7 +153,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `escala_vendas_${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `escala_vendas_${toLocalISODate()}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

@@ -309,8 +309,11 @@ export function optimizePeakWeek(
         }
     }
 
+    const [y, m] = monthKey.split('-').map(Number);
+    const daysInMonth = (y && m) ? new Date(y, m, 0).getDate() : 31;
+
     activeEmps.forEach((emp, empIdx) => {
-        const shifts = [...(emp.shifts[monthKey] || Array(31).fill('T'))];
+        const shifts = [...(emp.shifts[monthKey] || Array(daysInMonth).fill('T'))];
         
         // 1. Remover folgas simples nos dias críticos de pico (ex: 22, 23, 24)
         criticalDays.forEach(day => {

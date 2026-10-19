@@ -8,6 +8,7 @@ import { MobileDayScheduleView } from './MobileDayScheduleView';
 import { MobileFilterDrawer } from './MobileFilterDrawer';
 
 import { HolidayCredit } from '../hooks/useHolidayCredits';
+import { toLocalISODate } from '../src/utils/date';
 
 interface ShiftGridProps {
   employees: Employee[];
@@ -746,7 +747,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
 
                   const isSelected = selectedDayIdx === dayIdx;
-                  const todayStr = new Date().toISOString().split('T')[0];
+                  const todayStr = toLocalISODate();
                   const isPast = d.dateStr < todayStr;
                   const pastDimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale pointer-events-none select-none' : '';
                   const focusDimClass = focusSelectedDay && !isSelected ? 'opacity-40 hover:opacity-100 transition-opacity duration-150' : '';
@@ -1132,7 +1133,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const is7thDay = streak === 7;
                               const hasAlert = streak > maxStreak && isWorkingDay;
                               const hasCellViolation = hasAlert || isSundayViolation;
-                              const todayStr = new Date().toISOString().split('T')[0];
+                              const todayStr = toLocalISODate();
                                const isPast = d.dateStr < todayStr;
                                const pastDimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
                                const dayRequest = !isReadOnly ? (emp.requests || []).find(r => r.date === fullDate) : undefined;

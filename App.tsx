@@ -100,8 +100,9 @@ const App: React.FC = () => {
   const [validatedMonths, setValidatedMonths] = useLocalStorage<Record<string, boolean>>(STORAGE_KEYS.validatedMonths, {});
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
   const [showInconsistencyModal, setShowInconsistencyModal] = useState(false);
-  const [viewerModeType, setViewerModeType] = useLocalStorage<'personal' | 'grid'>(STORAGE_KEYS.viewerModeType, 'personal');
-  const [viewerSelectedEmpId, setViewerSelectedEmpId] = useLocalStorage<string>(STORAGE_KEYS.viewerSelectedEmpId, '');
+  // Preferências por dispositivo: NÃO sincronizam com a nuvem (evita propagar a escolha de um celular para toda a loja)
+  const [viewerModeType, setViewerModeType] = useLocalPreference<'personal' | 'grid'>(STORAGE_KEYS.viewerModeType, 'personal');
+  const [viewerSelectedEmpId, setViewerSelectedEmpId] = useLocalPreference<string>(STORAGE_KEYS.viewerSelectedEmpId, '');
   const [auditLogs, setAuditLogs] = useLocalStorage<AuditLogEntry[]>(STORAGE_KEYS.auditLogs, []);
   const [pendingAuditAction, setPendingAuditAction] = useState<{
     impacts: AuditImpactPreview[];

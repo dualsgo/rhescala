@@ -296,13 +296,15 @@ export function useLocalPreference<T>(key: string, initialValue: T): [T, (value:
     });
 
     const setValue = (value: T | ((val: T) => T)) => {
-        try {
-            const valueToStore = value instanceof Function ? value(storedValue) : value;
-            setStoredValue(valueToStore);
-            window.localStorage.setItem(key, JSON.stringify(valueToStore));
-        } catch (error) {
-            console.error('Error saving to localStorage', error);
-        }
+        setStoredValue(prev => {
+            const valueToStore = value instanceof Function ? value(prev) : value;
+            try {
+                window.localStorage.setItem(key, JSON.stringify(valueToStore));
+            } catch (error) {
+                console.error('Error saving to localStorage', error);
+            }
+            return valueToStore;
+        });
     };
 
     return [storedValue, setValue];

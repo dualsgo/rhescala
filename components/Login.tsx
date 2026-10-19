@@ -2,12 +2,14 @@
 import React, { useState } from 'react';
 import { Icon } from './Icon';
 import { apiStore, clearConfiguredApiUrl } from '../src/gas-api';
+import { useDialog } from '../contexts/DialogContext';
 
 interface LoginProps {
   onLogin: (role: 'admin' | 'viewer') => void;
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
+  const { showDialog } = useDialog();
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -96,8 +98,15 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
 
             <button 
-              onClick={() => {
-                if (window.confirm('Deseja realmente trocar o link da planilha? Você voltará para a tela de configuração inicial.')) {
+              onClick={async () => {
+                const confirmed = await showDialog({
+                  type: 'confirm',
+                  title: 'Trocar Planilha',
+                  message: 'Deseja realmente trocar o link da planilha? Você voltará para a tela de configuração inicial.',
+                  confirmText: 'Trocar',
+                  cancelText: 'Cancelar'
+                });
+                if (confirmed) {
                   clearConfiguredApiUrl();
                   window.location.reload();
                 }

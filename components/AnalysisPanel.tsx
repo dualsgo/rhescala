@@ -5,6 +5,7 @@ import { getShiftClassification, isWorkingShift } from '../hooks/useScheduleEngi
 import { Icon } from './Icon';
 import { buildHolidaySet, SHIFT_HOURS, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth } from '../constants';
 import { toPng } from 'html-to-image';
+import { addDaysToISODate } from '../src/utils/date';
 
 
 interface AnalysisPanelProps {
@@ -56,9 +57,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
 
   // Helper inside AnalysisPanel for date math
   function addDays(dateStr: string, days: number): string {
-    const d = new Date(dateStr + 'T00:00:00');
-    d.setDate(d.getDate() + days);
-    return d.toISOString().split('T')[0];
+    return addDaysToISODate(dateStr, days);
   }
 
   // ── Data Processing ──────────────────────────────────────────────────────────

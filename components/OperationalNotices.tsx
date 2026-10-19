@@ -2,6 +2,7 @@
 import React from 'react';
 import { Icon } from './Icon';
 import { toPng } from 'html-to-image';
+import { toLocalISODate } from '../src/utils/date';
 
 interface OperationalNoticesProps {
   onClose: () => void;
@@ -29,7 +30,7 @@ export const OperationalNotices: React.FC<OperationalNoticesProps> = ({ onClose 
         }
       });
       const link = document.createElement('a');
-      link.download = `comunicado-operacional-${today.toISOString().split('T')[0]}.png`;
+      link.download = `comunicado-operacional-${toLocalISODate(today)}.png`;
       link.href = dataUrl;
       link.click();
     }

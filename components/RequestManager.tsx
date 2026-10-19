@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { Employee, MonthYear, ShiftType } from '../types';
 import { Icon } from './Icon';
 import { getShortName } from '../constants';
+import { useDialog } from '../contexts/DialogContext';
+import { getDaysInMonthKey } from '../src/utils/date';
 
 interface RequestManagerProps {
   employees: Employee[];
@@ -18,6 +20,7 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
   isReadOnly = false,
   onClose,
 }) => {
+  const { showDialog } = useDialog();
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
 
   const allRequests = useMemo(() => {
@@ -157,13 +160,20 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
                           {/* Folga Normal Action */}
                           {req.type !== 'troca_turno' && (
                             <button 
-                              onClick={() => {
-                                if(window.confirm(`Isto lançará automaticamente "F" na escala do dia ${(req.date || '').split('-').reverse().join('/')}. Confirmar?`)) {
+                              onClick={async () => {
+                                const confirmed = await showDialog({
+                                  type: 'confirm',
+                                  title: 'Conceder Folga (F)',
+                                  message: `Isto lançará automaticamente "F" na escala do dia ${(req.date || '').split('-').reverse().join('/')}. Confirmar?`,
+                                  confirmText: 'Confirmar Folga',
+                                  cancelText: 'Cancelar'
+                                });
+                                if (confirmed) {
                                   const [year, month, day] = (req.date || '').split('-');
                                   if (year && month && day) {
                                     const mKey = `${year}-${month}`;
                                     const dIdx = parseInt(day, 10) - 1;
-                                    const updatedShifts = [...(employee.shifts[mKey] || Array(31).fill('T'))];
+                                    const updatedShifts = [...(employee.shifts[mKey] || Array(getDaysInMonthKey(mKey)).fill('T'))];
                                     updatedShifts[dIdx] = 'F';
                                     
                                     const updated = (employee.requests || []).map(r => 
@@ -186,8 +196,15 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
                           {/* Troca de Turno Action */}
                           {req.type === 'troca_turno' && req.targetEmployeeId && (
                             <button 
-                              onClick={() => {
-                                if(window.confirm('Isto trocará automaticamente os turnos, horários e posições dos dois colaboradores neste dia. Confirmar?')) {
+                              onClick={async () => {
+                                const confirmed = await showDialog({
+                                  type: 'confirm',
+                                  title: 'Efetuar Troca de Turno',
+                                  message: 'Isto trocará automaticamente os turnos, horários e posições dos dois colaboradores neste dia. Confirmar?',
+                                  confirmText: 'Efetuar Troca',
+                                  cancelText: 'Cancelar'
+                                });
+                                if (confirmed) {
                                   const [year, month, day] = (req.date || '').split('-');
                                   if (year && month && day) {
                                     const mKey = `${year}-${month}`;
@@ -203,7 +220,7 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
                                       const theirHour = (targetEmp.dailyHours[mKey] || [])[dIdx] || targetEmp.workPeriod;
                                       const theirPos = (targetEmp.tacticalPositions?.[mKey] || [])[dIdx] || null;
                                       
-                                      const newTargetShifts = [...(targetEmp.shifts[mKey] || Array(31).fill('T'))];
+                                      const newTargetShifts = [...(targetEmp.shifts[mKey] || Array(getDaysInMonthKey(mKey)).fill('T'))];
                                       newTargetShifts[dIdx] = myShift;
                                       const newTargetHours = [...(targetEmp.dailyHours[mKey] || [])];
                                       newTargetHours[dIdx] = myHour;
@@ -216,7 +233,7 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
                                         tacticalPositions: { ...targetEmp.tacticalPositions, [mKey]: newTargetPos }
                                       });
                                       
-                                      const newMyShifts = [...(employee.shifts[mKey] || Array(31).fill('T'))];
+                                      const newMyShifts = [...(employee.shifts[mKey] || Array(getDaysInMonthKey(mKey)).fill('T'))];
                                       newMyShifts[dIdx] = theirShift;
                                       const newMyHours = [...(employee.dailyHours[mKey] || [])];
                                       newMyHours[dIdx] = theirHour;
@@ -244,11 +261,18 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
                           )}
 
                           <button 
-                            onClick={() => {
-                              const msg = window.prompt('Justificativa da aprovação (ex: Liberado mais cedo):', 'Pedido aprovado.');
-                              if (msg !== null) {
+                            onClick={async () => {
+                              const msg = await showDialog({
+                                type: 'prompt',
+                                title: 'Aprovação de Pedido',
+                                message: 'Justificativa da aprovação (ex: Liberado mais cedo):',
+                                promptDefault: 'Pedido aprovado.',
+                                confirmText: 'Aprovar',
+                                cancelText: 'Cancelar'
+                              });
+                              if (typeof msg === 'string') {
                                 const updated = (employee.requests || []).map(r => 
-                                  (r.createdAt === req.createdAt) ? { ...r, status: 'granted' as const, feedback: msg || 'Pedido aprovado.' } : r
+                                  (r.createdAt === req.createdAt) ? { ...r, status: 'granted' as const, feedback: msg.trim() || 'Pedido aprovado.' } : r
                                 );
                                 onUpdateEmployee(employee.id, { requests: updated });
                               }
@@ -271,11 +295,17 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
                           </button>
 
                           <button 
-                            onClick={() => {
-                              const msg = window.prompt('Motivo da recusa:');
-                              if (msg !== null) {
+                            onClick={async () => {
+                              const msg = await showDialog({
+                                type: 'prompt',
+                                title: 'Recusar Pedido',
+                                message: 'Motivo da recusa:',
+                                confirmText: 'Recusar',
+                                cancelText: 'Cancelar'
+                              });
+                              if (typeof msg === 'string') {
                                 const updated = (employee.requests || []).map(r => 
-                                  (r.createdAt === req.createdAt) ? { ...r, status: 'refused' as const, feedback: msg || 'Pedido recusado sem justificativa.' } : r
+                                  (r.createdAt === req.createdAt) ? { ...r, status: 'refused' as const, feedback: msg.trim() || 'Pedido recusado sem justificativa.' } : r
                                 );
                                 onUpdateEmployee(employee.id, { requests: updated });
                               }
