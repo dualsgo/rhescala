@@ -25,7 +25,6 @@ import {
 } from '../clt/sunday-rotation';
 import { getLegalOverrideForDay } from '../clt/legal-overrides';
 import { optimizeProtectedDays } from '../peaks/protected-days';
-import { resolveTacticalDay, applyTacticalOnly } from '../tactical/tactical-positions';
 
 /**
  * "Smart Update" para geração/atualização mensal completa de escala.
@@ -175,10 +174,11 @@ export function applyMonthUpdate(
             }
 
             const isPreferredDay = isEmployeePreferredDayOff(emp, dow);
+            const isEstoque = emp.cargo === 'Estoque' || (emp.cargo as string) === 'Estoquista' || emp.role === 'Estoque';
 
-            // 3.2 Se for domingo de folga da rotação CLT OU folga fixa no domingo OU Estoquista
+            // 3.2 Se for domingo de folga da rotação CLT OU folga fixa no domingo OU Estoque
             if (dow === 0) {
-                const isSundayRest = restSundays.has(dayIdx) || isPreferredDay || emp.cargo === 'Estoquista';
+                const isSundayRest = restSundays.has(dayIdx) || isPreferredDay || isEstoque;
                 if (isSundayRest) {
                     shifts[dayIdx] = 'F';
                     decisionReasons[dayIdx] = 'SUNDAY_ROTATION_OFF';
@@ -202,7 +202,7 @@ export function applyMonthUpdate(
             const willWorkNextSunday = nextSunday !== undefined &&
                 !restSundays.has(nextSunday) &&
                 !isEmployeePreferredDayOff(emp, 0) &&
-                emp.cargo !== 'Estoquista';
+                !isEstoque;
 
             // Verifica se na janela da semana que antecede o próximo domingo já houve algum dia de descanso
             const weekStartIdx = nextSunday !== undefined ? Math.max(0, nextSunday - 6) : 0;
@@ -385,35 +385,6 @@ export function generateYearSchedule(
                     deletedNationalHolidays
                 );
             });
-
-            const allActive = [...activeRegular, ...activeApprentices];
-
-            // Pass: Tactical Positioning for the whole month
-            for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
-                const isHoliday = buildHolidaySet(year, customHolidays, deletedNationalHolidays).has(dateStr);
-                const isSunday = new Date(year, month, dayIdx + 1).getDay() === 0;
-
-                const empsForDay = allActive.map(emp => ({
-                    ...emp,
-                    shifts: {
-                        ...emp.shifts,
-                        [monthKey]: result[emp.id][monthKey].shifts
-                    },
-                    dailyHours: {
-                        ...emp.dailyHours,
-                        [monthKey]: result[emp.id][monthKey].hours
-                    }
-                }));
-
-                const positions = resolveTacticalDay(empsForDay, monthKey, dayIdx, isHoliday, isSunday, settings);
-                
-                allActive.forEach(emp => {
-                    if (result[emp.id][monthKey].shifts[dayIdx] === 'T' && positions[emp.id]) {
-                        result[emp.id][monthKey].shifts[dayIdx] = positions[emp.id] as ShiftType;
-                    }
-                });
-            }
         }
     }
 
@@ -517,7 +488,7 @@ export function generateCleanMonthSchedule(
     const monthData = applyMonthUpdate(employees, targetYear, targetMonth, customHolidays, deletedNationalHolidays, settings, protectedDays, mode);
     
     // 2. Aplica nos colaboradores
-    const updatedEmps = employees.map(emp => {
+    return employees.map(emp => {
         const d = monthData[emp.id];
         if (d) {
             return {
@@ -528,19 +499,6 @@ export function generateCleanMonthSchedule(
                     ...(emp.decisionReasons || {}),
                     [targetKey]: d.decisionReasons || {}
                 }
-            };
-        }
-        return emp;
-    });
-
-    // 3. Distribui posições táticas automáticas (P1..P4 e ESTQ) para os turnos trabalhados
-    const tacticalMap = applyTacticalOnly(updatedEmps, targetYear, targetMonth, customHolidays, deletedNationalHolidays, settings);
-
-    return updatedEmps.map(emp => {
-        if (tacticalMap[emp.id]) {
-            return {
-                ...emp,
-                tacticalPositions: { ...emp.tacticalPositions, [targetKey]: tacticalMap[emp.id] }
             };
         }
         return emp;

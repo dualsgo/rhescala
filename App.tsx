@@ -8,7 +8,6 @@ import {
   applyMonthUpdate, 
   applyHoursOnly,
   applyFolgasOnly,
-  applyTacticalOnly,
   generateCleanMonthSchedule,
   detectScheduleDiffs,
   resolveTacticalDay, 
@@ -16,7 +15,6 @@ import {
   getShiftClassification, 
   findSundayViolations, 
   isWorkingShift, 
-  distributeTacticalPositions,
 } from './hooks/useScheduleEngine';
 
 import { Header } from './components/Header';
@@ -339,7 +337,7 @@ const App: React.FC = () => {
         employees.forEach(emp => {
           if (emp.shifts[monthKey]) newSnapshot.shifts[emp.id] = [...emp.shifts[monthKey]];
           if (emp.dailyHours[monthKey]) newSnapshot.dailyHours[emp.id] = [...emp.dailyHours[monthKey]];
-          if (emp.tacticalPositions[monthKey]) newSnapshot.tacticalPositions[emp.id] = [...emp.tacticalPositions[monthKey]];
+          if (emp.tacticalPositions?.[monthKey] && newSnapshot.tacticalPositions) newSnapshot.tacticalPositions[emp.id] = [...emp.tacticalPositions[monthKey]];
         });
         setOfficialSnapshots(prev => ({ ...prev, [monthKey]: newSnapshot }));
       }
@@ -495,7 +493,7 @@ const App: React.FC = () => {
   const handleApplyGranularPresets = useCallback((options: {
     scope: 'all' | 'single';
     targetEmpId?: string;
-    applyMode: 'hours_only' | 'folgas_only' | 'tactical_only' | 'full';
+    applyMode: 'hours_only' | 'folgas_only' | 'full';
   }) => {
     const { scope, targetEmpId, applyMode } = options;
     const empId = scope === 'single' ? targetEmpId : undefined;
@@ -518,15 +516,7 @@ const App: React.FC = () => {
         return emp;
       }));
       showDialog({ title: 'Sucesso', message: 'Folgas e rotação de domingos recalculadas com sucesso respeitando os dias protegidos/sazonais!' });
-    } else if (applyMode === 'tactical_only') {
-      const updatedPositions = applyTacticalOnly(employees, currentMY.year, currentMY.month, customHolidays, deletedNationalHolidays, activeJornadaSettings);
-      setEmployees(prev => prev.map(emp => {
-        if (updatedPositions[emp.id]) {
-          return { ...emp, tacticalPositions: { ...emp.tacticalPositions, [monthKey]: updatedPositions[emp.id] } };
-        }
-        return emp;
-      }));
-      showDialog({ title: 'Sucesso', message: 'Funções da equipe (Caixa, Pacote, Reposição, Vendas, Fiscal e Estoque) redistribuídas com sucesso!' });
+
     } else if (applyMode === 'full') {
       const updatedData = applyMonthUpdate(employees, currentMY.year, currentMY.month, customHolidays, deletedNationalHolidays, activeJornadaSettings, {}, 'suggested_retro', empId);
       setEmployees(prev => prev.map(emp => {

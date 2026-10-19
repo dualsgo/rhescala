@@ -194,7 +194,7 @@ export const CleaningSchedule: React.FC<CleaningScheduleProps> = ({ employees, c
            <div className="flex gap-4">
               <div className="text-center">
                  <p className="text-[10px] font-black text-white/50 uppercase">Média por Colab.</p>
-                 <p className="text-2xl font-black">{(daysInMonth / Math.max(employees.filter(e => e.status === 'active' && !e.isHidden && !e.isYoungApprentice && e.cargo !== 'Aprendiz' && e.cargo !== 'Estoquista').length, 1)).toFixed(1)}</p>
+                 <p className="text-2xl font-black">{(daysInMonth / Math.max(employees.filter(e => e.status === 'active' && !e.isHidden && !e.isYoungApprentice && e.cargo !== 'Estoque').length, 1)).toFixed(1)}</p>
               </div>
            </div>
         </div>

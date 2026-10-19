@@ -86,7 +86,7 @@ describe('Criação do Novo Mês e Aplicação Avulsa (Regras CLT, Domingos e Fo
     it('garante que Estoquistas e quem tem folga fixa no domingo nunca trabalhem aos domingos', () => {
       const estoquista = createTestEmployee({
         id: 'emp-estq',
-        cargo: 'Estoquista',
+        cargo: 'Estoque',
         jornada: '6x1',
         preferredDayOff: 'Domingo'
       });
@@ -231,10 +231,10 @@ describe('Criação do Novo Mês e Aplicação Avulsa (Regras CLT, Domingos e Fo
   describe('4. Criação de Novo Mês Completa (generateCleanMonthSchedule)', () => {
     it('gera escala mensal inteligente e limpa aplicando regras para toda a equipe', () => {
       const team = [
-        createTestEmployee({ id: 't1', cargo: 'Atendente', preferredDayOff: 'Terça-feira' }),
-        createTestEmployee({ id: 't2', cargo: 'Atendente', preferredDayOff: 'Quarta-feira' }),
-        createTestEmployee({ id: 't3', cargo: 'Estoquista', preferredDayOff: 'Domingo' }),
-        createTestEmployee({ id: 't4', cargo: 'Aprendiz', isYoungApprentice: true, courseDay: 'Quarta-feira' })
+        createTestEmployee({ id: 't1', cargo: 'Vendas', preferredDayOff: 'Terça-feira' }),
+        createTestEmployee({ id: 't2', cargo: 'Vendas', preferredDayOff: 'Quarta-feira' }),
+        createTestEmployee({ id: 't3', cargo: 'Estoque', preferredDayOff: 'Domingo' }),
+        createTestEmployee({ id: 't4', cargo: 'Apoio', isYoungApprentice: true, courseDay: 'Quarta-feira' })
       ];
 
       const updated = generateCleanMonthSchedule(team, YEAR, MONTH);

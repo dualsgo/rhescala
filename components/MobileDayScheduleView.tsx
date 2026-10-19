@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Employee, MonthYear, ShiftType, JornadaSettings } from '../types';
+import { Employee, MonthYear, ShiftType, JornadaSettings, normalizeEmployeeRole, ROLE_METADATA_MAP } from '../types';
 import { Icon } from './Icon';
 import { getShortName, isEmployeeActiveOnDay, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS } from '../constants';
 import { getShiftClassification, isWorkingShift } from '../src/engine/shifts/shift-predicates';
@@ -367,11 +367,15 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
                   Padrão
                 </span>
               )}
-              {tacticalDisplayMode !== 'off' && item.pos && (
-                <span className={`px-1.5 py-0.2 rounded-md border text-[9px] font-black uppercase tracking-wider inline-block mt-0.5 ${getTacticalColor(item.pos)}`}>
-                  {item.pos}
-                </span>
-              )}
+              {(() => {
+                const role = normalizeEmployeeRole(item.emp.cargo || item.emp.role);
+                const meta = ROLE_METADATA_MAP[role];
+                return (
+                  <span className={`px-1.5 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-wider inline-block mt-0.5 ${meta.badgeColor}`}>
+                    {meta.label} ({meta.code})
+                  </span>
+                );
+              })()}
             </div>
           )}
 

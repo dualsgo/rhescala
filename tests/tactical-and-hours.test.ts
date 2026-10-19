@@ -52,9 +52,9 @@ describe('Horários, Almoços e Posições Táticas', () => {
     it('em feriados: aprendiz recebe 12h45, estoquista recebe horário concreto e atendentes recebem pausas de 15 min escalonadas', () => {
       const team = [
         createTestEmployee({ id: '1', isYoungApprentice: true }),
-        createTestEmployee({ id: '2', cargo: 'Estoquista' }),
-        createTestEmployee({ id: '3', cargo: 'Atendente' }),
-        createTestEmployee({ id: '4', cargo: 'Atendente' })
+        createTestEmployee({ id: '2', cargo: 'Estoque' }),
+        createTestEmployee({ id: '3', cargo: 'Vendas' }),
+        createTestEmployee({ id: '4', cargo: 'Vendas' })
       ];
 
       const lunches = calculateLunches(team, true, false, true, DEFAULT_JORNADA_SETTINGS);
@@ -105,45 +105,45 @@ describe('Horários, Almoços e Posições Táticas', () => {
     it('atribui ESTQ automaticamente para Estoquistas', () => {
       const estoque = createTestEmployee({
         id: 'emp-estq',
-        cargo: 'Estoquista',
+        cargo: 'Estoque',
         shifts: { [MONTH_KEY]: ['T'] },
         dailyHours: { [MONTH_KEY]: ['10h às 18h20'] }
       });
 
       const res = resolveTacticalDay([estoque], MONTH_KEY, DAY_IDX, false, false);
-      expect(res['emp-estq']).toBe('ESTQ');
+      expect(res['emp-estq']).toBe('Estoque');
     });
 
     it('preserva posições manuais definidas na grade', () => {
       const emp = createTestEmployee({
         id: 'emp-manual',
-        cargo: 'Atendente',
+        cargo: 'Vendas',
         shifts: { [MONTH_KEY]: ['T'] },
         dailyHours: { [MONTH_KEY]: ['10h às 18h20'] },
         tacticalPositions: { [MONTH_KEY]: ['P3'] }
       });
 
       const res = resolveTacticalDay([emp], MONTH_KEY, DAY_IDX, false, false);
-      expect(res['emp-manual']).toBe('P3');
+      expect(res['emp-manual']).toBe('Vendas');
     });
 
     it('preenche P1 obrigatoriamente priorizando colaborador com preferência P1', () => {
       const empP1Fan = createTestEmployee({
         id: 'emp-fan',
-        cargo: 'Atendente',
+        cargo: 'Vendas',
         preferredPosition1: 'P1',
         shifts: { [MONTH_KEY]: ['T'] },
         dailyHours: { [MONTH_KEY]: ['10h às 18h20'] }
       });
       const empOther = createTestEmployee({
         id: 'emp-other',
-        cargo: 'Atendente',
+        cargo: 'Vendas',
         shifts: { [MONTH_KEY]: ['T'] },
         dailyHours: { [MONTH_KEY]: ['10h às 18h20'] }
       });
 
       const res = resolveTacticalDay([empOther, empP1Fan], MONTH_KEY, DAY_IDX, false, false);
-      expect(res['emp-fan']).toBe('P1');
+      expect(res['emp-fan']).toBe('Vendas');
     });
 
     it('ignora colaboradores de folga ou afastamento', () => {
@@ -160,10 +160,10 @@ describe('Horários, Almoços e Posições Táticas', () => {
 
   describe('Escala de Limpeza da Copa (getCleaningSchedule)', () => {
     it('distribui a limpeza equilibrada excluindo Aprendizes e Estoquistas', () => {
-      const atendente1 = createTestEmployee({ id: 'a1', name: 'Atendente Um', cargo: 'Atendente', shifts: { '2028-10': Array(31).fill('T') } });
-      const atendente2 = createTestEmployee({ id: 'a2', name: 'Atendente Dois', cargo: 'Atendente', shifts: { '2028-10': Array(31).fill('T') } });
-      const estoquista = createTestEmployee({ id: 'e1', name: 'Estoquista João', cargo: 'Estoquista', shifts: { '2028-10': Array(31).fill('T') } });
-      const aprendiz = createTestEmployee({ id: 'ap1', name: 'Aprendiz Ana', isYoungApprentice: true, cargo: 'Aprendiz', shifts: { '2028-10': Array(31).fill('T') } });
+      const atendente1 = createTestEmployee({ id: 'a1', name: 'Atendente Um', cargo: 'Vendas', shifts: { '2028-10': Array(31).fill('T') } });
+      const atendente2 = createTestEmployee({ id: 'a2', name: 'Atendente Dois', cargo: 'Vendas', shifts: { '2028-10': Array(31).fill('T') } });
+      const estoquista = createTestEmployee({ id: 'e1', name: 'Estoquista João', cargo: 'Estoque', shifts: { '2028-10': Array(31).fill('T') } });
+      const aprendiz = createTestEmployee({ id: 'ap1', name: 'Aprendiz Ana', isYoungApprentice: true, cargo: 'Apoio', shifts: { '2028-10': Array(31).fill('T') } });
 
       const schedule = getCleaningSchedule([atendente1, atendente2, estoquista, aprendiz], { year: 2028, month: 9 });
 

@@ -3,26 +3,25 @@ import { migrateLegacyEmployeeData } from '../src/services/scheduleMigrationServ
 import { Employee, ShiftType } from '../types';
 
 describe('scheduleMigrationService - migrateLegacyEmployeeData', () => {
-  it('deve converter "ESTOQUE" para "ESTQ" em tacticalPositions, shifts e preferências', () => {
+  it('deve converter cargos legados e códigos de turnos transitórios (P1..P4, ESTQ) para as funções canônicas e turnos "T"', () => {
     const legacyEmp: Employee = {
       id: 'emp-1',
       name: 'João Estoquista',
+      cargo: 'Estoquista' as any,
       isYoungApprentice: false,
       status: 'active',
       statusColor: '#000',
       shifts: {
-        '2026-10': ['ESTOQUE' as unknown as ShiftType, 'T', 'F'],
+        '2026-10': ['ESTOQUE' as unknown as ShiftType, 'P1' as unknown as ShiftType, 'F'],
       },
       dailyHours: {
         '2026-10': ['10h às 18h20', '10h às 18h20', 'Folga'],
       },
       tacticalPositions: {
-        '2026-10': ['ESTOQUE', null, null],
+        '2026-10': ['ESTOQUE', 'P1', null],
       },
       workPeriod: '10h às 18h20',
       preferredDayOff: 'Domingo',
-      preferredPosition1: 'ESTOQUE',
-      preferredPosition2: 'ESTOQUE',
       shiftName: 'Abertura',
     };
 
@@ -30,30 +29,28 @@ describe('scheduleMigrationService - migrateLegacyEmployeeData', () => {
 
     expect(result.hasChanged).toBe(true);
     const migrated = result.employees[0];
-    expect(migrated.shifts['2026-10'][0]).toBe('ESTQ');
-    expect(migrated.tacticalPositions['2026-10'][0]).toBe('ESTQ');
-    expect(migrated.preferredPosition1).toBe('ESTQ');
-    expect(migrated.preferredPosition2).toBe('ESTQ');
+    expect(migrated.cargo).toBe('Estoque');
+    expect(migrated.role).toBe('Estoque');
+    expect(migrated.shifts['2026-10'][0]).toBe('T');
+    expect(migrated.shifts['2026-10'][1]).toBe('T');
+    expect(migrated.shifts['2026-10'][2]).toBe('F');
   });
 
   it('não deve alterar colaboradores sem dados legados e manter hasChanged false', () => {
     const cleanEmp: Employee = {
       id: 'emp-2',
       name: 'Maria Vendedora',
+      cargo: 'Vendas',
+      role: 'Vendas',
       isYoungApprentice: false,
       status: 'active',
       statusColor: '#000',
       shifts: {
-        '2026-10': ['T', 'F', 'P1'],
+        '2026-10': ['T', 'F', 'T'],
       },
       dailyHours: {},
-      tacticalPositions: {
-        '2026-10': ['P1', null, null],
-      },
       workPeriod: '10h às 18h20',
       preferredDayOff: 'Segunda-feira',
-      preferredPosition1: 'P1',
-      preferredPosition2: 'P2',
       shiftName: 'Fechamento',
     };
 

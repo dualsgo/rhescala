@@ -46,7 +46,7 @@ export const OperationalGuideModal: React.FC<OperationalGuideModalProps> = ({ on
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-3xl">🟥</span>
                 <div>
-                  <h4 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight">Caixa / Pacote (Equiv. P1)</h4>
+                  <h4 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight">Caixa (CX)</h4>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Âncora de Finalização</p>
                 </div>
               </div>
@@ -63,7 +63,7 @@ export const OperationalGuideModal: React.FC<OperationalGuideModalProps> = ({ on
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-3xl">🟨</span>
                 <div>
-                  <h4 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight">Reposição / Org. (Equiv. P2)</h4>
+                  <h4 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight">Apoio / Reposição (AP)</h4>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filtro, Entrada & Gôndolas</p>
                 </div>
               </div>
@@ -80,7 +80,7 @@ export const OperationalGuideModal: React.FC<OperationalGuideModalProps> = ({ on
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-3xl">🟩</span>
                 <div>
-                  <h4 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight">Vendas / Atend. (Equiv. P3)</h4>
+                  <h4 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight">Vendas (VEND)</h4>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Salão / Consultor de Loja</p>
                 </div>
               </div>
@@ -97,7 +97,7 @@ export const OperationalGuideModal: React.FC<OperationalGuideModalProps> = ({ on
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-3xl">🟦</span>
                 <div>
-                  <h4 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight">Fiscal / Apoio (Equiv. P4)</h4>
+                  <h4 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight">Fiscal (FISC)</h4>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Prevenção & Apoio Flexível</p>
                 </div>
               </div>

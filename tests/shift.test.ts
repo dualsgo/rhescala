@@ -45,12 +45,12 @@ describe('ShiftType & Normalization Domain Rules', () => {
   describe('Tabela de Casos de Turnos (Entrada -> Saída)', () => {
     const shiftTestCases = [
       { input: 'T', isWorking: true, valid: true },
-      { input: 'P1', isWorking: true, valid: true },
-      { input: 'PC', isWorking: true, valid: true },
-      { input: 'P2', isWorking: true, valid: true },
-      { input: 'P3', isWorking: true, valid: true },
-      { input: 'P4', isWorking: true, valid: true },
-      { input: 'ESTQ', isWorking: true, valid: true },
+      { input: 'P1', isWorking: true, valid: false },
+      { input: 'PC', isWorking: true, valid: false },
+      { input: 'P2', isWorking: true, valid: false },
+      { input: 'P3', isWorking: true, valid: false },
+      { input: 'P4', isWorking: true, valid: false },
+      { input: 'ESTQ', isWorking: true, valid: false },
       { input: 'F', isWorking: false, valid: true },
       { input: 'FF', isWorking: false, valid: true },
       { input: 'FF 2026-12-25', isWorking: false, valid: true },

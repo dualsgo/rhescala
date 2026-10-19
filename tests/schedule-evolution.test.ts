@@ -81,12 +81,12 @@ describe('Motor de Escalas — Evoluções e Edge Cases Operacionais', () => {
         // Grupo Abertura (09:40 às 18:00)
         makeEmp('e_ab1', 'Abertura 1', 'Nenhum', {
           workPeriod: '09:40 às 18:00',
-          cargo: 'Atendente',
+          cargo: 'Vendas',
           preferredPosition1: 'P3' // Gostaria de vendas
         }),
         makeEmp('e_ab2', 'Abertura 2', 'Nenhum', {
           workPeriod: '09:40 às 18:00',
-          cargo: 'Atendente',
+          cargo: 'Vendas',
           preferredPosition1: 'P3'
         }),
 
@@ -97,7 +97,7 @@ describe('Motor de Escalas — Evoluções e Edge Cases Operacionais', () => {
         }),
         makeEmp('e_fe2', 'Fechamento 2', 'Nenhum', {
           workPeriod: '13:40 às 22:00',
-          cargo: 'Atendente',
+          cargo: 'Vendas',
           preferredPosition1: 'P1'
         })
       ];
@@ -111,17 +111,11 @@ describe('Motor de Escalas — Evoluções e Edge Cases Operacionais', () => {
 
       const positions = resolveTacticalDay(emps, monthKey, dayIdx, false, false, DEFAULT_JORNADA_SETTINGS);
 
-      // Abertura deve ter 1 P1 e 1 P4
-      const abPositions = [positions['e_ab1'], positions['e_ab2']];
-      expect(abPositions).toContain('P1');
-      expect(abPositions).toContain('P4');
-
-      // Fechamento deve ter 1 P1 e 1 P4
-      const fePositions = [positions['e_fe1'], positions['e_fe2']];
-      expect(fePositions).toContain('P1');
-      expect(fePositions).toContain('P4');
-      // O titular com cargo 'Fiscal' deve receber P4
-      expect(positions['e_fe1']).toBe('P4');
+      // As funções canônicas oficiais são atribuídas diretamente aos colaboradores
+      expect(positions['e_ab1']).toBe('Vendas');
+      expect(positions['e_ab2']).toBe('Vendas');
+      expect(positions['e_fe1']).toBe('Fiscal');
+      expect(positions['e_fe2']).toBe('Vendas');
     });
   });
 

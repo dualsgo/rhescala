@@ -17,7 +17,7 @@ describe('MobileEmployerViewer — Fase 7.4', () => {
     {
       id: 'emp-1',
       name: 'Carlos Oliveira',
-      cargo: 'Atendente',
+      cargo: 'Vendas',
       isYoungApprentice: false,
       contractType: 'CLT',
       jornada: '6x1',
@@ -33,7 +33,7 @@ describe('MobileEmployerViewer — Fase 7.4', () => {
     {
       id: 'emp-2',
       name: 'Beatriz Santos',
-      cargo: 'Atendente',
+      cargo: 'Vendas',
       isYoungApprentice: false,
       contractType: 'CLT',
       jornada: '6x1',

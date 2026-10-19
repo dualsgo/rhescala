@@ -10,7 +10,8 @@ import { isWorkingShift } from '../shifts/shift-predicates';
 export { isWorkingShift };
 
 export function isEmployeePreferredDayOff(emp: Employee, dow: number): boolean {
-  if (emp.cargo === 'Estoquista' && dow === 0) return true;
+  const isEstoque = emp.cargo === 'Estoque' || emp.role === 'Estoque' || (emp.cargo as string) === 'Estoquista';
+  if (isEstoque && dow === 0) return true;
   if (!emp.preferredDayOff || emp.preferredDayOff === 'Nenhum') return false;
   const pref = emp.preferredDayOff.trim().toLowerCase().replace('-feira', '');
   const dayName = WEEKDAY_NAMES[dow].toLowerCase().replace('-feira', '');
@@ -152,7 +153,8 @@ export function generateMonthForEmployee(
     }
 
     if (dow === 0) {
-      if (sundayRestDays.has(dayIdx) || emp.cargo === 'Estoquista') {
+      const isEstoque = emp.cargo === 'Estoque' || emp.role === 'Estoque' || (emp.cargo as string) === 'Estoquista';
+      if (sundayRestDays.has(dayIdx) || isEstoque) {
         shifts.push('F');
       } else {
         shifts.push('T');

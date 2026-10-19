@@ -55,7 +55,7 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
     const dayIdx = parseInt(day, 10) - 1;
     
     return employees.filter(emp => {
-      if (emp.isYoungApprentice || emp.cargo === 'Aprendiz') return false;
+      if (emp.isYoungApprentice) return false;
       let shift = (emp.shifts[targetMonthKey] || [])[dayIdx];
       if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) shift = 'FE';
       if (emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd) shift = 'AT';

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useDialog } from '../contexts/DialogContext';
-import { Employee, EmployeeCargo } from '../types';
+import { Employee, EmployeeCargo, EmployeeRole, EMPLOYEE_ROLES, ROLE_METADATA_MAP, normalizeEmployeeRole } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD, getTacticalLabel, getTacticalEmoji } from '../constants';
 import { addDaysToISODate } from '../src/utils/date';
@@ -24,7 +24,7 @@ interface TeamViewProps {
   onClose?: () => void;
 }
 
-const CARGO_OPTIONS: EmployeeCargo[] = ['Atendente', 'Estoquista', 'Aprendiz', 'Fiscal'];
+const CARGO_OPTIONS: EmployeeCargo[] = EMPLOYEE_ROLES;
 
 /** Adds `days` calendar days to a YYYY-MM-DD string and returns YYYY-MM-DD */
 function addDays(dateStr: string, days: number): string {
@@ -189,7 +189,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
   const [newName, setNewName] = useState('');
   const [isYoung, setIsYoung] = useState(false);
   const [courseDay, setCourseDay] = useState('Segunda-feira');
-  const [newCargo, setNewCargo] = useState<EmployeeCargo>('Atendente');
+  const [newCargo, setNewCargo] = useState<EmployeeCargo>('Apoio');
   const [newBirthday, setNewBirthday] = useState('');
   const [newHiredAt, setNewHiredAt] = useState('');
   const [newFiredAt, setNewFiredAt] = useState('');
@@ -257,29 +257,31 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
           </div>
 
           <div>
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Cargo</label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {CARGO_OPTIONS.map(c => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => {
-                    setNewCargo(c);
-                    if (c === 'Aprendiz') {
-                      setIsYoung(true);
-                    } else {
-                      setIsYoung(false);
-                    }
-                  }}
-                  className={`py-2 rounded-xl text-xs font-black uppercase border transition-all ${
-                    newCargo === c
-                      ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
-                      : 'bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-700 hover:border-orange-300'
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Função / Cargo</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {CARGO_OPTIONS.map(c => {
+                const meta = ROLE_METADATA_MAP[c];
+                const isSelected = newCargo === c;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setNewCargo(c)}
+                    className={`py-2 px-2.5 rounded-xl text-xs font-black uppercase border transition-all flex items-center justify-between ${
+                      isSelected
+                        ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
+                        : 'bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-700 hover:border-orange-300'
+                    }`}
+                  >
+                    <span>{c}</span>
+                    <span className={`text-[9px] px-1 py-0.5 rounded font-black ${
+                      isSelected ? 'bg-white/20 text-white' : meta.badgeColor
+                    }`}>
+                      {meta.code}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -461,7 +463,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
             <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm uppercase shadow-sm ${
               employee.isYoungApprentice
                 ? 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300'
-                : employee.cargo === 'Estoquista'
+                : employee.cargo === 'Estoque'
                 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
                 : 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300'
             }`}>
@@ -518,22 +520,21 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
               </div>
 
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Cargo</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Cargo / Função Oficial</label>
                 <select
                   disabled={isReadOnly}
-                  value={employee.cargo || 'Atendente'}
+                  value={normalizeEmployeeRole(employee.cargo || employee.role)}
                   onChange={(e) => {
-                    const newCargo = e.target.value as EmployeeCargo;
-                    const isApprentice = newCargo === 'Aprendiz';
+                    const newCargo = normalizeEmployeeRole(e.target.value);
                     onUpdateEmployee(employee.id, { 
                       cargo: newCargo,
-                      isYoungApprentice: isApprentice
+                      role: newCargo
                     });
                   }}
                   className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-orange-500"
                 >
-                  {CARGO_OPTIONS.map(c => (
-                    <option key={c} value={c}>{c}</option>
+                  {EMPLOYEE_ROLES.map(c => (
+                    <option key={c} value={c}>{c} ({ROLE_METADATA_MAP[c].code})</option>
                   ))}
                 </select>
               </div>
@@ -727,38 +728,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
               </div>
             </div>
 
-            {/* Tactical Positions */}
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Função Preferencial 1 (Correlata)</label>
-                <select
-                  disabled={isReadOnly}
-                  value={employee.preferredPosition1 || ''}
-                  onChange={(e) => onUpdateEmployee(employee.id, { preferredPosition1: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-200 outline-none"
-                >
-                  <option value="">Nenhuma</option>
-                  {['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
-                    <option key={p} value={p}>{p} — {getTacticalLabel(p, 'roles')} {getTacticalEmoji(p)}</option>
-                  ))}
-                </select>
-              </div>
 
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Função Preferencial 2 (Correlata)</label>
-                <select
-                  disabled={isReadOnly}
-                  value={employee.preferredPosition2 || ''}
-                  onChange={(e) => onUpdateEmployee(employee.id, { preferredPosition2: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-200 outline-none"
-                >
-                  <option value="">Nenhuma</option>
-                  {['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
-                    <option key={p} value={p}>{p} — {getTacticalLabel(p, 'roles')} {getTacticalEmoji(p)}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
           </div>
 
           {/* Section 4: Condições Especiais (Aprendiz, Férias & Atestado) */}
@@ -1170,7 +1140,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shadow-sm uppercase shrink-0 transition-transform group-hover:scale-105 ${
                       emp.isYoungApprentice
                         ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
-                        : emp.cargo === 'Estoquista'
+                        : emp.cargo === 'Estoque'
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
                         : 'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300'
                     }`}>
@@ -1185,9 +1155,15 @@ export const TeamView: React.FC<TeamViewProps> = ({
                         <div className={`w-2 h-2 rounded-full shrink-0 ${emp.status === 'active' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          {emp.cargo || 'Atendente'}
-                        </span>
+                        {(() => {
+                          const r = normalizeEmployeeRole(emp.cargo || emp.role);
+                          const meta = ROLE_METADATA_MAP[r];
+                          return (
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${meta.badgeColor}`}>
+                              {meta.label} ({meta.code})
+                            </span>
+                          );
+                        })()}
                         {emp.contractType === 'Sazonal' && (
                           <span className="text-[8px] px-1.5 py-0.2 rounded font-black bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 uppercase">Sazonal</span>
                         )}

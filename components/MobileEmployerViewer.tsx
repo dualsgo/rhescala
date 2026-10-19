@@ -1,12 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Employee, MonthYear, Holiday, JornadaSettings, ShiftType, TacticalDisplayMode } from '../types';
+import { Employee, MonthYear, Holiday, JornadaSettings, ShiftType, TacticalDisplayMode, normalizeEmployeeRole, ROLE_METADATA_MAP } from '../types';
 import { Icon } from './Icon';
 import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { 
   isWorkingShift, 
   getShiftClassification, 
-  calculateLunches, 
-  resolveTacticalDay 
+  calculateLunches 
 } from '../hooks/useScheduleEngine';
 import { buildHolidaySet, getShortName, isEmployeeActiveInMonth, isEmployeeActiveOnDay, getTacticalLabel } from '../constants';
 import { STORAGE_KEYS } from '../src/infrastructure/storage/storageKeys';
@@ -164,8 +163,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     const hour = (currentEmp.dailyHours[monthKey] || [])[currentDayIdx] || currentEmp.workPeriod || '10h às 18h20';
     const classification = getShiftClassification(hour, isSunday, jornadaSettings);
 
-    const resolved = resolveTacticalDay(activeEmployees, monthKey, currentDayIdx, isHoliday, isSunday, jornadaSettings);
-    const tacticalPos = resolved[currentEmp.id] || null;
+    const role = normalizeEmployeeRole(currentEmp.cargo || currentEmp.role);
 
     // Cálculo escalonado de almoço
     const workingToday = activeEmployees.filter(e => isWorkingShift((e.shifts[monthKey] || [])[currentDayIdx]));
@@ -184,7 +182,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
       isWorking,
       hour,
       classification,
-      tacticalPos,
+      role,
       lunchInfo,
       isHoliday,
       isSunday
@@ -206,7 +204,6 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(currentDayIdx + 1).padStart(2, '0')}`;
     const isHoliday = holidaySet.has(dateStr);
     const isSunday = dow === 0;
-    const resolved = resolveTacticalDay(activeEmployees, monthKey, currentDayIdx, isHoliday, isSunday, jornadaSettings);
 
     activeEmployees.forEach(emp => {
       const isOut = !isEmployeeActiveOnDay(emp, dateStr, monthKey, currentDayIdx);
@@ -215,17 +212,17 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
       const hour = (emp.dailyHours[monthKey] || [])[currentDayIdx] || emp.workPeriod || '10h às 18h20';
       const isWorking = isWorkingShift(shift);
       const classification = getShiftClassification(hour, isSunday, jornadaSettings);
-      const pos = resolved[emp.id] || null;
+      const role = normalizeEmployeeRole(emp.cargo || emp.role);
 
       if (!isWorking) {
-        groups['Folga'].push({ emp, hour, pos, shift });
+        groups['Folga'].push({ emp, hour, pos: role, shift });
       } else {
-        if (emp.cargo === 'Estoquista' || pos === 'ESTQ') {
-          groups['Estoque'].push({ emp, hour, pos, shift });
+        if (role === 'Estoque') {
+          groups['Estoque'].push({ emp, hour, pos: role, shift });
         } else if (groups[classification]) {
-          groups[classification].push({ emp, hour, pos, shift });
+          groups[classification].push({ emp, hour, pos: role, shift });
         } else {
-          groups['Fechamento'].push({ emp, hour, pos, shift });
+          groups['Fechamento'].push({ emp, hour, pos: role, shift });
         }
       }
     });
@@ -317,7 +314,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                  <span>{currentEmp.cargo || 'Atendente'}</span>
+                  <span>{normalizeEmployeeRole(currentEmp.cargo || currentEmp.role)}</span>
                   <span>•</span>
                   <span>{currentEmp.jornada || '6x1'}</span>
                 </div>
@@ -472,11 +469,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
                 <div className="bg-white/15 dark:bg-black/25 rounded-2xl p-3 backdrop-blur-md">
                   <span className="text-[11px] font-black uppercase tracking-wider text-white/75 block mb-1">Função na Loja</span>
                   <div className="text-sm font-black text-white">
-                    {tacticalDisplayMode === 'off'
-                      ? 'Trabalho Regular'
-                      : todayDetails.tacticalPos
-                      ? `${getTacticalLabel(todayDetails.tacticalPos, 'roles')}`
-                      : 'Vendas / Salão'}
+                    {todayDetails.role}
                   </div>
                 </div>
 
@@ -505,11 +498,9 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
                     className="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-800 dark:text-zinc-200"
                   >
                     <span>{getShortName(emp.name, employees)}</span>
-                    {pos && (
-                      <span className="text-[11px] font-black text-orange-600 dark:text-orange-400">
-                        • {pos}
-                      </span>
-                    )}
+                    <span className="text-[11px] font-black text-orange-600 dark:text-orange-400">
+                      • {normalizeEmployeeRole(emp.cargo || emp.role)}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -685,11 +676,15 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
                         </div>
 
                         <div className="flex items-center gap-1.5 shrink-0">
-                          {pos && (
-                            <span className="px-2.5 py-1 rounded-xl bg-zinc-800 text-white font-black text-[11px] uppercase">
-                              {pos}
-                            </span>
-                          )}
+                          {isWorkingShift(shift) && (() => {
+                            const role = normalizeEmployeeRole(emp.cargo || emp.role);
+                            const meta = ROLE_METADATA_MAP[role];
+                            return (
+                              <span className={`px-2.5 py-1 rounded-xl font-black text-[11px] uppercase border ${meta.badgeColor}`}>
+                                {meta.label}
+                              </span>
+                            );
+                          })()}
                           {!isWorkingShift(shift) && getShiftBadge(shift)}
                         </div>
                       </div>

@@ -95,7 +95,7 @@ describe('Regras de Escala CLT (6x1, 5x2, Aprendiz, Afastamentos, Aniversários)
         id: 'emp-apprentice',
         name: 'Aprendiz Lucas',
         isYoungApprentice: true,
-        cargo: 'Aprendiz',
+        cargo: 'Apoio',
         courseDay: 'Quarta-feira',
         preferredDayOff: 'Domingo'
       });

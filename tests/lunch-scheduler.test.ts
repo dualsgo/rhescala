@@ -101,8 +101,8 @@ describe('FASE 7.8.1 — Redesenho do Motor de Alocação de Almoços (lunch-sch
   describe('Cenário E: Aprendiz', () => {
     it('permanece fixo em 12h45 e é registrado primeiro sem sofrer deslocamento', () => {
       const team = [
-        createTestEmployee({ id: 'ap1', cargo: 'Aprendiz', isYoungApprentice: true, workPeriod: '10h às 16h15' }),
-        createTestEmployee({ id: 'ab1', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'ap1', cargo: 'Apoio', isYoungApprentice: true, workPeriod: '10h às 16h15' }),
+        createTestEmployee({ id: 'ab1', cargo: 'Vendas', workPeriod: '10h às 18h20' }),
       ];
 
       const lunches = calculateLunches(team, false, false, undefined, DEFAULT_JORNADA_SETTINGS);
@@ -114,8 +114,8 @@ describe('FASE 7.8.1 — Redesenho do Motor de Alocação de Almoços (lunch-sch
   describe('Cenário F: Estoquista', () => {
     it('recebe horário concreto e não retorna "Flexível"', () => {
       const team = [
-        createTestEmployee({ id: 'estq1', cargo: 'Estoquista', workPeriod: '10h às 18h20' }),
-        createTestEmployee({ id: 'ab1', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'estq1', cargo: 'Estoque', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'ab1', cargo: 'Vendas', workPeriod: '10h às 18h20' }),
       ];
 
       const lunches = calculateLunches(team, false, false, undefined, DEFAULT_JORNADA_SETTINGS);
@@ -270,9 +270,9 @@ describe('FASE 7.8.1 — Redesenho do Motor de Alocação de Almoços (lunch-sch
   describe('Cenário N: Função Caixa (Cobertura e Alternância Operacional)', () => {
     it('não libera dois caixas simultaneamente e Caixa Abertura aguarda a chegada real do segundo Caixa', () => {
       const team = [
-        createTestEmployee({ id: 'cx_ab', name: 'Caixa Abertura', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
-        createTestEmployee({ id: 'cx_fe', name: 'Caixa Fechamento', cargo: 'Atendente', workPeriod: '13h40 às 22h' }),
-        createTestEmployee({ id: 'vend1', name: 'Vendedor', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'cx_ab', name: 'Caixa Abertura', cargo: 'Vendas', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'cx_fe', name: 'Caixa Fechamento', cargo: 'Vendas', workPeriod: '13h40 às 22h' }),
+        createTestEmployee({ id: 'vend1', name: 'Vendedor', cargo: 'Vendas', workPeriod: '10h às 18h20' }),
       ];
 
       // Passa as funções operacionais atuais (Caixa, Vendas) via options.roles
@@ -298,8 +298,8 @@ describe('FASE 7.8.1 — Redesenho do Motor de Alocação de Almoços (lunch-sch
 
     it('permite alternância com horários dinâmicos de entrada (ex: segundo Caixa entrando às 13h00)', () => {
       const team = [
-        createTestEmployee({ id: 'cx1', name: 'Caixa Manhã', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
-        createTestEmployee({ id: 'cx2', name: 'Caixa Tarde', cargo: 'Atendente', workPeriod: '13h às 21h' }),
+        createTestEmployee({ id: 'cx1', name: 'Caixa Manhã', cargo: 'Vendas', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'cx2', name: 'Caixa Tarde', cargo: 'Vendas', workPeriod: '13h às 21h' }),
       ];
 
       const details = calculateDetailedLunches(team, false, false, undefined, DEFAULT_JORNADA_SETTINGS, {
@@ -318,11 +318,11 @@ describe('FASE 7.8.1 — Redesenho do Motor de Alocação de Almoços (lunch-sch
 
     it('reconhece as funções operacionais atuais: Caixa, Vendas, Pacote e Apoio (com Repositor)', () => {
       const team = [
-        createTestEmployee({ id: 'c1', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
-        createTestEmployee({ id: 'v1', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
-        createTestEmployee({ id: 'p1', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
-        createTestEmployee({ id: 'a1', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
-        createTestEmployee({ id: 'r1', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'c1', cargo: 'Vendas', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'v1', cargo: 'Vendas', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'p1', cargo: 'Vendas', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'a1', cargo: 'Vendas', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'r1', cargo: 'Vendas', workPeriod: '10h às 18h20' }),
       ];
 
       const details = calculateDetailedLunches(team, false, false, undefined, DEFAULT_JORNADA_SETTINGS, {
@@ -428,8 +428,8 @@ describe('FASE 7.8.1 — Redesenho do Motor de Alocação de Almoços (lunch-sch
     // 6. Equipe com somente 1 Caixa
     it('equipe com somente 1 Caixa aloca almoço normalmente sem inventar substituição', () => {
       const team = [
-        createTestEmployee({ id: 'cx_solo', name: 'Caixa Único', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
-        createTestEmployee({ id: 'vend_1', name: 'Vendedor 1', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'cx_solo', name: 'Caixa Único', cargo: 'Vendas', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'vend_1', name: 'Vendedor 1', cargo: 'Vendas', workPeriod: '10h às 18h20' }),
       ];
 
       const details = calculateDetailedLunches(team, false, false, undefined, DEFAULT_JORNADA_SETTINGS, {
@@ -446,8 +446,8 @@ describe('FASE 7.8.1 — Redesenho do Motor de Alocação de Almoços (lunch-sch
     // 7. Equipe com 2 Caixas (alternância)
     it('equipe com 2 Caixas garante alternância estrita', () => {
       const team = [
-        createTestEmployee({ id: 'cx_1', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
-        createTestEmployee({ id: 'cx_2', cargo: 'Atendente', workPeriod: '13h40 às 22h' }),
+        createTestEmployee({ id: 'cx_1', cargo: 'Vendas', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'cx_2', cargo: 'Vendas', workPeriod: '13h40 às 22h' }),
       ];
 
       const details = calculateDetailedLunches(team, false, false, undefined, DEFAULT_JORNADA_SETTINGS, {
@@ -544,9 +544,9 @@ describe('FASE 7.8.1 — Redesenho do Motor de Alocação de Almoços (lunch-sch
     // A. 3 pessoas: Caixa + Vendas + Apoio (10h às 18h20) -> serialização e cobertura mínima 2/3
     it('Cenário A (3 pessoas: Caixa, Vendas, Apoio): serializa almoços com cobertura de 2/3 e nunca 2 pessoas simultâneas', () => {
       const team = [
-        createTestEmployee({ id: 'cx', name: 'Caixa', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
-        createTestEmployee({ id: 'v1', name: 'Vendas', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
-        createTestEmployee({ id: 'ap', name: 'Apoio', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'cx', name: 'Caixa', cargo: 'Vendas', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'v1', name: 'Vendas', cargo: 'Vendas', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'ap', name: 'Apoio', cargo: 'Vendas', workPeriod: '10h às 18h20' }),
       ];
 
       const details = calculateDetailedLunches(team, false, false, undefined, DEFAULT_JORNADA_SETTINGS, {
@@ -569,10 +569,10 @@ describe('FASE 7.8.1 — Redesenho do Motor de Alocação de Almoços (lunch-sch
         createTestEmployee({ id: 'ab_pc1', workPeriod: '10h às 18h20' }),
         createTestEmployee({ id: 'ab_ap1', workPeriod: '10h às 18h20' }),
         createTestEmployee({ id: 'ab_v2', workPeriod: '10h às 18h20' }),
-        createTestEmployee({ id: 'ab_cx1', cargo: 'Atendente', workPeriod: '10h às 18h20' }),
+        createTestEmployee({ id: 'ab_cx1', cargo: 'Vendas', workPeriod: '10h às 18h20' }),
         createTestEmployee({ id: 'ab_v3', workPeriod: '10h às 18h20' }),
         createTestEmployee({ id: 'int_ap2', workPeriod: '12h às 20h20' }),
-        createTestEmployee({ id: 'fe_cx2', cargo: 'Atendente', workPeriod: '13h40 às 22h' }),
+        createTestEmployee({ id: 'fe_cx2', cargo: 'Vendas', workPeriod: '13h40 às 22h' }),
         createTestEmployee({ id: 'fe_v4', workPeriod: '13h40 às 22h' }),
         createTestEmployee({ id: 'fe_pc2', workPeriod: '13h40 às 22h' }),
       ];

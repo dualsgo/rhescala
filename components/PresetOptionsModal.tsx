@@ -11,7 +11,7 @@ interface PresetOptionsModalProps {
   onApply: (options: {
     scope: 'all' | 'single';
     targetEmpId?: string;
-    applyMode: 'hours_only' | 'folgas_only' | 'tactical_only' | 'full';
+    applyMode: 'hours_only' | 'folgas_only' | 'full';
   }) => void;
 }
 
@@ -25,7 +25,7 @@ export const PresetOptionsModal: React.FC<PresetOptionsModalProps> = ({
 }) => {
   const [scope, setScope] = useState<'all' | 'single'>(initialEmployeeId ? 'single' : 'all');
   const [selectedEmpId, setSelectedEmpId] = useState<string>(initialEmployeeId || (employees[0]?.id || ''));
-  const [applyMode, setApplyMode] = useState<'hours_only' | 'folgas_only' | 'tactical_only' | 'full'>('hours_only');
+  const [applyMode, setApplyMode] = useState<'hours_only' | 'folgas_only' | 'full'>('hours_only');
 
   if (!isOpen) return null;
 
@@ -178,29 +178,7 @@ export const PresetOptionsModal: React.FC<PresetOptionsModalProps> = ({
                 </div>
               </label>
 
-              {/* Só Funções */}
-              <label
-                onClick={() => setApplyMode('tactical_only')}
-                className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                  applyMode === 'tactical_only'
-                    ? 'bg-indigo-50/60 dark:bg-indigo-950/40 border-indigo-500/50 shadow-sm'
-                    : 'bg-white dark:bg-zinc-800/40 border-slate-200 dark:border-zinc-800 hover:border-slate-300'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="applyMode"
-                  checked={applyMode === 'tactical_only'}
-                  onChange={() => setApplyMode('tactical_only')}
-                  className="mt-1 text-indigo-600 focus:ring-indigo-500"
-                />
-                <div className="flex-1">
-                  <span className="text-xs font-black text-slate-800 dark:text-zinc-100">Apenas Funções Correlatas (Caixa, Pacote, Reposição, Vendas, Fiscal, Estoque)</span>
-                  <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5 font-medium">
-                    Redistribui as funções da equipe na loja para todos os dias sem alterar turnos nem horários.
-                  </p>
-                </div>
-              </label>
+
 
               {/* Completo */}
               <label

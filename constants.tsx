@@ -1,8 +1,10 @@
-import { Employee } from './types';
+import { Employee, EmployeeRole, EMPLOYEE_ROLES, ROLE_METADATA_MAP, normalizeEmployeeRole } from './types';
 import type { TacticalDisplayMode } from './types';
 
+export { EMPLOYEE_ROLES, ROLE_METADATA_MAP, normalizeEmployeeRole };
 export type { TacticalDisplayMode };
 
+// Mapa unificado com as 6 funções canônicas (mantém compatibilidade com códigos legados)
 export const TACTICAL_ROLE_MAP: Record<string, {
   positionCode: string;
   roleCode: string;
@@ -14,73 +16,7 @@ export const TACTICAL_ROLE_MAP: Record<string, {
   colorRing: string;
   emoji: string;
 }> = {
-  P1: {
-    positionCode: 'P1',
-    roleCode: 'CX',
-    positionLabel: 'Caixa (P1)',
-    roleLabel: 'Caixa',
-    shortRoleLabel: 'Caixa',
-    colorBg: 'bg-red-600',
-    colorText: 'text-white',
-    colorRing: 'ring-red-400',
-    emoji: '🟥'
-  },
-  PC: {
-    positionCode: 'PC',
-    roleCode: 'PC',
-    positionLabel: 'Pacote (P1)',
-    roleLabel: 'Pacote',
-    shortRoleLabel: 'Pacote',
-    colorBg: 'bg-orange-500',
-    colorText: 'text-white',
-    colorRing: 'ring-orange-400',
-    emoji: '🟧'
-  },
-  P2: {
-    positionCode: 'P2',
-    roleCode: 'REP',
-    positionLabel: 'Reposição / Organização (P2)',
-    roleLabel: 'Reposição / Organização',
-    shortRoleLabel: 'Reposição',
-    colorBg: 'bg-amber-500',
-    colorText: 'text-white',
-    colorRing: 'ring-amber-300',
-    emoji: '🟨'
-  },
-  P3: {
-    positionCode: 'P3',
-    roleCode: 'VEND',
-    positionLabel: 'Vendas / Atendimento (P3)',
-    roleLabel: 'Vendas / Atendimento',
-    shortRoleLabel: 'Vendas',
-    colorBg: 'bg-emerald-600',
-    colorText: 'text-white',
-    colorRing: 'ring-emerald-400',
-    emoji: '🟩'
-  },
-  P4: {
-    positionCode: 'P4',
-    roleCode: 'FISC',
-    positionLabel: 'Fiscal',
-    roleLabel: 'Fiscal',
-    shortRoleLabel: 'Fiscal',
-    colorBg: 'bg-blue-600',
-    colorText: 'text-white',
-    colorRing: 'ring-blue-400',
-    emoji: '🟦'
-  },
-  FISC: {
-    positionCode: 'FISC',
-    roleCode: 'FISC',
-    positionLabel: 'Fiscal',
-    roleLabel: 'Fiscal',
-    shortRoleLabel: 'Fiscal',
-    colorBg: 'bg-blue-600',
-    colorText: 'text-white',
-    colorRing: 'ring-blue-400',
-    emoji: '🟦'
-  },
-  CX: {
+  Caixa: {
     positionCode: 'CX',
     roleCode: 'CX',
     positionLabel: 'Caixa',
@@ -89,82 +25,110 @@ export const TACTICAL_ROLE_MAP: Record<string, {
     colorBg: 'bg-red-600',
     colorText: 'text-white',
     colorRing: 'ring-red-400',
-    emoji: '🟥'
+    emoji: '🔴'
   },
-  REP: {
-    positionCode: 'REP',
-    roleCode: 'REP',
-    positionLabel: 'Reposição / Organização',
-    roleLabel: 'Reposição / Organização',
-    shortRoleLabel: 'Reposição',
+  Pacote: {
+    positionCode: 'PC',
+    roleCode: 'PC',
+    positionLabel: 'Pacote',
+    roleLabel: 'Pacote',
+    shortRoleLabel: 'Pacote',
+    colorBg: 'bg-orange-500',
+    colorText: 'text-white',
+    colorRing: 'ring-orange-400',
+    emoji: '🟠'
+  },
+  Vendas: {
+    positionCode: 'VEND',
+    roleCode: 'VEND',
+    positionLabel: 'Vendas',
+    roleLabel: 'Vendas',
+    shortRoleLabel: 'Vendas',
+    colorBg: 'bg-emerald-600',
+    colorText: 'text-white',
+    colorRing: 'ring-emerald-400',
+    emoji: '🟢'
+  },
+  Apoio: {
+    positionCode: 'AP',
+    roleCode: 'AP',
+    positionLabel: 'Apoio',
+    roleLabel: 'Apoio',
+    shortRoleLabel: 'Apoio',
+    colorBg: 'bg-blue-600',
+    colorText: 'text-white',
+    colorRing: 'ring-blue-400',
+    emoji: '🔵'
+  },
+  Fiscal: {
+    positionCode: 'FISC',
+    roleCode: 'FISC',
+    positionLabel: 'Fiscal',
+    roleLabel: 'Fiscal',
+    shortRoleLabel: 'Fiscal',
     colorBg: 'bg-amber-500',
     colorText: 'text-white',
     colorRing: 'ring-amber-300',
-    emoji: '🟨'
+    emoji: '🟡'
   },
-  VEND: {
-    positionCode: 'VEND',
-    roleCode: 'VEND',
-    positionLabel: 'Vendas / Atendimento',
-    roleLabel: 'Vendas / Atendimento',
-    shortRoleLabel: 'Vendas',
-    colorBg: 'bg-emerald-600',
-    colorText: 'text-white',
-    colorRing: 'ring-emerald-400',
-    emoji: '🟩'
-  },
-  ATEND: {
-    positionCode: 'ATEND',
-    roleCode: 'VEND',
-    positionLabel: 'Vendas / Atendimento',
-    roleLabel: 'Vendas / Atendimento',
-    shortRoleLabel: 'Vendas',
-    colorBg: 'bg-emerald-600',
-    colorText: 'text-white',
-    colorRing: 'ring-emerald-400',
-    emoji: '🟩'
-  },
-  ESTQ: {
+  Estoque: {
     positionCode: 'ESTQ',
     roleCode: 'ESTQ',
     positionLabel: 'Estoque',
     roleLabel: 'Estoque',
     shortRoleLabel: 'Estoque',
-    colorBg: 'bg-slate-700',
+    colorBg: 'bg-zinc-700',
     colorText: 'text-white',
-    colorRing: 'ring-slate-500',
+    colorRing: 'ring-zinc-500',
     emoji: '📦'
-  }
+  },
+  // Aliases legados mapeados diretamente para as 6 funções
+  P1: { positionCode: 'CX', roleCode: 'CX', positionLabel: 'Caixa', roleLabel: 'Caixa', shortRoleLabel: 'Caixa', colorBg: 'bg-red-600', colorText: 'text-white', colorRing: 'ring-red-400', emoji: '🔴' },
+  PC: { positionCode: 'PC', roleCode: 'PC', positionLabel: 'Pacote', roleLabel: 'Pacote', shortRoleLabel: 'Pacote', colorBg: 'bg-orange-500', colorText: 'text-white', colorRing: 'ring-orange-400', emoji: '🟠' },
+  P2: { positionCode: 'AP', roleCode: 'AP', positionLabel: 'Apoio', roleLabel: 'Apoio', shortRoleLabel: 'Apoio', colorBg: 'bg-blue-600', colorText: 'text-white', colorRing: 'ring-blue-400', emoji: '🔵' },
+  REP: { positionCode: 'AP', roleCode: 'AP', positionLabel: 'Apoio', roleLabel: 'Apoio', shortRoleLabel: 'Apoio', colorBg: 'bg-blue-600', colorText: 'text-white', colorRing: 'ring-blue-400', emoji: '🔵' },
+  P3: { positionCode: 'VEND', roleCode: 'VEND', positionLabel: 'Vendas', roleLabel: 'Vendas', shortRoleLabel: 'Vendas', colorBg: 'bg-emerald-600', colorText: 'text-white', colorRing: 'ring-emerald-400', emoji: '🟢' },
+  VEND: { positionCode: 'VEND', roleCode: 'VEND', positionLabel: 'Vendas', roleLabel: 'Vendas', shortRoleLabel: 'Vendas', colorBg: 'bg-emerald-600', colorText: 'text-white', colorRing: 'ring-emerald-400', emoji: '🟢' },
+  P4: { positionCode: 'FISC', roleCode: 'FISC', positionLabel: 'Fiscal', roleLabel: 'Fiscal', shortRoleLabel: 'Fiscal', colorBg: 'bg-amber-500', colorText: 'text-white', colorRing: 'ring-amber-300', emoji: '🟡' },
+  FISC: { positionCode: 'FISC', roleCode: 'FISC', positionLabel: 'Fiscal', roleLabel: 'Fiscal', shortRoleLabel: 'Fiscal', colorBg: 'bg-amber-500', colorText: 'text-white', colorRing: 'ring-amber-300', emoji: '🟡' },
+  ESTQ: { positionCode: 'ESTQ', roleCode: 'ESTQ', positionLabel: 'Estoque', roleLabel: 'Estoque', shortRoleLabel: 'Estoque', colorBg: 'bg-zinc-700', colorText: 'text-white', colorRing: 'ring-zinc-500', emoji: '📦' }
 };
 
-export const TACTICAL_POSITIONS_LIST = ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'];
+export const TACTICAL_POSITIONS_LIST = ['CX', 'PC', 'VEND', 'AP', 'FISC', 'ESTQ'];
 
 /**
- * Retorna o rótulo descritivo da posição/função baseado no modo de exibição.
+ * Retorna o rótulo descritivo da função oficial.
  */
-export function getTacticalLabel(posCode: string, mode: TacticalDisplayMode = 'positions'): string {
-  if (mode === 'off') return 'Trabalho (T)';
-  const item = TACTICAL_ROLE_MAP[posCode];
-  if (!item) return posCode;
-  return mode === 'roles' ? item.roleLabel : item.positionLabel;
+export function getTacticalLabel(posCode: string, _mode?: TacticalDisplayMode): string {
+  const role = normalizeEmployeeRole(posCode);
+  return ROLE_METADATA_MAP[role]?.label || role;
 }
 
 /**
- * Retorna a sigla exibida na célula da grade baseada no modo de exibição.
+ * Retorna a sigla da função oficial.
  */
-export function getTacticalCellCode(posCode: string, mode: TacticalDisplayMode = 'positions'): string {
-  if (mode === 'off') return 'T';
-  const item = TACTICAL_ROLE_MAP[posCode];
-  if (!item) return posCode;
-  return mode === 'roles' ? item.roleCode : item.positionCode;
+export function getTacticalCellCode(posCode: string, _mode?: TacticalDisplayMode): string {
+  const role = normalizeEmployeeRole(posCode);
+  return ROLE_METADATA_MAP[role]?.code || 'T';
 }
 
 /**
- * Retorna o emoji associado à posição/função.
+ * Retorna o emoji descritivo da função oficial.
  */
 export function getTacticalEmoji(posCode: string): string {
-  return TACTICAL_ROLE_MAP[posCode]?.emoji || '🔹';
+  const role = normalizeEmployeeRole(posCode);
+  switch (role) {
+    case 'Caixa': return '🔴';
+    case 'Pacote': return '🟠';
+    case 'Vendas': return '🟢';
+    case 'Apoio': return '🔵';
+    case 'Fiscal': return '🟡';
+    case 'Estoque': return '📦';
+    default: return '💼';
+  }
 }
+
+
 
 /** ID sentinel do colaborador placeholder (nunca deve ser exibido como real) */
 export const PLACEHOLDER_EMPLOYEE_ID = '__placeholder__';

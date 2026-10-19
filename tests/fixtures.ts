@@ -7,7 +7,7 @@ export function createTestEmployee(overrides: Partial<Employee> = {}): Employee 
     isYoungApprentice: false,
     contractType: 'CLT',
     jornada: '6x1',
-    cargo: 'Atendente',
+    cargo: 'Vendas',
     status: 'active',
     statusColor: '#00aa00',
     shifts: {},

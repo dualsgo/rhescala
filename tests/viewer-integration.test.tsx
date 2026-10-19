@@ -21,7 +21,7 @@ describe('Viewer Integration — Fase 7.5', () => {
     createTestEmployee({
       id: 'emp-1',
       name: 'Carlos Oliveira',
-      cargo: 'Atendente',
+      cargo: 'Vendas',
       status: 'active',
       shifts: { [currentMonthKey]: ['T', 'T', 'F', 'T', 'T', 'T', 'T'] },
       dailyHours: { [currentMonthKey]: ['10h às 18h20', '10h às 18h20', 'Folga', '10h às 18h20', '10h às 18h20', '10h às 18h20', '10h às 18h20'] },
@@ -29,7 +29,7 @@ describe('Viewer Integration — Fase 7.5', () => {
     createTestEmployee({
       id: 'emp-2',
       name: 'Beatriz Santos',
-      cargo: 'Atendente',
+      cargo: 'Vendas',
       status: 'active',
       shifts: { [currentMonthKey]: ['T', 'F', 'T', 'T', 'T', 'T', 'T'] },
       dailyHours: { [currentMonthKey]: ['13h40 às 22h00', 'Folga', '13h40 às 22h00', '13h40 às 22h00', '13h40 às 22h00', '13h40 às 22h00', '13h40 às 22h00'] },

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings, ScheduleDiffItem, TacticalDisplayMode, ProtectedDaysConfig, DECISION_REASON_LABELS } from '../types';
+import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings, ScheduleDiffItem, TacticalDisplayMode, ProtectedDaysConfig, DECISION_REASON_LABELS, EmployeeRole, EMPLOYEE_ROLES, ROLE_METADATA_MAP, normalizeEmployeeRole } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, isEmployeeActiveInMonth, normalizeProtectedDaysConfig, getTacticalLabel, getTacticalCellCode, getTacticalEmoji } from '../constants';
 import { getShiftClassification, isWorkingShift, getPrevMonthWorkStreak, getPrevMonthConsecutive } from '../hooks/useScheduleEngine';
@@ -208,36 +208,20 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       { code: 'DO', label: 'Aniversário / Especial', color: 'bg-fuchsia-600' },
       { code: 'C', label: 'Curso / Treinamento', color: 'bg-slate-500' },
       { code: 'AT', label: 'Atestado Médico', color: 'bg-rose-400' },
-      { code: '1/6..6/6', label: 'Dias Seguidos 6x1 (Canto Sup. Esq.)', color: 'bg-slate-600' },
+      { code: '1/6..6/6', label: 'Dias Seguidos 6x1', color: 'bg-slate-600' },
       { code: '7º', label: '7º Dia: Violação 6x1', color: 'bg-rose-600' },
-      { code: '1D / 2D', label: 'Domingos Trabalhados (Canto Sup. Dir.)', color: 'bg-amber-500' },
+      { code: '1D / 2D', label: 'Domingos Trabalhados', color: 'bg-amber-500' },
       { code: '3D', label: '3º Domingo: Violação CLT', color: 'bg-rose-600' },
       { code: '3D✓', label: '3º Dom: Folga Cumprida!', color: 'bg-emerald-600' },
-      { code: '2D✓ / 1D✓', label: 'Dom Folga (Apto Troca)', color: 'bg-emerald-500' },
     ];
 
-    if (tacticalDisplayMode === 'off') {
-      return baseItems;
-    }
+    const roleItems = EMPLOYEE_ROLES.map(role => {
+      const meta = ROLE_METADATA_MAP[role];
+      return { code: meta.code, label: meta.label, color: meta.bgColor };
+    });
 
-    const tacticalItems = tacticalDisplayMode === 'roles' ? [
-      { code: 'CX', label: 'Caixa', color: 'bg-red-600' },
-      { code: 'PC', label: 'Pacote', color: 'bg-orange-500' },
-      { code: 'FISC', label: 'Fiscal', color: 'bg-amber-500' },
-      { code: 'ATEND', label: 'Atendimento', color: 'bg-emerald-600' },
-      { code: 'APOIO', label: 'Apoio', color: 'bg-blue-600' },
-      { code: 'ESTQ', label: 'Estoque', color: 'bg-slate-700' },
-    ] : [
-      { code: 'P1', label: 'P1 (Caixa)', color: 'bg-red-600' },
-      { code: 'PC', label: 'PC (Pacote)', color: 'bg-orange-500' },
-      { code: 'P2', label: 'P2 (Porta)', color: 'bg-amber-500' },
-      { code: 'P3', label: 'P3 (Salão)', color: 'bg-emerald-600' },
-      { code: 'P4', label: 'P4 (Apoio)', color: 'bg-blue-600' },
-      { code: 'ESTQ', label: 'ESTQ (Estoque)', color: 'bg-slate-700' },
-    ];
-
-    return [...baseItems, ...tacticalItems];
-  }, [tacticalDisplayMode]);
+    return [...baseItems, ...roleItems];
+  }, []);
 
   const prevWorkStreaks = useMemo(() => {
     return getPrevMonthWorkStreak(employees, currentMY.year, currentMY.month);
@@ -889,7 +873,19 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                      })()}
                                    </div>
                                    <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                                     <span className="text-[8px] sm:text-[9px] text-slate-400 font-bold uppercase truncate">{emp.cargo || 'Vendedor'}</span>
+                                     {(() => {
+                                        const role = normalizeEmployeeRole(emp.cargo || emp.role);
+                                        const meta = ROLE_METADATA_MAP[role];
+                                        return (
+                                          <span 
+                                            className={`text-[8px] sm:text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md border tracking-wider inline-flex items-center gap-1 ${meta.badgeColor}`}
+                                            title={`Função oficial: ${meta.label}`}
+                                          >
+                                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: 'currentColor' }} />
+                                            <span>{meta.label}</span>
+                                          </span>
+                                        );
+                                      })()}
                                      {emp.contractType === 'Sazonal' && (
                                        <span className="text-[7px] px-1 rounded bg-amber-100 text-amber-600 font-bold uppercase tracking-widest">Sazonal</span>
                                      )}
@@ -952,7 +948,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               } else if (emp.vacationStart && emp.vacationEnd && fullDate >= emp.vacationStart && fullDate <= emp.vacationEnd) {
                                 rawShift = 'FE';
                               }
-                              const shift = (isReadOnly && ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].includes(rawShift)) ? 'T' : rawShift;
+                              const shift = ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ', 'CX', 'REP', 'VEND', 'FISC'].includes(rawShift) ? 'T' : rawShift;
                               
                               const prevStreak = prevWorkStreaks.get(emp.id) || 0;
                               let streak = 0;
@@ -1386,6 +1382,38 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               })()}
             </tbody>
           </table>
+        </div>
+
+        {/* Resumo de Cobertura Diária por Função Oficial */}
+        <div className="bg-slate-50/80 dark:bg-zinc-900/60 border-t border-slate-200 dark:border-zinc-800 px-3 py-2 flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-black uppercase text-slate-500 dark:text-zinc-400 tracking-wider flex items-center gap-1">
+              <Icon name="groups" className="text-sm text-orange-500" />
+              Equipe do Dia {selectedDayIdx + 1} por Função:
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+            {EMPLOYEE_ROLES.map(role => {
+              const meta = ROLE_METADATA_MAP[role];
+              const count = displayedEmployees.filter(emp => {
+                const s = emp.shifts[monthKey]?.[selectedDayIdx];
+                const isWorking = isWorkingShift(s) || s === 'C';
+                return isWorking && normalizeEmployeeRole(emp.cargo || emp.role) === role;
+              }).length;
+
+              return (
+                <div 
+                  key={role}
+                  className={`inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-lg border ${meta.badgeColor}`}
+                  title={`${count} colaboradores de ${meta.label} trabalhando no dia ${selectedDayIdx + 1}`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'currentColor' }} />
+                  <span>{meta.label}:</span>
+                  <span className="font-black text-slate-900 dark:text-zinc-100">{count}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 

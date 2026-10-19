@@ -30,8 +30,8 @@ export function isSundayUnavailable(
   }
   // 1b. Birthday
   if (isBirthday(emp, dateStr)) return true;
-  // 2. Preferred day off is Sunday or Estoquista
-  if (isEmployeePreferredDayOff(emp, 0) || emp.cargo === 'Estoquista') return true;
+  // 2. Preferred day off is Sunday or Estoque
+  if (isEmployeePreferredDayOff(emp, 0) || emp.cargo === 'Estoque' || (emp.cargo as string) === 'Estoquista' || emp.role === 'Estoque') return true;
   // 3. Not yet hired
   if (emp.hiredAt && dateStr < emp.hiredAt) return true;
   // 4. Already fired
@@ -163,8 +163,9 @@ export function buildSundayAssignments(
       const mustRest = available.filter(emp => !working.has(emp.id) && (consecutive.get(emp.id) ?? 0) >= 2);
       const canWork = available.filter(emp => !working.has(emp.id) && (consecutive.get(emp.id) ?? 0) < 2);
 
-      const regularCanWork = canWork.filter(emp => emp.cargo !== 'Estoquista');
-      const estoquistasCanWork = canWork.filter(emp => emp.cargo === 'Estoquista');
+      const isEstoque = (emp: Employee) => emp.cargo === 'Estoque' || emp.role === 'Estoque' || (emp.cargo as string) === 'Estoquista';
+      const regularCanWork = canWork.filter(emp => !isEstoque(emp));
+      const estoquistasCanWork = canWork.filter(emp => isEstoque(emp));
 
       const maxRestAllowed = maxFolgas !== undefined ? Math.max(0, maxFolgas) : available.length;
 

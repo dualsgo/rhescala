@@ -33,7 +33,7 @@ export function useHolidayCredits(
 
     employees.forEach(emp => {
       // Jovem Aprendiz não trabalha em feriados/fins de semana e não gera créditos de feriado
-      if (emp.isYoungApprentice || emp.cargo === 'Aprendiz') {
+      if (emp.isYoungApprentice) {
         results[emp.id] = [];
         return;
       }

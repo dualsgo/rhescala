@@ -1,3 +1,100 @@
+export type EmployeeRole = 'Caixa' | 'Pacote' | 'Vendas' | 'Apoio' | 'Fiscal' | 'Estoque';
+export type EmployeeCargo = EmployeeRole;
+
+export interface RoleMetadata {
+  role: EmployeeRole;
+  code: string;        // 'CX', 'PC', 'VEND', 'AP', 'FISC', 'ESTQ'
+  label: string;       // 'Caixa', 'Pacote', 'Vendas', 'Apoio', 'Fiscal', 'Estoque'
+  badgeColor: string;  // Classes Tailwind de badge
+  textColor: string;
+  bgColor: string;
+}
+
+export const EMPLOYEE_ROLES: EmployeeRole[] = [
+  'Caixa',
+  'Pacote',
+  'Vendas',
+  'Apoio',
+  'Fiscal',
+  'Estoque'
+];
+
+export const ROLE_METADATA_MAP: Record<EmployeeRole, RoleMetadata> = {
+  Caixa: {
+    role: 'Caixa',
+    code: 'CX',
+    label: 'Caixa',
+    badgeColor: 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30',
+    textColor: 'text-red-600 dark:text-red-400',
+    bgColor: 'bg-red-500'
+  },
+  Pacote: {
+    role: 'Pacote',
+    code: 'PC',
+    label: 'Pacote',
+    badgeColor: 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30',
+    textColor: 'text-orange-600 dark:text-orange-400',
+    bgColor: 'bg-orange-500'
+  },
+  Vendas: {
+    role: 'Vendas',
+    code: 'VEND',
+    label: 'Vendas',
+    badgeColor: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30',
+    textColor: 'text-emerald-600 dark:text-emerald-400',
+    bgColor: 'bg-emerald-500'
+  },
+  Apoio: {
+    role: 'Apoio',
+    code: 'AP',
+    label: 'Apoio',
+    badgeColor: 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30',
+    textColor: 'text-blue-600 dark:text-blue-400',
+    bgColor: 'bg-blue-500'
+  },
+  Fiscal: {
+    role: 'Fiscal',
+    code: 'FISC',
+    label: 'Fiscal',
+    badgeColor: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30',
+    textColor: 'text-amber-600 dark:text-amber-400',
+    bgColor: 'bg-amber-500'
+  },
+  Estoque: {
+    role: 'Estoque',
+    code: 'ESTQ',
+    label: 'Estoque',
+    badgeColor: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-300 border-zinc-500/30',
+    textColor: 'text-zinc-600 dark:text-zinc-400',
+    bgColor: 'bg-zinc-600'
+  }
+};
+
+/**
+ * Normaliza qualquer cargo, sigla ou código tático legado para as 6 funções canônicas oficiais.
+ */
+export function normalizeEmployeeRole(rawRole?: string | null): EmployeeRole {
+  if (!rawRole) return 'Vendas';
+  const clean = rawRole.trim().toUpperCase();
+
+  // Caixa
+  if (clean === 'CAIXA' || clean === 'CX' || clean === 'P1' || clean.includes('CAIXA')) return 'Caixa';
+  // Pacote
+  if (clean === 'PACOTE' || clean === 'PC' || clean === 'EMBALAGEM') return 'Pacote';
+  // Fiscal
+  if (clean === 'FISCAL' || clean === 'FISC' || clean === 'P4' || clean.includes('PREVENÇÃO') || clean.includes('PREVENCAO')) return 'Fiscal';
+  // Estoque
+  if (clean === 'ESTOQUE' || clean === 'ESTQ' || clean === 'ESTOQUISTA') return 'Estoque';
+  // Apoio (inclui Reposição / REP / P2 / Apoio)
+  if (clean === 'APOIO' || clean === 'AP' || clean === 'P2' || clean.includes('REPOSI') || clean === 'REP') return 'Apoio';
+  // Vendas (padrão para VEND, P3, Atendimento, Vendedor, etc.)
+  if (clean === 'VENDAS' || clean === 'VEND' || clean === 'P3' || clean.includes('VEND') || clean.includes('ATEND')) return 'Vendas';
+  // Aprendiz sem cargo específico assume Apoio operacional
+  if (clean === 'APRENDIZ') return 'Apoio';
+
+  return 'Vendas';
+}
+
 export type DecisionReason =
   | 'LEGAL_IMMUTABLE'
   | 'SUNDAY_ROTATION_OFF'
@@ -17,6 +114,7 @@ export const DECISION_REASON_LABELS: Record<DecisionReason, string> = {
   REGULAR_WORK: 'Trabalho regular escalado',
 };
 
+// TacticalShiftType mantido apenas como alias legado para retrocompatibilidade de tipos
 export type TacticalShiftType = 'P1' | 'PC' | 'P2' | 'P3' | 'P4' | 'ESTQ';
 
 export type StandardShiftType = 
@@ -31,17 +129,19 @@ export type StandardShiftType =
 
 export type HolidayCreditShiftType = `FF ${string}`;
 
-export type ShiftType = StandardShiftType | TacticalShiftType | HolidayCreditShiftType;
+export type ShiftType = StandardShiftType | HolidayCreditShiftType;
 
 export function isShiftType(val: unknown): val is ShiftType {
   if (typeof val !== 'string') return false;
-  const standard: string[] = ['T', 'F', 'FF', 'FE', 'AT', 'C', 'DO', 'N/A', 'P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'];
+  const standard: string[] = ['T', 'F', 'FF', 'FE', 'AT', 'C', 'DO', 'N/A'];
   return standard.includes(val) || val.startsWith('FF');
 }
 
 export function normalizeShiftCode(raw: unknown): ShiftType {
   if (typeof raw !== 'string') return 'T';
   const trimmed = raw.trim();
+  // Se vier qualquer código tático legado, migra imediatamente para Trabalho ('T')
+  if (['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ', 'CX', 'REP', 'VEND', 'FISC'].includes(trimmed)) return 'T';
   if (isShiftType(trimmed)) return trimmed;
   if (trimmed.startsWith('FF')) return trimmed as HolidayCreditShiftType;
   return 'T';
@@ -49,26 +149,25 @@ export function normalizeShiftCode(raw: unknown): ShiftType {
 
 export type TacticalDisplayMode = 'positions' | 'roles' | 'off';
 
-export type EmployeeCargo = 'Estoquista' | 'Aprendiz' | 'Fiscal' | 'Atendente';
-
 export interface Employee {
   id: string;
   name: string;
   isYoungApprentice: boolean;
   contractType?: 'CLT' | 'Sazonal';
   jornada?: '6x1' | '5x2';
-  cargo?: EmployeeCargo;           // 'Atendente' (padrão) | 'Estoquista' | 'Aprendiz' | 'Fiscal'
+  cargo?: EmployeeRole;           // 6 funções canônicas oficiais
+  role?: EmployeeRole;            // Alias moderno para cargo
   courseDay?: string; // e.g. 'Segunda-feira'
   status: 'active' | 'inactive';
   statusColor: string;
   shifts: Record<string, ShiftType[]>;     // Keyed by "YYYY-MM"
   dailyHours: Record<string, string[]>;    // Keyed by "YYYY-MM"
-  tacticalPositions: Record<string, (string | null)[]>; // Keyed by "YYYY-MM", e.g. 'P1', 'P2'
+  tacticalPositions?: Record<string, (string | null)[]>; // Legado mantido opcional
   decisionReasons?: Record<string, Record<number, DecisionReason>>; // Keyed by "YYYY-MM", then 0-indexed day
   workPeriod: string;                      // Default work period
   preferredDayOff: string;                 // e.g. 'Segunda-feira'
-  preferredPosition1?: string;             // e.g. 'P1', 'ESTQ'
-  preferredPosition2?: string;             // e.g. 'P2'
+  preferredPosition1?: string;             // Legado mantido opcional
+  preferredPosition2?: string;             // Legado mantido opcional
   shiftName: string;
   vacationStart?: string; // YYYY-MM-DD
   vacationEnd?: string;   // YYYY-MM-DD

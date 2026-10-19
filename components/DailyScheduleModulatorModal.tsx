@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Employee, MonthYear, Holiday, JornadaSettings, TacticalDisplayMode } from '../types';
+import { Employee, MonthYear, Holiday, JornadaSettings, TacticalDisplayMode, EmployeeRole, EMPLOYEE_ROLES, ROLE_METADATA_MAP, normalizeEmployeeRole } from '../types';
 import { Icon } from './Icon';
 import { useDialog } from '../contexts/DialogContext';
 import { copyToClipboard } from '../src/utils/clipboard';
@@ -54,7 +54,7 @@ const COMMON_LUNCH_TIMES = [
   '15h', '15h30', '16h', '16h30', '17h', '17h30', '18h'
 ];
 
-const TACTICAL_POSITIONS = ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'];
+const TACTICAL_POSITIONS: EmployeeRole[] = EMPLOYEE_ROLES;
 
 export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalProps> = ({
   isOpen,
@@ -147,11 +147,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
       if (!isWorkingShift(shift)) return;
 
       const hour = e.dailyHours?.[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
-      let pos = e.tacticalPositions?.[monthKey]?.[dayIdx];
-      if (!pos || pos === 'AUTO') {
-        if (shift !== 'T') pos = shift;
-        else pos = resolvedPositions[e.id];
-      }
+      const pos = normalizeEmployeeRole(e.cargo || e.role);
       const posEmoji = getTacticalEmoji(pos);
 
       if (!initialGroups[hour]) initialGroups[hour] = [];
@@ -221,9 +217,9 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
     }));
 
     const getPriority = (pos: string) => {
-      if (pos === 'P3') return 1;
-      if (pos === 'P1') return 2;
-      if (pos === 'P4') return 3;
+      if (pos === 'Vendas' || pos === 'P3') return 1;
+      if (pos === 'Caixa' || pos === 'P1') return 2;
+      if (pos === 'Fiscal' || pos === 'P4') return 3;
       return 4;
     };
 
@@ -587,7 +583,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
                             >
                               {TACTICAL_POSITIONS.map(pos => (
                                 <option key={pos} value={pos}>
-                                  {pos} - {getTacticalLabel(pos, 'roles')}
+                                  {pos} ({ROLE_METADATA_MAP[pos].code})
                                 </option>
                               ))}
                             </select>
