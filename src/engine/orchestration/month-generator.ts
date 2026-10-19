@@ -15,7 +15,8 @@ import {
     WEEKDAY_NAMES,
     getTargetHours,
     getPrevMonthWorkStreak,
-    generateMonthForEmployee
+    generateMonthForEmployee,
+    isEmployeePreferredDayOff
 } from '../clt/clt-rules';
 import {
     getPrevMonthConsecutive,
@@ -40,7 +41,8 @@ export function applyMonthUpdate(
     deletedNationalHolidays: string[] = [],
     settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS,
     protectedDays?: ProtectedDaysConfig | number[],
-    mode: 'suggested_retro' | 'all_working' = 'suggested_retro'
+    mode: 'suggested_retro' | 'all_working' = 'suggested_retro',
+    targetEmpId?: string
 ): Record<string, { shifts: ShiftType[]; hours: string[] }> {
     const result: Record<string, { shifts: ShiftType[]; hours: string[] }> = {};
 
@@ -124,13 +126,17 @@ export function applyMonthUpdate(
     // Retro-análise dos 2 últimos domingos do mês anterior
     const prevConsecutive = getPrevMonthConsecutive(activeRegular, year, month);
     const { assignments: sundayAssignments } = buildSundayAssignments(
-        activeRegular, year, month, sundaysInMonth, prevConsecutive, settings, protectedDays
+        activeRegular, year, month, sundaysInMonth, prevConsecutive, settings, protectedDays, targetEmpId
     );
 
     // Retro-análise dos dias trabalhados no mês anterior até o dia 31
     const prevStreaks = getPrevMonthWorkStreak(activeRegular, year, month);
 
-    activeRegular.forEach(emp => {
+    const targetEmps = targetEmpId
+        ? activeRegular.filter(e => e.id === targetEmpId)
+        : activeRegular;
+
+    targetEmps.forEach(emp => {
         const restSundays = sundayAssignments.get(emp.id) ?? new Set<number>();
         const is5x2 = emp.jornada === '5x2';
         const maxStreak = is5x2 ? 5 : 6;
@@ -146,7 +152,8 @@ export function applyMonthUpdate(
         let currentStreak = prevStreaks.get(emp.id) || 0;
 
         for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
-            const dow = new Date(year, month, dayIdx + 1).getDay();
+            const date = new Date(year, month, dayIdx + 1);
+            const dow = date.getDay();
             const legal = getLegalOverride(emp, dayIdx);
 
             // 3.1 Se houver condição legal (Férias, Atestado, Aniversário, Não-contratado)
@@ -156,11 +163,20 @@ export function applyMonthUpdate(
                 continue;
             }
 
-            // 3.2 Se for domingo de folga da rotação CLT (ex: se trabalhou 2 domingos anteriores folga dia 5)
-            if (dow === 0 && restSundays.has(dayIdx)) {
-                shifts[dayIdx] = 'F';
-                currentStreak = 0;
-                continue;
+            const isPreferredDay = isEmployeePreferredDayOff(emp, dow);
+
+            // 3.2 Se for domingo de folga da rotação CLT OU folga fixa no domingo OU Estoquista
+            if (dow === 0) {
+                const isSundayRest = restSundays.has(dayIdx) || isPreferredDay || emp.cargo === 'Estoquista';
+                if (isSundayRest || (currentStreak + 1 > maxStreak)) {
+                    shifts[dayIdx] = 'F';
+                    currentStreak = 0;
+                    continue;
+                } else {
+                    shifts[dayIdx] = 'T';
+                    currentStreak++;
+                    continue;
+                }
             }
 
             // 3.3 Verificação de limite CLT 6x1 / 5x2 (se trabalhou 6 dias seguidos, o 7º dia é FOLGA OBRIGATÓRIA)
@@ -170,7 +186,42 @@ export function applyMonthUpdate(
                 continue;
             }
 
-            // 3.4 Senão, dia regular de trabalho
+            // 3.4 Preferência de folga fixa da semana
+            if (isPreferredDay) {
+                shifts[dayIdx] = 'F';
+                currentStreak = 0;
+                continue;
+            }
+
+            // 3.5 Para colaboradores sem folga fixa semanal que trabalharão no próximo domingo:
+            // Concede folga técnica no meio da semana (quarta ou quinta) para garantir que cheguem ao domingo sem violar o limite de 6 dias
+            const nextSunday = sundaysInMonth.find(s => s >= dayIdx);
+            const willWorkNextSunday = nextSunday !== undefined &&
+                !restSundays.has(nextSunday) &&
+                !isEmployeePreferredDayOff(emp, 0) &&
+                emp.cargo !== 'Estoquista';
+            const midWeekOffDow = 3 + (activeRegular.indexOf(emp) % 2);
+
+            if (
+                (!emp.preferredDayOff || emp.preferredDayOff === 'Nenhum') &&
+                willWorkNextSunday &&
+                dow === midWeekOffDow &&
+                nextSunday !== undefined &&
+                nextSunday - dayIdx <= 6
+            ) {
+                shifts[dayIdx] = 'F';
+                currentStreak = 0;
+                continue;
+            }
+
+            // 3.6 Para 5x2 sem dia preferido, folga aos sábados
+            if (is5x2 && dow === 6) {
+                shifts[dayIdx] = 'F';
+                currentStreak = 0;
+                continue;
+            }
+
+            // 3.7 Senão, dia regular de trabalho
             shifts[dayIdx] = 'T';
             currentStreak++;
         }
@@ -358,7 +409,7 @@ export function applyFolgasOnly(
     settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS,
     protectedDays?: Record<number, number | ProtectedDayDetail> | number[]
 ): Record<string, ShiftType[]> {
-    const monthData = applyMonthUpdate(employees, year, month, customHolidays, deletedNationalHolidays, settings, protectedDays);
+    const monthData = applyMonthUpdate(employees, year, month, customHolidays, deletedNationalHolidays, settings, protectedDays, 'suggested_retro', targetEmpId);
     const result: Record<string, ShiftType[]> = {};
 
     if (targetEmpId) {

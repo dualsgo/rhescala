@@ -1,6 +1,6 @@
 import { Employee, JornadaSettings, ProtectedDayDetail } from '../../../types';
 import { DEFAULT_JORNADA_SETTINGS, normalizeProtectedDaysDetails } from '../config/schedule-constants';
-import { isWorkingShift, isBirthday } from './clt-rules';
+import { isWorkingShift, isBirthday, isEmployeePreferredDayOff } from './clt-rules';
 
 /**
  * Returns true if `emp` is UNAVAILABLE to work (or rest via rotation) on the
@@ -30,8 +30,8 @@ export function isSundayUnavailable(
   }
   // 1b. Birthday
   if (isBirthday(emp, dateStr)) return true;
-  // 2. Preferred day off is Sunday
-  if (emp.preferredDayOff === 'Domingo') return true;
+  // 2. Preferred day off is Sunday or Estoquista
+  if (isEmployeePreferredDayOff(emp, 0) || emp.cargo === 'Estoquista') return true;
   // 3. Not yet hired
   if (emp.hiredAt && dateStr < emp.hiredAt) return true;
   // 4. Already fired
@@ -100,7 +100,8 @@ export function buildSundayAssignments(
   sundaysInMonth: number[],
   initialConsecutive?: Map<string, number>,
   settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS,
-  protectedDays?: Record<number, number | ProtectedDayDetail> | number[]
+  protectedDays?: Record<number, number | ProtectedDayDetail> | number[],
+  targetEmpId?: string
 ): { assignments: Map<string, Set<number>>, nextConsecutive: Map<string, number> } {
   const assignments = new Map<string, Set<number>>();
   const consecutive = new Map<string, number>();
@@ -134,6 +135,20 @@ export function buildSundayAssignments(
     const resting = new Set<string>();
     const working = new Set<string>();
 
+    // Quando calculando avulso para um colaborador específico, leva em conta quem já trabalha no domingo
+    if (targetEmpId) {
+      activeRegular.forEach(emp => {
+        if (emp.id !== targetEmpId) {
+          const shift = emp.shifts[monthKey]?.[sundayDayIdx];
+          if (shift && isWorkingShift(shift)) {
+            working.add(emp.id);
+          } else if (shift && shift !== 'N/A') {
+            resting.add(emp.id);
+          }
+        }
+      });
+    }
+
     if (isProtectedSunday && maxFolgas === 0 && (!mandatoryIds || mandatoryIds.length === 0)) {
       available.forEach(emp => working.add(emp.id));
     } else {
@@ -161,9 +176,10 @@ export function buildSundayAssignments(
         }
       });
 
+      const effectiveMinWorkers = Math.min(settings.minSundayWorkers, available.length);
       const neededWorkers = maxFolgas !== undefined
-        ? Math.max(settings.minSundayWorkers, available.length - maxRestAllowed)
-        : settings.minSundayWorkers;
+        ? Math.max(effectiveMinWorkers, available.length - maxRestAllowed)
+        : effectiveMinWorkers;
 
       regularCanWork.sort((a, b) => {
         const streakA = consecutive.get(a.id) ?? 0;

@@ -9,6 +9,14 @@ export const WEEKDAY_NAMES = [
 import { isWorkingShift } from '../shifts/shift-predicates';
 export { isWorkingShift };
 
+export function isEmployeePreferredDayOff(emp: Employee, dow: number): boolean {
+  if (emp.cargo === 'Estoquista' && dow === 0) return true;
+  if (!emp.preferredDayOff || emp.preferredDayOff === 'Nenhum') return false;
+  const pref = emp.preferredDayOff.trim().toLowerCase().replace('-feira', '');
+  const dayName = WEEKDAY_NAMES[dow].toLowerCase().replace('-feira', '');
+  return pref === dayName;
+}
+
 export function isBirthday(emp: Employee, dateStr: string): boolean {
   if (!emp.birthday) return false;
   const empMD = emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday;
@@ -137,18 +145,14 @@ export function generateMonthForEmployee(
     }
 
     // ── Regular ───────────────────────────────────────────────────────
-    const isPreferredDay = emp.preferredDayOff && (
-      WEEKDAY_NAMES[dow] === emp.preferredDayOff || 
-      `${WEEKDAY_NAMES[dow]}-feira` === emp.preferredDayOff ||
-      WEEKDAY_NAMES[dow] === `${emp.preferredDayOff}-feira`
-    );
+    const isPreferredDay = isEmployeePreferredDayOff(emp, dow);
 
     if (isPreferredDay) {
       shifts.push('F'); hours.push(getTargetHours(emp, dow, isHoliday, settings)); continue;
     }
 
     if (dow === 0) {
-      if (sundayRestDays.has(dayIdx)) {
+      if (sundayRestDays.has(dayIdx) || emp.cargo === 'Estoquista') {
         shifts.push('F');
       } else {
         shifts.push('T');

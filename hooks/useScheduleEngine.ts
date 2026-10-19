@@ -14,7 +14,8 @@ import {
     isBirthday,
     getTargetHours,
     getPrevMonthWorkStreak,
-    generateMonthForEmployee
+    generateMonthForEmployee,
+    isEmployeePreferredDayOff
 } from '../src/engine/clt/clt-rules';
 
 import {
@@ -79,6 +80,7 @@ export {
     getTargetHours,
     getPrevMonthWorkStreak,
     generateMonthForEmployee,
+    isEmployeePreferredDayOff,
     isSundayUnavailable,
     getPrevMonthConsecutive,
     buildSundayAssignments,
