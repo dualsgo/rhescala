@@ -137,6 +137,7 @@ export const Header: React.FC<HeaderProps> = ({
   const navItems = [
     { id: 'grid', label: 'Grade', icon: 'grid_view' },
     { id: 'analysis', label: 'Análise', icon: 'insights' },
+    { id: 'team', label: 'Equipe', icon: 'groups' },
     { id: 'requests', label: 'Solicitações', icon: 'assignment' },
   ];
 
@@ -181,18 +182,18 @@ export const Header: React.FC<HeaderProps> = ({
             setShowShareMenu(false);
             setShowProfileMenu(false);
           }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all shadow-xs ${
+          className={`flex items-center gap-1.5 px-3 min-h-[38px] rounded-lg border text-xs font-semibold uppercase tracking-wider transition-all shadow-xs ${
             activeFiltersCount > 0
               ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-500 text-orange-600 dark:text-orange-400 font-black shadow-sm'
-              : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-200 hover:border-orange-400'
+              : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200 hover:border-orange-400'
           }`}
           aria-label={`Filtros da Escala${activeFiltersCount > 0 ? ` (${activeFiltersCount} ativo${activeFiltersCount === 1 ? '' : 's'})` : ''}`}
           title="Filtros da Escala (Turnos, Presença, Contrato e Período)"
         >
-          <Icon name="tune" className={`text-sm shrink-0 ${activeFiltersCount > 0 ? 'text-orange-500' : 'text-slate-500 dark:text-zinc-400'}`} />
+          <Icon name="tune" className={`text-sm shrink-0 ${activeFiltersCount > 0 ? 'text-orange-500' : 'text-zinc-500 dark:text-zinc-400'}`} />
           <span>Filtros</span>
           {activeFiltersCount > 0 && (
-            <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-black flex items-center justify-center shrink-0">
+            <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[11px] font-black flex items-center justify-center shrink-0">
               {activeFiltersCount}
             </span>
           )}
@@ -202,11 +203,11 @@ export const Header: React.FC<HeaderProps> = ({
         {showFilterMenu && (
           <div
             onClick={(e) => e.stopPropagation()}
-            className="absolute top-full right-0 mt-2 w-80 max-w-[90vw] bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-3.5 space-y-3 animate-in fade-in slide-in-from-top-1 duration-150 text-slate-800 dark:text-zinc-100"
+            className="absolute top-full right-0 mt-2 w-80 max-w-[90vw] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-3.5 space-y-3 animate-in fade-in slide-in-from-top-1 duration-150 text-zinc-800 dark:text-zinc-100"
           >
             {/* Header do Menu Filtros */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-zinc-800">
-              <div className="flex items-center gap-1.5 font-black text-xs uppercase tracking-wider text-slate-800 dark:text-zinc-100">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center gap-1.5 font-black text-xs uppercase tracking-wider text-zinc-800 dark:text-zinc-100">
                 <Icon name="tune" className="text-sm text-orange-500" />
                 <span>Filtros da Grade</span>
               </div>
@@ -216,7 +217,7 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={() => {
                     onClearFilters();
                   }}
-                  className="text-[10px] font-bold text-rose-500 hover:text-rose-600 hover:underline uppercase tracking-wider"
+                  className="text-[11px] font-bold text-rose-500 hover:text-rose-600 hover:underline uppercase tracking-wider"
                 >
                   Limpar Todos
                 </button>
@@ -226,8 +227,8 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* 2. Período da Grade */}
             <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Período da Grade</label>
-              <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-zinc-800/70 p-1 rounded-xl">
+              <label className="text-[11px] font-black uppercase tracking-wider text-zinc-400">Período da Grade</label>
+              <div className="grid grid-cols-3 gap-1 bg-zinc-100 dark:bg-zinc-800/70 p-1 rounded-xl">
                 {[
                   { id: 'all', label: 'Mês Todo' },
                   { id: 'sunday', label: 'Domingos' },
@@ -240,7 +241,7 @@ export const Header: React.FC<HeaderProps> = ({
                     className={`py-1 text-[11px] font-black uppercase rounded-lg transition-all text-center ${
                       filter === p.id
                         ? 'bg-orange-500 text-white shadow-sm'
-                        : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-slate-200'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                     }`}
                   >
                     {p.label}
@@ -252,22 +253,22 @@ export const Header: React.FC<HeaderProps> = ({
             {/* 3. Presença Diária */}
             {onToggleOnlyWorkingToday && (
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Presença no Dia</label>
+                <label className="text-[11px] font-black uppercase tracking-wider text-zinc-400">Presença no Dia</label>
                 <button
                   type="button"
                   onClick={onToggleOnlyWorkingToday}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-bold transition-all ${
                     onlyWorkingToday
                       ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-xs'
-                      : 'bg-slate-50 dark:bg-zinc-800/60 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-100'
+                      : 'bg-zinc-50 dark:bg-zinc-800/60 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100'
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     <Icon name={onlyWorkingToday ? 'check_circle' : 'group'} className="text-sm text-emerald-600 dark:text-emerald-400" />
                     <span>Apenas quem trabalha no dia</span>
                   </div>
-                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                    onlyWorkingToday ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300'
+                  <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded-full ${
+                    onlyWorkingToday ? 'bg-emerald-600 text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
                   }`}>
                     {onlyWorkingToday ? 'Ativo' : 'Todos'}
                   </span>
@@ -278,13 +279,13 @@ export const Header: React.FC<HeaderProps> = ({
             {/* 4. Turnos da Equipe */}
             {onSelectedGroupChange && (
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Turno</label>
-                <div className="grid grid-cols-2 gap-1 bg-slate-100 dark:bg-zinc-800/70 p-1 rounded-xl text-center">
+                <label className="text-[11px] font-black uppercase tracking-wider text-zinc-400">Turno</label>
+                <div className="grid grid-cols-2 gap-1 bg-zinc-100 dark:bg-zinc-800/70 p-1 rounded-xl text-center">
                   <button
                     type="button"
                     onClick={() => onSelectedGroupChange(null)}
                     className={`col-span-2 py-1 text-[11px] font-black uppercase rounded-lg transition-all ${
-                      !selectedGroup ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900'
+                      !selectedGroup ? 'bg-orange-500 text-white shadow-sm' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
                     }`}
                   >
                     Todos os Turnos
@@ -295,7 +296,7 @@ export const Header: React.FC<HeaderProps> = ({
                       key={group}
                       onClick={() => onSelectedGroupChange(group)}
                       className={`py-1 text-[11px] font-bold rounded-lg transition-all ${
-                        selectedGroup === group ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900'
+                        selectedGroup === group ? 'bg-orange-500 text-white shadow-sm' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
                       }`}
                     >
                       {group.split('/')[0]}
@@ -308,8 +309,8 @@ export const Header: React.FC<HeaderProps> = ({
             {/* 5. Tipo de Contrato */}
             {onContractFilterChange && (
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Tipo de Contrato</label>
-                <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-zinc-800/70 p-1 rounded-xl">
+                <label className="text-[11px] font-black uppercase tracking-wider text-zinc-400">Tipo de Contrato</label>
+                <div className="grid grid-cols-3 gap-1 bg-zinc-100 dark:bg-zinc-800/70 p-1 rounded-xl">
                   {[
                     { id: 'all', label: 'Todos' },
                     { id: 'clt', label: 'CLT' },
@@ -322,7 +323,7 @@ export const Header: React.FC<HeaderProps> = ({
                       className={`py-1 text-[11px] font-black uppercase rounded-lg transition-all text-center ${
                         contractFilter === c.id
                           ? 'bg-orange-500 text-white shadow-sm'
-                          : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-slate-200'
+                          : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                       }`}
                     >
                       {c.label}
@@ -369,13 +370,13 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-black tracking-tight text-zinc-900 dark:text-zinc-100 leading-none">Rhescala</span>
-              <span className="text-[9px] font-bold text-orange-600 dark:text-orange-400 tracking-wider uppercase leading-none mt-0.5">
+              <span className="text-[11px] font-bold text-orange-600 dark:text-orange-400 tracking-wider uppercase leading-none mt-0.5">
                 {isReadOnly ? 'Colaborador' : 'Gestão'}
               </span>
             </div>
           </div>
 
-          {/* Seletor de Mês/Ano (com botões < e > de min-h-[40px] min-w-[40px]) */}
+          {/* Seletor de Mês/Ano (com botões < e > de min-h-[38px] min-w-[38px]) */}
           <div className="flex items-center bg-zinc-100 dark:bg-zinc-900 rounded-xl p-0.5 border border-zinc-200/80 dark:border-zinc-800 shadow-inner">
             <button
               type="button"
@@ -388,7 +389,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }
                 onMonthChange({ month: newMonth, year: newYear });
               }}
-              className="min-h-[40px] min-w-[40px] p-1 sm:p-1.5 rounded-lg hover:bg-white dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-all flex items-center justify-center active:scale-95"
+              className="min-h-[38px] min-w-[38px] p-1 sm:p-1.5 rounded-lg hover:bg-white dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-all flex items-center justify-center active:scale-95"
               title="Mês Anterior"
               aria-label="Mês Anterior"
             >
@@ -399,7 +400,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="block text-xs sm:text-sm font-black text-zinc-800 dark:text-zinc-100 uppercase tracking-tight">
                 {currentMonthName}
               </span>
-              <span className="block text-[8px] sm:text-[9px] font-bold text-zinc-400 tracking-widest">
+              <span className="block text-[11px] font-bold text-zinc-400 tracking-widest tabular-nums">
                 {currentMY.year}
               </span>
             </div>
@@ -417,7 +418,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onMonthChange({ month: newMonth, year: newYear });
               }}
               disabled={!canGoNext}
-              className={`min-h-[40px] min-w-[40px] p-1 sm:p-1.5 rounded-lg text-zinc-500 transition-all flex items-center justify-center ${
+              className={`min-h-[38px] min-w-[38px] p-1 sm:p-1.5 rounded-lg text-zinc-500 transition-all flex items-center justify-center ${
                 canGoNext ? 'hover:bg-white dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-200 cursor-pointer active:scale-95' : 'opacity-30 cursor-not-allowed'
               }`}
               title={canGoNext ? 'Próximo Mês' : 'Avanço restrito pelo perfil'}
@@ -444,7 +445,7 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={isReadOnly ? undefined : onToggleValidation}
             aria-label={`Status da Escala: ${isValidated ? 'Oficializada' : 'Modo Rascunho'}`}
-            className={`hidden md:flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border font-bold text-[10px] uppercase tracking-wider transition-all shadow-sm shrink-0 ${
+            className={`hidden md:flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border font-bold text-[11px] tabular-nums uppercase tracking-wider transition-all shadow-sm shrink-0 min-h-[38px] ${
               isValidated
                 ? 'bg-emerald-500 text-white border-emerald-600 shadow-emerald-500/20'
                 : 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border-amber-300 dark:border-amber-800'
@@ -490,7 +491,7 @@ export const Header: React.FC<HeaderProps> = ({
                     aria-label={`${pendingRequestsCount} solicitações pendentes`}
                   >
                     <span className="animate-ping absolute inline-flex h-4 w-4 rounded-full bg-rose-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 items-center justify-center text-[8px] font-black text-white shadow-sm">
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 items-center justify-center text-[11px] font-black text-white shadow-sm">
                       {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
                     </span>
                   </span>
@@ -606,7 +607,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={onToggleDensityMode}
-                className={`hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-xs ${
+                className={`hidden xl:flex items-center gap-1.5 px-3 min-h-[38px] rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all shadow-xs ${
                   densityMode === 'audit'
                     ? 'bg-blue-600 border-blue-600 text-white shadow-blue-500/20'
                     : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
@@ -624,7 +625,7 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 onClick={onOpenDiffModal}
                 aria-label={`${diffCount} divergência${diffCount === 1 ? '' : 's'} pós-oficialização`}
-                className="hidden lg:flex items-center gap-1 px-2 xl:px-2.5 py-1.5 rounded-xl border bg-amber-500 border-amber-600 text-white shadow-sm font-bold text-[10px] uppercase tracking-wider hover:scale-105 transition-all"
+                className="hidden lg:flex items-center gap-1 px-2.5 min-h-[38px] rounded-lg border bg-amber-500 border-amber-600 text-white shadow-sm font-bold text-[11px] tabular-nums uppercase tracking-wider hover:scale-105 transition-all"
                 title={`Auditoria: ${diffCount} divergência${diffCount === 1 ? '' : 's'} em relação à versão oficial impressa`}
               >
                 <Icon name="difference" className="text-xs shrink-0" />
@@ -638,7 +639,7 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 onClick={onOpenInconsistencyModal}
                 aria-label={`${inconsistencyCount} alerta${inconsistencyCount === 1 ? '' : 's'} de inconsistência CLT`}
-                className="hidden lg:flex items-center gap-1 px-2 xl:px-2.5 py-1.5 rounded-xl border bg-rose-500 border-rose-600 text-white shadow-sm font-black text-[10px] uppercase tracking-wider animate-pulse hover:scale-105 transition-all"
+                className="hidden lg:flex items-center gap-1 px-2.5 min-h-[38px] rounded-lg border bg-rose-500 border-rose-600 text-white shadow-sm font-bold text-[11px] tabular-nums uppercase tracking-wider animate-pulse hover:scale-105 transition-all"
                 title={`Central de Alertas: ${inconsistencyCount} inconformidade${inconsistencyCount === 1 ? '' : 's'} com regras da CLT ou escalas`}
               >
                 <Icon name="warning" className="text-xs shrink-0" />
@@ -654,7 +655,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={onManualSave}
                 disabled={isSaving}
                 aria-label={isSaving ? 'Salvando escala...' : isJustSaved ? 'Escala salva com sucesso' : 'Salvar escala agora (Atalho Ctrl+S)'}
-                className={`hidden sm:flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border font-black text-[10px] sm:text-xs uppercase tracking-wider transition-all shadow-sm ${
+                className={`hidden sm:flex items-center gap-1 sm:gap-1.5 px-3 min-h-[38px] rounded-lg border font-bold text-[11px] sm:text-xs tabular-nums uppercase tracking-wider transition-all shadow-sm ${
                   isJustSaved
                     ? 'bg-emerald-600 border-emerald-700 text-white shadow-emerald-500/30 scale-[1.02]'
                     : isSaving
@@ -670,7 +671,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="inline">
                   {isJustSaved ? 'Salvo!' : isSaving ? 'Salvando...' : 'Salvar'}
                 </span>
-                <span className="hidden min-[1440px]:inline text-[8px] sm:text-[9px] opacity-80 bg-black/25 px-1 py-0.5 rounded font-mono">
+                <span className="hidden min-[1440px]:inline text-[11px] sm:text-[11px] opacity-80 bg-black/25 px-1 py-0.5 rounded font-mono">
                   Ctrl+S
                 </span>
               </button>
@@ -693,15 +694,15 @@ export const Header: React.FC<HeaderProps> = ({
                   setShowProfileMenu(false);
                 }}
                 aria-label="Menu de Ações, Ferramentas e Exportação da Escala"
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all shadow-xs ${
+                className={`flex items-center gap-1.5 px-3 min-h-[38px] rounded-lg border text-xs font-semibold uppercase tracking-wider transition-all shadow-xs ${
                   showActionsMenu
                     ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm'
                     : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200 hover:border-zinc-300'
                 }`}
-                title="Ferramentas de Escala (Planejamento, Validação e Ajustes)"
+                title="Automação & Regras da Escala (Planejamento, Otimização CLT e Ajustes)"
               >
                 <Icon name="handyman" className="text-sm text-zinc-500 dark:text-zinc-400 shrink-0" />
-                <span>Ferramentas</span>
+                <span className="hidden xl:inline">Automação & Regras</span><span className="inline xl:hidden">Regras</span>
                 <Icon name={showActionsMenu ? 'expand_less' : 'expand_more'} className="text-xs opacity-70 shrink-0" />
               </button>
 
@@ -737,12 +738,12 @@ export const Header: React.FC<HeaderProps> = ({
                             </div>
                             <div className="flex flex-col">
                               <span className="font-black uppercase text-[11px]">Modo Edição</span>
-                              <span className="text-[10px] text-zinc-400">
+                              <span className="text-[11px] text-zinc-400">
                                 {isEditable ? 'Edição liberada nas células' : 'Bloqueado contra cliques acidentais'}
                               </span>
                             </div>
                           </div>
-                          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                          <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded-full ${
                             isEditable ? 'bg-indigo-600 text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
                           }`}>
                             {isEditable ? 'Ativo' : 'Bloq.'}
@@ -765,7 +766,7 @@ export const Header: React.FC<HeaderProps> = ({
                           </div>
                           <div className="flex flex-col">
                             <span className="font-black uppercase text-[11px]">Opções & Automações</span>
-                            <span className="text-[10px] text-zinc-400">Sorteio de domingos, folgas e funções</span>
+                            <span className="text-[11px] text-zinc-400">Sorteio de domingos, folgas e funções</span>
                           </div>
                         </button>
                       )}
@@ -796,7 +797,7 @@ export const Header: React.FC<HeaderProps> = ({
                           </div>
                           <div className="flex flex-col">
                             <span className="font-black uppercase text-[11px]">Auditoria CLT Completa</span>
-                            <span className="text-[10px] text-zinc-400">6x1, domingos e desfalques de equipe</span>
+                            <span className="text-[11px] text-zinc-400">6x1, domingos e desfalques de equipe</span>
                           </div>
                         </button>
                       )}
@@ -815,7 +816,7 @@ export const Header: React.FC<HeaderProps> = ({
                           </div>
                           <div className="flex flex-col">
                             <span className="font-black uppercase text-[11px]">Divergências Pós-Oficial</span>
-                            <span className="text-[10px] text-zinc-400">Comparar com snapshot congelado</span>
+                            <span className="text-[11px] text-zinc-400">Comparar com snapshot congelado</span>
                           </div>
                         </button>
                       )}
@@ -847,7 +848,7 @@ export const Header: React.FC<HeaderProps> = ({
                         </div>
                         <div className="flex flex-col">
                           <span className="font-black uppercase text-[11px]">{showNotes ? 'Ocultar Recados' : 'Mural de Recados'}</span>
-                          <span className="text-[10px] text-zinc-400">Anotações no rodapé da impressão</span>
+                          <span className="text-[11px] text-zinc-400">Anotações no rodapé da impressão</span>
                         </div>
                       </button>
 
@@ -864,7 +865,7 @@ export const Header: React.FC<HeaderProps> = ({
                         </div>
                         <div className="flex flex-col">
                           <span className="font-black uppercase text-[11px]">Parâmetros de Jornada</span>
-                          <span className="text-[10px] text-zinc-400">Faixas de turno e regras de almoço</span>
+                          <span className="text-[11px] text-zinc-400">Faixas de turno e regras de almoço</span>
                         </div>
                       </button>
                     </div>
@@ -885,7 +886,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setShowProfileMenu(false);
                 }}
                 aria-label="Publicar ou Exportar Escala"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase tracking-wider shadow-md shadow-orange-500/25 active:scale-95 transition-all"
+                className="flex items-center gap-1.5 px-4 min-h-[38px] rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs uppercase tracking-wider shadow-md shadow-orange-500/25 active:scale-95 transition-all"
                 title="Publicar e Exportar Escala (Oficializar, WhatsApp, Imprimir)"
               >
                 <Icon name="rocket_launch" className="text-sm" />
@@ -915,7 +916,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <span className="font-black uppercase text-[11px] text-zinc-900 dark:text-zinc-100">
                         {isValidated ? 'Voltar para Rascunho' : 'Oficializar Escala'}
                       </span>
-                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Congela a versão oficial para auditoria</span>
+                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Congela a versão oficial para auditoria</span>
                     </div>
                   </button>
 
@@ -935,7 +936,7 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
                     <div className="flex flex-col">
                       <span className="font-black uppercase text-[11px] text-zinc-900 dark:text-zinc-100">WhatsApp: Escala do Dia</span>
-                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Resumo de turnos e almoços</span>
+                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Resumo de turnos e almoços</span>
                     </div>
                   </button>
 
@@ -953,7 +954,7 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
                     <div className="flex flex-col">
                       <span className="font-black uppercase text-[11px] text-zinc-900 dark:text-zinc-100">WhatsApp: Apoio / Funções</span>
-                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Postos de caixa, reposição e salão</span>
+                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Postos de caixa, reposição e salão</span>
                     </div>
                   </button>
 
@@ -973,7 +974,7 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
                     <div className="flex flex-col">
                       <span className="font-black uppercase text-[11px] text-zinc-900 dark:text-zinc-100">Imprimir / Salvar PDF</span>
-                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Layout oficial A4 paisagem</span>
+                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Layout oficial A4 paisagem</span>
                     </div>
                   </button>
 
@@ -992,7 +993,7 @@ export const Header: React.FC<HeaderProps> = ({
                       </div>
                       <div className="flex flex-col">
                         <span className="font-black uppercase text-[11px] text-emerald-700 dark:text-emerald-300">Exportar Planilha (CSV)</span>
-                        <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Compatível com Excel e Sheets</span>
+                        <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Compatível com Excel e Sheets</span>
                       </div>
                     </button>
                   )}
@@ -1010,7 +1011,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="flex items-center gap-1.5 p-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all border border-zinc-200 dark:border-zinc-700"
                 title="Conta e Sessão"
               >
-                <div className="w-6 h-6 rounded-lg bg-orange-500 text-white flex items-center justify-center font-black text-[10px] uppercase shadow-sm shrink-0">
+                <div className="w-6 h-6 rounded-lg bg-orange-500 text-white flex items-center justify-center font-black text-[11px] uppercase shadow-sm shrink-0">
                   RH
                 </div>
                 <Icon name="expand_more" className="text-xs text-zinc-400 shrink-0" />
@@ -1023,7 +1024,7 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800 mb-1">
                     <span className="block text-xs font-black uppercase text-zinc-800 dark:text-zinc-200">Gestão Loja</span>
-                    <span className="block text-[10px] font-bold text-zinc-400">{isReadOnly ? 'Visualizador' : 'Administrador'}</span>
+                    <span className="block text-[11px] font-bold text-zinc-400">{isReadOnly ? 'Visualizador' : 'Administrador'}</span>
                   </div>
 
                   <button
@@ -1076,7 +1077,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={onOpenDiffModal}
-                  className="flex items-center gap-1 px-2 py-1 rounded-xl bg-amber-500 text-white font-black text-[10px] shadow-sm"
+                  className="flex items-center gap-1 px-2 py-1 rounded-xl bg-amber-500 text-white font-black text-[11px] shadow-sm"
                   title="Divergências pós-oficialização"
                 >
                   <Icon name="difference" className="text-xs" />
@@ -1088,7 +1089,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={onOpenInconsistencyModal}
-                  className="flex items-center gap-1 px-2 py-1 rounded-xl bg-rose-500 text-white font-black text-[10px] shadow-sm animate-pulse"
+                  className="flex items-center gap-1 px-2 py-1 rounded-xl bg-rose-500 text-white font-black text-[11px] shadow-sm animate-pulse"
                   title="Alertas CLT"
                 >
                   <Icon name="warning" className="text-xs" />
@@ -1112,23 +1113,23 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Mobile Navigation Drawer Overlay - Apenas Gestão */}
       {!isReadOnly && showMobileMenu && (
         <div className="lg:hidden fixed inset-0 z-[60] bg-zinc-950/60 backdrop-blur-sm animate-fade-in flex flex-col justify-end">
-          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl p-5 border-t border-slate-200 dark:border-zinc-800 max-h-[85vh] overflow-y-auto space-y-4 custom-scrollbar">
+          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl p-5 border-t border-zinc-200 dark:border-zinc-800 max-h-[85vh] overflow-y-auto space-y-4 custom-scrollbar">
             {/* Handle */}
-            <div className="w-12 h-1.5 bg-slate-300 dark:bg-zinc-700 rounded-full mx-auto -mt-1 mb-2" />
+            <div className="w-12 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto -mt-1 mb-2" />
 
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
               <div>
-                <span className="text-base font-black text-slate-900 dark:text-zinc-100 uppercase tracking-tight block">
+                <span className="text-base font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight block">
                   {isReadOnly ? 'Painel do Colaborador' : 'Menu Operacional'}
                 </span>
-                <span className="text-[10px] font-bold text-slate-400">
+                <span className="text-[11px] font-bold text-zinc-400">
                   {isReadOnly ? 'Consulta rápida da escala' : 'Gestão de equipe e rotinas'}
                 </span>
               </div>
               <button 
                 onClick={() => setShowMobileMenu(false)} 
-                className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-500 hover:text-slate-800"
+                className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-800"
               >
                 <Icon name="close" className="text-lg" />
               </button>
@@ -1152,9 +1153,9 @@ export const Header: React.FC<HeaderProps> = ({
                     onViewChange('requests');
                     setShowMobileMenu(false);
                   }}
-                  className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 flex items-center gap-3 text-xs font-black uppercase"
+                  className="w-full p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 flex items-center gap-3 text-xs font-black uppercase"
                 >
-                  <Icon name="assignment" className="text-lg text-slate-400" />
+                  <Icon name="assignment" className="text-lg text-zinc-400" />
                   <span>Minhas Solicitações de Folga</span>
                 </button>
 
@@ -1163,9 +1164,9 @@ export const Header: React.FC<HeaderProps> = ({
                     onViewChange('feriados');
                     setShowMobileMenu(false);
                   }}
-                  className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 flex items-center gap-3 text-xs font-black uppercase"
+                  className="w-full p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 flex items-center gap-3 text-xs font-black uppercase"
                 >
-                  <Icon name="event_busy" className="text-lg text-slate-400" />
+                  <Icon name="event_busy" className="text-lg text-zinc-400" />
                   <span>Feriados da Loja</span>
                 </button>
 
@@ -1174,9 +1175,9 @@ export const Header: React.FC<HeaderProps> = ({
                     onShowHelp();
                     setShowMobileMenu(false);
                   }}
-                  className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 flex items-center gap-3 text-xs font-black uppercase"
+                  className="w-full p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 flex items-center gap-3 text-xs font-black uppercase"
                 >
-                  <Icon name="info" className="text-lg text-slate-400" />
+                  <Icon name="info" className="text-lg text-zinc-400" />
                   <span>Manual & Regras</span>
                 </button>
 
@@ -1185,21 +1186,21 @@ export const Header: React.FC<HeaderProps> = ({
                     onSwitchRole();
                     setShowMobileMenu(false);
                   }}
-                  className="w-full p-3.5 rounded-2xl bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 flex items-center gap-3 text-xs font-black uppercase shadow-sm mt-3"
+                  className="w-full p-3.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 flex items-center gap-3 text-xs font-black uppercase shadow-sm mt-3"
                 >
                   <div className="p-1.5 rounded-xl bg-orange-100 dark:bg-orange-950 text-orange-600">
                     <Icon name="admin_panel_settings" className="text-base" />
                   </div>
                   <div className="flex flex-col text-left">
                     <span>Acesso Gerencial</span>
-                    <span className="text-[10px] font-normal text-slate-400 lowercase">entrar como administrador</span>
+                    <span className="text-[11px] font-normal text-zinc-400 lowercase">entrar como administrador</span>
                   </div>
                 </button>
               </div>
             ) : (
               <div className="space-y-4 pt-1">
                 {/* Destaque: Salvar Escala & Status Oficial */}
-                <div className="space-y-2 bg-slate-50 dark:bg-zinc-800/60 p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-700/80">
+                <div className="space-y-2 bg-zinc-50 dark:bg-zinc-800/60 p-3 rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80">
                   {onManualSave && (
                     <button
                       onClick={() => {
@@ -1221,11 +1222,11 @@ export const Header: React.FC<HeaderProps> = ({
                   )}
 
                   <div className="flex items-center justify-between pt-1">
-                    <span className="text-xs font-bold text-slate-600 dark:text-zinc-300">Status da Escala:</span>
+                    <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300">Status da Escala:</span>
                     <button
                       type="button"
                       onClick={onToggleValidation}
-                      className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1 border shadow-xs ${
+                      className={`px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider flex items-center gap-1 border shadow-xs ${
                         isValidated
                           ? 'bg-emerald-500 text-white border-emerald-600'
                           : 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700'
@@ -1239,7 +1240,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                 {/* Ações da Escala */}
                 <div className="space-y-2">
-                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block px-1">
+                  <span className="text-[11px] font-black uppercase text-zinc-400 tracking-wider block px-1">
                     Ações da Escala
                   </span>
                   <div className="grid grid-cols-2 gap-2">
@@ -1262,7 +1263,7 @@ export const Header: React.FC<HeaderProps> = ({
                       className={`p-3 rounded-xl border flex items-center gap-2 text-xs font-bold uppercase transition-all ${
                         isEditable 
                           ? 'bg-indigo-600 text-white border-indigo-700' 
-                          : 'bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border-slate-200 dark:border-zinc-700'
+                          : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700'
                       }`}
                     >
                       <Icon name={isEditable ? 'lock_open' : 'edit'} className="text-base shrink-0" />
@@ -1274,7 +1275,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {/* Rotinas da Loja */}
                 {operationsSections.map(sec => (
                   <div key={sec.title} className="space-y-1.5">
-                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block px-1">
+                    <span className="text-[11px] font-black uppercase text-zinc-400 tracking-wider block px-1">
                       {sec.title}
                     </span>
                     <div className="grid grid-cols-2 gap-2">
@@ -1288,10 +1289,10 @@ export const Header: React.FC<HeaderProps> = ({
                           className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold text-left transition-all ${
                             currentView === item.id
                               ? 'bg-orange-500 text-white border-orange-600 shadow-sm'
-                              : 'bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border-slate-200/80 dark:border-zinc-700/80'
+                              : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200/80 dark:border-zinc-700/80'
                           }`}
                         >
-                          <Icon name={item.icon} className={`text-sm shrink-0 ${currentView === item.id ? 'text-white' : 'text-slate-400'}`} />
+                          <Icon name={item.icon} className={`text-sm shrink-0 ${currentView === item.id ? 'text-white' : 'text-zinc-400'}`} />
                           <span className="truncate">{item.label}</span>
                         </button>
                       ))}
@@ -1300,15 +1301,15 @@ export const Header: React.FC<HeaderProps> = ({
                 ))}
 
                 {/* Sessão */}
-                <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 space-y-2">
+                <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 space-y-2">
                   <button
                     onClick={() => {
                       onSwitchRole();
                       setShowMobileMenu(false);
                     }}
-                    className="w-full p-2.5 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-bold text-xs flex items-center justify-center gap-2"
+                    className="w-full p-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold text-xs flex items-center justify-center gap-2"
                   >
-                    <Icon name="visibility" className="text-base text-slate-400" />
+                    <Icon name="visibility" className="text-base text-zinc-400" />
                     <span>Alternar para Modo Colaborador</span>
                   </button>
 

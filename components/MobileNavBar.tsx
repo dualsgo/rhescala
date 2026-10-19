@@ -28,6 +28,10 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({
   const isRequestsActive = currentView === 'requests';
   const isAnalysisActive = currentView === 'analysis';
 
+  if (isReadOnly && viewerModeType === 'personal') {
+    return null;
+  }
+
   return (
     <nav 
       aria-label="Navegação móvel inferior"

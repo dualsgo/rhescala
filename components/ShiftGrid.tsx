@@ -9,6 +9,7 @@ import { MobileFilterDrawer } from './MobileFilterDrawer';
 
 import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { toLocalISODate } from '../src/utils/date';
+import { ROLE_VISUAL_MAP, SHIFT_CELL_STYLES, getShiftCellStyle } from '../src/utils/design-system';
 
 interface ShiftGridProps {
   employees: Employee[];
@@ -61,6 +62,7 @@ interface ShiftGridProps {
 }
 
 export const ShiftGrid: React.FC<ShiftGridProps> = ({
+
   employees,
   currentMY,
   selectedDayIdx,
@@ -126,6 +128,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
   const [isCompactMode, setIsCompactMode] = useState(false);
   const [focusSelectedDay, setFocusSelectedDay] = useState(false);
+  const [groupBy, setGroupBy] = useState<'role' | 'shift'>('role');
 
   // Modo de Densidade Visual (clean = Visão Limpa [Padrão], audit = Visão de Auditoria Completa)
   const [internalDensityMode, setInternalDensityMode] = useState<'clean' | 'audit'>(() => {
@@ -206,9 +209,9 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       { code: 'FF', label: 'Folga de Feriado', color: 'bg-amber-500' },
       { code: 'FE', label: 'Férias', color: 'bg-emerald-500' },
       { code: 'DO', label: 'Aniversário / Especial', color: 'bg-fuchsia-600' },
-      { code: 'C', label: 'Curso / Treinamento', color: 'bg-slate-500' },
+      { code: 'C', label: 'Curso / Treinamento', color: 'bg-zinc-500' },
       { code: 'AT', label: 'Atestado Médico', color: 'bg-rose-400' },
-      { code: '1/6..6/6', label: 'Dias Seguidos 6x1', color: 'bg-slate-600' },
+      { code: '1/6..6/6', label: 'Dias Seguidos 6x1', color: 'bg-zinc-600' },
       { code: '7º', label: '7º Dia: Violação 6x1', color: 'bg-rose-600' },
       { code: '1D / 2D', label: 'Domingos Trabalhados', color: 'bg-amber-500' },
       { code: '3D', label: '3º Domingo: Violação CLT', color: 'bg-rose-600' },
@@ -303,16 +306,16 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       {/* ============================================================ */}
       <div className="flex flex-col gap-2 lg:hidden">
         {/* Row 1: Alternador Diário/Tabela + Botão Filtros + WhatsApp */}
-        <div className="flex items-center justify-between gap-2 bg-white dark:bg-zinc-900 p-2 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-sm">
+        <div className="flex items-center justify-between gap-2 bg-white dark:bg-zinc-900 p-2 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
           {/* Alternador Diário vs Tabela */}
-          <div className="flex items-center bg-slate-100 dark:bg-zinc-800 p-0.5 rounded-xl">
+          <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl">
             <button
               type="button"
               onClick={() => setMobileViewMode('daily')}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all ${
                 mobileViewMode === 'daily'
                   ? 'bg-orange-500 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
               }`}
             >
               <Icon name="view_agenda" className="text-sm" />
@@ -324,7 +327,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all ${
                 mobileViewMode === 'table'
                   ? 'bg-orange-500 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
               }`}
             >
               <Icon name="grid_on" className="text-sm" />
@@ -338,7 +341,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               <button
                 type="button"
                 onClick={onExportCsv}
-                className="p-2 rounded-xl bg-slate-800 text-white dark:bg-zinc-800 shadow-sm active:scale-95 transition-all"
+                className="p-2 rounded-xl bg-zinc-800 text-white dark:bg-zinc-800 shadow-sm active:scale-95 transition-all"
                 title="Salvar Escala Completa em CSV (.csv)"
               >
                 <Icon name="table_view" className="text-base text-emerald-400" />
@@ -362,13 +365,13 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
                 activeFiltersCount > 0
                   ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-500 text-orange-600 dark:text-orange-400 font-black shadow-sm'
-                  : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300'
+                  : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300'
               }`}
             >
               <Icon name="tune" className="text-sm text-orange-500" />
               <span>Filtros</span>
               {activeFiltersCount > 0 && (
-                <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-black flex items-center justify-center">
+                <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[11px] font-black flex items-center justify-center">
                   {activeFiltersCount}
                 </span>
               )}
@@ -401,10 +404,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     ? 'bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 font-bold'
                     : isHol
                     ? 'bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-400 font-bold'
-                    : 'bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-bold'
+                    : 'bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold'
                 }`}
               >
-                <span className={`text-[8px] uppercase tracking-tighter ${isSelected ? 'text-white/90' : 'text-slate-400 dark:text-zinc-500'}`}>
+                <span className={`text-[11px] uppercase tracking-tighter ${isSelected ? 'text-white/90' : 'text-zinc-400 dark:text-zinc-500'}`}>
                   {d.weekday}
                 </span>
                 <span className="text-sm font-black leading-tight">
@@ -428,7 +431,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       {!isReadOnly && (
         <div className="hidden lg:flex flex-col gap-2.5">
         {/* Linha 1: Contexto Operacional do Dia & Ações Imediatas */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white dark:bg-zinc-900 p-2 sm:p-2.5 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-sm w-full">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white dark:bg-zinc-900 p-2 sm:p-2.5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm w-full">
           {/* Lado Esquerdo: Dia Selecionado & Ações Diárias */}
           <div className="flex flex-wrap items-center gap-2">
             {/* Âncora do Dia Selecionado */}
@@ -438,15 +441,15 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-black uppercase tracking-wider transition-all shadow-sm ${
                 isCurrentMonth && (selectedDayIdx + 1) === todayDayNum
                   ? 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20'
-                  : 'bg-slate-50 dark:bg-zinc-800/80 border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800'
+                  : 'bg-zinc-50 dark:bg-zinc-800/80 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }`}
               title="Clique para abrir o Resumo Operacional detalhado deste dia (escalas, almoços e postos)"
             >
-              <span className={`w-2 h-2 rounded-full ${isCurrentMonth && (selectedDayIdx + 1) === todayDayNum ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'}`} />
+              <span className={`w-2 h-2 rounded-full ${isCurrentMonth && (selectedDayIdx + 1) === todayDayNum ? 'bg-amber-500 animate-pulse' : 'bg-zinc-400'}`} />
               <span>
                 {isCurrentMonth && (selectedDayIdx + 1) === todayDayNum ? 'Hoje' : 'Dia'}: {String(selectedDayIdx + 1).padStart(2, '0')}/{String(currentMY.month + 1).padStart(2, '0')} {days[selectedDayIdx]?.weekday ? `(${days[selectedDayIdx].weekday})` : ''}
               </span>
-              <Icon name="visibility" className="text-xs text-slate-400 dark:text-zinc-400" />
+              <Icon name="visibility" className="text-xs text-zinc-400 dark:text-zinc-400" />
             </button>
 
 
@@ -455,7 +458,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               <button
                 type="button"
                 onClick={() => onShareWhatsApp(selectedDayIdx)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shadow-emerald-600/20 active:scale-95 whitespace-nowrap"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black uppercase tracking-wider transition-all shadow-sm shadow-emerald-600/20 active:scale-95 whitespace-nowrap"
                 title="Preparar e compartilhar a divulgação operacional do dia"
               >
                 <Icon name="campaign" className="text-xs" />
@@ -468,7 +471,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               <button
                 type="button"
                 onClick={onExportCsv}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-slate-700 dark:border-zinc-700 text-[10px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-95 whitespace-nowrap group"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-900 text-white dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-zinc-700 dark:border-zinc-700 text-[11px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-95 whitespace-nowrap group"
                 title="Salvar escala mensal em planilha CSV para Excel e Google Sheets"
               >
                 <Icon name="table_view" className="text-xs text-emerald-400 group-hover:scale-110 transition-transform" />
@@ -480,10 +483,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             <button
               type="button"
               onClick={() => setFocusSelectedDay(!focusSelectedDay)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
                 focusSelectedDay 
                   ? 'bg-amber-500 border-amber-500 text-white shadow-amber-500/20' 
-                  : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
+                  : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
               }`}
               title={focusSelectedDay ? 'Desativar modo foco' : 'Destacar coluna do dia selecionado e suavizar as demais'}
             >
@@ -496,10 +499,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               <button
                 type="button"
                 onClick={() => setHidePastDays(!hidePastDays)}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
                   hidePastDays 
                     ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-500/20' 
-                    : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
+                    : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
                 }`}
                 title={hidePastDays ? 'Exibir o mês inteiro' : 'Ocultar dias passados para focar no restante do mês'}
               >
@@ -537,10 +540,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             <button
               type="button"
               onClick={() => setIsCompactMode(!isCompactMode)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
                 isCompactMode 
                   ? 'bg-purple-600 border-purple-600 text-white shadow-purple-500/20' 
-                  : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
+                  : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
               }`}
               title="Alternar entre espaçamento normal e denso para exibir mais colaboradores"
             >
@@ -552,10 +555,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             <button
               type="button"
               onClick={() => setShowLegend(!showLegend)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
                 showLegend 
                   ? 'bg-orange-500 border-orange-500 text-white shadow-orange-500/20' 
-                  : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
+                  : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
               }`}
               title="Exibir ou ocultar legenda de turnos e funções correlatas"
             >
@@ -574,10 +577,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             <button
               type="button"
               onClick={() => setOnlyWorkingToday(!onlyWorkingToday)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
                 onlyWorkingToday 
                   ? 'bg-emerald-600 border-emerald-600 text-white shadow-emerald-500/20' 
-                  : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 hover:bg-slate-50'
+                  : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50'
               }`}
               title="Filtrar apenas colaboradores escalados para trabalhar no dia selecionado"
             >
@@ -586,12 +589,12 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             </button>
 
             {/* Filtro: Turno do Colaborador */}
-            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
+            <div className="flex items-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
               <button 
                 type="button"
                 onClick={() => setSelectedGroup(null)}
-                className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                  !selectedGroup ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-slate-200'
+                className={`px-2 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                  !selectedGroup ? 'bg-orange-500 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
                 }`}
               >
                 Todos os Turnos
@@ -601,8 +604,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   type="button"
                   key={group}
                   onClick={() => setSelectedGroup(group)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                    selectedGroup === group ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-slate-200'
+                  className={`px-2 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                    selectedGroup === group ? 'bg-orange-500 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
                   }`}
                 >
                   {group.split('/')[0]}
@@ -611,7 +614,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             </div>
 
             {/* Filtro: Tipo de Contrato */}
-            <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
+            <div className="flex items-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
               {[
                 { id: 'all', label: 'Todos' },
                 { id: 'clt', label: 'CLT' },
@@ -621,10 +624,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   type="button"
                   key={f.id}
                   onClick={() => setContractFilter(f.id as any)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                  className={`px-2 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
                     contractFilter === f.id 
                       ? 'bg-orange-500 text-white shadow-sm' 
-                      : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                      : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
                   }`}
                 >
                   {f.label}
@@ -634,7 +637,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           </div>
 
           {/* Lado Direito: Filtro de Período da Grade */}
-          <div className="flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
+          <div className="flex items-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-0.5 rounded-xl shadow-sm shrink-0">
             {[
               { id: 'all', label: 'Mês Completo', short: 'Mês' },
               { id: 'sunday', label: 'Domingos', short: 'Dom' },
@@ -644,10 +647,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 type="button"
                 key={f.id}
                 onClick={() => onFilterChange(f.id as any)}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
                   filter === f.id 
                     ? 'bg-orange-500 text-white shadow-sm' 
-                    : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                    : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
                 }`}
               >
                 <span className="hidden sm:inline">{f.label}</span>
@@ -659,16 +662,16 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
         {/* Linha 3: Legenda Retrátil com Animação Suave */}
         {showLegend && (
-          <div className="flex flex-wrap items-center justify-between gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 px-3.5 py-2 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-1 duration-150 w-full">
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3.5 py-2 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-1 duration-150 w-full">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
               {legendItems.map(item => (
                 <div key={item.code} className="flex items-center gap-1.5">
                   <div className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
-                  <span className="text-[10px] font-bold text-slate-700 dark:text-zinc-300 tracking-tight whitespace-nowrap">{item.label}</span>
+                  <span className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 tracking-tight whitespace-nowrap">{item.label}</span>
                 </div>
               ))}
             </div>
-            <div className="flex items-center gap-1 text-[10px] font-medium text-slate-400 dark:text-zinc-500 ml-auto select-none">
+            <div className="flex items-center gap-1 text-[11px] font-medium text-zinc-400 dark:text-zinc-500 ml-auto select-none">
               <Icon name="touch_app" className="text-orange-400 text-xs" />
               <span>Toque no nome do colaborador para ver detalhes</span>
             </div>
@@ -705,7 +708,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       </div>
 
       {/* Grid Container */}
-      <div className={`bg-white dark:bg-zinc-950 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden flex-1 flex-col relative ${
+      <div className={`bg-white dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden flex-1 flex-col relative ${
         mobileViewMode === 'daily' ? 'hidden lg:flex' : 'flex'
       }`}>
         <div 
@@ -716,34 +719,36 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           }}
         >
           <table className="w-full border-separate border-spacing-0">
-            <thead className="sticky top-0 z-40 bg-slate-50 dark:bg-zinc-900">
-              <tr className="bg-slate-50 dark:bg-zinc-900/50">
-                <th className="sticky left-0 z-[50] bg-slate-50 dark:bg-zinc-900 border-b border-r border-slate-200 dark:border-zinc-800 py-2 px-2 sm:px-3 text-left min-w-[110px] sm:min-w-[135px] w-[110px] sm:w-[135px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]">
-                  <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</span>
+            <thead className="sticky top-0 z-40 bg-zinc-50 dark:bg-zinc-900">
+              <tr className="bg-zinc-50 dark:bg-zinc-900/50">
+                <th className="sticky left-0 z-[50] bg-zinc-50 dark:bg-zinc-900 border-b border-r border-zinc-200 dark:border-zinc-800 py-2.5 px-3 text-left w-[230px] min-w-[230px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Colaborador</span>
+                    <button
+                      type="button"
+                      onClick={() => setGroupBy(prev => prev === 'role' ? 'shift' : 'role')}
+                      className="text-[11px] font-bold text-orange-600 dark:text-orange-400 hover:underline cursor-pointer"
+                      title="Alternar agrupamento entre Função e Turno"
+                    >
+                      {groupBy === 'role' ? 'Por Função' : 'Por Turno'}
+                    </button>
+                  </div>
                 </th>
-                {!isReadOnly && isEditable && (
-                  <th className="hidden sm:table-cell sticky left-[110px] sm:left-[135px] z-[50] bg-slate-50 dark:bg-zinc-900 border-b border-r border-slate-200 dark:border-zinc-800 py-2 px-3 text-left min-w-[115px] w-[115px]">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horário</span>
-                  </th>
-                )}
                 {filteredDays.map(d => {
                   const dayIdx = d.num - 1;
                   const stats = employees.reduce((acc, emp) => {
                     if (!isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month)) return acc;
                     const shift = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
-                    const hour = (emp.dailyHours[monthKey] || [])[dayIdx] || emp.workPeriod;
-                    const shiftClass = getShiftClassification(hour, d.isSunday, jornadaSettings);
                     if (isWorkingShift(shift) || shift.startsWith('FF')) {
                       acc.total++;
-                      if (shiftClass === 'Abertura') acc.opening++;
-                      else if (shiftClass === 'Fechamento') acc.closing++;
                     }
                     return acc;
-                  }, { total: 0, opening: 0, closing: 0 });
-
+                  }, { total: 0 });
 
                   const isSelected = selectedDayIdx === dayIdx;
                   const todayStr = toLocalISODate();
+                  const isToday = d.dateStr === todayStr;
+                  const isWeekend = d.isSunday || d.weekday === 'SÁB' || d.weekday === 'DOM';
                   const isPast = d.dateStr < todayStr;
                   const pastDimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale pointer-events-none select-none' : '';
                   const focusDimClass = focusSelectedDay && !isSelected ? 'opacity-40 hover:opacity-100 transition-opacity duration-150' : '';
@@ -753,32 +758,37 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     <th 
                       key={d.num} 
                       onClick={() => isSelected ? onOpenDayDetail(dayIdx) : onSelectDay(dayIdx)}
-                      className={`p-3 border-b border-slate-200 dark:border-zinc-800 min-w-[60px] cursor-pointer transition-all ${pastDimClass} ${focusDimClass} ${focusHighlight ? focusHighlight : d.isSunday ? 'bg-rose-50 dark:bg-rose-950/40' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-950/40' : ''}`}
+                      className={`p-2 border-b border-zinc-200 dark:border-zinc-800 min-w-[46px] w-[48px] cursor-pointer transition-all ${isToday ? 'border-t-4 border-t-orange-500' : ''} ${pastDimClass} ${focusDimClass} ${focusHighlight ? focusHighlight : isWeekend ? 'bg-zinc-100/60 dark:bg-zinc-900/60' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-950/40' : ''}`}
                     >
-                      <div className="flex flex-col items-center gap-1 relative">
-                        <span className="text-[9px] font-black text-slate-400 uppercase">{d.weekday}</span>
-                        <div className="flex items-center gap-1">
-                          <span className={`text-sm font-black ${d.isSunday ? 'text-rose-600' : 'text-slate-900 dark:text-zinc-100'}`}>{d.num}</span>
-                          
-                        </div>
-                        <div className="mt-1 text-[8px] font-bold text-slate-400 flex items-center gap-1">
-                           <span>T:{stats.total}</span>
-                        </div>
+                      <div className="flex flex-col items-center gap-0.5 relative">
+                        <span className={`text-[11px] font-bold uppercase ${d.isSunday ? 'text-rose-500' : 'text-zinc-400'}`}>{d.weekday}</span>
+                        <span className={`text-sm font-bold tabular-nums ${d.isSunday ? 'text-rose-600' : 'text-zinc-900 dark:text-zinc-100'}`}>{d.num}</span>
+                        <span className="text-[11px] font-bold text-zinc-400 tabular-nums">
+                          T:{stats.total}
+                        </span>
                       </div>
                     </th>
                   );
                 })}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {(() => {
-                const groups: Record<string, Employee[]> = {
-                  'Abertura': [],
-                  'Intermediário': [],
-                  'Fechamento': [],
-                  'Estoque': [],
-                  'Folgas/Outros': []
-                };
+                const groups: Record<string, Employee[]> = groupBy === 'role'
+                  ? {
+                      'Caixa': [],
+                      'Pacote': [],
+                      'Vendas': [],
+                      'Apoio': [],
+                      'Fiscal': [],
+                      'Estoque': []
+                    }
+                  : {
+                      'Abertura': [],
+                      'Intermediário': [],
+                      'Fechamento': [],
+                      'Folgas/Outros': []
+                    };
 
                 employees.forEach(emp => {
                   if (!isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month)) return;
@@ -802,31 +812,35 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     }
                   }
 
-                  if (isOff) {
-                    groups['Folgas/Outros'].push(emp);
+                  if (groupBy === 'role') {
+                    const empRole = normalizeEmployeeRole(emp.cargo || emp.role);
+                    if (groups[empRole]) groups[empRole].push(emp);
+                    else groups['Apoio'].push(emp);
                   } else {
-                    if (groups[classification]) groups[classification].push(emp);
-                    else groups['Fechamento'].push(emp);
+                    if (isOff) {
+                      groups['Folgas/Outros'].push(emp);
+                    } else {
+                      if (groups[classification]) groups[classification].push(emp);
+                      else groups['Fechamento'].push(emp);
+                    }
                   }
                 });
 
-                return ['Abertura', 'Intermediário', 'Fechamento', 'Folgas/Outros'].map(groupName => {
-                  const emps = groups[groupName];
+                const groupOrder = groupBy === 'role'
+                  ? ['Caixa', 'Pacote', 'Vendas', 'Apoio', 'Fiscal', 'Estoque']
+                  : ['Abertura', 'Intermediário', 'Fechamento', 'Folgas/Outros'];
+
+                return groupOrder.map(groupName => {
+                  const emps = groups[groupName] || [];
                   if (emps.length === 0) return null;
 
                   return (
                     <React.Fragment key={groupName}>
                       {/* Group Header Row */}
-                      <tr className="bg-slate-100/90 dark:bg-zinc-900/90 backdrop-blur-md sticky z-20">
-                        <td className="sticky left-0 py-1.5 px-2 font-black text-[9px] sm:text-[10px] uppercase text-slate-600 dark:text-zinc-400 border-r border-slate-200 dark:border-zinc-800 bg-inherit shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]">
-                          {groupName}
+                      <tr className="bg-zinc-100/90 dark:bg-zinc-900/90 backdrop-blur-md sticky z-20">
+                        <td className="sticky left-0 py-1.5 px-3 font-bold text-[11px] uppercase text-zinc-600 dark:text-zinc-400 border-r border-zinc-200 dark:border-zinc-800 bg-inherit shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)] w-[230px] min-w-[230px]">
+                          {groupName} ({emps.length})
                         </td>
-                        {!isReadOnly && isEditable && (
-                          <>
-                            <td className="hidden sm:table-cell sticky left-[180px] border-r border-slate-200 dark:border-zinc-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]" />
-                            <td className="hidden md:table-cell sticky left-[305px] border-r border-slate-200 dark:border-zinc-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]" />
-                          </>
-                        )}
                         <td colSpan={filteredDays.length} className="bg-inherit h-7" />
                       </tr>
 
@@ -835,105 +849,50 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                         return (
                           <tr 
                             key={emp.id} 
-                            className="transition-colors group/row hover:bg-slate-50/50 dark:hover:bg-zinc-800/50"
+                            className="transition-colors group/row hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50"
                           >
-                             <td className="sticky left-0 z-[10] border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-1.5 sm:py-1.5 sm:px-2 min-w-[110px] sm:min-w-[135px] w-[110px] sm:w-[135px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)] transition-all bg-white dark:bg-zinc-950">
+                             <td className="sticky left-0 z-[10] border-b border-r border-zinc-200 dark:border-zinc-800 py-1.5 px-2.5 w-[230px] min-w-[230px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)] transition-all bg-white dark:bg-zinc-950">
                                <button 
+                                 type="button"
                                  onClick={() => onOpenEmployeeCard(emp)}
                                  title={isReadOnly ? `${emp.name.toUpperCase()} • Clique para acessar cartão individual (requer senha pessoal)` : `${emp.name.toUpperCase()} • Clique para ver escala completa, solicitações ou lançar atestado médico por período`}
-                                 className="flex items-center gap-1.5 sm:gap-2 w-full text-left p-0.5 sm:p-1 rounded-lg sm:rounded-xl transition-all group/name hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                                 className="flex flex-col w-full text-left p-1 rounded-xl transition-all group/name hover:bg-orange-50 dark:hover:bg-orange-950/20"
                                >
-                                 <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] font-bold border shrink-0 transition-colors bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-800 group-hover/name:bg-orange-100 group-hover/name:text-orange-600 group-hover/name:border-orange-200">
-                                   {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                                 </div>
-                                 <div className="flex flex-col min-w-0 flex-1">
-                                   <div className="flex items-center gap-1 flex-wrap">
-                                     <span className="text-[10px] sm:text-[11px] font-black uppercase truncate transition-colors text-slate-900 dark:text-zinc-100 group-hover/name:text-orange-600" title={emp.name.toUpperCase()}>{getShortName(emp.name, employees)}</span>
-                                     {(() => {
-                                       if (isReadOnly) return null;
-                                       const reqs = emp.requests || [];
-                                       const hasAnswered = reqs.some(r => r.date?.startsWith(monthKey) && r.status !== 'pending');
-                                       const hasPending = reqs.some(r => r.date?.startsWith(monthKey) && r.status === 'pending');
-                                       
-                                       if (hasAnswered) {
-                                         return (
-                                           <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center shadow-md animate-pulse-subtle shrink-0" title="Pedido respondido!">
-                                             <Icon name="notifications_active" className="text-[9px] text-white" />
-                                           </div>
-                                         );
-                                       }
-                                       if (hasPending) {
-                                         return (
-                                           <div className="w-3.5 h-3.5 bg-orange-500 rounded-full flex items-center justify-center animate-bounce-subtle shrink-0" title="Tem pedidos pendentes">
-                                             <Icon name="chat_bubble" className="text-[8px] text-white" />
-                                           </div>
-                                         );
-                                       }
-                                       return null;
-                                     })()}
+                                 <div className="flex items-center justify-between gap-1.5 w-full">
+                                   <div className="flex items-center gap-1.5 min-w-0">
+                                     <div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold border shrink-0 transition-colors bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 group-hover/name:bg-orange-100 group-hover/name:text-orange-600 group-hover/name:border-orange-200">
+                                       {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                                     </div>
+                                     <span className="text-sm font-semibold truncate transition-colors text-zinc-900 dark:text-zinc-100 group-hover/name:text-orange-600" title={emp.name.toUpperCase()}>
+                                       {getShortName(emp.name, employees)}
+                                     </span>
                                    </div>
-                                   <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                                     {(() => {
-                                        const role = normalizeEmployeeRole(emp.cargo || emp.role);
-                                        const meta = ROLE_METADATA_MAP[role];
-                                        return (
-                                          <span 
-                                            className={`text-[8px] sm:text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md border tracking-wider inline-flex items-center gap-1 ${meta.badgeColor}`}
-                                            title={`Função oficial: ${meta.label}`}
-                                          >
-                                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: 'currentColor' }} />
-                                            <span>{meta.label}</span>
-                                          </span>
-                                        );
-                                      })()}
+                                   {(() => {
+                                     const role = normalizeEmployeeRole(emp.cargo || emp.role);
+                                     const meta = ROLE_VISUAL_MAP[role];
+                                     return (
+                                       <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md border shrink-0 ${meta.badgeClass}`}>
+                                         {meta.label}
+                                       </span>
+                                     );
+                                   })()}
+                                 </div>
+
+                                 <div className="flex items-center justify-between gap-1 mt-1 pl-7">
+                                   <span className="text-[11px] tabular-nums text-zinc-500 dark:text-zinc-400 font-medium truncate">
+                                     {emp.workPeriod || '10h às 18h20'}
+                                   </span>
+                                   <div className="flex items-center gap-1 shrink-0">
                                      {emp.contractType === 'Sazonal' && (
-                                       <span className="text-[7px] px-1 rounded bg-amber-100 text-amber-600 font-bold uppercase tracking-widest">Sazonal</span>
+                                       <span className="text-[11px] px-1 rounded bg-amber-100 text-amber-600 font-bold uppercase tracking-wider">Sazonal</span>
                                      )}
                                      {emp.jornada === '5x2' && (
-                                       <span className="text-[7px] px-1 rounded bg-purple-100 text-purple-600 font-bold uppercase tracking-widest">5x2</span>
+                                       <span className="text-[11px] px-1 rounded bg-purple-100 text-purple-600 font-bold uppercase tracking-wider">5x2</span>
                                      )}
                                    </div>
                                  </div>
-                                 <Icon name="chevron_right" className="hidden sm:block text-slate-300 group-hover/name:text-orange-500 opacity-0 group-hover/name:opacity-100 transition-all text-sm ml-auto shrink-0" />
                                </button>
                              </td>
-                              {!isReadOnly && isEditable && (
-                                <td className="hidden sm:table-cell sticky left-[110px] sm:left-[135px] z-10 bg-white dark:bg-zinc-950 border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-2 min-w-[115px] w-[115px]">
-                                  <select
-                                    value={emp.dailyHours[monthKey]?.[selectedDayIdx] || ''}
-                                    onChange={(e) => onUpdateEmployeeDailyHour(emp.id, selectedDayIdx, e.target.value)}
-                                    className="w-full bg-transparent border-none p-0 text-[11px] font-black text-orange-600 focus:ring-0 uppercase"
-                                  >
-                                    {(() => {
-                                      const date = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1);
-                                      const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`);
-                                      const isSun = date.getDay() === 0;
-
-                                      let options: string[];
-                                      if (isHol) options = [...jornadaSettings.shiftHours.holiday, ...(jornadaSettings.shiftHours.extended || [])];
-                                      else if (isSun) options = jornadaSettings.shiftHours.sunday;
-                                      else options = [...jornadaSettings.shiftHours.weekday, ...(jornadaSettings.shiftHours.extended || [])];
-                                      
-                                      if (emp.isYoungApprentice) options = jornadaSettings.shiftHours.apprentice;
-                                      
-                                      const currentVal = emp.dailyHours[monthKey]?.[selectedDayIdx];
-                                      const finalOptions = [...new Set([...options])].filter(Boolean);
-
-                                      return (
-                                        <>
-                                          <option value="" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100">AUTO 🤖</option>
-                                          {finalOptions.map(h => (
-                                            <option key={h} value={h} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100">{h}</option>
-                                          ))}
-                                          {currentVal && !finalOptions.includes(currentVal) && (
-                                            <option value={currentVal} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100">{currentVal}</option>
-                                          )}
-                                        </>
-                                      );
-                                    })()}
-                                  </select>
-                                </td>
-                              )}
 
                             {/* Shift Cells */}
                             {filteredDays.map(d => {
@@ -1141,8 +1100,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                const focusDimColClass = focusSelectedDay && !isSelectedCol ? 'opacity-40 hover:opacity-100 transition-opacity duration-150' : '';
                                const focusHighlight = isSelectedCol && focusSelectedDay ? 'ring-2 ring-inset ring-orange-500 bg-orange-500/10 dark:bg-orange-950/30' : isSelectedCol ? 'ring-2 ring-inset ring-orange-400/40' : '';
 
-                               return (
-                                 <td key={d.num} className={`py-1 px-1 border-b border-zinc-100 dark:border-zinc-800 text-center transition-all relative ${pastDimClass} ${focusDimColClass} ${focusHighlight} ${(!isReadOnly && hasCellViolation) ? 'ring-2 ring-inset ring-rose-500 bg-rose-50/50 dark:bg-rose-950/30' : (!isReadOnly && isSundayWarning) ? 'ring-2 ring-inset ring-amber-500/50 bg-amber-50/20' : ''}`}>
+
+                                const isWeekend = d.isSunday || d.weekday === 'SÁB' || d.weekday === 'DOM';
+                                const cellStyle = getShiftCellStyle(shift);
+                                return (
+                                  <td key={d.num} className={`py-1 px-1 border-b border-zinc-100 dark:border-zinc-800 text-center transition-all relative min-w-[46px] h-[48px] ${isWeekend ? 'bg-zinc-100/60 dark:bg-zinc-900/60' : ''} ${pastDimClass} ${focusDimColClass} ${focusHighlight} ${(!isReadOnly && hasCellViolation) ? 'ring-2 ring-inset ring-red-500 bg-red-500/10' : (!isReadOnly && isSundayWarning) ? 'ring-2 ring-inset ring-amber-500/50 bg-amber-50/20' : ''}`}>
                                    <div className="relative group flex flex-col items-center justify-center">
                                      {/* Indicador 4: Diferença pós-oficialização (Canto Inferior Esquerdo) */}
                                      {!isReadOnly && cellDiff && (
@@ -1158,7 +1120,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                      {sixByOneBadge && (
                                        <span
                                          onClick={(e) => { e.stopPropagation(); onSelectDay(d.num - 1); }}
-                                         className={`absolute -top-1 -left-1 px-1 py-0 text-[10px] leading-none font-black rounded-full z-30 transition-all cursor-help tracking-tighter ring-1 ring-white dark:ring-zinc-900 ${sixByOneBadge.className} ${sixByOneBadge.isHoverOnly ? 'opacity-0 group-hover:opacity-100' : ''}`}
+                                         className={`absolute -top-1 -left-1 px-1 py-0 text-[11px] leading-none font-black rounded-full z-30 transition-all cursor-help tracking-tighter ring-1 ring-white dark:ring-zinc-900 ${sixByOneBadge.className} ${sixByOneBadge.isHoverOnly ? 'opacity-0 group-hover:opacity-100' : ''}`}
                                          title={sixByOneBadge.title}
                                          aria-label={sixByOneBadge.title}
                                          role="status"
@@ -1171,7 +1133,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                      {sundayBadge && (
                                        <span
                                          onClick={(e) => { e.stopPropagation(); onSelectDay(d.num - 1); }}
-                                         className={`absolute -top-1 -right-1 px-1 py-0 text-[10px] leading-none font-black rounded-full z-30 transition-all cursor-help tracking-tighter ring-1 ring-white dark:ring-zinc-900 ${sundayBadge.className} ${sundayBadge.isHoverOnly ? 'opacity-0 group-hover:opacity-100' : ''}`}
+                                         className={`absolute -top-1 -right-1 px-1 py-0 text-[11px] leading-none font-black rounded-full z-30 transition-all cursor-help tracking-tighter ring-1 ring-white dark:ring-zinc-900 ${sundayBadge.className} ${sundayBadge.isHoverOnly ? 'opacity-0 group-hover:opacity-100' : ''}`}
                                          title={sundayBadge.title}
                                          aria-label={sundayBadge.title}
                                          role="status"
@@ -1194,14 +1156,14 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                            'bg-orange-500 animate-pulse'
                                          }`} />
                                          
-                                         <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-900 dark:bg-zinc-800 text-white p-3 rounded-2xl shadow-xl opacity-0 invisible group-hover/balloon:opacity-100 group-hover/balloon:visible transition-all z-[100] pointer-events-none scale-95 group-hover/balloon:scale-100 origin-bottom-right">
-                                           <div className="absolute top-full right-2 -mt-1 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800" />
-                                           <p className="text-[10px] font-black uppercase text-slate-400 mb-1 border-b border-slate-700 pb-1">Pedido do Colaborador</p>
+                                         <div className="absolute bottom-full right-0 mb-2 w-48 bg-zinc-900 dark:bg-zinc-800 text-white p-3 rounded-2xl shadow-xl opacity-0 invisible group-hover/balloon:opacity-100 group-hover/balloon:visible transition-all z-[100] pointer-events-none scale-95 group-hover/balloon:scale-100 origin-bottom-right">
+                                           <div className="absolute top-full right-2 -mt-1 border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-800" />
+                                           <p className="text-[11px] font-black uppercase text-zinc-400 mb-1 border-b border-zinc-700 pb-1">Pedido do Colaborador</p>
                                            <p className="text-xs font-bold leading-snug">{dayRequest.text}</p>
                                            {dayRequest.feedback && (
-                                             <div className="mt-2 pt-2 border-t border-slate-700">
-                                               <p className="text-[9px] font-black uppercase text-orange-400 mb-0.5">Resposta do Gerente</p>
-                                               <p className="text-[10px] font-bold text-slate-300 italic">{dayRequest.feedback}</p>
+                                             <div className="mt-2 pt-2 border-t border-zinc-700">
+                                               <p className="text-[11px] font-black uppercase text-orange-400 mb-0.5">Resposta do Gerente</p>
+                                               <p className="text-[11px] font-bold text-zinc-300 italic">{dayRequest.feedback}</p>
                                              </div>
                                            )}
                                          </div>
@@ -1250,23 +1212,14 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                            return baseTitle;
                                          })()
                                        }
-                                       className={`${isCompactMode ? 'w-8 h-8 rounded-lg text-[9px]' : 'w-10 h-10 rounded-xl text-[10px]'} flex items-center justify-center font-black transition-all shadow-xs relative ${
-                                         dayRequest ? (
-                                           dayRequest.status === 'granted' ? 'ring-1.5 ring-emerald-500/80' :
-                                           dayRequest.status === 'refused' ? 'ring-1.5 ring-red-500/80' :
-                                           dayRequest.status === 'seen' ? 'ring-1.5 ring-blue-500/80' :
-                                           'ring-2 ring-orange-500 animate-pulse'
-                                         ) : ''
-                                       } ${
-                                         shift === 'N/A' ? 'bg-slate-100/70 dark:bg-zinc-800/40 text-slate-400 dark:text-zinc-600 border border-dashed border-slate-200 dark:border-zinc-800 opacity-60' :
-                                         shift === 'AT' ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50' :
-                                         shift === 'F' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' :
-                                         shift.startsWith('FF') ? 'bg-amber-100 text-amber-600' :
-                                         shift === 'C' ? 'bg-indigo-100 text-indigo-600' :
-                                         shift === 'FE' ? 'bg-emerald-100 text-emerald-600' :
-                                         shift === 'DO' ? 'bg-fuchsia-600 text-white shadow-md' :
-                                         'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800'
-                                       }`}>
+                                        className={`${isCompactMode ? 'w-8 h-8 rounded-lg' : 'w-10 h-10 rounded-xl'} flex items-center justify-center font-bold transition-all shadow-xs relative border ${cellStyle.bg} ${cellStyle.text} ${cellStyle.border} ${
+                                          dayRequest ? (
+                                            dayRequest.status === 'granted' ? 'ring-1.5 ring-emerald-500/80' :
+                                            dayRequest.status === 'refused' ? 'ring-1.5 ring-red-500/80' :
+                                            dayRequest.status === 'seen' ? 'ring-1.5 ring-blue-500/80' :
+                                            'ring-2 ring-orange-500 animate-pulse'
+                                          ) : ''
+                                        }`}>
                                       {shift === 'AT' ? (
                                         <div className="flex flex-col items-center justify-center text-rose-500 font-black leading-none">
                                           <Icon name="add" className="text-sm" />
@@ -1277,9 +1230,9 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                               const c = new Date(fullDate + 'T00:00:00').getTime();
                                               const total = Math.round((e - s) / 86400000) + 1;
                                               const cur = Math.round((c - s) / 86400000) + 1;
-                                              return <span className="text-[6px] opacity-80 mt-0.5">{cur}/{total}</span>;
+                                              return <span className="text-[11px] opacity-80 mt-0.5">{cur}/{total}</span>;
                                             }
-                                            return <span className="text-[7px] font-black uppercase mt-0.5">AT</span>;
+                                            return <span className="text-[11px] font-black uppercase mt-0.5">AT</span>;
                                           })()}
                                         </div>
                                       ) : shift === 'FE' ? (
@@ -1292,27 +1245,25 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                               const c = new Date(fullDate + 'T00:00:00').getTime();
                                               const total = Math.round((e - s) / 86400000) + 1;
                                               const cur = Math.round((c - s) / 86400000) + 1;
-                                              return <span className="text-[6px] opacity-80 mt-0.5">{cur}/{total}</span>;
+                                              return <span className="text-[11px] opacity-80 mt-0.5">{cur}/{total}</span>;
                                             }
                                             return null;
                                           })()}
                                         </div>
                                       ) : shift === 'C' ? (
-                                         <span className="text-[9px] font-bold">CURSO</span>
+                                         <span className="text-[11px] font-bold">CURSO</span>
                                        ) : shift === 'N/A' ? (
-                                         <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">-</span>
-                                       ) : isWorkingShift(shift) ? (
-                                         <div className="flex flex-col items-center justify-center leading-none">
-                                           <span className="text-[10px] font-black">{d.isSunday ? 'DOM' : 'T'}</span>
-                                           {densityMode === 'audit' && (
-                                             <span className="text-[8px] font-bold text-zinc-400 dark:text-zinc-500 leading-none mt-0.5">
-                                               {((emp.dailyHours[monthKey] || [])[d.num - 1] || emp.workPeriod || '').split('h')[0]}h
-                                             </span>
-                                           )}
-                                         </div>
-                                       ) : (
-                                         <span className="text-[10px] font-black">{shift.startsWith('FF') ? 'FF' : shift}</span>
-                                       )}
+                                         <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-mono">-</span>
+                                        ) : isWorkingShift(shift) ? (
+                                          <div className="flex flex-col items-center justify-center leading-none">
+                                            <span className="text-[13px] font-bold">{d.isSunday ? 'DOM' : 'T'}</span>
+                                            <span className="text-[11px] font-medium tabular-nums opacity-80 leading-none mt-0.5">
+                                              {((emp.dailyHours[monthKey] || [])[d.num - 1] || emp.workPeriod || '').split('h')[0]}h
+                                            </span>
+                                          </div>
+                                        ) : (
+                                          <span className="text-[13px] font-bold">{shift.startsWith('FF') ? 'FF' : shift}</span>
+                                        )}
                                     </button>
 
                                     
@@ -1381,53 +1332,93 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 });
               })()}
             </tbody>
+            {/* Rodapé Fixo de Cobertura por Função */}
+            <tfoot className="sticky bottom-0 z-20 bg-white dark:bg-zinc-900 border-t-2 border-zinc-200 dark:border-zinc-800 shadow-xl">
+              {/* Linha Principal: Total em Turno (T) */}
+              <tr className="bg-zinc-50 dark:bg-zinc-900 font-bold border-b border-zinc-200 dark:border-zinc-800">
+                <td className="sticky left-0 z-30 bg-zinc-50 dark:bg-zinc-900 py-2 px-3 text-xs font-black uppercase text-zinc-700 dark:text-zinc-200 border-r border-zinc-200 dark:border-zinc-800 w-[230px] min-w-[230px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]">
+                  <div className="flex items-center gap-1.5">
+                    <Icon name="groups" className="text-orange-500 text-sm" />
+                    <span>Total em Turno (T)</span>
+                  </div>
+                </td>
+                {filteredDays.map(d => {
+                  const dayIdx = d.num - 1;
+                  const count = displayedEmployees.filter(emp => {
+                    if (!isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month)) return false;
+                    const s = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
+                    return isWorkingShift(s) || s === 'C';
+                  }).length;
+                  const isWeekend = d.isSunday || d.weekday === 'SÁB' || d.weekday === 'DOM';
+                  return (
+                    <td key={d.num} className={`py-1.5 px-1 text-center font-bold text-xs tabular-nums border-b border-zinc-200 dark:border-zinc-800 ${
+                      isWeekend ? 'bg-zinc-100/60 dark:bg-zinc-900/60' : ''
+                    }`}>
+                      <span className="text-zinc-900 dark:text-zinc-100 font-extrabold">{count}</span>
+                    </td>
+                  );
+                })}
+              </tr>
+
+              {/* Linhas das 6 Funções */}
+              {(['Caixa', 'Vendas', 'Pacote', 'Apoio', 'Fiscal', 'Estoque'] as const).map(role => {
+                const meta = ROLE_VISUAL_MAP[role];
+                return (
+                  <tr key={role} className="border-b border-zinc-100 dark:border-zinc-800/60 text-xs">
+                    <td className="sticky left-0 z-30 bg-white dark:bg-zinc-900 py-1 px-3 border-r border-zinc-200 dark:border-zinc-800 w-[230px] min-w-[230px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${meta.dotClass}`} />
+                        <span className="text-[11px] font-bold text-zinc-700 dark:text-zinc-200">{meta.label}</span>
+                      </div>
+                    </td>
+                    {filteredDays.map(d => {
+                      const dayIdx = d.num - 1;
+                      const count = displayedEmployees.filter(emp => {
+                        if (!isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month)) return false;
+                        const empRole = normalizeEmployeeRole(emp.cargo || emp.role);
+                        if (empRole !== role) return false;
+                        const s = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
+                        return isWorkingShift(s) || s === 'C';
+                      }).length;
+
+                      const isCriticalMissing = (role === 'Caixa' || role === 'Fiscal') && count === 0;
+                      const isWeekend = d.isSunday || d.weekday === 'SÁB' || d.weekday === 'DOM';
+
+                      return (
+                        <td 
+                          key={d.num} 
+                          className={`py-1 px-1 text-center text-[11px] tabular-nums border-b border-zinc-100 dark:border-zinc-800/60 ${
+                            isCriticalMissing 
+                              ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 font-bold' 
+                              : count > 0 
+                              ? 'text-zinc-700 dark:text-zinc-300 font-medium' 
+                              : 'text-zinc-300 dark:text-zinc-600'
+                          } ${isWeekend && !isCriticalMissing ? 'bg-zinc-100/40 dark:bg-zinc-900/40' : ''}`}
+                          title={`${count} colaborador(es) em ${meta.label} no dia ${d.num}${isCriticalMissing ? ' ⚠️ Alerta: Cobertura zero!' : ''}`}
+                        >
+                          {count}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tfoot>
           </table>
-        </div>
-
-        {/* Resumo de Cobertura Diária por Função Oficial */}
-        <div className="bg-slate-50/80 dark:bg-zinc-900/60 border-t border-slate-200 dark:border-zinc-800 px-3 py-2 flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-black uppercase text-slate-500 dark:text-zinc-400 tracking-wider flex items-center gap-1">
-              <Icon name="groups" className="text-sm text-orange-500" />
-              Equipe do Dia {selectedDayIdx + 1} por Função:
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-            {EMPLOYEE_ROLES.map(role => {
-              const meta = ROLE_METADATA_MAP[role];
-              const count = displayedEmployees.filter(emp => {
-                const s = emp.shifts[monthKey]?.[selectedDayIdx];
-                const isWorking = isWorkingShift(s) || s === 'C';
-                return isWorking && normalizeEmployeeRole(emp.cargo || emp.role) === role;
-              }).length;
-
-              return (
-                <div 
-                  key={role}
-                  className={`inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-lg border ${meta.badgeColor}`}
-                  title={`${count} colaboradores de ${meta.label} trabalhando no dia ${selectedDayIdx + 1}`}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'currentColor' }} />
-                  <span>{meta.label}:</span>
-                  <span className="font-black text-slate-900 dark:text-zinc-100">{count}</span>
-                </div>
-              );
-            })}
-          </div>
         </div>
       </div>
 
       {/* Recados Box in UI */}
       {showNotes && (
-        <div className="bg-white dark:bg-zinc-950 p-4 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm mt-2">
+        <div className="bg-white dark:bg-zinc-950 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm mt-2">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Icon name="campaign" className="text-orange-500" />
-              <h3 className="text-[12px] font-black uppercase text-slate-800 dark:text-zinc-100">Recados Importantes do Mês (Para Impressão)</h3>
+              <h3 className="text-[12px] font-black uppercase text-zinc-800 dark:text-zinc-100">Recados Importantes do Mês (Para Impressão)</h3>
             </div>
             <button 
               onClick={onCloseNotes}
-              className="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-zinc-900 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-all"
+              className="w-8 h-8 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-900 flex items-center justify-center text-zinc-400 hover:text-zinc-600 transition-all"
             >
               <Icon name="close" />
             </button>
@@ -1437,9 +1428,9 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             onChange={(e) => onUpdateMonthNotes(e.target.value)}
             placeholder="Digite aqui os recados que devem aparecer no rodapé do PDF... (aprox. 450 caracteres cabem no espaço)"
             maxLength={450}
-            className="w-full h-24 bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none outline-none text-slate-700 dark:text-zinc-300"
+            className="w-full h-24 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none outline-none text-zinc-700 dark:text-zinc-300"
           />
-          <div className="text-right mt-1 text-[10px] font-bold text-slate-400">
+          <div className="text-right mt-1 text-[11px] font-bold text-zinc-400">
             {monthNotes.length} / 450 caracteres
           </div>
         </div>
