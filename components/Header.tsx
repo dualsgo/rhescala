@@ -55,6 +55,8 @@ interface HeaderProps {
   selectedGroup?: string | null;
   onSelectedGroupChange?: (g: string | null) => void;
   onClearFilters?: () => void;
+  densityMode?: 'clean' | 'audit';
+  onToggleDensityMode?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -108,6 +110,8 @@ export const Header: React.FC<HeaderProps> = ({
   selectedGroup = null,
   onSelectedGroupChange,
   onClearFilters,
+  densityMode = 'clean',
+  onToggleDensityMode,
 }) => {
   const [showConfigMenu, setShowConfigMenu] = useState(false);
   const [showActionsModal, setShowActionsModal] = useState(false);
@@ -115,6 +119,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [showPublishMenu, setShowPublishMenu] = useState(false);
   const [internalMobileMenu, setInternalMobileMenu] = useState(false);
   const showMobileMenu = isMobileMenuOpen !== undefined ? isMobileMenuOpen : internalMobileMenu;
   const setShowMobileMenu = onToggleMobileMenu || setInternalMobileMenu;
@@ -179,12 +184,12 @@ export const Header: React.FC<HeaderProps> = ({
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all shadow-xs ${
             activeFiltersCount > 0
               ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-500 text-orange-600 dark:text-orange-400 font-black shadow-sm'
-              : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-200 hover:border-orange-400'
+              : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-200 hover:border-orange-400'
           }`}
           aria-label={`Filtros da Escala${activeFiltersCount > 0 ? ` (${activeFiltersCount} ativo${activeFiltersCount === 1 ? '' : 's'})` : ''}`}
           title="Filtros da Escala (Turnos, Presença, Contrato e Período)"
         >
-          <Icon name="tune" className={`text-sm shrink-0 ${activeFiltersCount > 0 ? 'text-orange-500' : 'text-slate-500 dark:text-slate-400'}`} />
+          <Icon name="tune" className={`text-sm shrink-0 ${activeFiltersCount > 0 ? 'text-orange-500' : 'text-slate-500 dark:text-zinc-400'}`} />
           <span>Filtros</span>
           {activeFiltersCount > 0 && (
             <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-black flex items-center justify-center shrink-0">
@@ -197,11 +202,11 @@ export const Header: React.FC<HeaderProps> = ({
         {showFilterMenu && (
           <div
             onClick={(e) => e.stopPropagation()}
-            className="absolute top-full right-0 mt-2 w-80 max-w-[90vw] bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-3.5 space-y-3 animate-in fade-in slide-in-from-top-1 duration-150 text-slate-800 dark:text-slate-100"
+            className="absolute top-full right-0 mt-2 w-80 max-w-[90vw] bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-3.5 space-y-3 animate-in fade-in slide-in-from-top-1 duration-150 text-slate-800 dark:text-zinc-100"
           >
             {/* Header do Menu Filtros */}
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-zinc-800">
-              <div className="flex items-center gap-1.5 font-black text-xs uppercase tracking-wider text-slate-800 dark:text-slate-100">
+              <div className="flex items-center gap-1.5 font-black text-xs uppercase tracking-wider text-slate-800 dark:text-zinc-100">
                 <Icon name="tune" className="text-sm text-orange-500" />
                 <span>Filtros da Grade</span>
               </div>
@@ -235,7 +240,7 @@ export const Header: React.FC<HeaderProps> = ({
                     className={`py-1 text-[11px] font-black uppercase rounded-lg transition-all text-center ${
                       filter === p.id
                         ? 'bg-orange-500 text-white shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                        : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
                     {p.label}
@@ -254,7 +259,7 @@ export const Header: React.FC<HeaderProps> = ({
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-bold transition-all ${
                     onlyWorkingToday
                       ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-xs'
-                      : 'bg-slate-50 dark:bg-zinc-800/60 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100'
+                      : 'bg-slate-50 dark:bg-zinc-800/60 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-100'
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -262,7 +267,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <span>Apenas quem trabalha no dia</span>
                   </div>
                   <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                    onlyWorkingToday ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-slate-300'
+                    onlyWorkingToday ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300'
                   }`}>
                     {onlyWorkingToday ? 'Ativo' : 'Todos'}
                   </span>
@@ -279,7 +284,7 @@ export const Header: React.FC<HeaderProps> = ({
                     type="button"
                     onClick={() => onSelectedGroupChange(null)}
                     className={`col-span-2 py-1 text-[11px] font-black uppercase rounded-lg transition-all ${
-                      !selectedGroup ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      !selectedGroup ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900'
                     }`}
                   >
                     Todos os Turnos
@@ -290,7 +295,7 @@ export const Header: React.FC<HeaderProps> = ({
                       key={group}
                       onClick={() => onSelectedGroupChange(group)}
                       className={`py-1 text-[11px] font-bold rounded-lg transition-all ${
-                        selectedGroup === group ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                        selectedGroup === group ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900'
                       }`}
                     >
                       {group.split('/')[0]}
@@ -317,7 +322,7 @@ export const Header: React.FC<HeaderProps> = ({
                       className={`py-1 text-[11px] font-black uppercase rounded-lg transition-all text-center ${
                         contractFilter === c.id
                           ? 'bg-orange-500 text-white shadow-sm'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                          : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-slate-200'
                       }`}
                     >
                       {c.label}
@@ -333,9 +338,9 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="bg-white dark:bg-black border-b border-slate-200 dark:border-zinc-800 sticky top-0 z-50 shadow-sm transition-colors h-14">
+    <header className="bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-50 shadow-sm transition-colors h-14">
       {/* Backdrop overlay to prevent clicking behind open dropdowns */}
-      {(showConfigMenu || showShareMenu || showProfileMenu || showFilterMenu || showActionsMenu) && (
+      {(showConfigMenu || showShareMenu || showProfileMenu || showFilterMenu || showActionsMenu || showPublishMenu) && (
         <div 
           className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[0.5px]" 
           onClick={(e) => {
@@ -345,126 +350,35 @@ export const Header: React.FC<HeaderProps> = ({
             setShowProfileMenu(false);
             setShowFilterMenu(false);
             setShowActionsMenu(false);
+            setShowPublishMenu(false);
           }}
         />
       )}
 
-      <div className="flex items-center justify-between px-3 sm:px-4 h-full gap-2 sm:gap-4 max-w-full relative z-50">
+      <div className="flex items-center justify-between px-2 sm:px-4 h-full gap-2 sm:gap-3 max-w-full relative z-50">
         
-        {/* Left: Brand on Mobile, Nav on Large Screens */}
-        <div className="flex items-center gap-2 lg:gap-4">
-          <div className="flex items-center gap-2 lg:hidden">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-sm font-black text-xs">
+        {/* ============================================================== */}
+        {/* BLOCO 1 (ESQUERDA): CONTEXTO & STATUS                          */}
+        {/* Logo/Loja + Seletor Mês/Ano (40px) + Sincronização + Status    */}
+        {/* ============================================================== */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Logo / Loja */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-sm font-black text-xs shrink-0">
               RH
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-black tracking-tight text-slate-900 dark:text-slate-100 leading-none">Rhescala</span>
+              <span className="text-xs font-black tracking-tight text-zinc-900 dark:text-zinc-100 leading-none">Rhescala</span>
               <span className="text-[9px] font-bold text-orange-600 dark:text-orange-400 tracking-wider uppercase leading-none mt-0.5">
                 {isReadOnly ? 'Colaborador' : 'Gestão'}
               </span>
             </div>
           </div>
 
-          {!isReadOnly && (
-            <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 bg-slate-100 dark:bg-zinc-900 p-1 rounded-xl border border-slate-200/50 dark:border-zinc-800">
-              {navItems.map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => onViewChange(item.id as any)}
-                  aria-label={item.label}
-                  title={`Visualizar ${item.label}`}
-                  className={`relative px-2 xl:px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 xl:gap-1.5 whitespace-nowrap shrink-0 ${
-                    currentView === item.id 
-                      ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600 dark:text-orange-400' 
-                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
-                >
-                  <Icon name={item.icon} className="text-sm shrink-0" />
-                  {item.id === 'requests' ? (
-                    <>
-                      <span className="hidden xl:inline">{item.label}</span>
-                      <span className="inline xl:hidden">Pedidos</span>
-                    </>
-                  ) : (
-                    <span>{item.label}</span>
-                  )}
-                  {item.id === 'requests' && pendingRequestsCount > 0 && (
-                    <span 
-                      className="flex h-4 w-4 ml-0.5 shrink-0" 
-                      aria-label={`${pendingRequestsCount} solicitações pendentes`}
-                    >
-                      <span className="animate-ping absolute inline-flex h-4 w-4 rounded-full bg-rose-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 items-center justify-center text-[8px] font-black text-white shadow-sm">
-                        {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
-                      </span>
-                    </span>
-                  )}
-                </button>
-              ))}
-
-              {/* Operações & Loja Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowConfigMenu(!showConfigMenu)}
-                  onBlur={() => setTimeout(() => setShowConfigMenu(false), 200)}
-                  aria-label="Menu Operações & Loja"
-                  title="Menu Operações & Loja (Rotinas, Equipe, Jornada, Feriados e Dados)"
-                  className={`px-2 xl:px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 xl:gap-1.5 whitespace-nowrap shrink-0 ${
-                    ['team','jornada','data','feriados','worked-holidays','cleaning','patrol','sections'].includes(currentView) 
-                      ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600 dark:text-orange-400' 
-                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
-                >
-                  <Icon name="tune" className="text-sm shrink-0" />
-                  <span className="hidden 2xl:inline">Operações & Loja</span>
-                  <span className="inline 2xl:hidden">Operações</span>
-                  <Icon name={showConfigMenu ? 'expand_less' : 'expand_more'} className="text-xs shrink-0" />
-                </button>
-
-                {showConfigMenu && (
-                  <div 
-                    onClick={(e) => e.stopPropagation()}
-                    className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 animate-in fade-in slide-in-from-top-1 duration-150 space-y-2"
-                  >
-                    {operationsSections.map((section, sIdx) => (
-                      <div key={section.title} className={sIdx > 0 ? 'pt-1.5 border-t border-slate-100 dark:border-zinc-800' : ''}>
-                        <div className="px-2.5 py-1 text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">
-                          {section.title}
-                        </div>
-                        <div className="space-y-0.5">
-                          {section.items.map(item => (
-                            <button
-                              key={item.id}
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                onViewChange(item.id as any);
-                                setShowConfigMenu(false);
-                              }}
-                              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all text-left ${
-                                currentView === item.id 
-                                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 font-bold' 
-                                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800'
-                              }`}
-                            >
-                              <Icon name={item.icon} className="text-base text-slate-400 shrink-0" />
-                              <span className="truncate">{item.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </nav>
-          )}
-        </div>
-
-        {/* Center: Month Selector, Status & Audit Badges */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Month Selector Box */}
-          <div className="flex items-center bg-slate-100 dark:bg-zinc-900 rounded-xl p-0.5 sm:p-1 border border-slate-200/60 dark:border-zinc-800 shadow-inner">
+          {/* Seletor de Mês/Ano (com botões < e > de min-h-[40px] min-w-[40px]) */}
+          <div className="flex items-center bg-zinc-100 dark:bg-zinc-900 rounded-xl p-0.5 border border-zinc-200/80 dark:border-zinc-800 shadow-inner">
             <button
+              type="button"
               onClick={() => {
                 let newMonth = currentMY.month - 1;
                 let newYear = currentMY.year;
@@ -474,23 +388,24 @@ export const Header: React.FC<HeaderProps> = ({
                 }
                 onMonthChange({ month: newMonth, year: newYear });
               }}
-              className="p-1 sm:p-1.5 rounded-lg hover:bg-white dark:hover:bg-zinc-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-all"
+              className="min-h-[40px] min-w-[40px] p-1 sm:p-1.5 rounded-lg hover:bg-white dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-all flex items-center justify-center active:scale-95"
               title="Mês Anterior"
               aria-label="Mês Anterior"
             >
-              <Icon name="chevron_left" className="text-sm sm:text-base" />
+              <Icon name="chevron_left" className="text-base" />
             </button>
 
-            <div className="px-2 sm:px-3 text-center select-none">
-              <span className="block text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
+            <div className="px-1.5 sm:px-2.5 text-center select-none min-w-[64px] sm:min-w-[76px]">
+              <span className="block text-xs sm:text-sm font-black text-zinc-800 dark:text-zinc-100 uppercase tracking-tight">
                 {currentMonthName}
               </span>
-              <span className="block text-[8px] sm:text-[9px] font-bold text-slate-400 tracking-widest">
+              <span className="block text-[8px] sm:text-[9px] font-bold text-zinc-400 tracking-widest">
                 {currentMY.year}
               </span>
             </div>
 
             <button
+              type="button"
               onClick={() => {
                 if (!canGoNext) return;
                 let newMonth = currentMY.month + 1;
@@ -502,21 +417,34 @@ export const Header: React.FC<HeaderProps> = ({
                 onMonthChange({ month: newMonth, year: newYear });
               }}
               disabled={!canGoNext}
-              className={`p-1 sm:p-1.5 rounded-lg text-slate-500 transition-all ${
-                canGoNext ? 'hover:bg-white dark:hover:bg-zinc-800 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer' : 'opacity-30 cursor-not-allowed'
+              className={`min-h-[40px] min-w-[40px] p-1 sm:p-1.5 rounded-lg text-zinc-500 transition-all flex items-center justify-center ${
+                canGoNext ? 'hover:bg-white dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-200 cursor-pointer active:scale-95' : 'opacity-30 cursor-not-allowed'
               }`}
               title={canGoNext ? 'Próximo Mês' : 'Avanço restrito pelo perfil'}
               aria-label={canGoNext ? 'Próximo Mês' : 'Avanço restrito pelo perfil'}
             >
-              <Icon name="chevron_right" className="text-sm sm:text-base" />
+              <Icon name="chevron_right" className="text-base" />
             </button>
           </div>
 
-          {/* Scale Status: Official vs Draft (Desktop & Tablet) */}
+          {/* Indicador Discreto de Status de Sincronização na Nuvem */}
+          <div 
+            className="hidden sm:flex items-center px-2 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/50 dark:border-zinc-700/50 shrink-0"
+            title={`Sincronização Nuvem: ${syncStatus.state}`}
+          >
+            <div className={`w-2 h-2 rounded-full ${
+              syncStatus.state === 'idle' || syncStatus.state === 'synced' ? 'bg-emerald-500' :
+              syncStatus.state === 'syncing' ? 'bg-amber-500 animate-pulse' :
+              syncStatus.state === 'error' ? 'bg-rose-500' : 'bg-zinc-400'
+            }`} />
+          </div>
+
+          {/* Status Oficial vs Rascunho */}
           <button
+            type="button"
             onClick={isReadOnly ? undefined : onToggleValidation}
             aria-label={`Status da Escala: ${isValidated ? 'Oficializada' : 'Modo Rascunho'}`}
-            className={`hidden sm:flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border font-bold text-[10px] uppercase tracking-wider transition-all shadow-sm ${
+            className={`hidden md:flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border font-bold text-[10px] uppercase tracking-wider transition-all shadow-sm shrink-0 ${
               isValidated
                 ? 'bg-emerald-500 text-white border-emerald-600 shadow-emerald-500/20'
                 : 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border-amber-300 dark:border-amber-800'
@@ -526,45 +454,120 @@ export const Header: React.FC<HeaderProps> = ({
             <Icon name={isValidated ? 'verified' : 'pending_actions'} className="text-xs sm:text-sm shrink-0" />
             <span>{isValidated ? 'Oficial' : 'Rascunho'}</span>
           </button>
-
-          {/* Audit Diff Badge (Desktop) */}
-          {!isReadOnly && isValidated && onOpenDiffModal && diffCount > 0 && (
-            <button
-              onClick={onOpenDiffModal}
-              aria-label={`${diffCount} divergência${diffCount === 1 ? '' : 's'} pós-oficialização`}
-              className="hidden lg:flex items-center gap-1 px-2 xl:px-2.5 py-1.5 rounded-xl border bg-amber-500 border-amber-600 text-white shadow-sm font-bold text-[10px] uppercase tracking-wider hover:scale-105 transition-all"
-              title={`Auditoria: ${diffCount} divergência${diffCount === 1 ? '' : 's'} em relação à versão oficial impressa`}
-            >
-              <Icon name="difference" className="text-xs shrink-0" />
-              <span className="font-black">{diffCount}</span>
-              <span className="hidden xl:inline">{diffCount === 1 ? 'Alt.' : 'Alts.'}</span>
-            </button>
-          )}
-
-          {/* Inconsistency / Violation Badge (Desktop) */}
-          {!isReadOnly && onOpenInconsistencyModal && inconsistencyCount > 0 && (
-            <button
-              onClick={onOpenInconsistencyModal}
-              aria-label={`${inconsistencyCount} alerta${inconsistencyCount === 1 ? '' : 's'} de inconsistência CLT`}
-              className="hidden lg:flex items-center gap-1 px-2 xl:px-2.5 py-1.5 rounded-xl border bg-rose-500 border-rose-600 text-white shadow-sm font-black text-[10px] uppercase tracking-wider animate-pulse hover:scale-105 transition-all"
-              title={`Central de Alertas: ${inconsistencyCount} inconformidade${inconsistencyCount === 1 ? '' : 's'} com regras da CLT ou escalas`}
-            >
-              <Icon name="warning" className="text-xs shrink-0" />
-              <span className="font-black">{inconsistencyCount}</span>
-              <span className="hidden xl:inline">{inconsistencyCount === 1 ? 'Alerta' : 'Alertas'}</span>
-            </button>
-          )}
         </div>
 
-        {/* Right: Desktop Actions (>= lg) or Minimal Viewer Actions */}
+        {/* ============================================================== */}
+        {/* BLOCO 2 (CENTRAL): SEGMENTED CONTROL DE VISTAS PRIMÁRIAS        */}
+        {/* Grade • Análise • Solicitações/Pedidos • Operações & Loja       */}
+        {/* ============================================================== */}
+        {!isReadOnly && (
+          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 bg-zinc-100 dark:bg-zinc-900 p-1 rounded-xl border border-zinc-200/50 dark:border-zinc-800 shrink-0">
+            {navItems.map(item => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onViewChange(item.id as any)}
+                aria-label={item.label}
+                title={`Visualizar ${item.label}`}
+                className={`relative px-2 xl:px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 xl:gap-1.5 whitespace-nowrap shrink-0 ${
+                  currentView === item.id 
+                    ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600 dark:text-orange-400 font-black' 
+                    : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
+                }`}
+              >
+                <Icon name={item.icon} className="text-sm shrink-0" />
+                {item.id === 'requests' ? (
+                  <>
+                    <span className="hidden xl:inline">{item.label}</span>
+                    <span className="inline xl:hidden">Pedidos</span>
+                  </>
+                ) : (
+                  <span>{item.label}</span>
+                )}
+                {item.id === 'requests' && pendingRequestsCount > 0 && (
+                  <span 
+                    className="flex h-4 w-4 ml-0.5 shrink-0" 
+                    aria-label={`${pendingRequestsCount} solicitações pendentes`}
+                  >
+                    <span className="animate-ping absolute inline-flex h-4 w-4 rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 items-center justify-center text-[8px] font-black text-white shadow-sm">
+                      {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
+                    </span>
+                  </span>
+                )}
+              </button>
+            ))}
+
+            {/* Operações & Loja Dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowConfigMenu(!showConfigMenu)}
+                onBlur={() => setTimeout(() => setShowConfigMenu(false), 200)}
+                aria-label="Menu Operações & Loja"
+                title="Menu Operações & Loja (Rotinas, Equipe, Jornada, Feriados e Dados)"
+                className={`px-2 xl:px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 xl:gap-1.5 whitespace-nowrap shrink-0 ${
+                  ['team','jornada','data','feriados','worked-holidays','cleaning','patrol','sections'].includes(currentView) 
+                    ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600 dark:text-orange-400 font-black' 
+                    : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
+                }`}
+              >
+                <Icon name="tune" className="text-sm shrink-0" />
+                <span className="hidden 2xl:inline">Operações & Loja</span>
+                <span className="inline 2xl:hidden">Operações</span>
+                <Icon name={showConfigMenu ? 'expand_less' : 'expand_more'} className="text-xs shrink-0" />
+              </button>
+
+              {showConfigMenu && (
+                <div 
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 animate-in fade-in slide-in-from-top-1 duration-150 space-y-2"
+                >
+                  {operationsSections.map((section, sIdx) => (
+                    <div key={section.title} className={sIdx > 0 ? 'pt-1.5 border-t border-zinc-100 dark:border-zinc-800' : ''}>
+                      <div className="px-2.5 py-1 text-[11px] font-black uppercase text-zinc-400 dark:text-zinc-500 tracking-wider">
+                        {section.title}
+                      </div>
+                      <div className="space-y-0.5">
+                        {section.items.map(item => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              onViewChange(item.id as any);
+                              setShowConfigMenu(false);
+                            }}
+                            className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all text-left ${
+                              currentView === item.id 
+                                ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 font-bold' 
+                                : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                            }`}
+                          >
+                            <Icon name={item.icon} className="text-base text-zinc-400 shrink-0" />
+                            <span className="truncate">{item.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </nav>
+        )}
+
+        {/* ============================================================== */}
+        {/* BLOCO 3 (DIREITA): AÇÕES AGRUPADAS & FERRAMENTAS               */}
+        {/* ============================================================== */}
         {isReadOnly ? (
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Indicador de Nuvem / Sync */}
-            <div className="flex items-center px-2 py-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800/80 border border-slate-200/50 dark:border-zinc-700/50">
+            <div className="flex items-center px-2 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/50 dark:border-zinc-700/50">
               <div className={`w-2 h-2 rounded-full ${
                 syncStatus.state === 'idle' || syncStatus.state === 'synced' ? 'bg-emerald-500' :
                 syncStatus.state === 'syncing' ? 'bg-amber-500 animate-pulse' :
-                syncStatus.state === 'error' ? 'bg-rose-500' : 'bg-slate-400'
+                syncStatus.state === 'error' ? 'bg-rose-500' : 'bg-zinc-400'
               }`} title={`Sincronização Nuvem: ${syncStatus.state}`} />
             </div>
 
@@ -576,7 +579,7 @@ export const Header: React.FC<HeaderProps> = ({
               type="button"
               onClick={onSwitchRole}
               aria-label="Entrar com acesso gerencial de Administrador"
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 hover:bg-orange-50 hover:border-orange-300 dark:hover:bg-orange-950/40 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all shadow-xs"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 hover:bg-orange-50 hover:border-orange-300 dark:hover:bg-orange-950/40 text-zinc-700 dark:text-zinc-200 text-xs font-bold transition-all shadow-xs"
               title="Entrar com a senha de Administrador/Gerente da loja"
             >
               <Icon name="admin_panel_settings" className="text-sm text-orange-500 shrink-0" />
@@ -597,73 +600,121 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
         ) : (
-          <div className="hidden lg:flex items-center gap-1.5 sm:gap-2">
-            {/* Menu de Filtros (Gestão) */}
-            {renderFilterDropdown()}
-          
-          {/* Botão de Salvar Manual com Atalho Ctrl+S */}
-          {!isReadOnly && onManualSave && (
-            <button
-              onClick={onManualSave}
-              disabled={isSaving}
-              aria-label={isSaving ? 'Salvando escala...' : isJustSaved ? 'Escala salva com sucesso' : 'Salvar escala agora (Atalho Ctrl+S)'}
-              className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border font-black text-[10px] sm:text-xs uppercase tracking-wider transition-all shadow-sm ${
-                isJustSaved
-                  ? 'bg-emerald-600 border-emerald-700 text-white shadow-emerald-500/30 scale-[1.02]'
-                  : isSaving
-                  ? 'bg-indigo-50 dark:bg-indigo-950/50 border-indigo-300 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 animate-pulse'
-                  : 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 hover:scale-[1.02] active:scale-95 shadow-emerald-500/20'
-              }`}
-              title="Salvar escala agora para garantir que as alterações sejam preservadas (Atalho: Ctrl+S)"
-            >
-              <Icon 
-                name={isJustSaved ? 'check_circle' : isSaving ? 'sync' : 'save'} 
-                className={`text-xs sm:text-sm shrink-0 ${isSaving ? 'animate-spin' : ''}`} 
-              />
-              <span className="inline">
-                {isJustSaved ? 'Salvo!' : isSaving ? 'Salvando...' : 'Salvar'}
-              </span>
-              <span className="hidden min-[1440px]:inline text-[8px] sm:text-[9px] opacity-80 bg-black/25 px-1 py-0.5 rounded font-mono">
-                Ctrl+S
-              </span>
-            </button>
-          )}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* 1. Toggle Rápido: Visão Limpa / Auditoria */}
+            {onToggleDensityMode && (
+              <button
+                type="button"
+                onClick={onToggleDensityMode}
+                className={`hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-xs ${
+                  densityMode === 'audit'
+                    ? 'bg-blue-600 border-blue-600 text-white shadow-blue-500/20'
+                    : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                }`}
+                title={densityMode === 'audit' ? 'Alternar para Visão Limpa (ocultar contadores secundários)' : 'Alternar para Visão de Auditoria (exibir todos os badges e horários)'}
+              >
+                <Icon name={densityMode === 'audit' ? 'troubleshoot' : 'visibility'} className="text-xs" />
+                <span>{densityMode === 'audit' ? 'Auditoria' : 'Visão Limpa'}</span>
+              </button>
+            )}
 
-          {/* Menu Unificado de Ações & Ferramentas (Gestão) */}
-          {!isReadOnly && (
-            <div className="relative">
+            {/* 2. Badges de Auditoria & Alertas */}
+            {isValidated && onOpenDiffModal && diffCount > 0 && (
+              <button
+                type="button"
+                onClick={onOpenDiffModal}
+                aria-label={`${diffCount} divergência${diffCount === 1 ? '' : 's'} pós-oficialização`}
+                className="hidden lg:flex items-center gap-1 px-2 xl:px-2.5 py-1.5 rounded-xl border bg-amber-500 border-amber-600 text-white shadow-sm font-bold text-[10px] uppercase tracking-wider hover:scale-105 transition-all"
+                title={`Auditoria: ${diffCount} divergência${diffCount === 1 ? '' : 's'} em relação à versão oficial impressa`}
+              >
+                <Icon name="difference" className="text-xs shrink-0" />
+                <span className="font-black">{diffCount}</span>
+                <span className="hidden xl:inline">{diffCount === 1 ? 'Alt.' : 'Alts.'}</span>
+              </button>
+            )}
+
+            {onOpenInconsistencyModal && inconsistencyCount > 0 && (
+              <button
+                type="button"
+                onClick={onOpenInconsistencyModal}
+                aria-label={`${inconsistencyCount} alerta${inconsistencyCount === 1 ? '' : 's'} de inconsistência CLT`}
+                className="hidden lg:flex items-center gap-1 px-2 xl:px-2.5 py-1.5 rounded-xl border bg-rose-500 border-rose-600 text-white shadow-sm font-black text-[10px] uppercase tracking-wider animate-pulse hover:scale-105 transition-all"
+                title={`Central de Alertas: ${inconsistencyCount} inconformidade${inconsistencyCount === 1 ? '' : 's'} com regras da CLT ou escalas`}
+              >
+                <Icon name="warning" className="text-xs shrink-0" />
+                <span className="font-black">{inconsistencyCount}</span>
+                <span className="hidden xl:inline">{inconsistencyCount === 1 ? 'Alerta' : 'Alertas'}</span>
+              </button>
+            )}
+
+            {/* 3. Salvar Manual com Atalho Ctrl+S */}
+            {onManualSave && (
+              <button
+                type="button"
+                onClick={onManualSave}
+                disabled={isSaving}
+                aria-label={isSaving ? 'Salvando escala...' : isJustSaved ? 'Escala salva com sucesso' : 'Salvar escala agora (Atalho Ctrl+S)'}
+                className={`hidden sm:flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border font-black text-[10px] sm:text-xs uppercase tracking-wider transition-all shadow-sm ${
+                  isJustSaved
+                    ? 'bg-emerald-600 border-emerald-700 text-white shadow-emerald-500/30 scale-[1.02]'
+                    : isSaving
+                    ? 'bg-indigo-50 dark:bg-indigo-950/50 border-indigo-300 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 animate-pulse'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 hover:scale-[1.02] active:scale-95 shadow-emerald-500/20'
+                }`}
+                title="Salvar escala agora para garantir que as alterações sejam preservadas (Atalho: Ctrl+S)"
+              >
+                <Icon 
+                  name={isJustSaved ? 'check_circle' : isSaving ? 'sync' : 'save'} 
+                  className={`text-xs sm:text-sm shrink-0 ${isSaving ? 'animate-spin' : ''}`} 
+                />
+                <span className="inline">
+                  {isJustSaved ? 'Salvo!' : isSaving ? 'Salvando...' : 'Salvar'}
+                </span>
+                <span className="hidden min-[1440px]:inline text-[8px] sm:text-[9px] opacity-80 bg-black/25 px-1 py-0.5 rounded font-mono">
+                  Ctrl+S
+                </span>
+              </button>
+            )}
+
+            {/* 4. Menu de Filtros */}
+            <div className="hidden lg:block">
+              {renderFilterDropdown()}
+            </div>
+
+            {/* 5. Dropdown Menu "Ferramentas de Escala" */}
+            <div className="relative hidden lg:block">
               <button
                 type="button"
                 onClick={() => {
                   setShowActionsMenu(!showActionsMenu);
+                  setShowPublishMenu(false);
                   setShowConfigMenu(false);
                   setShowFilterMenu(false);
                   setShowProfileMenu(false);
-                  setShowShareMenu(false);
                 }}
                 aria-label="Menu de Ações, Ferramentas e Exportação da Escala"
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all shadow-xs ${
                   showActionsMenu
-                    ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-200 hover:border-slate-300'
+                    ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm'
+                    : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200 hover:border-zinc-300'
                 }`}
-                title="Ações, Ferramentas e Exportação da Escala"
+                title="Ferramentas de Escala (Planejamento, Validação e Ajustes)"
               >
-                <Icon name="more_vert" className="text-sm text-slate-500 dark:text-slate-400 shrink-0" />
-                <span>Ações</span>
+                <Icon name="handyman" className="text-sm text-zinc-500 dark:text-zinc-400 shrink-0" />
+                <span>Ferramentas</span>
                 <Icon name={showActionsMenu ? 'expand_less' : 'expand_more'} className="text-xs opacity-70 shrink-0" />
               </button>
 
               {showActionsMenu && (
                 <div 
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 flex flex-col gap-1.5 animate-in fade-in slide-in-from-top-1 duration-150 text-slate-800 dark:text-slate-100"
+                  className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 flex flex-col gap-1.5 animate-in fade-in slide-in-from-top-1 duration-150 text-zinc-800 dark:text-zinc-100"
                 >
-                  {/* Seção 1: Edição & Automações */}
+                  {/* Seção 1: Planejamento */}
                   <div>
-                    <div className="px-2.5 py-1 text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest flex items-center gap-1">
-                      <Icon name="auto_fix_high" className="text-xs text-orange-500" />
-                      <span>Edição & Inteligência</span>
+                    <div className="px-2.5 py-1 text-[11px] font-black uppercase text-zinc-400 dark:text-zinc-500 tracking-wider flex items-center gap-1">
+                      <Icon name="event_note" className="text-xs text-orange-500" />
+                      <span>Planejamento</span>
                     </div>
 
                     <div className="space-y-1 mt-1">
@@ -677,22 +728,22 @@ export const Header: React.FC<HeaderProps> = ({
                           className={`w-full flex items-center justify-between p-2 rounded-xl text-xs font-bold transition-all text-left ${
                             isEditable
                               ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300'
-                              : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                              : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
                           }`}
                         >
                           <div className="flex items-center gap-2.5">
-                            <div className={`p-1.5 rounded-lg ${isEditable ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-slate-300'}`}>
+                            <div className={`p-1.5 rounded-lg ${isEditable ? 'bg-indigo-600 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300'}`}>
                               <Icon name={isEditable ? 'lock_open' : 'edit'} className="text-sm" />
                             </div>
                             <div className="flex flex-col">
                               <span className="font-black uppercase text-[11px]">Modo Edição</span>
-                              <span className="text-[9px] text-slate-400">
+                              <span className="text-[10px] text-zinc-400">
                                 {isEditable ? 'Edição liberada nas células' : 'Bloqueado contra cliques acidentais'}
                               </span>
                             </div>
                           </div>
-                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                            isEditable ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-slate-300'
+                          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                            isEditable ? 'bg-indigo-600 text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
                           }`}>
                             {isEditable ? 'Ativo' : 'Bloq.'}
                           </span>
@@ -707,112 +758,80 @@ export const Header: React.FC<HeaderProps> = ({
                             setShowActionsModal(true);
                             setShowActionsMenu(false);
                           }}
-                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-orange-50 dark:hover:bg-orange-950/40 transition-all text-left"
+                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-orange-50 dark:hover:bg-orange-950/40 transition-all text-left"
                         >
                           <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-900/50 text-orange-600">
                             <Icon name="psychology" className="text-sm" />
                           </div>
                           <div className="flex flex-col">
                             <span className="font-black uppercase text-[11px]">Opções & Automações</span>
-                            <span className="text-[9px] text-slate-400">folgas, domingos e posições táticas</span>
+                            <span className="text-[10px] text-zinc-400">Sorteio de domingos, folgas e funções</span>
                           </div>
                         </button>
                       )}
                     </div>
                   </div>
 
-                  <div className="h-px bg-slate-100 dark:bg-zinc-800" />
+                  <div className="h-px bg-zinc-100 dark:bg-zinc-800" />
 
-                  {/* Seção 2: Comunicação & WhatsApp */}
+                  {/* Seção 2: Validação & Auditoria */}
                   <div>
-                    <div className="px-2.5 py-1 text-[9px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-widest flex items-center gap-1">
-                      <Icon name="chat" className="text-xs" />
-                      <span>WhatsApp da Loja</span>
+                    <div className="px-2.5 py-1 text-[11px] font-black uppercase text-rose-600 dark:text-rose-400 tracking-wider flex items-center gap-1">
+                      <Icon name="verified_user" className="text-xs" />
+                      <span>Validação & Conformidade</span>
                     </div>
 
                     <div className="space-y-1 mt-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onShareWhatsApp();
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-all text-left"
-                      >
-                        <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600">
-                          <Icon name="send" className="text-sm" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-black uppercase text-[11px]">Escala do Dia</span>
-                          <span className="text-[9px] text-slate-400">resumo diário com almoços para a equipe</span>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onShareApoioWhatsApp();
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all text-left"
-                      >
-                        <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/50 text-blue-600">
-                          <Icon name="assignment" className="text-sm" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-black uppercase text-[11px]">Apoio Operacional</span>
-                          <span className="text-[9px] text-slate-400">postos P1 a P4 e cobertura</span>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="h-px bg-slate-100 dark:bg-zinc-800" />
-
-                  {/* Seção 3: Documentos & Relatórios */}
-                  <div>
-                    <div className="px-2.5 py-1 text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest flex items-center gap-1">
-                      <Icon name="description" className="text-xs" />
-                      <span>Documentos & Relatórios</span>
-                    </div>
-
-                    <div className="space-y-1 mt-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onPrint();
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all text-left"
-                      >
-                        <div className="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-900/50 text-rose-600">
-                          <Icon name="picture_as_pdf" className="text-sm" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-black uppercase text-[11px]">Imprimir / PDF</span>
-                          <span className="text-[9px] text-slate-400">layout oficial A4 paisagem</span>
-                        </div>
-                      </button>
-
-                      {onExportCsv && (
+                      {onOpenInconsistencyModal && (
                         <button
                           type="button"
                           onClick={() => {
-                            onExportCsv();
+                            onOpenInconsistencyModal();
                             setShowActionsMenu(false);
                           }}
-                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-all text-left group"
+                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all text-left"
                         >
-                          <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 group-hover:scale-105 transition-transform">
-                            <Icon name="table_view" className="text-sm" />
+                          <div className="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-900/50 text-rose-600">
+                            <Icon name="gavel" className="text-sm" />
                           </div>
                           <div className="flex flex-col">
-                            <span className="font-black uppercase text-[11px] text-emerald-700 dark:text-emerald-300">Salvar Escala (CSV)</span>
-                            <span className="text-[9px] text-slate-400">planilha Excel / Google Sheets</span>
+                            <span className="font-black uppercase text-[11px]">Auditoria CLT Completa</span>
+                            <span className="text-[10px] text-zinc-400">6x1, domingos e desfalques de equipe</span>
                           </div>
                         </button>
                       )}
 
+                      {isValidated && onOpenDiffModal && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onOpenDiffModal();
+                            setShowActionsMenu(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-all text-left"
+                        >
+                          <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600">
+                            <Icon name="difference" className="text-sm" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-black uppercase text-[11px]">Divergências Pós-Oficial</span>
+                            <span className="text-[10px] text-zinc-400">Comparar com snapshot congelado</span>
+                          </div>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-zinc-100 dark:bg-zinc-800" />
+
+                  {/* Seção 3: Configurações & Mural */}
+                  <div>
+                    <div className="px-2.5 py-1 text-[11px] font-black uppercase text-zinc-400 dark:text-zinc-500 tracking-wider flex items-center gap-1">
+                      <Icon name="settings" className="text-xs" />
+                      <span>Configurações & Anotações</span>
+                    </div>
+
+                    <div className="space-y-1 mt-1">
                       <button
                         type="button"
                         onClick={() => {
@@ -820,7 +839,7 @@ export const Header: React.FC<HeaderProps> = ({
                           setShowActionsMenu(false);
                         }}
                         className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold transition-all text-left ${
-                          showNotes ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                          showNotes ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600' : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
                         }`}
                       >
                         <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600">
@@ -828,135 +847,271 @@ export const Header: React.FC<HeaderProps> = ({
                         </div>
                         <div className="flex flex-col">
                           <span className="font-black uppercase text-[11px]">{showNotes ? 'Ocultar Recados' : 'Mural de Recados'}</span>
-                          <span className="text-[9px] text-slate-400">anotações no rodapé</span>
+                          <span className="text-[10px] text-zinc-400">Anotações no rodapé da impressão</span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onViewChange('jornada');
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
+                      >
+                        <div className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600">
+                          <Icon name="schedule" className="text-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-black uppercase text-[11px]">Parâmetros de Jornada</span>
+                          <span className="text-[10px] text-zinc-400">Faixas de turno e regras de almoço</span>
                         </div>
                       </button>
                     </div>
                   </div>
-
                 </div>
               )}
             </div>
-          )}
 
-          {/* 3. Indicador de Nuvem / Sync */}
-          <div className="flex items-center px-2 py-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800/80 border border-slate-200/50 dark:border-zinc-700/50">
-            <div className={`w-2 h-2 rounded-full ${
-              syncStatus.state === 'idle' || syncStatus.state === 'synced' ? 'bg-emerald-500' :
-              syncStatus.state === 'syncing' ? 'bg-amber-500 animate-pulse' :
-              syncStatus.state === 'error' ? 'bg-rose-500' : 'bg-slate-400'
-            }`} title={`Sincronização Nuvem: ${syncStatus.state}`} />
-          </div>
-
-          {/* 4. Menu do Usuário & Perfil */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowProfileMenu(!showProfileMenu)}
-              onBlur={() => setTimeout(() => setShowProfileMenu(false), 200)}
-              aria-label="Menu de Conta e Sessão"
-              className="flex items-center gap-1.5 p-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-all border border-slate-200 dark:border-zinc-700"
-              title="Conta e Sessão"
-            >
-              <div className="w-6 h-6 rounded-lg bg-orange-500 text-white flex items-center justify-center font-black text-[10px] uppercase shadow-sm shrink-0">
-                RH
-              </div>
-              <Icon name="expand_more" className="text-xs text-slate-400 shrink-0" />
-            </button>
-
-            {showProfileMenu && (
-              <div 
-                onClick={(e) => e.stopPropagation()}
-                className="absolute top-full right-0 mt-2 w-52 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-1.5 animate-in fade-in slide-in-from-top-1 duration-200"
+            {/* 6. CTA Primário Destacado em Laranja: "Publicar / Exportar" */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPublishMenu(!showPublishMenu);
+                  setShowActionsMenu(false);
+                  setShowConfigMenu(false);
+                  setShowFilterMenu(false);
+                  setShowProfileMenu(false);
+                }}
+                aria-label="Publicar ou Exportar Escala"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase tracking-wider shadow-md shadow-orange-500/25 active:scale-95 transition-all"
+                title="Publicar e Exportar Escala (Oficializar, WhatsApp, Imprimir)"
               >
-                <div className="px-3 py-2 border-b border-slate-100 dark:border-zinc-800 mb-1">
-                  <span className="block text-xs font-black uppercase text-slate-800 dark:text-slate-200">Gestão Loja</span>
-                  <span className="block text-[10px] font-bold text-slate-400">{isReadOnly ? 'Visualizador' : 'Administrador'}</span>
+                <Icon name="rocket_launch" className="text-sm" />
+                <span className="hidden sm:inline">Publicar / Exportar</span>
+                <span className="inline sm:hidden">Publicar</span>
+                <Icon name={showPublishMenu ? 'expand_less' : 'expand_more'} className="text-xs" />
+              </button>
+
+              {showPublishMenu && (
+                <div 
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 flex flex-col gap-1 animate-in fade-in slide-in-from-top-1 duration-150 text-zinc-800 dark:text-zinc-100"
+                >
+                  {/* Oficializar Escala */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onToggleValidation();
+                      setShowPublishMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-left transition-all"
+                  >
+                    <div className={`p-1.5 rounded-lg ${isValidated ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600'}`}>
+                      <Icon name="verified" className="text-sm" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-black uppercase text-[11px] text-zinc-900 dark:text-zinc-100">
+                        {isValidated ? 'Voltar para Rascunho' : 'Oficializar Escala'}
+                      </span>
+                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Congela a versão oficial para auditoria</span>
+                    </div>
+                  </button>
+
+                  <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1" />
+
+                  {/* WhatsApp Escala do Dia */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onShareWhatsApp();
+                      setShowPublishMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-left transition-all"
+                  >
+                    <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600">
+                      <Icon name="chat" className="text-sm" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-black uppercase text-[11px] text-zinc-900 dark:text-zinc-100">WhatsApp: Escala do Dia</span>
+                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Resumo de turnos e almoços</span>
+                    </div>
+                  </button>
+
+                  {/* Apoio Operacional */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onShareApoioWhatsApp();
+                      setShowPublishMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold hover:bg-blue-50 dark:hover:bg-blue-950/40 text-left transition-all"
+                  >
+                    <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/50 text-blue-600">
+                      <Icon name="assignment" className="text-sm" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-black uppercase text-[11px] text-zinc-900 dark:text-zinc-100">WhatsApp: Apoio / Funções</span>
+                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Postos de caixa, reposição e salão</span>
+                    </div>
+                  </button>
+
+                  <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1" />
+
+                  {/* Imprimir / PDF */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onPrint();
+                      setShowPublishMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left transition-all"
+                  >
+                    <div className="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-900/50 text-rose-600">
+                      <Icon name="print" className="text-sm" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-black uppercase text-[11px] text-zinc-900 dark:text-zinc-100">Imprimir / Salvar PDF</span>
+                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Layout oficial A4 paisagem</span>
+                    </div>
+                  </button>
+
+                  {/* Salvar Escala (CSV) */}
+                  {onExportCsv && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onExportCsv();
+                        setShowPublishMenu(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-left transition-all"
+                    >
+                      <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600">
+                        <Icon name="table_view" className="text-sm" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-black uppercase text-[11px] text-emerald-700 dark:text-emerald-300">Exportar Planilha (CSV)</span>
+                        <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Compatível com Excel e Sheets</span>
+                      </div>
+                    </button>
+                  )}
                 </div>
+              )}
+            </div>
 
-                <button
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    onShowHelp();
-                    setShowProfileMenu(false);
-                  }}
-                  className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all text-left"
-                >
-                  <Icon name="badge" className="text-base text-orange-500" />
-                  <span>Guia de Funções (Correlatas)</span>
-                </button>
-
-                <button
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    onSwitchRole();
-                    setShowProfileMenu(false);
-                  }}
-                  className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all text-left"
-                >
-                  <Icon name="swap_horiz" className="text-base text-slate-400" />
-                  <span>{isReadOnly ? 'Entrar como Admin' : 'Modo Visualizador'}</span>
-                </button>
-
-                <div className="h-px bg-slate-100 dark:bg-zinc-800 my-1" />
-
-                <button
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    onLogout();
-                    setShowProfileMenu(false);
-                  }}
-                  className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-black uppercase text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all text-left"
-                >
-                  <Icon name="logout" className="text-base text-rose-500" />
-                  <span>Sair da Conta</span>
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-        )}
-
-        {/* Right: Mobile Alerts & Menu Trigger (< lg) - Apenas Gestão */}
-        {!isReadOnly && (
-          <div className="flex items-center gap-1.5 lg:hidden">
-            {isValidated && onOpenDiffModal && diffCount > 0 && (
+            {/* 7. Menu do Usuário & Perfil */}
+            <div className="relative">
               <button
-                onClick={onOpenDiffModal}
-                className="flex items-center gap-1 px-2 py-1 rounded-xl bg-amber-500 text-white font-black text-[10px] shadow-sm"
-                title="Divergências pós-oficialização"
+                type="button"
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                onBlur={() => setTimeout(() => setShowProfileMenu(false), 200)}
+                aria-label="Menu de Conta e Sessão"
+                className="flex items-center gap-1.5 p-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all border border-zinc-200 dark:border-zinc-700"
+                title="Conta e Sessão"
               >
-                <Icon name="difference" className="text-xs" />
-                <span>{diffCount}</span>
+                <div className="w-6 h-6 rounded-lg bg-orange-500 text-white flex items-center justify-center font-black text-[10px] uppercase shadow-sm shrink-0">
+                  RH
+                </div>
+                <Icon name="expand_more" className="text-xs text-zinc-400 shrink-0" />
               </button>
-            )}
 
-            {onOpenInconsistencyModal && inconsistencyCount > 0 && (
+              {showProfileMenu && (
+                <div 
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute top-full right-0 mt-2 w-52 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-1.5 animate-in fade-in slide-in-from-top-1 duration-200"
+                >
+                  <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800 mb-1">
+                    <span className="block text-xs font-black uppercase text-zinc-800 dark:text-zinc-200">Gestão Loja</span>
+                    <span className="block text-[10px] font-bold text-zinc-400">{isReadOnly ? 'Visualizador' : 'Administrador'}</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      onShowHelp();
+                      setShowProfileMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
+                  >
+                    <Icon name="badge" className="text-base text-orange-500" />
+                    <span>Guia de Funções (Correlatas)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      onSwitchRole();
+                      setShowProfileMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
+                  >
+                    <Icon name="swap_horiz" className="text-base text-zinc-400" />
+                    <span>{isReadOnly ? 'Entrar como Admin' : 'Modo Visualizador'}</span>
+                  </button>
+
+                  <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1" />
+
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      onLogout();
+                      setShowProfileMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-black uppercase text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all text-left"
+                  >
+                    <Icon name="logout" className="text-base text-rose-500" />
+                    <span>Sair da Conta</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 8. Mobile Alerts Trigger (< lg) */}
+            <div className="flex items-center gap-1.5 lg:hidden">
+              {isValidated && onOpenDiffModal && diffCount > 0 && (
+                <button
+                  type="button"
+                  onClick={onOpenDiffModal}
+                  className="flex items-center gap-1 px-2 py-1 rounded-xl bg-amber-500 text-white font-black text-[10px] shadow-sm"
+                  title="Divergências pós-oficialização"
+                >
+                  <Icon name="difference" className="text-xs" />
+                  <span>{diffCount}</span>
+                </button>
+              )}
+
+              {onOpenInconsistencyModal && inconsistencyCount > 0 && (
+                <button
+                  type="button"
+                  onClick={onOpenInconsistencyModal}
+                  className="flex items-center gap-1 px-2 py-1 rounded-xl bg-rose-500 text-white font-black text-[10px] shadow-sm animate-pulse"
+                  title="Alertas CLT"
+                >
+                  <Icon name="warning" className="text-xs" />
+                  <span>{inconsistencyCount}</span>
+                </button>
+              )}
+
               <button
-                onClick={onOpenInconsistencyModal}
-                className="flex items-center gap-1 px-2 py-1 rounded-xl bg-rose-500 text-white font-black text-[10px] shadow-sm animate-pulse"
-                title="Alertas CLT"
+                type="button"
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+                className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
+                title="Menu da Loja"
               >
-                <Icon name="warning" className="text-xs" />
-                <span>{inconsistencyCount}</span>
+                <Icon name={showMobileMenu ? 'close' : 'menu'} className="text-lg" />
               </button>
-            )}
-
-            <button
-              onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
-              title="Menu da Loja"
-            >
-              <Icon name={showMobileMenu ? 'close' : 'menu'} className="text-lg" />
-            </button>
+            </div>
           </div>
         )}
-
       </div>
 
       {/* Mobile Navigation Drawer Overlay - Apenas Gestão */}
       {!isReadOnly && showMobileMenu && (
-        <div className="lg:hidden fixed inset-0 z-[60] bg-slate-950/60 backdrop-blur-sm animate-fade-in flex flex-col justify-end">
+        <div className="lg:hidden fixed inset-0 z-[60] bg-zinc-950/60 backdrop-blur-sm animate-fade-in flex flex-col justify-end">
           <div className="bg-white dark:bg-zinc-900 rounded-t-3xl p-5 border-t border-slate-200 dark:border-zinc-800 max-h-[85vh] overflow-y-auto space-y-4 custom-scrollbar">
             {/* Handle */}
             <div className="w-12 h-1.5 bg-slate-300 dark:bg-zinc-700 rounded-full mx-auto -mt-1 mb-2" />
@@ -964,7 +1119,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
               <div>
-                <span className="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight block">
+                <span className="text-base font-black text-slate-900 dark:text-zinc-100 uppercase tracking-tight block">
                   {isReadOnly ? 'Painel do Colaborador' : 'Menu Operacional'}
                 </span>
                 <span className="text-[10px] font-bold text-slate-400">
@@ -997,7 +1152,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onViewChange('requests');
                     setShowMobileMenu(false);
                   }}
-                  className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-slate-200 flex items-center gap-3 text-xs font-black uppercase"
+                  className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 flex items-center gap-3 text-xs font-black uppercase"
                 >
                   <Icon name="assignment" className="text-lg text-slate-400" />
                   <span>Minhas Solicitações de Folga</span>
@@ -1008,7 +1163,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onViewChange('feriados');
                     setShowMobileMenu(false);
                   }}
-                  className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-slate-200 flex items-center gap-3 text-xs font-black uppercase"
+                  className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 flex items-center gap-3 text-xs font-black uppercase"
                 >
                   <Icon name="event_busy" className="text-lg text-slate-400" />
                   <span>Feriados da Loja</span>
@@ -1019,7 +1174,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onShowHelp();
                     setShowMobileMenu(false);
                   }}
-                  className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-slate-200 flex items-center gap-3 text-xs font-black uppercase"
+                  className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 flex items-center gap-3 text-xs font-black uppercase"
                 >
                   <Icon name="info" className="text-lg text-slate-400" />
                   <span>Manual & Regras</span>
@@ -1030,7 +1185,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onSwitchRole();
                     setShowMobileMenu(false);
                   }}
-                  className="w-full p-3.5 rounded-2xl bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-slate-200 flex items-center gap-3 text-xs font-black uppercase shadow-sm mt-3"
+                  className="w-full p-3.5 rounded-2xl bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 flex items-center gap-3 text-xs font-black uppercase shadow-sm mt-3"
                 >
                   <div className="p-1.5 rounded-xl bg-orange-100 dark:bg-orange-950 text-orange-600">
                     <Icon name="admin_panel_settings" className="text-base" />
@@ -1066,7 +1221,7 @@ export const Header: React.FC<HeaderProps> = ({
                   )}
 
                   <div className="flex items-center justify-between pt-1">
-                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Status da Escala:</span>
+                    <span className="text-xs font-bold text-slate-600 dark:text-zinc-300">Status da Escala:</span>
                     <button
                       type="button"
                       onClick={onToggleValidation}
@@ -1107,7 +1262,7 @@ export const Header: React.FC<HeaderProps> = ({
                       className={`p-3 rounded-xl border flex items-center gap-2 text-xs font-bold uppercase transition-all ${
                         isEditable 
                           ? 'bg-indigo-600 text-white border-indigo-700' 
-                          : 'bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-zinc-700'
+                          : 'bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border-slate-200 dark:border-zinc-700'
                       }`}
                     >
                       <Icon name={isEditable ? 'lock_open' : 'edit'} className="text-base shrink-0" />
@@ -1133,7 +1288,7 @@ export const Header: React.FC<HeaderProps> = ({
                           className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold text-left transition-all ${
                             currentView === item.id
                               ? 'bg-orange-500 text-white border-orange-600 shadow-sm'
-                              : 'bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-zinc-700/80'
+                              : 'bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border-slate-200/80 dark:border-zinc-700/80'
                           }`}
                         >
                           <Icon name={item.icon} className={`text-sm shrink-0 ${currentView === item.id ? 'text-white' : 'text-slate-400'}`} />
@@ -1151,7 +1306,7 @@ export const Header: React.FC<HeaderProps> = ({
                       onSwitchRole();
                       setShowMobileMenu(false);
                     }}
-                    className="w-full p-2.5 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-2"
+                    className="w-full p-2.5 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-bold text-xs flex items-center justify-center gap-2"
                   >
                     <Icon name="visibility" className="text-base text-slate-400" />
                     <span>Alternar para Modo Colaborador</span>

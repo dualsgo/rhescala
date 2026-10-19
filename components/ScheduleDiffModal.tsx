@@ -154,21 +154,21 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
     if (val === 'AT') return <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 rounded font-black text-[10px]">Atestado (AT)</span>;
     if (val === 'DO') return <span className="px-2 py-0.5 bg-pink-100 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 rounded font-black text-[10px]">Aniversário (DO)</span>;
     if (val === 'T') return <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded font-black text-[10px]">Trabalho (T)</span>;
-    return <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded font-bold text-[10px]">{val}</span>;
+    return <span className="px-2 py-0.5 bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 rounded font-bold text-[10px]">{val}</span>;
   };
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 rounded-[2rem] max-w-4xl w-full shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white dark:bg-zinc-900 rounded-[2rem] max-w-4xl w-full shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
+        <div className="p-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-800/30">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center">
               <Icon name="history_toggle_off" className="text-2xl" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">
+                <h3 className="text-base font-black text-slate-900 dark:text-zinc-100 uppercase tracking-tight">
                   Auditoria de Alterações
                 </h3>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase">
@@ -176,20 +176,20 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
                 </span>
               </div>
               <p className="text-xs font-bold text-slate-400">
-                Oficializada em: <span className="text-slate-600 dark:text-slate-300">{validatedDateStr}</span> • {monthName}
+                Oficializada em: <span className="text-slate-600 dark:text-zinc-300">{validatedDateStr}</span> • {monthName}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400"
+            className="p-2 hover:bg-slate-200 dark:hover:bg-zinc-800 rounded-full transition-colors text-slate-400"
           >
             <Icon name="close" />
           </button>
         </div>
 
         {/* Tab Switcher: Histórico Justificado vs Divergências do Snapshot */}
-        <div className="flex border-b border-slate-100 dark:border-slate-800 px-6 bg-slate-50/50 dark:bg-slate-850">
+        <div className="flex border-b border-slate-100 dark:border-zinc-800 px-6 bg-slate-50/50 dark:bg-zinc-850">
           <button
             onClick={() => setActiveTab('logs')}
             className={`px-4 py-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${
@@ -226,8 +226,8 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
         </div>
 
         {/* Stats Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-6 border-b border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+          <div className="p-3 bg-slate-50 dark:bg-zinc-800/50 rounded-2xl border border-slate-100 dark:border-zinc-800 flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 flex items-center justify-center font-black">
               {activeTab === 'logs' ? stats.logsTotal : stats.total}
             </div>
@@ -235,7 +235,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
               <p className="text-[10px] font-black uppercase text-slate-400">
                 {activeTab === 'logs' ? 'Logs de Alteração' : 'Total Divergências'}
               </p>
-              <p className="text-xs font-black text-slate-800 dark:text-slate-200">
+              <p className="text-xs font-black text-slate-800 dark:text-zinc-200">
                 {activeTab === 'logs' 
                   ? (stats.logsTotal === 0 ? 'Sem registros' : `${stats.logsTotal} no mês`)
                   : (stats.total === 0 ? 'Sem divergências' : `${stats.total} no mês`)}
@@ -243,44 +243,44 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
             </div>
           </div>
 
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
+          <div className="p-3 bg-slate-50 dark:bg-zinc-800/50 rounded-2xl border border-slate-100 dark:border-zinc-800 flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-900/40 text-rose-600 flex items-center justify-center font-black">
               {stats.shiftCount}
             </div>
             <div>
               <p className="text-[10px] font-black uppercase text-slate-400">Folgas / Turnos</p>
-              <p className="text-xs font-black text-slate-800 dark:text-slate-200">{stats.shiftCount} trocas</p>
+              <p className="text-xs font-black text-slate-800 dark:text-zinc-200">{stats.shiftCount} trocas</p>
             </div>
           </div>
 
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
+          <div className="p-3 bg-slate-50 dark:bg-zinc-800/50 rounded-2xl border border-slate-100 dark:border-zinc-800 flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 flex items-center justify-center font-black">
               {stats.hourCount}
             </div>
             <div>
               <p className="text-[10px] font-black uppercase text-slate-400">Horários</p>
-              <p className="text-xs font-black text-slate-800 dark:text-slate-200">{stats.hourCount} alterações</p>
+              <p className="text-xs font-black text-slate-800 dark:text-zinc-200">{stats.hourCount} alterações</p>
             </div>
           </div>
 
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
+          <div className="p-3 bg-slate-50 dark:bg-zinc-800/50 rounded-2xl border border-slate-100 dark:border-zinc-800 flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center font-black">
               {stats.posCount}
             </div>
             <div>
               <p className="text-[10px] font-black uppercase text-slate-400">Funções</p>
-              <p className="text-xs font-black text-slate-800 dark:text-slate-200">{stats.posCount} ajustes</p>
+              <p className="text-xs font-black text-slate-800 dark:text-zinc-200">{stats.posCount} ajustes</p>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="p-4 bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+        <div className="p-4 bg-slate-50/70 dark:bg-zinc-800/40 border-b border-slate-100 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 flex-wrap">
             <select
               value={selectedEmpId}
               onChange={(e) => setSelectedEmpId(e.target.value)}
-              className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500"
+              className="bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="all">
                 Todos os Colaboradores ({activeTab === 'logs' ? filteredLogs.length : filteredDiffs.length})
@@ -290,7 +290,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
               ))}
             </select>
 
-            <div className="flex items-center bg-slate-200/70 dark:bg-slate-800 p-1 rounded-xl gap-1 text-[11px] font-black">
+            <div className="flex items-center bg-slate-200/70 dark:bg-zinc-800 p-1 rounded-xl gap-1 text-[11px] font-black">
               <button
                 onClick={() => setTypeFilter('all')}
                 className={`px-2.5 py-1 rounded-lg transition-all ${typeFilter === 'all' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500'}`}
@@ -336,7 +336,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
                 <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-4 text-3xl">
                   <Icon name="verified" />
                 </div>
-                <h4 className="text-base font-black text-slate-800 dark:text-slate-200">
+                <h4 className="text-base font-black text-slate-800 dark:text-zinc-200">
                   {monthAuditLogs.length === 0 ? 'Nenhuma alteração com justificativa registrada' : 'Nenhuma alteração com os filtros selecionados'}
                 </h4>
                 <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
@@ -356,9 +356,9 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
                   return (
                     <div
                       key={log.id}
-                      className="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-3 hover:border-orange-400/50 transition-all shadow-sm"
+                      className="bg-white dark:bg-zinc-800/60 p-4 rounded-2xl border border-slate-200 dark:border-zinc-800 flex flex-col gap-3 hover:border-orange-400/50 transition-all shadow-sm"
                     >
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-2.5">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-zinc-800/80 pb-2.5">
                         <div className="flex items-center gap-2 flex-wrap">
                           <button
                             onClick={() => {
@@ -372,15 +372,15 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
                           >
                             📅 Dia {log.dateStr}
                           </button>
-                          <span className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase">
+                          <span className="text-xs font-black text-slate-900 dark:text-zinc-100 uppercase">
                             {log.empName}
                           </span>
-                          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                          <span className="text-xs text-slate-500 dark:text-zinc-400 font-medium">
                             • {log.humanDescription}
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-zinc-500 font-medium whitespace-nowrap">
                           <Icon name="schedule" className="text-xs" />
                           <span>{dateFormatted} por {log.authorName || 'Gestor'}</span>
                         </div>
@@ -402,13 +402,13 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
                           </span>
                         </div>
 
-                        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 flex items-start gap-2 max-w-md">
+                        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-100 dark:border-zinc-800 flex items-start gap-2 max-w-md">
                           <Icon name="comment" className="text-xs text-orange-500 shrink-0 mt-0.5" />
                           <div className="text-xs">
                             <span className="font-black text-slate-400 uppercase text-[9px] mr-1">
                               Motivo:
                             </span>
-                            <span className="font-semibold text-slate-800 dark:text-slate-200">
+                            <span className="font-semibold text-slate-800 dark:text-zinc-200">
                               "{log.justification}"
                             </span>
                           </div>
@@ -428,7 +428,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
                 <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-4 text-3xl">
                   <Icon name="verified" />
                 </div>
-                <h4 className="text-base font-black text-slate-800 dark:text-slate-200">
+                <h4 className="text-base font-black text-slate-800 dark:text-zinc-200">
                   {diffs.length === 0 ? 'Nenhuma alteração pós-oficialização' : 'Nenhuma alteração com os filtros selecionados'}
                 </h4>
                 <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
@@ -442,7 +442,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
                 {filteredDiffs.map((diff) => (
                   <div
                     key={diff.id}
-                    className="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-indigo-400/50 transition-all shadow-sm"
+                    className="bg-white dark:bg-zinc-800/60 p-4 rounded-2xl border border-slate-200 dark:border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-indigo-400/50 transition-all shadow-sm"
                   >
                     <div className="flex items-center gap-3">
                       <button
@@ -452,16 +452,16 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
                             onClose();
                           }
                         }}
-                        className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-xl text-center transition-colors group"
+                        className="px-2.5 py-1.5 bg-slate-100 dark:bg-zinc-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-xl text-center transition-colors group"
                         title="Ir para este dia na grade"
                       >
-                        <span className="block text-xs font-black text-slate-800 dark:text-slate-100 group-hover:text-indigo-600">{diff.dateStr}</span>
+                        <span className="block text-xs font-black text-slate-800 dark:text-zinc-100 group-hover:text-indigo-600">{diff.dateStr}</span>
                         <span className="block text-[9px] font-bold text-slate-400 uppercase">Dia {diff.dayIdx + 1}</span>
                       </button>
 
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-black text-slate-900 dark:text-slate-100">{diff.empName}</span>
+                          <span className="text-xs font-black text-slate-900 dark:text-zinc-100">{diff.empName}</span>
                           <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${
                             diff.type === 'shift' ? 'bg-rose-100 dark:bg-rose-950/50 text-rose-600' :
                             diff.type === 'hour' ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-600' :
@@ -479,11 +479,11 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
                     </div>
 
                     {/* Comparativo: Oficial vs Atual */}
-                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/60 p-2 rounded-xl border border-slate-100 dark:border-slate-800 self-stretch sm:self-auto justify-between sm:justify-end">
+                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-zinc-900/60 p-2 rounded-xl border border-slate-100 dark:border-zinc-800 self-stretch sm:self-auto justify-between sm:justify-end">
                       <div className="text-right">
                         <span className="block text-[9px] font-black text-slate-400 uppercase">Oficial</span>
                         {diff.type === 'shift' ? getShiftBadge(diff.officialVal) : (
-                          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 line-through">{diff.officialVal}</span>
+                          <span className="text-xs font-bold text-slate-500 dark:text-zinc-400 line-through">{diff.officialVal}</span>
                         )}
                       </div>
 
@@ -504,7 +504,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex items-center justify-between">
+        <div className="p-4 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/30 flex items-center justify-between">
           <p className="text-[11px] text-slate-400 font-medium">
             💡 Dica: Clique no dia para navegar diretamente para ele na grade da escala.
           </p>

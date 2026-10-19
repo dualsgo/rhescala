@@ -43,7 +43,7 @@ export const SyncBlockingOverlay: React.FC<SyncBlockingOverlayProps> = ({ syncSt
   if (!showOverlay) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-slate-950/75 glass-overlay flex items-center justify-center p-4 select-none animate-fade-in transition-all duration-300">
+    <div className="fixed inset-0 z-[9999] bg-zinc-950/75 glass-overlay flex items-center justify-center p-4 select-none animate-fade-in transition-all duration-300">
       <div className="glass-card bg-white/95 dark:bg-zinc-900/95 border border-slate-200/80 dark:border-zinc-800 shadow-2xl rounded-3xl p-6 sm:p-8 max-w-md w-full text-center relative overflow-hidden animate-scale-in">
         
         {/* Shimmer top accent bar */}
@@ -111,7 +111,7 @@ export const SyncBlockingOverlay: React.FC<SyncBlockingOverlayProps> = ({ syncSt
         </div>
 
         {/* Informative Description */}
-        <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
+        <p className="text-sm text-slate-600 dark:text-zinc-400 mb-6 leading-relaxed">
           {successPhase ? (
             'Seus dados foram atualizados no servidor com sucesso. A tela está pronta para uso.'
           ) : isError ? (

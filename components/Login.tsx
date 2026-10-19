@@ -38,19 +38,19 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 dark:bg-black flex items-center justify-center p-4 font-sans relative">
+    <div className="min-h-screen bg-zinc-950 dark:bg-zinc-950 flex items-center justify-center p-4 font-sans relative">
       <div className="max-w-md w-full bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 p-8 sm:p-10 animate-fade-in relative z-10">
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 bg-orange-500 rounded-2xl shadow-lg shadow-orange-500/20 flex items-center justify-center mb-4">
              <Icon name="event_note" className="text-3xl text-white" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">RH Escala</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-1">Sistema de Gestão de Escalas</p>
+          <p className="text-slate-500 dark:text-zinc-400 font-bold text-[10px] uppercase tracking-widest mt-1">Sistema de Gestão de Escalas</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">Senha de Acesso</label>
+            <label className="block text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-2 ml-1">Senha de Acesso</label>
             <div className="relative">
               <input
                 type="password"
@@ -70,7 +70,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black py-4 rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-70"
+            className="w-full bg-slate-900 dark:bg-white text-white dark:text-zinc-900 font-black py-4 rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-70"
           >
             {isLoading ? (
               <>
@@ -86,13 +86,13 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <div className="flex justify-center gap-8 w-full">
               <div className="flex flex-col items-center">
                 <span className="text-[9px] font-black text-slate-400 uppercase mb-1">Versão</span>
-                <span className="text-[11px] font-bold text-slate-900 dark:text-slate-100">2.1.0</span>
+                <span className="text-[11px] font-bold text-slate-900 dark:text-zinc-100">2.1.0</span>
               </div>
               <div className="flex flex-col items-center">
                 <span className="text-[9px] font-black text-slate-400 uppercase mb-1">Segurança</span>
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                  <span className="text-[11px] font-bold text-slate-900 dark:text-slate-100">Nuvem</span>
+                  <span className="text-[11px] font-bold text-slate-900 dark:text-zinc-100">Nuvem</span>
                 </div>
               </div>
             </div>

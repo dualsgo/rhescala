@@ -419,7 +419,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/70 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-zinc-950/70 backdrop-blur-md animate-fade-in">
       <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-6xl w-full h-[94vh] max-h-[900px] shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col">
         
         {/* Header Bar */}
@@ -430,7 +430,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight uppercase">
+                <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-zinc-100 tracking-tight uppercase">
                   Modulador da Escala Diária
                 </h3>
                 <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">

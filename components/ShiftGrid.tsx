@@ -56,6 +56,8 @@ interface ShiftGridProps {
   onToggleOnlyWorkingToday?: () => void;
   selectedGroup?: string | null;
   onSelectedGroupChange?: (g: string | null) => void;
+  densityMode?: 'clean' | 'audit';
+  onToggleDensityMode?: () => void;
 }
 
 export const ShiftGrid: React.FC<ShiftGridProps> = ({
@@ -97,6 +99,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onToggleOnlyWorkingToday,
   selectedGroup: propSelectedGroup,
   onSelectedGroupChange,
+  densityMode: propDensityMode,
+  onToggleDensityMode,
 }) => {
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
   const [hasScrolled, setHasScrolled] = useState(false);
@@ -122,19 +126,31 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
   const [isCompactMode, setIsCompactMode] = useState(false);
   const [focusSelectedDay, setFocusSelectedDay] = useState(false);
-  const [cycleBadgesMode, setCycleBadgesMode] = useState<'all' | 'alerts' | 'off'>(() => {
+
+  // Modo de Densidade Visual (clean = Visão Limpa [Padrão], audit = Visão de Auditoria Completa)
+  const [internalDensityMode, setInternalDensityMode] = useState<'clean' | 'audit'>(() => {
     try {
       const saved = localStorage.getItem('rhescala_cycle_badges_mode');
-      if (saved === 'all' || saved === 'alerts' || saved === 'off') return saved;
+      if (saved === 'audit' || saved === 'all') return 'audit';
     } catch {}
-    return 'alerts';
+    return 'clean';
   });
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('rhescala_cycle_badges_mode', cycleBadgesMode);
-    } catch {}
-  }, [cycleBadgesMode]);
+  const densityMode = propDensityMode !== undefined ? propDensityMode : internalDensityMode;
+  const handleToggleDensityMode = onToggleDensityMode || (() => {
+    setInternalDensityMode(prev => {
+      const next = prev === 'clean' ? 'audit' : 'clean';
+      try {
+        localStorage.setItem('rhescala_cycle_badges_mode', next);
+      } catch {}
+      return next;
+    });
+  });
+
+  const legacyCycleMode: 'all' | 'alerts' | 'off' = densityMode === 'audit' ? 'all' : 'alerts';
+  const setLegacyCycleMode = () => {
+    handleToggleDensityMode();
+  };
 
   // Mobile Redesign States
   const [mobileViewMode, setMobileViewMode] = useState<'daily' | 'table'>('daily');
@@ -312,7 +328,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all ${
                 mobileViewMode === 'daily'
                   ? 'bg-orange-500 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               <Icon name="view_agenda" className="text-sm" />
@@ -324,7 +340,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all ${
                 mobileViewMode === 'table'
                   ? 'bg-orange-500 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               <Icon name="grid_on" className="text-sm" />
@@ -362,7 +378,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
                 activeFiltersCount > 0
                   ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-500 text-orange-600 dark:text-orange-400 font-black shadow-sm'
-                  : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-slate-300'
+                  : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300'
               }`}
             >
               <Icon name="tune" className="text-sm text-orange-500" />
@@ -401,10 +417,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     ? 'bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 font-bold'
                     : isHol
                     ? 'bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-400 font-bold'
-                    : 'bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 text-slate-700 dark:text-slate-300 font-bold'
+                    : 'bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-bold'
                 }`}
               >
-                <span className={`text-[8px] uppercase tracking-tighter ${isSelected ? 'text-white/90' : 'text-slate-400 dark:text-slate-500'}`}>
+                <span className={`text-[8px] uppercase tracking-tighter ${isSelected ? 'text-white/90' : 'text-slate-400 dark:text-zinc-500'}`}>
                   {d.weekday}
                 </span>
                 <span className="text-sm font-black leading-tight">
@@ -483,7 +499,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
                 focusSelectedDay 
                   ? 'bg-amber-500 border-amber-500 text-white shadow-amber-500/20' 
-                  : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
+                  : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
               }`}
               title={focusSelectedDay ? 'Desativar modo foco' : 'Destacar coluna do dia selecionado e suavizar as demais'}
             >
@@ -499,7 +515,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
                   hidePastDays 
                     ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-500/20' 
-                    : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
+                    : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
                 }`}
                 title={hidePastDays ? 'Exibir o mês inteiro' : 'Ocultar dias passados para focar no restante do mês'}
               >
@@ -514,27 +530,23 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           {/* Lado Direito: Modos de Exibição & Controles */}
           <div className="flex flex-wrap items-center gap-2">
 
-            {/* Alternar Badges de Ciclo (6x1 e Domingos) */}
+            {/* Alternar Modo: Visão Limpa vs Auditoria */}
             <button
               type="button"
-              onClick={() => setCycleBadgesMode(prev => prev === 'all' ? 'alerts' : prev === 'alerts' ? 'off' : 'all')}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
-                cycleBadgesMode === 'all'
+              onClick={handleToggleDensityMode}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
+                densityMode === 'audit'
                   ? 'bg-blue-600 border-blue-600 text-white shadow-blue-500/20'
-                  : cycleBadgesMode === 'alerts'
-                  ? 'bg-amber-500 border-amber-500 text-white shadow-amber-500/20'
-                  : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
+                  : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
               }`}
               title={
-                cycleBadgesMode === 'all'
-                  ? 'Ciclos Ativos: Exibindo 1/6..6/6 e 1D..3D✓ em todos os dias. Clique para ver apenas alertas.'
-                  : cycleBadgesMode === 'alerts'
-                  ? 'Ciclos Alertas: Exibindo 6/6, 7º, 2D, 3D e 3D✓. Clique para ocultar.'
-                  : 'Ciclos Ocultos: Apenas violações mínimas. Clique para ativar todos os indicadores.'
+                densityMode === 'audit'
+                  ? 'Modo Auditoria: Exibindo todos os indicadores e ciclos completos. Clique para voltar à Visão Limpa.'
+                  : 'Visão Limpa: Exibindo apenas alertas críticos de violação (6/6, 7º, 2D✓, 3D, diffs). Clique para ver Auditoria completa.'
               }
             >
-              <Icon name="tag" className="text-xs" />
-              <span>{cycleBadgesMode === 'all' ? 'Ciclos: Todos' : cycleBadgesMode === 'alerts' ? 'Ciclos: Alertas' : 'Ciclos: Mínimo'}</span>
+              <Icon name={densityMode === 'audit' ? 'troubleshoot' : 'visibility'} className="text-xs" />
+              <span>{densityMode === 'audit' ? 'Auditoria' : 'Visão Limpa'}</span>
             </button>
 
             {/* Modo Denso */}
@@ -544,7 +556,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
                 isCompactMode 
                   ? 'bg-purple-600 border-purple-600 text-white shadow-purple-500/20' 
-                  : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
+                  : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
               }`}
               title="Alternar entre espaçamento normal e denso para exibir mais colaboradores"
             >
@@ -559,7 +571,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
                 showLegend 
                   ? 'bg-orange-500 border-orange-500 text-white shadow-orange-500/20' 
-                  : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
+                  : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
               }`}
               title="Exibir ou ocultar legenda de turnos e funções correlatas"
             >
@@ -581,7 +593,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
                 onlyWorkingToday 
                   ? 'bg-emerald-600 border-emerald-600 text-white shadow-emerald-500/20' 
-                  : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-zinc-100 hover:bg-slate-50'
+                  : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 hover:bg-slate-50'
               }`}
               title="Filtrar apenas colaboradores escalados para trabalhar no dia selecionado"
             >
@@ -595,7 +607,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 type="button"
                 onClick={() => setSelectedGroup(null)}
                 className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                  !selectedGroup ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                  !selectedGroup ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-slate-200'
                 }`}
               >
                 Todos os Turnos
@@ -606,7 +618,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   key={group}
                   onClick={() => setSelectedGroup(group)}
                   className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                    selectedGroup === group ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                    selectedGroup === group ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-slate-200'
                   }`}
                 >
                   {group.split('/')[0]}
@@ -628,7 +640,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
                     contractFilter === f.id 
                       ? 'bg-orange-500 text-white shadow-sm' 
-                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                      : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
                   }`}
                 >
                   {f.label}
@@ -651,7 +663,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
                   filter === f.id 
                     ? 'bg-orange-500 text-white shadow-sm' 
-                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
                 }`}
               >
                 <span className="hidden sm:inline">{f.label}</span>
@@ -709,7 +721,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       </div>
 
       {/* Grid Container */}
-      <div className={`bg-white dark:bg-black rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden flex-1 flex-col relative ${
+      <div className={`bg-white dark:bg-zinc-950 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl overflow-hidden flex-1 flex-col relative ${
         mobileViewMode === 'daily' ? 'hidden lg:flex' : 'flex'
       }`}>
         <div 
@@ -762,7 +774,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                       <div className="flex flex-col items-center gap-1 relative">
                         <span className="text-[9px] font-black text-slate-400 uppercase">{d.weekday}</span>
                         <div className="flex items-center gap-1">
-                          <span className={`text-sm font-black ${d.isSunday ? 'text-rose-600' : 'text-slate-900 dark:text-slate-100'}`}>{d.num}</span>
+                          <span className={`text-sm font-black ${d.isSunday ? 'text-rose-600' : 'text-slate-900 dark:text-zinc-100'}`}>{d.num}</span>
                           
                         </div>
                         <div className="mt-1 text-[8px] font-bold text-slate-400 flex items-center gap-1">
@@ -822,13 +834,13 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     <React.Fragment key={groupName}>
                       {/* Group Header Row */}
                       <tr className="bg-slate-100/90 dark:bg-zinc-900/90 backdrop-blur-md sticky z-20">
-                        <td className="sticky left-0 py-1.5 px-2 font-black text-[9px] sm:text-[10px] uppercase text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-zinc-800 bg-inherit shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]">
+                        <td className="sticky left-0 py-1.5 px-2 font-black text-[9px] sm:text-[10px] uppercase text-slate-600 dark:text-zinc-400 border-r border-slate-200 dark:border-zinc-800 bg-inherit shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]">
                           {groupName}
                         </td>
                         {!isReadOnly && isEditable && (
                           <>
-                            <td className="hidden sm:table-cell sticky left-[180px] border-r border-slate-200 dark:border-slate-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]" />
-                            <td className="hidden md:table-cell sticky left-[305px] border-r border-slate-200 dark:border-slate-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]" />
+                            <td className="hidden sm:table-cell sticky left-[180px] border-r border-slate-200 dark:border-zinc-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]" />
+                            <td className="hidden md:table-cell sticky left-[305px] border-r border-slate-200 dark:border-zinc-700 bg-inherit shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(51,65,85,1)]" />
                           </>
                         )}
                         <td colSpan={filteredDays.length} className="bg-inherit h-7" />
@@ -839,20 +851,20 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                         return (
                           <tr 
                             key={emp.id} 
-                            className="transition-colors group/row hover:bg-slate-50/50 dark:hover:bg-slate-800/50"
+                            className="transition-colors group/row hover:bg-slate-50/50 dark:hover:bg-zinc-800/50"
                           >
-                             <td className="sticky left-0 z-[10] border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-1.5 sm:py-1.5 sm:px-2 min-w-[110px] sm:min-w-[135px] w-[110px] sm:w-[135px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)] transition-all bg-white dark:bg-black">
+                             <td className="sticky left-0 z-[10] border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-1.5 sm:py-1.5 sm:px-2 min-w-[110px] sm:min-w-[135px] w-[110px] sm:w-[135px] shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] dark:shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)] transition-all bg-white dark:bg-zinc-950">
                                <button 
                                  onClick={() => onOpenEmployeeCard(emp)}
                                  title={isReadOnly ? `${emp.name.toUpperCase()} • Clique para acessar cartão individual (requer senha pessoal)` : `${emp.name.toUpperCase()} • Clique para ver escala completa, solicitações ou lançar atestado médico por período`}
                                  className="flex items-center gap-1.5 sm:gap-2 w-full text-left p-0.5 sm:p-1 rounded-lg sm:rounded-xl transition-all group/name hover:bg-orange-50 dark:hover:bg-orange-950/20"
                                >
-                                 <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] font-bold border shrink-0 transition-colors bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-zinc-800 group-hover/name:bg-orange-100 group-hover/name:text-orange-600 group-hover/name:border-orange-200">
+                                 <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] font-bold border shrink-0 transition-colors bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-800 group-hover/name:bg-orange-100 group-hover/name:text-orange-600 group-hover/name:border-orange-200">
                                    {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                                  </div>
                                  <div className="flex flex-col min-w-0 flex-1">
                                    <div className="flex items-center gap-1 flex-wrap">
-                                     <span className="text-[10px] sm:text-[11px] font-black uppercase truncate transition-colors text-slate-900 dark:text-slate-100 group-hover/name:text-orange-600" title={emp.name.toUpperCase()}>{getShortName(emp.name, employees)}</span>
+                                     <span className="text-[10px] sm:text-[11px] font-black uppercase truncate transition-colors text-slate-900 dark:text-zinc-100 group-hover/name:text-orange-600" title={emp.name.toUpperCase()}>{getShortName(emp.name, employees)}</span>
                                      {(() => {
                                        if (isReadOnly) return null;
                                        const reqs = emp.requests || [];
@@ -890,7 +902,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                </button>
                              </td>
                               {!isReadOnly && isEditable && (
-                                <td className="hidden sm:table-cell sticky left-[110px] sm:left-[135px] z-10 bg-white dark:bg-black border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-2 min-w-[115px] w-[115px]">
+                                <td className="hidden sm:table-cell sticky left-[110px] sm:left-[135px] z-10 bg-white dark:bg-zinc-950 border-b border-r border-slate-200 dark:border-zinc-800 py-1 px-2 min-w-[115px] w-[115px]">
                                   <select
                                     value={emp.dailyHours[monthKey]?.[selectedDayIdx] || ''}
                                     onChange={(e) => onUpdateEmployeeDailyHour(emp.id, selectedDayIdx, e.target.value)}
@@ -913,12 +925,12 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
                                       return (
                                         <>
-                                          <option value="" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">AUTO 🤖</option>
+                                          <option value="" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100">AUTO 🤖</option>
                                           {finalOptions.map(h => (
-                                            <option key={h} value={h} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">{h}</option>
+                                            <option key={h} value={h} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100">{h}</option>
                                           ))}
                                           {currentVal && !finalOptions.includes(currentVal) && (
-                                            <option value={currentVal} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100">{currentVal}</option>
+                                            <option value={currentVal} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100">{currentVal}</option>
                                           )}
                                         </>
                                       );
@@ -1019,44 +1031,40 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               // 6x1 / 5x2 Cycle Badge (Canto Superior Esquerdo)
                               const isWorkingDay = isWorkingShift(shift) || shift === 'C';
                               const maxStreak = emp.jornada === '5x2' ? 5 : 6;
-                              let sixByOneBadge: { text: string; className: string; title: string } | null = null;
+                              let sixByOneBadge: { text: string; className: string; title: string; isHoverOnly?: boolean } | null = null;
 
                               if (!isReadOnly && shift !== 'N/A' && isWorkingDay) {
                                 if (streak > maxStreak) {
                                   sixByOneBadge = {
                                     text: `${streak}º`,
-                                    className: 'bg-rose-600 text-white shadow-md ring-2 ring-white dark:ring-slate-900 animate-pulse',
+                                    className: 'bg-rose-600 text-white shadow-md ring-2 ring-white dark:ring-zinc-900 animate-pulse',
                                     title: `VIOLAÇÃO CLT: ${streak}º dia consecutivo sem folga! Limite legal da escala é de ${maxStreak} dias seguidos.`
                                   };
                                 } else if (streak === maxStreak) {
-                                  if (cycleBadgesMode === 'all' || cycleBadgesMode === 'alerts') {
-                                    sixByOneBadge = {
-                                      text: `${streak}/${maxStreak}`,
-                                      className: 'bg-amber-500 text-white shadow-xs ring-1 ring-white dark:ring-slate-900',
-                                      title: `${streak}º dia consecutivo de trabalho: LIMITE DO CICLO ${maxStreak}x1! O próximo dia DEVE ser folga!`
-                                    };
-                                  }
+                                  sixByOneBadge = {
+                                    text: `${streak}/${maxStreak}`,
+                                    className: 'bg-amber-500 text-white shadow-xs ring-1 ring-white dark:ring-zinc-900',
+                                    title: `${streak}º dia consecutivo de trabalho: LIMITE DO CICLO ${maxStreak}x1! O próximo dia DEVE ser folga!`
+                                  };
                                 } else if (streak === maxStreak - 1) {
-                                  if (cycleBadgesMode === 'all') {
-                                    sixByOneBadge = {
-                                      text: `${streak}/${maxStreak}`,
-                                      className: 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-2xs',
-                                      title: `${streak}º dia consecutivo de trabalho (${streak}/${maxStreak}): Penúltimo dia antes do descanso semanal obrigatório.`
-                                    };
-                                  }
+                                  sixByOneBadge = {
+                                    text: `${streak}/${maxStreak}`,
+                                    className: 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-2xs',
+                                    title: `${streak}º dia consecutivo de trabalho (${streak}/${maxStreak}): Penúltimo dia antes do descanso semanal obrigatório.`,
+                                    isHoverOnly: densityMode === 'clean'
+                                  };
                                 } else if (streak >= 1) {
-                                  if (cycleBadgesMode === 'all') {
-                                    sixByOneBadge = {
-                                      text: `${streak}/${maxStreak}`,
-                                      className: 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 shadow-2xs',
-                                      title: `${streak}º dia consecutivo de trabalho no ciclo ${maxStreak}x1.`
-                                    };
-                                  }
+                                  sixByOneBadge = {
+                                    text: `${streak}/${maxStreak}`,
+                                    className: 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 shadow-2xs',
+                                    title: `${streak}º dia consecutivo de trabalho no ciclo ${maxStreak}x1.`,
+                                    isHoverOnly: densityMode === 'clean'
+                                  };
                                 }
                               }
 
                               // Sunday Streak & Compliance Badge (Canto Superior Direito)
-                              let sundayBadge: { text: string; className: string; title: string } | null = null;
+                              let sundayBadge: { text: string; className: string; title: string; isHoverOnly?: boolean } | null = null;
 
                               if (!isReadOnly && isSunday && shift !== 'N/A') {
                                 if (emp.isYoungApprentice) {
@@ -1064,14 +1072,15 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                   if (isApprenticeWorking) {
                                     sundayBadge = {
                                       text: 'D!',
-                                      className: 'bg-rose-600 text-white shadow-md ring-2 ring-white dark:ring-slate-900 animate-pulse',
+                                      className: 'bg-rose-600 text-white shadow-md ring-2 ring-white dark:ring-zinc-900 animate-pulse',
                                       title: 'VIOLAÇÃO LEGAL: Jovem Aprendiz não pode trabalhar aos domingos!'
                                     };
-                                  } else if (cycleBadgesMode === 'all') {
+                                  } else {
                                     sundayBadge = {
                                       text: 'D✓',
-                                      className: 'bg-slate-500/80 text-white shadow-xs ring-1 ring-white dark:ring-slate-900',
-                                      title: 'Jovem Aprendiz: Folga legal de domingo garantida por lei.'
+                                      className: 'bg-zinc-500/80 text-white shadow-xs ring-1 ring-white dark:ring-zinc-900',
+                                      title: 'Jovem Aprendiz: Folga legal de domingo garantida por lei.',
+                                      isHoverOnly: densityMode === 'clean'
                                     };
                                   }
                                 } else {
@@ -1081,50 +1090,44 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                     if (finalSundayStreak >= 3) {
                                       sundayBadge = {
                                         text: `${finalSundayStreak}D`,
-                                        className: 'bg-rose-600 text-white shadow-md ring-2 ring-white dark:ring-slate-900 animate-pulse',
+                                        className: 'bg-rose-600 text-white shadow-md ring-2 ring-white dark:ring-zinc-900 animate-pulse',
                                         title: `${finalSundayStreak}º Domingo Consecutivo Trabalhado: VIOLAÇÃO CLT! Proibido trabalhar 3 domingos consecutivos.`
                                       };
                                     } else if (finalSundayStreak === 2) {
                                       sundayBadge = {
                                         text: '2D',
-                                        className: 'bg-amber-500 text-white shadow-xs ring-1 ring-white dark:ring-slate-900',
+                                        className: 'bg-amber-500 text-white shadow-xs ring-1 ring-white dark:ring-zinc-900',
                                         title: '2º Domingo Consecutivo Trabalhado: Atenção ao limite CLT (o próximo domingo deve ser folga obrigatória)!'
                                       };
                                     } else if (finalSundayStreak === 1) {
-                                      if (cycleBadgesMode === 'all') {
-                                        sundayBadge = {
-                                          text: '1D',
-                                          className: 'bg-slate-700 dark:bg-zinc-700 text-white shadow-xs ring-1 ring-white dark:ring-slate-900',
-                                          title: '1º Domingo Consecutivo Trabalhado: Pode trabalhar mais 1 domingo antes da folga obrigatória.'
-                                        };
-                                      }
+                                      sundayBadge = {
+                                        text: '1D',
+                                        className: 'bg-zinc-700 dark:bg-zinc-700 text-white shadow-xs ring-1 ring-white dark:ring-zinc-900',
+                                        title: '1º Domingo Consecutivo Trabalhado: Pode trabalhar mais 1 domingo antes da folga obrigatória.',
+                                        isHoverOnly: densityMode === 'clean'
+                                      };
                                     }
                                   } else {
                                     // Colaborador de folga no domingo (F, FF, DO, FE, AT, etc.)
                                     if (currentSunCount >= 2) {
-                                      if (cycleBadgesMode === 'all' || cycleBadgesMode === 'alerts') {
-                                        sundayBadge = {
-                                          text: '3D✓',
-                                          className: 'bg-emerald-600 text-white shadow-xs ring-1 ring-white dark:ring-slate-900 font-black',
-                                          title: '3º Domingo: Folga Obrigatória Cumprida! (Respeitou o ciclo CLT após 2 domingos trabalhados — NÃO alterar para trabalho).'
-                                        };
-                                      }
+                                      sundayBadge = {
+                                        text: '3D✓',
+                                        className: 'bg-emerald-600 text-white shadow-xs ring-1 ring-white dark:ring-zinc-900 font-black',
+                                        title: '3º Domingo: Folga Obrigatória Cumprida! (Respeitou o ciclo CLT após 2 domingos trabalhados — NÃO alterar para trabalho).'
+                                      };
                                     } else if (currentSunCount === 1) {
-                                      if (cycleBadgesMode === 'all') {
-                                        sundayBadge = {
-                                          text: '2D✓',
-                                          className: 'bg-emerald-500 text-white shadow-xs ring-1 ring-white dark:ring-slate-900 font-black',
-                                          title: 'Folga no 2º Domingo: Trabalhou o domingo anterior e folgou este (Oportunidade para troca/cobertura se a loja precisar de reforço).'
-                                        };
-                                      }
+                                      sundayBadge = {
+                                        text: '2D✓',
+                                        className: 'bg-emerald-500 text-white shadow-xs ring-1 ring-white dark:ring-zinc-900 font-black',
+                                        title: 'Folga no 2º Domingo: Trabalhou o domingo anterior e folgou este (Oportunidade para troca/cobertura se a loja precisar de reforço).'
+                                      };
                                     } else {
-                                      if (cycleBadgesMode === 'all') {
-                                        sundayBadge = {
-                                          text: '1D✓',
-                                          className: 'bg-teal-600 text-white shadow-xs ring-1 ring-white dark:ring-slate-900 font-black',
-                                          title: 'Folga no Domingo: Sem domingos anteriores trabalhados (Totalmente livre/disponível para troca/cobertura).'
-                                        };
-                                      }
+                                      sundayBadge = {
+                                        text: '1D✓',
+                                        className: 'bg-teal-600 text-white shadow-xs ring-1 ring-white dark:ring-zinc-900 font-black',
+                                        title: 'Folga no Domingo: Sem domingos anteriores trabalhados (Totalmente livre/disponível para troca/cobertura).',
+                                        isHoverOnly: densityMode === 'clean'
+                                      };
                                     }
                                   }
                                 }
@@ -1143,12 +1146,12 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                const focusHighlight = isSelectedCol && focusSelectedDay ? 'ring-2 ring-inset ring-orange-500 bg-orange-500/10 dark:bg-orange-950/30' : isSelectedCol ? 'ring-2 ring-inset ring-orange-400/40' : '';
 
                                return (
-                                 <td key={d.num} className={`py-1 px-1 border-b border-slate-50 dark:border-slate-800 text-center transition-all relative ${pastDimClass} ${focusDimColClass} ${focusHighlight} ${(!isReadOnly && hasCellViolation) ? 'ring-2 ring-inset ring-rose-500 bg-rose-50/50 dark:bg-rose-950/30' : (!isReadOnly && isSundayWarning) ? 'ring-2 ring-inset ring-amber-500/50 bg-amber-50/20' : ''}`}>
+                                 <td key={d.num} className={`py-1 px-1 border-b border-zinc-100 dark:border-zinc-800 text-center transition-all relative ${pastDimClass} ${focusDimColClass} ${focusHighlight} ${(!isReadOnly && hasCellViolation) ? 'ring-2 ring-inset ring-rose-500 bg-rose-50/50 dark:bg-rose-950/30' : (!isReadOnly && isSundayWarning) ? 'ring-2 ring-inset ring-amber-500/50 bg-amber-50/20' : ''}`}>
                                    <div className="relative group flex flex-col items-center justify-center">
                                      {/* Indicador 4: Diferença pós-oficialização (Canto Inferior Esquerdo) */}
                                      {!isReadOnly && cellDiff && (
                                        <span 
-                                         className="absolute -bottom-0.5 -left-0.5 w-2 h-2 rounded-full bg-amber-500 ring-1.5 ring-white dark:ring-slate-900 shadow-sm z-30 cursor-help"
+                                         className="absolute -bottom-0.5 -left-0.5 w-2 h-2 rounded-full bg-amber-500 ring-1.5 ring-white dark:ring-zinc-900 shadow-sm z-30 cursor-help"
                                          title={`Alteração pós-oficialização (${cellDiff.type}): Oficial [${cellDiff.officialVal}] ➔ Atual [${cellDiff.currentVal}]`}
                                          aria-label={`Alteração pós-oficialização (${cellDiff.type}): Oficial [${cellDiff.officialVal}] para Atual [${cellDiff.currentVal}]`}
                                          role="status"
@@ -1159,7 +1162,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                      {sixByOneBadge && (
                                        <span
                                          onClick={(e) => { e.stopPropagation(); onSelectDay(d.num - 1); }}
-                                         className={`absolute -top-1 -left-1 px-1 py-0 text-[7px] font-black rounded-full z-30 transition-all cursor-help leading-tight tracking-tighter ring-1 ring-white dark:ring-slate-900 ${sixByOneBadge.className}`}
+                                         className={`absolute -top-1 -left-1 px-1 py-0 text-[10px] leading-none font-black rounded-full z-30 transition-all cursor-help tracking-tighter ring-1 ring-white dark:ring-zinc-900 ${sixByOneBadge.className} ${sixByOneBadge.isHoverOnly ? 'opacity-0 group-hover:opacity-100' : ''}`}
                                          title={sixByOneBadge.title}
                                          aria-label={sixByOneBadge.title}
                                          role="status"
@@ -1172,7 +1175,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                      {sundayBadge && (
                                        <span
                                          onClick={(e) => { e.stopPropagation(); onSelectDay(d.num - 1); }}
-                                         className={`absolute -top-1 -right-1 px-1 py-0 text-[7px] font-black rounded-full z-30 transition-all cursor-help leading-tight tracking-tighter ring-1 ring-white dark:ring-slate-900 ${sundayBadge.className}`}
+                                         className={`absolute -top-1 -right-1 px-1 py-0 text-[10px] leading-none font-black rounded-full z-30 transition-all cursor-help tracking-tighter ring-1 ring-white dark:ring-zinc-900 ${sundayBadge.className} ${sundayBadge.isHoverOnly ? 'opacity-0 group-hover:opacity-100' : ''}`}
                                          title={sundayBadge.title}
                                          aria-label={sundayBadge.title}
                                          role="status"
@@ -1184,7 +1187,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                      {/* Indicador 4: Pedido de Colaborador (Canto Inferior Direito) */}
                                      {dayRequest && (
                                        <div 
-                                         className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full z-30 ring-1.5 ring-white dark:ring-slate-900 cursor-help flex items-center justify-center group/balloon"
+                                         className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full z-30 ring-1.5 ring-white dark:ring-zinc-900 cursor-help flex items-center justify-center group/balloon"
                                          role="status"
                                          aria-label={`Pedido do colaborador: ${dayRequest.text} (${dayRequest.status})`}
                                        >
@@ -1195,7 +1198,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                            'bg-orange-500 animate-pulse'
                                          }`} />
                                          
-                                         <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-900 dark:bg-slate-800 text-white p-3 rounded-2xl shadow-xl opacity-0 invisible group-hover/balloon:opacity-100 group-hover/balloon:visible transition-all z-[100] pointer-events-none scale-95 group-hover/balloon:scale-100 origin-bottom-right">
+                                         <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-900 dark:bg-zinc-800 text-white p-3 rounded-2xl shadow-xl opacity-0 invisible group-hover/balloon:opacity-100 group-hover/balloon:visible transition-all z-[100] pointer-events-none scale-95 group-hover/balloon:scale-100 origin-bottom-right">
                                            <div className="absolute top-full right-2 -mt-1 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800" />
                                            <p className="text-[10px] font-black uppercase text-slate-400 mb-1 border-b border-slate-700 pb-1">Pedido do Colaborador</p>
                                            <p className="text-xs font-bold leading-snug">{dayRequest.text}</p>
@@ -1244,7 +1247,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                          shift === 'C' ? 'bg-indigo-100 text-indigo-600' :
                                          shift === 'FE' ? 'bg-emerald-100 text-emerald-600' :
                                          shift === 'DO' ? 'bg-fuchsia-600 text-white shadow-md' :
-                                         'bg-white dark:bg-zinc-900 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-zinc-800'
+                                         'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800'
                                        }`}>
                                       {shift === 'AT' ? (
                                         <div className="flex flex-col items-center justify-center text-rose-500 font-black leading-none">
@@ -1276,7 +1279,22 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                             return null;
                                           })()}
                                         </div>
-                                      ) : shift === 'C' ? <span className="text-[7px]">CURSO</span> : shift === 'N/A' ? <span className="text-[9px] text-slate-400 dark:text-zinc-500 font-mono">-</span> : (isWorkingShift(shift) ? (d.isSunday ? 'DOM' : 'T') : (shift.startsWith('FF') ? 'FF' : shift))}
+                                      ) : shift === 'C' ? (
+                                         <span className="text-[9px] font-bold">CURSO</span>
+                                       ) : shift === 'N/A' ? (
+                                         <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">-</span>
+                                       ) : isWorkingShift(shift) ? (
+                                         <div className="flex flex-col items-center justify-center leading-none">
+                                           <span className="text-[10px] font-black">{d.isSunday ? 'DOM' : 'T'}</span>
+                                           {densityMode === 'audit' && (
+                                             <span className="text-[8px] font-bold text-zinc-400 dark:text-zinc-500 leading-none mt-0.5">
+                                               {((emp.dailyHours[monthKey] || [])[d.num - 1] || emp.workPeriod || '').split('h')[0]}h
+                                             </span>
+                                           )}
+                                         </div>
+                                       ) : (
+                                         <span className="text-[10px] font-black">{shift.startsWith('FF') ? 'FF' : shift}</span>
+                                       )}
                                     </button>
 
                                     
@@ -1351,11 +1369,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
       {/* Recados Box in UI */}
       {showNotes && (
-        <div className="bg-white dark:bg-black p-4 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm mt-2">
+        <div className="bg-white dark:bg-zinc-950 p-4 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm mt-2">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Icon name="campaign" className="text-orange-500" />
-              <h3 className="text-[12px] font-black uppercase text-slate-800 dark:text-slate-100">Recados Importantes do Mês (Para Impressão)</h3>
+              <h3 className="text-[12px] font-black uppercase text-slate-800 dark:text-zinc-100">Recados Importantes do Mês (Para Impressão)</h3>
             </div>
             <button 
               onClick={onCloseNotes}
@@ -1369,7 +1387,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             onChange={(e) => onUpdateMonthNotes(e.target.value)}
             placeholder="Digite aqui os recados que devem aparecer no rodapé do PDF... (aprox. 450 caracteres cabem no espaço)"
             maxLength={450}
-            className="w-full h-24 bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none outline-none text-slate-700 dark:text-slate-300"
+            className="w-full h-24 bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none outline-none text-slate-700 dark:text-zinc-300"
           />
           <div className="text-right mt-1 text-[10px] font-bold text-slate-400">
             {monthNotes.length} / 450 caracteres
@@ -1398,8 +1416,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
         hidePastDays={hidePastDays}
         setHidePastDays={setHidePastDays}
         isCurrentMonth={isCurrentMonth}
-        cycleBadgesMode={cycleBadgesMode}
-        setCycleBadgesMode={setCycleBadgesMode}
+        cycleBadgesMode={legacyCycleMode}
+        setCycleBadgesMode={setLegacyCycleMode}
         onResetFilters={() => {
           setOnlyWorkingToday(false);
           setSelectedGroup(null);

@@ -183,7 +183,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                 >
                   <Icon name="arrow_back" />
                 </button>
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Análise de Escala & Gargalos</h2>
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">Análise de Escala & Gargalos</h2>
               </div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-1">
                 Visualização de Sobrecarga e Cobertura Operacional • {(currentMY.month + 1).toString().padStart(2, '0')}/{currentMY.year}
@@ -215,13 +215,13 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                 )}
                 <button 
                   onClick={() => setViewMode('insights')}
-                  className={`px-5 sm:px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${viewMode === 'insights' ? 'bg-white dark:bg-zinc-900 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                  className={`px-5 sm:px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${viewMode === 'insights' ? 'bg-white dark:bg-zinc-900 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
                 >
                   <Icon name="analytics" className="text-sm" /> Insights
                 </button>
                 <button 
                   onClick={() => setViewMode('team-calendar')}
-                  className={`px-5 sm:px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${viewMode === 'team-calendar' ? 'bg-white dark:bg-zinc-900 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                  className={`px-5 sm:px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${viewMode === 'team-calendar' ? 'bg-white dark:bg-zinc-900 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
                 >
                   <Icon name="calendar_view_month" className="text-sm" /> Escala Geral
                 </button>
@@ -275,7 +275,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                   <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-6 sm:p-8 shadow-sm h-full flex flex-col transition-colors">
                     <div className="mb-6 flex justify-between items-start">
                         <div className="min-w-0">
-                            <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 truncate">
+                            <h3 className="text-lg font-black text-slate-800 dark:text-zinc-100 truncate">
                                 {selectedEmployee?.name || 'Selecione um colaborador'}
                             </h3>
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Calendário Semanal (Dom-Sáb)</p>
@@ -306,7 +306,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                                 link.click();
                               }
                             }}
-                            className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-slate-400 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center ml-2"
+                            className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center ml-2"
                             title="Baixar Calendário"
                           >
                             <Icon name="download" className="text-sm" />
@@ -318,7 +318,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                         <div id="individual-calendar-capture" className="bg-white dark:bg-zinc-900 p-4 rounded-2xl">
                           <div className="mb-4 text-center border-b border-slate-100 dark:border-zinc-800 pb-4">
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Escala Individual</p>
-                              <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">{selectedEmployee?.name}</h3>
+                              <h3 className="text-lg font-black text-slate-800 dark:text-zinc-100 uppercase tracking-tight">{selectedEmployee?.name}</h3>
                               <p className="text-[9px] font-bold text-slate-400 uppercase">{(currentMY.month + 1).toString().padStart(2, '0')}/{currentMY.year}</p>
                           </div>
                         {selectedEmployee && (
@@ -356,7 +356,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                         </div>
                         <div className="bg-slate-50 dark:bg-zinc-800/60 p-4 rounded-xl border border-slate-200 dark:border-zinc-700">
                             <p className="text-[10px] font-bold text-slate-400 uppercase">Maior Sequência</p>
-                            <p className="text-2xl font-black text-slate-900 dark:text-slate-100">{selectedEmployee?.maxStreak}d</p>
+                            <p className="text-2xl font-black text-slate-900 dark:text-zinc-100">{selectedEmployee?.maxStreak}d</p>
                             <p className="text-[9px] font-medium text-slate-400">{selectedEmployee?.overlooked ? '⚠️ Excede limite legal' : 'Dentro do limite'}</p>
                         </div>
                     </div>
@@ -368,7 +368,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-6 sm:p-8 shadow-sm flex flex-col max-h-[600px] transition-colors">
                         <div className="mb-6 flex items-center justify-between">
                             <div>
-                              <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">Ranking de Escala</h3>
+                              <h3 className="text-lg font-black text-slate-800 dark:text-zinc-100">Ranking de Escala</h3>
                               <p className="text-xs font-bold text-slate-400">Clique para ver o calendário individual</p>
                             </div>
                             {selectedEmployee && onUpdateShift && (
@@ -388,7 +388,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
                                     className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all border ${
                                         selectedEmpId === s.id 
                                         ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/20 scale-[1.01]' 
-                                        : 'bg-slate-50 dark:bg-zinc-800/60 border-slate-100 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-800 dark:text-slate-200'
+                                        : 'bg-slate-50 dark:bg-zinc-800/60 border-slate-100 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-800 dark:text-zinc-200'
                                     }`}
                                 >
                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${
@@ -513,8 +513,8 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
      </div>
      <div className="min-w-0">
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
-        <h4 className={`text-xl font-black ${urgent ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-100'} leading-none`}>{value}</h4>
-        <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 truncate mt-1">{description}</p>
+        <h4 className={`text-xl font-black ${urgent ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-zinc-100'} leading-none`}>{value}</h4>
+        <p className="text-[10px] font-medium text-slate-400 dark:text-zinc-500 truncate mt-1">{description}</p>
      </div>
   </div>
 );

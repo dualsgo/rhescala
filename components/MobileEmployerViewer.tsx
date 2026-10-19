@@ -9,7 +9,8 @@ import {
   resolveTacticalDay 
 } from '../hooks/useScheduleEngine';
 import { buildHolidaySet, getShortName, isEmployeeActiveInMonth, isEmployeeActiveOnDay, getTacticalLabel } from '../constants';
-import { useDialog } from '../contexts/DialogContext';
+import { STORAGE_KEYS } from '../src/infrastructure/storage/storageKeys';
+import { toLocalISODate } from '../src/utils/date';
 
 interface MobileEmployerViewerProps {
   employees: Employee[];
@@ -29,6 +30,7 @@ interface MobileEmployerViewerProps {
 }
 
 const WEEKDAY_NAMES_PT = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+const WEEKDAY_SHORT_PT = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
 
 export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
   employees,
@@ -42,15 +44,13 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
   onOpenEmployeeCard,
   onSwitchToFullGrid,
   onMonthChange,
-  onUpdateEmployee,
   tacticalDisplayMode = 'off',
-  onToggleTacticalDisplayMode,
 }) => {
   const [activeTab, setActiveTab] = useState<'hoje' | 'semana' | 'equipe' | 'mes'>('hoje');
   const [searchTerm, setSearchTerm] = useState('');
   const [showEmpSelector, setShowEmpSelector] = useState(false);
-  const { showDialog } = useDialog();
 
+  // Navegação entre meses
   const handlePrevMonth = () => {
     if (currentMY.month === 0) {
       onMonthChange({ month: 11, year: currentMY.year - 1 });
@@ -71,10 +71,30 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     return employees.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
   }, [employees, currentMY]);
 
-  // Current selected employee
+  // Colaborador atual com persistência no localStorage
   const currentEmp = useMemo(() => {
+    if (!selectedEmployeeId) {
+      // Tenta recuperar do localStorage caso a prop venha vazia
+      try {
+        const cachedId = window.localStorage.getItem(STORAGE_KEYS.viewerSelectedEmpId);
+        if (cachedId) {
+          const parsed = JSON.parse(cachedId);
+          const found = activeEmployees.find(e => e.id === parsed);
+          if (found) return found;
+        }
+      } catch {
+        // Fallback silencioso
+      }
+    }
     return activeEmployees.find(e => e.id === selectedEmployeeId) || activeEmployees[0] || null;
   }, [activeEmployees, selectedEmployeeId]);
+
+  // Se houver colaborador ativo e a prop for vazia, aciona a seleção
+  useEffect(() => {
+    if (!selectedEmployeeId && currentEmp) {
+      onSelectEmployee(currentEmp.id);
+    }
+  }, [currentEmp, selectedEmployeeId, onSelectEmployee]);
 
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
@@ -84,7 +104,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
   const isCurrentMonth = currentMY.year === today.getFullYear() && currentMY.month === today.getMonth();
   const currentDayIdx = isCurrentMonth ? today.getDate() - 1 : 0;
 
-  // Compute stats for current employee for the month
+  // Estatísticas mensais do colaborador
   const empMonthStats = useMemo(() => {
     if (!currentEmp) return { workDays: 0, offDays: 0, sundaysWorked: 0, holidaysWorked: 0 };
     const shifts = currentEmp.shifts[monthKey] || [];
@@ -113,11 +133,11 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     return { workDays, offDays, sundaysWorked, holidaysWorked };
   }, [currentEmp, monthKey, daysInMonth, currentMY, holidaySet]);
 
-  // Compute Holiday Credit list for current employee
+  // Créditos de feriado pendentes
   const empCreditsList = useMemo(() => {
     if (!currentEmp || !holidayCredits) return [];
     if (Array.isArray(holidayCredits)) {
-      return (holidayCredits as any[]).filter(c => c.employeeId === currentEmp.id);
+      return (holidayCredits as unknown as Array<{ employeeId?: string; status: string }>).filter(c => c.employeeId === currentEmp.id);
     }
     if (typeof holidayCredits === 'object') {
       return (holidayCredits as Record<string, HolidayCredit[]>)[currentEmp.id] || [];
@@ -129,7 +149,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     return empCreditsList.filter(c => c.status === 'pending').length;
   }, [empCreditsList]);
 
-  // Compute today's tactical position and schedule for current employee
+  // Detalhes do dia de hoje para o colaborador
   const todayDetails = useMemo(() => {
     if (!currentEmp) return null;
     const date = new Date(currentMY.year, currentMY.month, currentDayIdx + 1);
@@ -147,7 +167,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     const resolved = resolveTacticalDay(activeEmployees, monthKey, currentDayIdx, isHoliday, isSunday, jornadaSettings);
     const tacticalPos = resolved[currentEmp.id] || null;
 
-    // Calculate lunch
+    // Cálculo escalonado de almoço
     const workingToday = activeEmployees.filter(e => isWorkingShift((e.shifts[monthKey] || [])[currentDayIdx]));
     const lunchTimes = calculateLunches(workingToday, isHoliday, isSunday, undefined, jornadaSettings, {
       monthKey,
@@ -171,7 +191,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     };
   }, [currentEmp, currentMY, currentDayIdx, monthKey, holidaySet, activeEmployees, jornadaSettings]);
 
-  // Compute today's team roster (who works today grouped by shift)
+  // Escalação da equipe de hoje agrupada por turno
   const todayTeamRoster = useMemo(() => {
     const groups: Record<string, { emp: Employee; hour: string; pos: string | null; shift: ShiftType }[]> = {
       'Abertura': [],
@@ -213,7 +233,15 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     return groups;
   }, [activeEmployees, currentMY, currentDayIdx, holidaySet, monthKey, jornadaSettings]);
 
-  // Next 7 days timeline for current employee
+  // Colegas no mesmo turno do colaborador
+  const peersInSameShift = useMemo(() => {
+    if (!todayDetails || !todayDetails.isWorking) return [];
+    const groupKey = todayDetails.classification;
+    const roster = todayTeamRoster[groupKey] || [];
+    return roster.filter(item => item.emp.id !== currentEmp?.id);
+  }, [todayDetails, todayTeamRoster, currentEmp]);
+
+  // Linha do tempo dos próximos 7 dias
   const upcomingDays = useMemo(() => {
     if (!currentEmp) return [];
     const list = [];
@@ -234,7 +262,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
       list.push({
         dayNum: i + 1,
         weekday: WEEKDAY_NAMES_PT[dow],
-        weekdayShort: ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'][dow],
+        weekdayShort: WEEKDAY_SHORT_PT[dow],
         dateFormatted: `${String(i + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}`,
         shift,
         hour,
@@ -248,96 +276,109 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     return list;
   }, [currentEmp, isCurrentMonth, currentDayIdx, daysInMonth, currentMY, holidaySet, monthKey]);
 
-  // Position Badge Helper
-  const getPositionBadge = (pos: string | null) => {
-    if (!pos || tacticalDisplayMode === 'off') return null;
-    const colors: Record<string, string> = {
-      'P1': 'bg-rose-500 text-white ring-2 ring-rose-300 shadow-sm',
-      'PC': 'bg-orange-500 text-white ring-2 ring-orange-300 shadow-sm',
-      'P2': 'bg-amber-500 text-white ring-2 ring-amber-300 shadow-sm',
-      'P3': 'bg-emerald-500 text-white ring-2 ring-emerald-300 shadow-sm',
-      'P4': 'bg-sky-500 text-white ring-2 ring-sky-300 shadow-sm',
-      'ESTQ': 'bg-slate-700 text-white ring-2 ring-slate-400 shadow-sm',
-    };
-    const label = getTacticalLabel(pos, tacticalDisplayMode);
-    return (
-      <span className={`px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider ${colors[pos] || 'bg-slate-800 text-white'}`}>
-        {label}
-      </span>
-    );
-  };
+  // Próximos 2 dias para o Hero Card
+  const nextTwoDays = useMemo(() => {
+    return upcomingDays.filter(d => !d.isToday).slice(0, 2);
+  }, [upcomingDays]);
 
+  // Badges semânticos de turnos
   const getShiftBadge = (shift: ShiftType) => {
-    if (shift === 'N/A') return <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-slate-400 font-bold text-xs uppercase">Fora do Contrato</span>;
-    if (shift === 'FE') return <span className="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-black text-xs uppercase">Férias</span>;
-    if (shift.startsWith('FF')) return <span className="px-2 py-0.5 rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 font-black text-xs uppercase">Folga Feriado</span>;
-    if (shift === 'F') return <span className="px-2 py-0.5 rounded-lg bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 font-black text-xs uppercase">Folga</span>;
-    if (shift === 'DO') return <span className="px-2 py-0.5 rounded-lg bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-950/60 dark:text-fuchsia-300 font-black text-xs uppercase">Aniversário</span>;
-    if (shift === 'AT') return <span className="px-2 py-0.5 rounded-lg bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 font-black text-xs uppercase">Atestado</span>;
-    if (shift === 'C') return <span className="px-2 py-0.5 rounded-lg bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 font-black text-xs uppercase">Curso</span>;
-    return <span className="px-2 py-0.5 rounded-lg bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300 font-black text-xs uppercase">Trabalho</span>;
+    if (shift === 'N/A') return <span className="px-2.5 py-1 rounded-xl bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 font-bold text-[11px] uppercase">Fora do Contrato</span>;
+    if (shift === 'FE') return <span className="px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 font-black text-[11px] uppercase">Férias</span>;
+    if (shift.startsWith('FF')) return <span className="px-2.5 py-1 rounded-xl bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300 font-black text-[11px] uppercase">Folga Feriado</span>;
+    if (shift === 'F') return <span className="px-2.5 py-1 rounded-xl bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300 font-black text-[11px] uppercase">Folga</span>;
+    if (shift === 'DO') return <span className="px-2.5 py-1 rounded-xl bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950/70 dark:text-fuchsia-300 font-black text-[11px] uppercase">Aniversário</span>;
+    if (shift === 'AT') return <span className="px-2.5 py-1 rounded-xl bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300 font-black text-[11px] uppercase">Atestado</span>;
+    if (shift === 'C') return <span className="px-2.5 py-1 rounded-xl bg-sky-100 text-sky-800 dark:bg-sky-950/70 dark:text-sky-300 font-black text-[11px] uppercase">Curso</span>;
+    return <span className="px-2.5 py-1 rounded-xl bg-orange-100 text-orange-800 dark:bg-orange-950/70 dark:text-orange-300 font-black text-[11px] uppercase">Trabalho</span>;
   };
 
   return (
-    <div className="h-full flex flex-col gap-3 max-w-lg mx-auto pb-20 animate-fade-in overflow-y-auto custom-scrollbar pr-1">
+    <div className="h-full flex flex-col gap-3.5 max-w-lg mx-auto pb-24 animate-fade-in overflow-y-auto custom-scrollbar px-1">
       
-      {/* Top Header Card for Collaborator */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3">
+      {/* 1. Header Card do Colaborador com Touch Targets Conformes (44px) */}
+      <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-4 shadow-sm flex flex-col gap-3">
         
-        {/* Collaborator Selector Header */}
+        {/* Linha Superior: Perfil + Botão de Trocar + Grade */}
         <div className="flex items-center justify-between gap-2">
-          <div 
-            onClick={() => setShowEmpSelector(true)}
-            className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer p-1.5 -m-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition-colors"
-          >
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-400 text-white flex items-center justify-center font-black text-sm uppercase shadow-md shadow-orange-500/20 shrink-0">
-              {currentEmp ? currentEmp.name.split(' ').map(n => n[0]).join('').substring(0, 2) : 'RH'}
-            </div>
-            
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1">
-                <span className="text-base font-black text-slate-900 dark:text-slate-100 uppercase truncate">
-                  {currentEmp ? currentEmp.name : 'Selecionar Colaborador'}
-                </span>
-                <Icon name="unfold_more" className="text-sm text-slate-400 shrink-0" />
+          {currentEmp ? (
+            <div 
+              onClick={() => setShowEmpSelector(true)}
+              className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer p-1.5 -m-1.5 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 text-white flex items-center justify-center font-black text-base uppercase shadow-md shadow-orange-500/25 shrink-0">
+                {currentEmp.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
               </div>
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                <span>{currentEmp?.cargo || 'Atendente'}</span>
-                <span>•</span>
-                <span>{currentEmp?.contractType || 'CLT'}</span>
-                <span>•</span>
-                <span>{currentEmp?.jornada || '6x1'}</span>
+              
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base font-black text-zinc-900 dark:text-zinc-100 uppercase truncate">
+                    {currentEmp.name}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                  <span>{currentEmp.cargo || 'Atendente'}</span>
+                  <span>•</span>
+                  <span>{currentEmp.jornada || '6x1'}</span>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div 
+              onClick={() => setShowEmpSelector(true)}
+              className="flex items-center gap-3 flex-1 cursor-pointer"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-zinc-200 dark:bg-zinc-800 text-zinc-500 flex items-center justify-center">
+                <Icon name="person" className="text-2xl" />
+              </div>
+              <div>
+                <span className="text-sm font-black text-zinc-900 dark:text-zinc-100 block">Quem é você na loja?</span>
+                <span className="text-xs text-orange-500 font-bold">Toque para selecionar seu nome</span>
+              </div>
+            </div>
+          )}
 
-          {/* Quick Switch to Full Grid */}
-          <button
-            onClick={onSwitchToFullGrid}
-            className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700 text-xs font-black uppercase flex items-center gap-1 shrink-0"
-            title="Ver grade completa da loja"
-          >
-            <Icon name="grid_view" className="text-base" />
-            <span className="hidden sm:inline">Grade</span>
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {currentEmp && (
+              <button
+                type="button"
+                onClick={() => setShowEmpSelector(true)}
+                className="min-h-[44px] px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-bold transition-all"
+                title="Trocar colaborador"
+              >
+                Trocar
+              </button>
+            )}
+
+            {/* Alternador para Grade Completa */}
+            <button
+              type="button"
+              onClick={onSwitchToFullGrid}
+              className="min-h-[44px] min-w-[44px] px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-all"
+              title="Ver grade completa da loja"
+            >
+              <Icon name="grid_view" className="text-lg" />
+              <span className="hidden sm:inline">Grade</span>
+            </button>
+          </div>
         </div>
 
-        {/* Quick Month Bar */}
-        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-zinc-800 text-xs font-black uppercase">
-          <div className="flex items-center gap-1.5">
+        {/* Barra de Mês com Botões de 44x44px */}
+        <div className="flex items-center justify-between pt-2.5 border-t border-zinc-100 dark:border-zinc-800/80 text-xs font-black uppercase">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handlePrevMonth}
-              className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700 active:scale-95 transition-all"
+              className="w-11 h-11 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all"
               title="Mês anterior"
               aria-label="Mês anterior"
             >
-              <Icon name="chevron_left" className="text-base" />
+              <Icon name="chevron_left" className="text-xl" />
             </button>
 
-            <div className="flex items-center gap-1 text-slate-700 dark:text-slate-200 px-1">
-              <Icon name="calendar_month" className="text-orange-500 text-sm" />
-              <span className="capitalize">
+            <div className="flex items-center gap-1.5 text-zinc-800 dark:text-zinc-200 px-1 font-extrabold text-sm capitalize">
+              <Icon name="calendar_month" className="text-orange-500 text-lg" />
+              <span>
                 {new Date(currentMY.year, currentMY.month, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
               </span>
             </div>
@@ -345,237 +386,240 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
             <button
               type="button"
               onClick={handleNextMonth}
-              className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700 active:scale-95 transition-all"
+              className="w-11 h-11 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all"
               title="Próximo mês"
               aria-label="Próximo mês"
             >
-              <Icon name="chevron_right" className="text-base" />
+              <Icon name="chevron_right" className="text-xl" />
             </button>
           </div>
 
-          {/* Holiday Credit Chip */}
+          {/* Saldo de Folgas Feriado */}
           {pendingCreditsCount > 0 && (
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800 text-[10px] font-black shrink-0">
-              <Icon name="stars" className="text-xs text-amber-500" />
-              <span>Saldo Folgas: {pendingCreditsCount}d</span>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800 text-xs font-extrabold shrink-0">
+              <Icon name="stars" className="text-sm text-amber-500" />
+              <span>{pendingCreditsCount}d Folga</span>
             </div>
           )}
         </div>
 
-
-
       </div>
 
-      {/* Navigation Pills (Mobile Segmented Tab Bar) */}
-      <div className="flex items-center bg-slate-100 dark:bg-zinc-900 p-1 rounded-2xl border border-slate-200/60 dark:border-zinc-800 overflow-x-auto custom-scrollbar">
-        {[
-          { id: 'hoje', label: 'Hoje', icon: 'today' },
-          { id: 'semana', label: '7 Dias', icon: 'date_range' },
-          { id: 'equipe', label: 'Quem Trabalha', icon: 'groups' },
-          { id: 'mes', label: 'Mês Todo', icon: 'calendar_view_month' },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as 'hoje' | 'semana' | 'equipe' | 'mes')}
-            className={`flex-1 min-w-[70px] py-2 px-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
-              activeTab === tab.id
-                ? 'bg-white dark:bg-zinc-800 text-orange-600 dark:text-orange-400 shadow-sm'
-                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
-            }`}
-          >
-            <Icon name={tab.icon} className="text-sm" />
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Empty State when no active collaborator is available */}
+      {/* Estado Vazio: Nenhum Colaborador Selecionado ou Cadastrado */}
       {!currentEmp && (
-        <div className="bg-white dark:bg-zinc-900 rounded-3xl p-8 border border-slate-200 dark:border-zinc-800 text-center flex flex-col items-center justify-center gap-2 shadow-sm animate-fade-in">
-          <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-zinc-800 text-slate-400 flex items-center justify-center">
-            <Icon name="person_off" className="text-2xl" />
+        <div className="bg-white dark:bg-zinc-900 rounded-3xl p-8 border border-zinc-200 dark:border-zinc-800 text-center flex flex-col items-center justify-center gap-3 shadow-sm animate-fade-in">
+          <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+            <Icon name="person_search" className="text-3xl" />
           </div>
-          <span className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase">
+          <span className="text-base font-black text-zinc-900 dark:text-zinc-100 uppercase">
             Nenhum colaborador disponível
           </span>
-          <span className="text-xs font-bold text-slate-400 max-w-xs">
+          <span className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs">
             Não há colaboradores ativos cadastrados para este mês na loja.
           </span>
         </div>
       )}
 
-      {/* TAB 1: MEU DIA HOJE (CARD PRINCIPAL) */}
+      {/* TAB 1: MEU DIA (DASHBOARD FOCO EM 1 SEGUNDO) */}
       {activeTab === 'hoje' && todayDetails && (
-        <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="space-y-3.5 animate-in fade-in duration-200">
           
-          {/* Main Shift Hero Card */}
-          <div className={`rounded-3xl p-5 border text-white shadow-xl relative overflow-hidden flex flex-col gap-4 ${
+          {/* BLOCO 1: Card Hero do Turno Atual */}
+          <div className={`rounded-3xl p-6 border text-white shadow-xl relative overflow-hidden flex flex-col gap-4 ${
             todayDetails.isWorking
-              ? 'bg-gradient-to-br from-orange-500 via-amber-500 to-orange-600 border-orange-400 shadow-orange-500/20'
+              ? 'bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 border-orange-400/50 shadow-orange-500/20'
               : todayDetails.shift === 'FE'
-              ? 'bg-gradient-to-br from-emerald-600 to-teal-700 border-emerald-500 shadow-emerald-600/20'
-              : 'bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 shadow-slate-900/30'
+              ? 'bg-gradient-to-br from-emerald-600 to-teal-700 border-emerald-500/50 shadow-emerald-600/20'
+              : 'bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 border-zinc-700 shadow-zinc-950/40'
           }`}>
             
-            {/* Top Row: Date & Shift Label */}
+            {/* Status Semântico no Topo */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black uppercase tracking-widest bg-white/20 px-2.5 py-1 rounded-xl backdrop-blur-md">
-                  {todayDetails.weekday}, {todayDetails.dateFormatted}
-                </span>
-                {todayDetails.isHoliday && (
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-rose-500/80 px-2 py-0.5 rounded-lg">
-                    Feriado
-                  </span>
-                )}
-              </div>
+              <span className="text-xs font-black uppercase tracking-wider bg-white/20 dark:bg-black/30 px-3 py-1.5 rounded-xl backdrop-blur-md">
+                {todayDetails.weekday}, {todayDetails.dateFormatted}
+              </span>
 
-              <div className="bg-white/20 px-3 py-1 rounded-xl text-xs font-black uppercase backdrop-blur-md">
-                {todayDetails.isWorking ? todayDetails.classification : 'Descanso'}
+              <div className="bg-white/20 dark:bg-black/30 px-3 py-1.5 rounded-xl text-xs font-black uppercase backdrop-blur-md">
+                {todayDetails.isWorking ? `🟢 ${todayDetails.classification}` : '🏖️ Descanso'}
               </div>
             </div>
 
-            {/* Middle: Work Hours & Status */}
+            {/* Horário Principal em Destaque */}
             <div>
               {todayDetails.isWorking ? (
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white/80 block">Horário de Trabalho</span>
-                  <div className="text-3xl sm:text-4xl font-black tracking-tight mt-0.5">
+                  <span className="text-xs font-extrabold uppercase tracking-widest text-white/80 block">Horário de Trabalho</span>
+                  <div className="text-3xl sm:text-4xl font-black tracking-tight mt-1">
                     {todayDetails.hour}
                   </div>
                 </div>
               ) : (
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white/80 block">Situação Hoje</span>
-                  <div className="text-3xl font-black tracking-tight mt-0.5 flex items-center gap-2">
-                    {todayDetails.shift === 'FE' ? '🏖️ Férias' : 
-                     todayDetails.shift === 'DO' ? '🎂 Aniversário' :
-                     todayDetails.shift === 'AT' ? '🩺 Atestado' :
-                     todayDetails.shift === 'C' ? '📚 Curso Teórico' : '🎉 Folga Oficial'}
+                  <span className="text-xs font-extrabold uppercase tracking-widest text-white/80 block">Situação Hoje</span>
+                  <div className="text-3xl font-black tracking-tight mt-1 flex items-center gap-2">
+                    {todayDetails.shift === 'FE' ? '🏖️ FÉRIAS' : 
+                     todayDetails.shift === 'DO' ? '🎂 ANIVERSÁRIO (DO)' :
+                     todayDetails.shift === 'AT' ? '🩺 ATESTADO MÉDICO' :
+                     todayDetails.shift === 'C' ? '📚 CURSO TEÓRICO' : '🎉 FOLGA SEMANAL'}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Bottom Row: Tactical Position & Lunch */}
+            {/* Função e Almoço Calculado */}
             {todayDetails.isWorking && (
-              <div className="grid grid-cols-2 gap-2 pt-3 border-t border-white/20">
-                <div className="bg-white/10 rounded-2xl p-2.5 backdrop-blur-sm">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-white/70 block mb-1">Função na Loja</span>
+              <div className="grid grid-cols-2 gap-2.5 pt-3 border-t border-white/20">
+                <div className="bg-white/15 dark:bg-black/25 rounded-2xl p-3 backdrop-blur-md">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-white/75 block mb-1">Função na Loja</span>
                   <div className="text-sm font-black text-white">
                     {tacticalDisplayMode === 'off'
-                      ? 'Trabalho Regular (T)'
+                      ? 'Trabalho Regular'
                       : todayDetails.tacticalPos
                       ? `${getTacticalLabel(todayDetails.tacticalPos, 'roles')}`
-                      : 'Vendas / Apoio'}
+                      : 'Vendas / Salão'}
                   </div>
                 </div>
 
-                <div className="bg-white/10 rounded-2xl p-2.5 backdrop-blur-sm">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-white/70 block mb-1">Pausa Almoço</span>
+                <div className="bg-white/15 dark:bg-black/25 rounded-2xl p-3 backdrop-blur-md">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-white/75 block mb-1">🍽️ Almoço Calculado</span>
                   <div className="text-sm font-black text-white">
-                    {todayDetails.lunchInfo ? todayDetails.lunchInfo : 'Conforme escala'}
+                    {todayDetails.lunchInfo ? todayDetails.lunchInfo : 'Conforme operação'}
                   </div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Quick Action: Solicitations / Autoatendimento */}
+          {/* BLOCO 2: Colegas no Mesmo Turno */}
+          {todayDetails.isWorking && peersInSameShift.length > 0 && (
+            <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-4 shadow-sm space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black uppercase text-zinc-600 dark:text-zinc-300 tracking-wider">
+                  👥 Sua Equipe no Turno {todayDetails.classification} ({peersInSameShift.length + 1})
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {peersInSameShift.map(({ emp, pos }) => (
+                  <div 
+                    key={emp.id}
+                    className="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-800 dark:text-zinc-200"
+                  >
+                    <span>{getShortName(emp.name, employees)}</span>
+                    {pos && (
+                      <span className="text-[11px] font-black text-orange-600 dark:text-orange-400">
+                        • {pos}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* BLOCO 3: Próximos 2 Dias */}
+          {nextTwoDays.length > 0 && (
+            <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-4 shadow-sm space-y-2.5">
+              <span className="text-xs font-black uppercase text-zinc-600 dark:text-zinc-300 tracking-wider block">
+                📅 Próximos Dias
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {nextTwoDays.map(d => (
+                  <div key={d.dayNum} className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700 flex flex-col justify-between gap-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-zinc-900 dark:text-zinc-100">{d.weekdayShort} {d.dayNum}</span>
+                      {getShiftBadge(d.shift)}
+                    </div>
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate mt-1">
+                      {d.isWorking ? d.hour : 'Sem jornada'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* BLOCO 4: CTA Primário Amplo (48px) para Solicitações */}
           <button
             type="button"
             onClick={() => {
               if (currentEmp) onOpenEmployeeCard(currentEmp, 'pedidos');
             }}
-            className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm flex items-center justify-between hover:border-orange-400 transition-all text-left group"
+            className="w-full min-h-[48px] bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-orange-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          >
+            <Icon name="add_circle" className="text-lg" />
+            <span>+ Solicitar Troca de Turno ou Folga</span>
+          </button>
+
+          {/* Cartão de Resumo Mensal */}
+          <button
+            type="button"
+            onClick={() => {
+              if (currentEmp) onOpenEmployeeCard(currentEmp, 'pedidos');
+            }}
+            className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm flex items-center justify-between hover:border-orange-400 transition-all text-left"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center text-lg group-hover:scale-110 transition-transform">
+              <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center text-lg">
                 <Icon name="badge" />
               </div>
               <div>
-                <span className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight block">
+                <span className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight block">
                   Cartão Pessoal & Solicitações
                 </span>
-                <span className="text-xs font-bold text-slate-400">
-                  Pedir folga, troca de turno ou enviar atestado médico
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Total de {empMonthStats.workDays} dias de trabalho e {empMonthStats.offDays} folgas no mês
                 </span>
               </div>
             </div>
-            <Icon name="arrow_forward" className="text-slate-400 text-lg group-hover:translate-x-1 transition-transform" />
+            <Icon name="arrow_forward" className="text-zinc-400 text-lg" />
           </button>
-
-          {/* Monthly Totals Summary Card */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm space-y-3">
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest block">Resumo do Mês ({currentEmp?.name.split(' ')[0]})</span>
-            <div className="grid grid-cols-4 gap-2 text-center">
-              <div className="bg-slate-50 dark:bg-zinc-800 p-2.5 rounded-xl">
-                <span className="text-lg font-black text-slate-800 dark:text-slate-100 block">{empMonthStats.workDays}</span>
-                <span className="text-[9px] font-black uppercase text-slate-400">Trabalho</span>
-              </div>
-              <div className="bg-slate-50 dark:bg-zinc-800 p-2.5 rounded-xl">
-                <span className="text-lg font-black text-rose-600 block">{empMonthStats.offDays}</span>
-                <span className="text-[9px] font-black uppercase text-slate-400">Folgas</span>
-              </div>
-              <div className="bg-slate-50 dark:bg-zinc-800 p-2.5 rounded-xl">
-                <span className="text-lg font-black text-amber-600 block">{empMonthStats.sundaysWorked}</span>
-                <span className="text-[9px] font-black uppercase text-slate-400">Domingos</span>
-              </div>
-              <div className="bg-slate-50 dark:bg-zinc-800 p-2.5 rounded-xl">
-                <span className="text-lg font-black text-emerald-600 block">{pendingCreditsCount}</span>
-                <span className="text-[9px] font-black uppercase text-slate-400">Crédito</span>
-              </div>
-            </div>
-          </div>
 
         </div>
       )}
 
-      {/* TAB 2: PRÓXIMOS 7 DIAS (LINHA DO TEMPO VERTICAL) */}
+      {/* TAB 2: PRÓXIMOS 7 DIAS (LINHA DO TEMPO) */}
       {activeTab === 'semana' && (
-        <div className="space-y-2.5 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="space-y-2.5 animate-in fade-in duration-200">
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Próximos 7 Dias</span>
-            <span className="text-[10px] font-bold text-orange-500 uppercase">{currentEmp?.name}</span>
+            <span className="text-xs font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">Próximos 7 Dias</span>
+            <span className="text-xs font-bold text-orange-500 uppercase">{currentEmp?.name}</span>
           </div>
 
           <div className="space-y-2">
             {upcomingDays.map((d) => (
               <div 
                 key={d.dayNum}
-                className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 min-h-[56px] ${
                   d.isToday
                     ? 'bg-orange-50/70 dark:bg-orange-950/20 border-orange-300 dark:border-orange-800 ring-1 ring-orange-400/30'
-                    : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800'
+                    : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800'
                 }`}
               >
-                {/* Date & Weekday */}
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center font-black shrink-0 ${
+                  <div className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center font-black shrink-0 ${
                     d.isSunday 
-                      ? 'bg-rose-100 dark:bg-rose-950 text-rose-600' 
+                      ? 'bg-rose-100 dark:bg-rose-950/70 text-rose-600' 
                       : d.isToday
                       ? 'bg-orange-500 text-white'
-                      : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-200'
+                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200'
                   }`}>
-                    <span className="text-xs leading-none">{d.dayNum}</span>
-                    <span className="text-[8px] uppercase tracking-tighter mt-0.5">{d.weekdayShort}</span>
+                    <span className="text-sm leading-none">{d.dayNum}</span>
+                    <span className="text-[11px] uppercase tracking-tighter mt-0.5">{d.weekdayShort}</span>
                   </div>
 
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-black text-slate-900 dark:text-slate-100">
+                      <span className="text-sm font-black text-zinc-900 dark:text-zinc-100">
                         {d.isToday ? 'Hoje' : d.weekday}
                       </span>
-                      {d.isHoliday && <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-700 font-bold uppercase">Feriado</span>}
+                      {d.isHoliday && <span className="text-[11px] px-2 py-0.5 rounded-lg bg-amber-100 text-amber-800 font-bold uppercase">Feriado</span>}
                     </div>
-                    <span className="text-xs font-bold text-slate-400 block mt-0.5">
+                    <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 block mt-0.5">
                       {d.isWorking ? d.hour : 'Sem jornada'}
                     </span>
                   </div>
                 </div>
 
-                {/* Shift Tag */}
                 <div className="shrink-0">
                   {getShiftBadge(d.shift)}
                 </div>
@@ -587,10 +631,10 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
 
       {/* TAB 3: QUEM TRABALHA HOJE NA LOJA */}
       {activeTab === 'equipe' && (
-        <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="space-y-3 animate-in fade-in duration-200">
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Escalação da Loja Hoje</span>
-            <span className="text-[10px] font-bold text-slate-500">
+            <span className="text-xs font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">Escalação da Loja Hoje</span>
+            <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300">
               {todayDetails?.dateFormatted} ({todayDetails?.weekday})
             </span>
           </div>
@@ -600,10 +644,10 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
             if (!roster || roster.length === 0) return null;
 
             return (
-              <div key={groupName} className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3.5 shadow-sm space-y-2">
-                <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-2">
-                  <span className="text-xs font-black uppercase text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                    <span className={`w-2 h-2 rounded-full ${
+              <div key={groupName} className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-4 shadow-sm space-y-2.5">
+                <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-2">
+                  <span className="text-xs font-black uppercase text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${
                       groupName === 'Abertura' ? 'bg-amber-500' :
                       groupName === 'Intermediário' ? 'bg-blue-500' :
                       groupName === 'Fechamento' ? 'bg-indigo-600' :
@@ -611,30 +655,30 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
                     }`} />
                     {groupName}
                   </span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">
+                  <span className="text-xs font-semibold text-zinc-400 uppercase">
                     {roster.length} {roster.length === 1 ? 'colaborador' : 'colaboradores'}
                   </span>
                 </div>
 
-                <div className="space-y-1.5 pt-1">
+                <div className="space-y-2 pt-1">
                   {roster.map(({ emp, hour, pos, shift }) => {
                     const isMe = emp.id === currentEmp?.id;
                     return (
                       <div 
                         key={emp.id}
-                        className={`p-2 rounded-xl flex items-center justify-between gap-2 ${
-                          isMe ? 'bg-orange-50 dark:bg-orange-950/30 ring-1 ring-orange-400' : 'bg-slate-50/70 dark:bg-zinc-800/50'
+                        className={`p-2.5 rounded-2xl flex items-center justify-between gap-2.5 min-h-[48px] ${
+                          isMe ? 'bg-orange-50 dark:bg-orange-950/30 ring-1 ring-orange-400' : 'bg-zinc-50/80 dark:bg-zinc-800/50'
                         }`}
                       >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-zinc-700 flex items-center justify-center text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase shrink-0">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-xl bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-black text-zinc-700 dark:text-zinc-200 uppercase shrink-0">
                             {emp.name.substring(0, 2)}
                           </div>
                           <div className="min-w-0">
-                            <span className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase truncate block">
+                            <span className="text-xs font-black text-zinc-900 dark:text-zinc-100 uppercase truncate block">
                               {emp.name} {isMe && '(Você)'}
                             </span>
-                            <span className="text-[10px] font-bold text-slate-400 block">
+                            <span className="text-xs text-zinc-500 dark:text-zinc-400 block font-medium">
                               {isWorkingShift(shift) ? hour : 'Folga'}
                             </span>
                           </div>
@@ -642,7 +686,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
 
                         <div className="flex items-center gap-1.5 shrink-0">
                           {pos && (
-                            <span className="px-2 py-0.5 rounded-lg bg-slate-800 text-white font-black text-[9px] uppercase">
+                            <span className="px-2.5 py-1 rounded-xl bg-zinc-800 text-white font-black text-[11px] uppercase">
                               {pos}
                             </span>
                           )}
@@ -658,56 +702,71 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
         </div>
       )}
 
-      {/* TAB 4: MÊS TODO (CALENDÁRIO COMPACTO) */}
+      {/* TAB 4: MÊS TODO (AGENDA VERTICAL ESTILO GOOGLE CALENDAR) */}
       {activeTab === 'mes' && currentEmp && (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 shadow-sm space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-2">
-            <span className="text-xs font-black uppercase text-slate-700 dark:text-slate-200">
+        <div className="space-y-2.5 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
               Escala Completa do Mês
             </span>
-            <span className="text-[10px] font-bold text-slate-400 uppercase">
+            <span className="text-xs font-bold text-orange-500 uppercase">
               {currentEmp.name}
             </span>
           </div>
 
-          <div className="grid grid-cols-7 gap-1.5 text-center">
-            {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((wd, i) => (
-              <div key={i} className="text-[9px] font-black text-slate-400 uppercase py-1">
-                {wd}
-              </div>
-            ))}
-
+          {/* Lista de Agenda Vertical com Cards Horizontais (min-h-[56px]) */}
+          <div className="space-y-2">
             {Array.from({ length: daysInMonth }, (_, i) => {
               const date = new Date(currentMY.year, currentMY.month, i + 1);
               const dow = date.getDay();
               const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
               const isHoliday = holidaySet.has(dateStr);
+              const isSunday = dow === 0;
               const isOut = !isEmployeeActiveOnDay(currentEmp, dateStr, monthKey, i);
               const shift = isOut ? 'N/A' : ((currentEmp.shifts[monthKey] || [])[i] || 'T');
               const isWorking = isWorkingShift(shift);
               const isToday = isCurrentMonth && i === currentDayIdx;
+              const hour = (currentEmp.dailyHours[monthKey] || [])[i] || currentEmp.workPeriod || '10h às 18h20';
 
               return (
                 <div 
                   key={i}
-                  className={`p-1.5 rounded-xl flex flex-col items-center justify-center border text-[10px] font-black transition-all ${
+                  className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 min-h-[56px] ${
                     isToday
-                      ? 'ring-2 ring-orange-500 bg-orange-50 dark:bg-orange-950/40 border-orange-400'
+                      ? 'ring-2 ring-orange-500 bg-orange-50/80 dark:bg-orange-950/25 border-orange-400'
                       : isOut || shift === 'N/A'
-                      ? 'bg-slate-50 dark:bg-zinc-900/60 border-dashed border-slate-200 dark:border-zinc-800 text-slate-400 dark:text-zinc-600 opacity-60'
-                      : isWorking
-                      ? 'bg-slate-50 dark:bg-zinc-800/80 border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-slate-200'
-                      : shift === 'FE'
-                      ? 'bg-emerald-500 text-white border-emerald-600'
-                      : shift.startsWith('FF')
-                      ? 'bg-amber-500 text-white border-amber-600'
-                      : 'bg-rose-500 text-white border-rose-600'
+                      ? 'bg-zinc-50 dark:bg-zinc-900/50 border-dashed border-zinc-200 dark:border-zinc-800 text-zinc-400 opacity-60'
+                      : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800'
                   }`}
                 >
-                  <span>{i + 1}</span>
-                  <span className="text-[8px] uppercase font-bold mt-0.5">
-                    {isOut || shift === 'N/A' ? '-' : shift === 'FE' ? 'FE' : shift === 'F' ? 'F' : shift.startsWith('FF') ? 'FF' : 'T'}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center font-black shrink-0 ${
+                      isToday
+                        ? 'bg-orange-500 text-white'
+                        : isSunday
+                        ? 'bg-rose-100 dark:bg-rose-950/70 text-rose-600'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200'
+                    }`}>
+                      <span className="text-sm leading-none">{i + 1}</span>
+                      <span className="text-[11px] uppercase tracking-tighter mt-0.5">{WEEKDAY_SHORT_PT[dow]}</span>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-zinc-900 dark:text-zinc-100">
+                          {isToday ? 'Hoje' : WEEKDAY_NAMES_PT[dow]}
+                        </span>
+                        {isHoliday && <span className="text-[11px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold uppercase">Feriado</span>}
+                      </div>
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium block mt-0.5">
+                        {isOut || shift === 'N/A' ? 'Fora de vigência' : isWorking ? hour : 'Folga'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="shrink-0">
+                    {getShiftBadge(shift)}
+                  </div>
                 </div>
               );
             })}
@@ -715,34 +774,77 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
         </div>
       )}
 
+      {/* NAVEGAÇÃO INFERIOR CONSOLIDADA (Touch Targets de 44x44px) */}
+      <nav 
+        aria-label="Navegação móvel"
+        className="fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-t border-zinc-200 dark:border-zinc-800 px-3 py-1 shadow-lg pb-[max(env(safe-area-inset-bottom),0.5rem)]"
+      >
+        <div className="grid grid-cols-4 max-w-md mx-auto items-center">
+          {[
+            { id: 'hoje', label: 'Hoje', sub: 'Meu Dia', icon: 'today' },
+            { id: 'semana', label: '7 Dias', sub: 'Semana', icon: 'date_range' },
+            { id: 'equipe', label: 'Quem Trabalha', sub: 'Equipe', icon: 'groups' },
+            { id: 'mes', label: 'Mês Todo', sub: 'Agenda', icon: 'calendar_view_month' },
+          ].map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as 'hoje' | 'semana' | 'equipe' | 'mes')}
+                className={`min-h-[44px] flex flex-col items-center justify-center rounded-2xl transition-all relative ${
+                  isActive 
+                    ? 'text-orange-600 dark:text-orange-400 font-black' 
+                    : 'text-zinc-500 dark:text-zinc-400 font-medium hover:text-zinc-800 dark:hover:text-zinc-200'
+                }`}
+              >
+                <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-orange-50 dark:bg-orange-950/50 scale-105' : ''}`}>
+                  <Icon name={tab.icon} className="text-xl" />
+                </div>
+                <span className="text-[11px] tracking-tight truncate mt-0.5 font-bold">
+                  {tab.label}
+                </span>
+                {isActive && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500 absolute bottom-0.5"></span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
       {/* Modal / Sheet para Troca Rápida de Colaborador */}
       {showEmpSelector && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl p-5 border border-slate-200 dark:border-zinc-800 w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-4">
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-zinc-950/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl p-5 border border-zinc-200 dark:border-zinc-800 w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-4">
             
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
-              <h4 className="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">
-                Selecionar Colaborador
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+              <h4 className="text-base font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight">
+                Quem é você na loja?
               </h4>
-              <button onClick={() => setShowEmpSelector(false)} className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800">
-                <Icon name="close" />
+              <button 
+                type="button"
+                onClick={() => setShowEmpSelector(false)} 
+                className="w-11 h-11 rounded-xl text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center"
+              >
+                <Icon name="close" className="text-xl" />
               </button>
             </div>
 
-            {/* Search Box */}
+            {/* Caixa de Busca com 44px de Altura */}
             <div className="relative my-3">
-              <Icon name="search" className="absolute left-3 top-3 text-slate-400 text-sm" />
+              <Icon name="search" className="absolute left-3.5 top-3.5 text-zinc-400 text-lg" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar por nome..."
-                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl pl-9 pr-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                placeholder="Buscar por seu nome..."
+                className="w-full min-h-[44px] bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl pl-11 pr-4 text-sm font-semibold text-zinc-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
 
-            {/* List */}
-            <div className="overflow-y-auto custom-scrollbar flex-1 space-y-1.5 pr-1">
+            {/* Lista de Colaboradores com Touch Target de 48px */}
+            <div className="overflow-y-auto custom-scrollbar flex-1 space-y-2 pr-1">
               {activeEmployees
                 .filter(e => e.name.toLowerCase().includes(searchTerm.toLowerCase()) || (e.cargo || '').toLowerCase().includes(searchTerm.toLowerCase()))
                 .map(emp => {
@@ -750,31 +852,35 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
                   return (
                     <button
                       key={emp.id}
+                      type="button"
                       onClick={() => {
                         onSelectEmployee(emp.id);
+                        try {
+                          window.localStorage.setItem(STORAGE_KEYS.viewerSelectedEmpId, JSON.stringify(emp.id));
+                        } catch {}
                         setShowEmpSelector(false);
                       }}
-                      className={`w-full p-3 rounded-2xl flex items-center justify-between gap-3 text-left transition-all ${
+                      className={`w-full min-h-[48px] p-3 rounded-2xl flex items-center justify-between gap-3 text-left transition-all ${
                         isSelected 
                           ? 'bg-orange-500 text-white shadow-md' 
-                          : 'bg-slate-50 dark:bg-zinc-800/60 text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800'
+                          : 'bg-zinc-50 dark:bg-zinc-800/60 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs uppercase ${
-                          isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-slate-300'
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs uppercase ${
+                          isSelected ? 'bg-white/20 text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300'
                         }`}>
                           {emp.name.substring(0, 2)}
                         </div>
                         <div className="min-w-0">
                           <span className="text-xs font-black uppercase block truncate">{emp.name}</span>
-                          <span className={`text-[10px] font-bold block ${isSelected ? 'text-white/80' : 'text-slate-400'}`}>
+                          <span className={`text-[11px] font-semibold block ${isSelected ? 'text-white/80' : 'text-zinc-500 dark:text-zinc-400'}`}>
                             {emp.cargo || 'Atendente'} • {emp.workPeriod || '10h às 18h20'}
                           </span>
                         </div>
                       </div>
 
-                      {isSelected && <Icon name="check" className="text-lg text-white shrink-0" />}
+                      {isSelected && <Icon name="check" className="text-xl text-white shrink-0" />}
                     </button>
                   );
                 })}

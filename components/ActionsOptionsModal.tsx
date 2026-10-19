@@ -47,7 +47,7 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4 bg-zinc-950/60 backdrop-blur-sm animate-fade-in"
       onClick={(e) => {
         e.stopPropagation();
         onClose();
@@ -64,7 +64,7 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
               <Icon name="auto_fix_high" className="text-xl" />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">
+              <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-zinc-100 uppercase tracking-tight">
                 Ações & Opções da Escala
               </h3>
               <p className="text-[11px] font-bold text-slate-400">
@@ -103,19 +103,19 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-xl ${isEditable ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-slate-300'}`}>
+                  <div className={`p-2 rounded-xl ${isEditable ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300'}`}>
                     <Icon name={isEditable ? 'edit' : 'edit_off'} className="text-base" />
                   </div>
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-black uppercase text-slate-800 dark:text-slate-100">Modo Edição</span>
+                      <span className="text-xs font-black uppercase text-slate-800 dark:text-zinc-100">Modo Edição</span>
                       <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                        isEditable ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-slate-400'
+                        isEditable ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-400'
                       }`}>
                         {isEditable ? 'Ativo' : 'Bloqueado'}
                       </span>
                     </div>
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                    <span className="text-[10px] text-slate-500 dark:text-zinc-400">
                       Permite alterar células, turnos e horários na grade
                     </span>
                   </div>
@@ -136,19 +136,19 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-xl ${allowRetroactive ? 'bg-amber-500 text-white shadow-sm' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-slate-300'}`}>
+                  <div className={`p-2 rounded-xl ${allowRetroactive ? 'bg-amber-500 text-white shadow-sm' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300'}`}>
                     <Icon name={allowRetroactive ? 'history' : 'history_toggle_off'} className="text-base" />
                   </div>
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-black uppercase text-slate-800 dark:text-slate-100">Edição Retroativa</span>
+                      <span className="text-xs font-black uppercase text-slate-800 dark:text-zinc-100">Edição Retroativa</span>
                       <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                        allowRetroactive ? 'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-slate-400'
+                        allowRetroactive ? 'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-400'
                       }`}>
                         {allowRetroactive ? 'Permitido' : 'Protegido'}
                       </span>
                     </div>
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                    <span className="text-[10px] text-slate-500 dark:text-zinc-400">
                       Permite editar dias anteriores a hoje no mês corrente
                     </span>
                   </div>
@@ -189,7 +189,7 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
                   <span className="text-xs font-black uppercase text-orange-700 dark:text-orange-300">
                     Criar Novo Mês
                   </span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                  <span className="text-[10px] text-slate-500 dark:text-zinc-400">
                     Gera escala sugerida ou base com análise retroativa CLT
                   </span>
                 </div>
@@ -213,7 +213,7 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
                   <span className="text-xs font-black uppercase text-indigo-700 dark:text-indigo-300">
                     Aplicar Pré-definições
                   </span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                  <span className="text-[10px] text-slate-500 dark:text-zinc-400">
                     Reaplicar seletivamente apenas horários, folgas ou funções
                   </span>
                 </div>
@@ -229,14 +229,14 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
                 }}
                 className="w-full flex items-center gap-3 p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-800/50 hover:bg-slate-100 dark:hover:bg-zinc-800 text-left transition-all group"
               >
-                <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-slate-200 flex items-center justify-center shadow-sm shrink-0 group-hover:scale-105 transition-transform">
+                <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200 flex items-center justify-center shadow-sm shrink-0 group-hover:scale-105 transition-transform">
                   <Icon name="casino" className="text-xl" />
                 </div>
                 <div className="flex flex-col flex-1 min-w-0">
-                  <span className="text-xs font-black uppercase text-slate-800 dark:text-slate-200">
+                  <span className="text-xs font-black uppercase text-slate-800 dark:text-zinc-200">
                     Sortear Domingos CLT
                   </span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                  <span className="text-[10px] text-slate-500 dark:text-zinc-400">
                     Revezamento com limite de 2 domingos consecutivos
                   </span>
                 </div>
@@ -264,7 +264,7 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
                     <span className="text-xs font-black uppercase text-emerald-700 dark:text-emerald-300">
                       Salvar Escala em CSV (.csv)
                     </span>
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                    <span className="text-[10px] text-slate-500 dark:text-zinc-400">
                       Exporta a grade completa preservando colunas e linhas para Excel
                     </span>
                   </div>

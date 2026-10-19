@@ -170,8 +170,8 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
               {employee.name.substring(0, 2).toUpperCase()}
             </div>
             <div>
-              <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight leading-tight">{employee.name}</h3>
-              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{employee.cargo || 'Colaborador'} • {months[currentMY.month]} {currentMY.year}</p>
+              <h3 className="text-xl font-black text-slate-800 dark:text-zinc-100 uppercase tracking-tight leading-tight">{employee.name}</h3>
+              <p className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">{employee.cargo || 'Colaborador'} • {months[currentMY.month]} {currentMY.year}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -179,7 +179,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
               <button 
                 type="button"
                 onClick={onLockSession}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 dark:hover:bg-rose-950/40 dark:hover:text-rose-300 text-slate-600 dark:text-slate-300 text-xs font-bold transition-all shadow-xs"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 dark:hover:bg-rose-950/40 dark:hover:text-rose-300 text-slate-600 dark:text-zinc-300 text-xs font-bold transition-all shadow-xs"
                 title="Bloquear sessão individual e exigir senha no próximo acesso"
               >
                 <Icon name="lock" className="text-sm text-orange-500" />
@@ -353,7 +353,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                             <Icon name="event_available" className="text-lg" />
                           </div>
                           <div>
-                            <p className="text-[11px] font-black text-slate-800 dark:text-slate-100 uppercase">{c.holidayName}</p>
+                            <p className="text-[11px] font-black text-slate-800 dark:text-zinc-100 uppercase">{c.holidayName}</p>
                             <p className="text-[9px] font-bold text-amber-600 uppercase tracking-tighter">Pendente de Agendamento</p>
                           </div>
                         </div>
@@ -375,7 +375,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                           <Icon name="check_circle" className="text-lg" />
                         </div>
                         <div>
-                          <p className="text-[11px] font-black text-slate-800 dark:text-slate-100 uppercase">{c.holidayName}</p>
+                          <p className="text-[11px] font-black text-slate-800 dark:text-zinc-100 uppercase">{c.holidayName}</p>
                           <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-tighter">Agendado para {c.offDate?.split('-').reverse().slice(0, 2).join('/')}</p>
                         </div>
                       </div>
@@ -447,10 +447,10 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                     <div className="flex items-center gap-3">
                       <div className="flex flex-col items-center justify-center w-10 h-10 bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-slate-100 dark:border-zinc-800">
                         <span className="text-[8px] font-black text-slate-300 uppercase leading-none">{dow.substring(0, 3)}</span>
-                        <span className={`text-sm font-black ${isSun ? 'text-rose-500' : 'text-slate-700 dark:text-slate-200'}`}>{d}</span>
+                        <span className={`text-sm font-black ${isSun ? 'text-rose-500' : 'text-slate-700 dark:text-zinc-200'}`}>{d}</span>
                       </div>
                       <div>
-                        <p className={`text-[11px] font-black uppercase ${shift === 'F' ? 'text-rose-600' : (typeof shift === 'string' && shift.startsWith('FF')) ? 'text-amber-600' : 'text-slate-800 dark:text-slate-100'}`}>
+                        <p className={`text-[11px] font-black uppercase ${shift === 'F' ? 'text-rose-600' : (typeof shift === 'string' && shift.startsWith('FF')) ? 'text-amber-600' : 'text-slate-800 dark:text-zinc-100'}`}>
                           {shift === 'T' ? 'Trabalha' : shift === 'F' ? 'Folga' : (typeof shift === 'string' && shift.startsWith('FF')) ? 'Folga Feriado' : shift === 'FE' ? (() => {
                             if (employee.vacationStart && employee.vacationEnd && fullDate >= employee.vacationStart && fullDate <= employee.vacationEnd) {
                               const s = new Date(employee.vacationStart + 'T00:00:00').getTime();
@@ -546,7 +546,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                      <div className="space-y-1.5">
                         <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Trocar com quem?</label>
                         <select 
-                          className="w-full bg-slate-100 dark:bg-zinc-950 border-none rounded-xl px-4 py-3 text-xs font-bold outline-none ring-1 ring-slate-200 dark:ring-zinc-800 focus:ring-2 focus:ring-orange-500 transition-all text-slate-700 dark:text-slate-300"
+                          className="w-full bg-slate-100 dark:bg-zinc-950 border-none rounded-xl px-4 py-3 text-xs font-bold outline-none ring-1 ring-slate-200 dark:ring-zinc-800 focus:ring-2 focus:ring-orange-500 transition-all text-slate-700 dark:text-zinc-300"
                           value={targetEmployeeId}
                           onChange={(e) => setTargetEmployeeId(e.target.value)}
                         >
@@ -612,7 +612,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                 )}
               </div>
             ) : (
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center">
+              <div className="p-4 bg-slate-50 dark:bg-zinc-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-700 text-center">
                  <p className="text-[10px] font-bold text-slate-400 uppercase italic">Acesse com sua senha para enviar solicitações.</p>
               </div>
             )}
@@ -662,12 +662,12 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                       })()}
                     </span>
                   </div>
-                  <p className="text-xs font-bold text-slate-700 dark:text-slate-200 leading-relaxed pr-8">{req.text}</p>
+                  <p className="text-xs font-bold text-slate-700 dark:text-zinc-200 leading-relaxed pr-8">{req.text}</p>
                   
                   {req.feedback && (isAdmin || isValidated) && (
                     <div className="mt-3 p-2 bg-slate-50 dark:bg-zinc-900 rounded-lg border border-slate-100 dark:border-zinc-800">
                       <p className="text-[9px] font-black uppercase text-slate-400 mb-0.5">Justificativa do Gerente:</p>
-                      <p className="text-[10px] font-bold text-slate-600 dark:text-slate-300 italic">{req.feedback}</p>
+                      <p className="text-[10px] font-bold text-slate-600 dark:text-zinc-300 italic">{req.feedback}</p>
                     </div>
                   )}
                   
@@ -875,10 +875,10 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                   <Icon name="history_edu" className="text-2xl" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">
+                  <h4 className="text-sm font-black text-slate-900 dark:text-zinc-100 uppercase tracking-tight">
                     Histórico de Alterações na Escala
                   </h4>
-                  <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mt-0.5">
+                  <p className="text-xs font-medium text-slate-600 dark:text-zinc-400 mt-0.5">
                     Registro de todas as mudanças realizadas após a oficialização da escala, com justificativas e horários de alteração.
                   </p>
                 </div>
@@ -889,10 +889,10 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                   <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
                     <Icon name="check_circle" className="text-3xl" />
                   </div>
-                  <h5 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                  <h5 className="text-sm font-black text-slate-800 dark:text-zinc-200 uppercase tracking-wide">
                     Nenhuma Alteração Registrada
                   </h5>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium max-w-sm mt-1">
+                  <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium max-w-sm mt-1">
                     Sua escala permanece exatamente conforme a versão original oficializada, sem alterações posteriores.
                   </p>
                 </div>
@@ -921,12 +921,12 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                             <span className="px-2.5 py-1 rounded-xl bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 font-black text-xs uppercase tracking-wider">
                               📅 Dia {log.dateStr}
                             </span>
-                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            <span className="text-xs font-bold text-slate-700 dark:text-zinc-300">
                               {log.humanDescription}
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-zinc-500 font-medium">
                             <Icon name="schedule" className="text-xs" />
                             <span>{dateFormatted} por {log.authorName || 'Gestor'}</span>
                           </div>
@@ -955,10 +955,10 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-100 dark:border-zinc-800 flex items-start gap-2">
                           <Icon name="comment" className="text-xs text-orange-500 shrink-0 mt-0.5" />
                           <div className="text-xs">
-                            <span className="font-black text-slate-500 dark:text-slate-400 uppercase text-[10px] mr-1.5">
+                            <span className="font-black text-slate-500 dark:text-zinc-400 uppercase text-[10px] mr-1.5">
                               Motivo:
                             </span>
-                            <span className="font-semibold text-slate-800 dark:text-slate-200">
+                            <span className="font-semibold text-slate-800 dark:text-zinc-200">
                               "{log.justification}"
                             </span>
                           </div>
@@ -989,7 +989,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                     <span className="w-3 h-3 rounded-full bg-rose-500 inline-block animate-pulse" />
                     <div>
                       <p className="text-[10px] font-black uppercase text-slate-400">Atestado Ativo Cadastrado</p>
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                      <p className="text-xs font-bold text-slate-800 dark:text-zinc-100">
                         {new Date(employee.atestadoStart + 'T00:00:00').toLocaleDateString('pt-BR')} até {new Date(employee.atestadoEnd + 'T00:00:00').toLocaleDateString('pt-BR')}
                       </p>
                       <p className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
@@ -1009,7 +1009,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
               )}
 
               <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 rounded-2xl space-y-4 shadow-sm">
-                <h4 className="text-xs font-black uppercase text-slate-700 dark:text-slate-200 tracking-wider">Novo / Editar Atestado</h4>
+                <h4 className="text-xs font-black uppercase text-slate-700 dark:text-zinc-200 tracking-wider">Novo / Editar Atestado</h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -1018,7 +1018,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                       type="date"
                       value={atestadoStartInput}
                       onChange={(e) => setAtestadoStartInput(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-orange-500"
+                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
 
@@ -1030,7 +1030,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                       max={180}
                       value={atestadoDurationInput}
                       onChange={(e) => setAtestadoDurationInput(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-orange-500"
+                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
                 </div>

@@ -222,11 +222,11 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm animate-fade-in">
       <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
         <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
-          <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
+          <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-zinc-100 flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-orange-100 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 flex items-center justify-center">
               <Icon name="person_add" className="text-xl" />
             </div>
@@ -251,7 +251,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
               type="text" 
               value={newName} 
               onChange={(e) => setNewName(e.target.value)} 
-              className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-3 font-bold text-sm text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-orange-500 outline-none uppercase" 
+              className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-3 font-bold text-sm text-slate-800 dark:text-zinc-100 focus:ring-2 focus:ring-orange-500 outline-none uppercase" 
               placeholder="Ex: João da Silva" 
             />
           </div>
@@ -274,7 +274,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
                   className={`py-2 rounded-xl text-xs font-black uppercase border transition-all ${
                     newCargo === c
                       ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
-                      : 'bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-zinc-700 hover:border-orange-300'
+                      : 'bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-700 hover:border-orange-300'
                   }`}
                 >
                   {c}
@@ -289,7 +289,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
               <select 
                 value={newContractType} 
                 onChange={(e) => setNewContractType(e.target.value as any)}
-                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="CLT">CLT (Efetivo)</option>
                 <option value="Sazonal">Sazonal / Temporário</option>
@@ -300,7 +300,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
               <select 
                 value={newJornada} 
                 onChange={(e) => setNewJornada(e.target.value as any)}
-                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="6x1">6x1</option>
                 <option value="5x2">5x2</option>
@@ -332,27 +332,27 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block mb-1">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-zinc-400 block mb-1">
                   Início / Admissão {newContractType === 'Sazonal' && '*'}
                 </label>
                 <input 
                   type="date" 
                   value={newHiredAt} 
                   onChange={(e) => setNewHiredAt(e.target.value)} 
-                  className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-orange-500" 
+                  className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2 font-bold text-xs text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-orange-500" 
                 />
                 <span className="text-[9px] text-slate-400 block mt-0.5">Antes desta data: N/A</span>
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block mb-1">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-zinc-400 block mb-1">
                   Término do Contrato {newContractType === 'Sazonal' ? '(Previsto)' : '(Opcional)'}
                 </label>
                 <input 
                   type="date" 
                   value={newFiredAt} 
                   onChange={(e) => setNewFiredAt(e.target.value)} 
-                  className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-orange-500" 
+                  className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2 font-bold text-xs text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-orange-500" 
                 />
                 <span className="text-[9px] text-slate-400 block mt-0.5">Após esta data: N/A</span>
               </div>
@@ -371,7 +371,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
               type="date" 
               value={newBirthday} 
               onChange={(e) => setNewBirthday(e.target.value)} 
-              className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-slate-200 outline-none" 
+              className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2.5 font-bold text-xs text-slate-800 dark:text-zinc-200 outline-none" 
             />
           </div>
           
@@ -383,7 +383,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
               onChange={(e) => setIsYoung(e.target.checked)} 
               className="w-4 h-4 accent-orange-500 rounded cursor-pointer" 
             />
-            <label htmlFor="isYoung" className="text-xs font-black text-slate-700 dark:text-slate-300 cursor-pointer">
+            <label htmlFor="isYoung" className="text-xs font-black text-slate-700 dark:text-zinc-300 cursor-pointer">
               Jovem Aprendiz
             </label>
           </div>
@@ -453,7 +453,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   });
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-zinc-950/60 backdrop-blur-sm animate-fade-in">
       <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/80">
@@ -469,7 +469,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 uppercase">
+                <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-zinc-100 uppercase">
                   {employee.name}
                 </h4>
                 <span className={`w-2 h-2 rounded-full ${employee.status === 'active' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
@@ -499,7 +499,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
         <div className="overflow-y-auto p-5 sm:p-7 space-y-6 flex-1 custom-scrollbar">
           {/* Section 1: Identificação & Cargo */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-zinc-100 uppercase tracking-wider">
               <Icon name="badge" className="text-orange-500 text-base" />
               <span>Identificação & Cargo</span>
             </div>
@@ -513,7 +513,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   value={employee.name}
                   onChange={(e) => onUpdateEmployee(employee.id, { name: e.target.value })}
                   placeholder="Nome do colaborador"
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 text-xs font-black text-slate-900 dark:text-slate-100 uppercase outline-none focus:ring-2 focus:ring-orange-500/20"
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 text-xs font-black text-slate-900 dark:text-zinc-100 uppercase outline-none focus:ring-2 focus:ring-orange-500/20"
                 />
               </div>
 
@@ -530,7 +530,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                       isYoungApprentice: isApprentice
                     });
                   }}
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   {CARGO_OPTIONS.map(c => (
                     <option key={c} value={c}>{c}</option>
@@ -542,7 +542,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
 
           {/* Section 2: Período de Contrato & Vínculo */}
           <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
-            <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-zinc-100 uppercase tracking-wider">
               <Icon name="event_available" className="text-orange-500 text-base" />
               <span>Período de Contrato & Vínculo</span>
             </div>
@@ -573,7 +573,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                 {/* Data de Início / Admissão */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                    <label className="text-[10px] font-black text-slate-600 dark:text-zinc-300 uppercase tracking-wider">
                       Início / Admissão
                     </label>
                     {employee.hiredAt && (
@@ -591,7 +591,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                       const syncedShifts = syncEmployeeContractShifts(employee, newHiredAt, employee.firedAt);
                       onUpdateEmployee(employee.id, { hiredAt: newHiredAt, shifts: syncedShifts });
                     }}
-                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-orange-500"
                   />
                   <p className="text-[9px] text-slate-400">
                     Antes desta data: <strong>N/A</strong> automático
@@ -601,7 +601,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                 {/* Data de Término / Fim de Contrato */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                    <label className="text-[10px] font-black text-slate-600 dark:text-zinc-300 uppercase tracking-wider">
                       Término do Contrato
                     </label>
                     {employee.firedAt && !isReadOnly && (
@@ -627,7 +627,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                       const syncedShifts = syncEmployeeContractShifts(employee, employee.hiredAt, newFiredAt);
                       onUpdateEmployee(employee.id, { firedAt: newFiredAt, shifts: syncedShifts });
                     }}
-                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-orange-500"
                   />
                   <p className="text-[9px] text-slate-400">
                     Após esta data: <strong>N/A</strong> automático
@@ -649,7 +649,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   disabled={isReadOnly}
                   value={employee.contractType || 'CLT'}
                   onChange={(e) => onUpdateEmployee(employee.id, { contractType: e.target.value as any })}
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="CLT">CLT (Efetivo)</option>
                   <option value="Sazonal">Sazonal / Temporário</option>
@@ -662,7 +662,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   disabled={isReadOnly}
                   value={employee.jornada || '6x1'}
                   onChange={(e) => onUpdateEmployee(employee.id, { jornada: e.target.value as any })}
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="6x1">6x1</option>
                   <option value="5x2">5x2</option>
@@ -676,7 +676,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   disabled={isReadOnly}
                   value={employee.birthday || ''}
                   onChange={(e) => onUpdateEmployee(employee.id, { birthday: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
             </div>
@@ -684,7 +684,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
 
           {/* Section 3: Escala Base & Folgas */}
           <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
-            <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-zinc-100 uppercase tracking-wider">
               <Icon name="schedule" className="text-orange-500 text-base" />
               <span>Escala Base & Folga Semanal</span>
             </div>
@@ -696,7 +696,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   disabled={isReadOnly}
                   value={employee.workPeriod}
                   onChange={(e) => onUpdateEmployee(employee.id, { workPeriod: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-orange-500"
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-200 outline-none focus:ring-1 focus:ring-orange-500"
                 >
                   {employee.isYoungApprentice ? (
                     <option value={APPRENTICE_WORK_PERIOD}>{APPRENTICE_WORK_PERIOD}</option>
@@ -717,7 +717,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   disabled={isReadOnly}
                   value={employee.preferredDayOff}
                   onChange={(e) => onUpdateEmployee(employee.id, { preferredDayOff: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-orange-500"
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-200 outline-none focus:ring-1 focus:ring-orange-500"
                 >
                   <option value="">Nenhuma folga fixa</option>
                   {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'].map(d => (
@@ -735,7 +735,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   disabled={isReadOnly}
                   value={employee.preferredPosition1 || ''}
                   onChange={(e) => onUpdateEmployee(employee.id, { preferredPosition1: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-200 outline-none"
                 >
                   <option value="">Nenhuma</option>
                   {['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
@@ -750,7 +750,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   disabled={isReadOnly}
                   value={employee.preferredPosition2 || ''}
                   onChange={(e) => onUpdateEmployee(employee.id, { preferredPosition2: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-200 outline-none"
                 >
                   <option value="">Nenhuma</option>
                   {['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].map(p => (
@@ -763,7 +763,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
 
           {/* Section 4: Condições Especiais (Aprendiz, Férias & Atestado) */}
           <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
-            <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-zinc-100 uppercase tracking-wider">
               <Icon name="verified_user" className="text-orange-500 text-base" />
               <span>Condições Especiais & Afastamentos</span>
             </div>
@@ -776,7 +776,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                     <Icon name="child_care" className="text-base" />
                   </div>
                   <div>
-                    <span className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase">Jovem Aprendiz</span>
+                    <span className="text-xs font-black text-slate-800 dark:text-zinc-200 uppercase">Jovem Aprendiz</span>
                     <p className="text-[10px] text-slate-400">Folga automática aos Sábados, Domingos e Feriados</p>
                   </div>
                 </div>
@@ -811,7 +811,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
             {!employee.isYoungApprentice && (
               <div className="p-3.5 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <label className="text-[10px] font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
                     <Icon name="beach_access" className="text-emerald-500 text-sm" />
                     Férias (Início)
                   </label>
@@ -831,7 +831,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   disabled={isReadOnly}
                   value={employee.vacationStart || ''}
                   onChange={(e) => handleVacationStart(employee, e.target.value, onUpdateEmployee)}
-                  className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                  className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-200 outline-none"
                 />
                 {employee.vacationStart && employee.vacationEnd && (
                   <div className="bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-900/50 flex items-center justify-between text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
@@ -845,7 +845,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
             {/* Atestado Médico */}
             <div className="p-3.5 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 space-y-2.5">
               <div className="flex items-center justify-between">
-                <label className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <label className="text-[10px] font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
                   <Icon name="medical_services" className="text-rose-500 text-sm" />
                   Atestado Médico (Lançar por Período)
                 </label>
@@ -872,7 +872,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                     disabled={isReadOnly}
                     value={atestadoStartEdit}
                     onChange={(e) => setAtestadoStartEdit(e.target.value)}
-                    className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                    className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-200 outline-none"
                   />
                 </div>
                 <div>
@@ -884,13 +884,13 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                     disabled={isReadOnly}
                     value={atestadoDurationEdit}
                     onChange={(e) => setAtestadoDurationEdit(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                    className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-200 outline-none"
                   />
                 </div>
               </div>
               {atestadoStartEdit && (
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-zinc-700/60">
-                  <div className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                  <div className="text-[10px] font-bold text-slate-600 dark:text-zinc-300">
                     <span>Fim: {formatDateBR(addDays(atestadoStartEdit, atestadoDurationEdit - 1))}</span>
                     <span className="ml-2 text-emerald-600 dark:text-emerald-400">Retorno: {formatDateBR(addDays(atestadoStartEdit, atestadoDurationEdit))}</span>
                   </div>
@@ -913,7 +913,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
 
           {/* Section 5: Acesso & Visibilidade */}
           <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
-            <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-zinc-100 uppercase tracking-wider">
               <Icon name="lock" className="text-orange-500 text-base" />
               <span>Acesso & Visibilidade</span>
             </div>
@@ -940,7 +940,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                     value={employee.password || ''}
                     onChange={(e) => onUpdateEmployee(employee.id, { password: e.target.value })}
                     placeholder="Padrão: 1234"
-                    className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 outline-none"
+                    className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-slate-800 dark:text-zinc-200 outline-none"
                   />
                   <Icon name="key" className="absolute right-3 top-2 text-slate-400 text-xs" />
                 </div>
@@ -961,7 +961,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                     className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1.5 border transition-all ${
                       employee.isHidden
                         ? 'bg-slate-900 text-white border-slate-900 dark:bg-zinc-700'
-                        : 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-zinc-700 hover:border-slate-300'
+                        : 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:border-slate-300'
                     }`}
                   >
                     <Icon name={employee.isHidden ? 'visibility_off' : 'visibility'} className="text-sm" />
@@ -1047,12 +1047,12 @@ export const TeamView: React.FC<TeamViewProps> = ({
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm gap-4">
         <div>
            <div className="flex items-center gap-2">
-             <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100">Equipe Operacional</h3>
+             <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-zinc-100">Equipe Operacional</h3>
              <span className="text-xs px-2.5 py-0.5 rounded-full font-black bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900">
                {employees.length} {employees.length === 1 ? 'colaborador' : 'colaboradores'}
              </span>
            </div>
-           <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mt-0.5">
+           <p className="text-xs font-bold text-slate-400 dark:text-zinc-500 mt-0.5">
              Clique no card ou no botão Editar para abrir os dados completos do colaborador em um modal.
            </p>
         </div>
@@ -1093,7 +1093,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar colaborador..."
-              className="w-full h-9 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl pl-9 pr-8 text-xs font-semibold text-slate-700 dark:text-slate-200 placeholder-slate-400 outline-none focus:ring-2 focus:ring-orange-500/30 transition-all"
+              className="w-full h-9 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl pl-9 pr-8 text-xs font-semibold text-slate-700 dark:text-zinc-200 placeholder-slate-400 outline-none focus:ring-2 focus:ring-orange-500/30 transition-all"
             />
             {searchTerm && (
               <button 
@@ -1113,7 +1113,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
                 className={`h-full px-2.5 sm:px-3 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center ${
                   cargoFilter === c 
                     ? 'bg-orange-500 text-white shadow-sm' 
-                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                    : 'text-slate-500 hover:text-slate-700 dark:text-zinc-400'
                 }`}
               >
                 {c === 'ALL' ? 'Todos' : c}
@@ -1179,7 +1179,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase truncate group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors" title={emp.name.toUpperCase()}>
+                        <span className="text-sm font-black text-slate-900 dark:text-zinc-100 uppercase truncate group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors" title={emp.name.toUpperCase()}>
                           {emp.name}
                         </span>
                         <div className={`w-2 h-2 rounded-full shrink-0 ${emp.status === 'active' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
@@ -1207,7 +1207,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
                 </div>
 
                 {/* Key Chips */}
-                <div className="flex flex-col gap-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-300 pt-2 border-t border-slate-100 dark:border-zinc-800">
+                <div className="flex flex-col gap-1.5 text-[11px] font-bold text-slate-600 dark:text-zinc-300 pt-2 border-t border-slate-100 dark:border-zinc-800">
                   {/* Período de Contrato / Início & Término */}
                   {(emp.hiredAt || emp.firedAt) && (
                     <div className={`flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-lg border w-fit ${
@@ -1229,20 +1229,20 @@ export const TeamView: React.FC<TeamViewProps> = ({
                   )}
 
                   {/* Horário Base */}
-                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400">
                     <Icon name="schedule" className="text-xs text-orange-500 shrink-0" />
                     <span>{emp.workPeriod || '10h às 18h20'}</span>
                   </div>
 
                   {/* Folga Fixa */}
-                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400">
                     <Icon name="event_busy" className="text-xs text-rose-500 shrink-0" />
                     <span>Folga: {emp.preferredDayOff ? emp.preferredDayOff.replace('-feira', '') : 'Sem folga fixa'}</span>
                   </div>
 
                   {/* Aniversário */}
                   {emp.birthday && (
-                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[10px]">
+                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 text-[10px]">
                       <Icon name="cake" className="text-xs text-fuchsia-500 shrink-0" />
                       <span>Aniversário: {formatDateBR(emp.birthday).substring(0, 5)}</span>
                     </div>

@@ -54,6 +54,7 @@ import { CreateMonthModal } from './components/CreateMonthModal';
 import { DailyScheduleModulatorModal } from './components/DailyScheduleModulatorModal';
 import { AuditJustificationModal, AuditImpactPreview } from './components/AuditJustificationModal';
 import { MobileNavBar } from './components/MobileNavBar';
+import { ScheduleSkeleton } from './components/ScheduleSkeleton';
 import { migrateLegacyEmployeeData } from './src/services/scheduleMigrationService';
 import { useScheduleExport } from './hooks/useScheduleExport';
 import { useHolidayHandlers } from './hooks/useHolidayHandlers';
@@ -96,6 +97,16 @@ const App: React.FC = () => {
   const [showDiffModal, setShowDiffModal] = useState(false);
   const [currentView, setCurrentView] = useState<string>('grid');
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
+  const [isChangingMonth, setIsChangingMonth] = useState(false);
+
+  const handleMonthChange = useCallback((newMY: MonthYear | ((prev: MonthYear) => MonthYear)) => {
+    setIsChangingMonth(true);
+    setCurrentMY(newMY);
+    const timer = setTimeout(() => {
+      setIsChangingMonth(false);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, []);
   const [sectionAssignments, setSectionAssignments] = useLocalStorage<Record<string, any>>(STORAGE_KEYS.sectionAssignments, {});
   const [validatedMonths, setValidatedMonths] = useLocalStorage<Record<string, boolean>>(STORAGE_KEYS.validatedMonths, {});
   const [selectedDayIdx, setSelectedDayIdx] = useState(new Date().getDate() - 1);
@@ -133,6 +144,7 @@ const App: React.FC = () => {
 
   const [isDarkMode] = useLocalPreference<boolean>(STORAGE_KEYS.darkMode, false);
   const [tacticalDisplayMode, setTacticalDisplayMode] = useLocalPreference<TacticalDisplayMode>(STORAGE_KEYS.tacticalDisplayMode, 'off');
+  const [densityMode, setDensityMode] = useLocalPreference<'clean' | 'audit'>('rhescala_cycle_badges_mode', 'clean');
   const { showDialog } = useDialog();
   const [waModal, setWaModal] = useState<{ show: boolean; dayIdx: number }>({ show: false, dayIdx: 0 });
   const [showHelp, setShowHelp] = useState(false);
@@ -683,13 +695,13 @@ const App: React.FC = () => {
 
   return (
     <>
-      <div className={`h-screen flex flex-col overflow-hidden ${isDarkMode ? 'dark bg-black text-white' : 'bg-slate-50'} transition-colors font-sans print:hidden`}>
+      <div className={`h-screen flex flex-col overflow-hidden ${isDarkMode ? 'dark bg-zinc-950 text-zinc-100' : 'bg-zinc-50 text-zinc-900'} transition-colors font-sans print:hidden`}>
         <Header 
               currentView={currentView}
               currentMY={currentMY}
               filter={filter}
               onViewChange={setCurrentView}
-              onMonthChange={setCurrentMY}
+              onMonthChange={handleMonthChange}
               onFilterChange={setFilter}
               onShareWhatsApp={() => handleShareWhatsApp(selectedDayIdx)}
               onShareApoioWhatsApp={() => handleShareApoioWhatsApp(selectedDayIdx)}
@@ -744,6 +756,8 @@ const App: React.FC = () => {
               selectedGroup={selectedGroup}
               onSelectedGroupChange={setSelectedGroup}
               onClearFilters={handleClearFilters}
+              densityMode={densityMode}
+              onToggleDensityMode={() => setDensityMode(prev => prev === 'clean' ? 'audit' : 'clean')}
             />
 
        <main className="flex-1 overflow-y-auto p-2 sm:p-4 pb-24 lg:pb-4">
@@ -762,6 +776,9 @@ const App: React.FC = () => {
 
            switch (currentView) {
              case 'grid': {
+                if (isChangingMonth) {
+                  return <ScheduleSkeleton mode="auto" />;
+                }
                if (isReadOnly && !isValidated) {
                  return (
                    <div className="h-full flex flex-col items-center justify-center p-8 text-center animate-fade-in">
@@ -819,8 +836,8 @@ const App: React.FC = () => {
                     onSortearDomingo={handleSortearDomingo}
                     onOpenAnalysis={() => setCurrentView('analysis')}
                     onShowHolidayManager={() => setCurrentView('feriados')}
-                    onNextMonth={() => setCurrentMY(prev => prev.month === 11 ? { month: 0, year: prev.year + 1 } : { ...prev, month: prev.month + 1 })}
-                    onPrevMonth={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })}
+                    onNextMonth={() => handleMonthChange(prev => prev.month === 11 ? { month: 0, year: prev.year + 1 } : { ...prev, month: prev.month + 1 })}
+                    onPrevMonth={() => handleMonthChange(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })}
                     monthNotes={monthNotes[monthKey] || ''}
                     onUpdateMonthNotes={(text) => {
                       if (isReadOnly) return;
@@ -838,6 +855,8 @@ const App: React.FC = () => {
                       setViewerSelectedEmpId(empId);
                     }}
                     onOpenEmployeeCard={handleOpenEmployeeCard}
+                    densityMode={densityMode}
+                    onToggleDensityMode={() => setDensityMode(prev => prev === 'clean' ? 'audit' : 'clean')}
                   />
                 );
 
@@ -856,7 +875,7 @@ const App: React.FC = () => {
                           onSelectEmployee={(empId) => setViewerSelectedEmpId(empId)}
                           onOpenEmployeeCard={handleOpenEmployeeCard}
                           onSwitchToFullGrid={() => setViewerModeType('grid')}
-                          onMonthChange={setCurrentMY}
+                          onMonthChange={handleMonthChange}
                           onUpdateEmployee={onUpdateEmployee}
                           tacticalDisplayMode={tacticalDisplayMode}
                           onToggleTacticalDisplayMode={(mode) => { if (mode) setTacticalDisplayMode(mode); else setTacticalDisplayMode(prev => prev === "off" ? "positions" : prev === "positions" ? "roles" : "off"); }}
@@ -1125,9 +1144,9 @@ const App: React.FC = () => {
 
        {/* Day Detail Modal */}
        {showDayDetail && (
-         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-sm animate-fade-in">
-           <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] w-full max-w-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] overflow-hidden">
-             <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 z-10 no-print">
+         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-zinc-950/60 backdrop-blur-sm animate-fade-in">
+           <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] w-full max-w-2xl shadow-2xl border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[90vh] overflow-hidden">
+             <div className="px-8 py-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between sticky top-0 bg-white dark:bg-zinc-900 z-10 no-print">
                <div className="flex items-center gap-4">
                  <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center">
                    <Icon name="event_available" className="text-xl" />
@@ -1170,8 +1189,8 @@ const App: React.FC = () => {
                  </button>
                </div>
              </div>
-             <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-white dark:bg-slate-900">
-               <div id="day-detail-screenshot" className="bg-white dark:bg-slate-900">
+             <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-white dark:bg-zinc-900">
+               <div id="day-detail-screenshot" className="bg-white dark:bg-zinc-900">
                  <DaySummaryCard 
                    selectedDayIdx={selectedDayIdx} 
                    employees={employees} 
