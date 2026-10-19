@@ -21,6 +21,65 @@ import {
 import { getLegalOverrideForDay } from '../clt/legal-overrides';
 
 /**
+ * Validação bidirecional rápida para remanejamento de folgas em torno de dias de pico (Fase 4).
+ * Garante que:
+ * 1. O dia destino não seja um dia protegido.
+ * 2. O dia destino não estoure seu próprio teto de folgas (maxFolgas).
+ * 3. A janela anterior à nova folga não ultrapasse maxStreak dias contínuos.
+ * 4. A janela posterior à nova folga não ultrapasse maxStreak dias contínuos.
+ */
+export function isValidSwap(
+    shifts: ShiftType[],
+    empId: string,
+    fromDay: number,
+    toDay: number,
+    maxStreak: number = 6,
+    prevStreak: number = 0,
+    protectedIndicesSet: Set<number> = new Set(),
+    details?: Record<number, ProtectedDayDetail>,
+    allEmpShifts?: Record<string, ShiftType[]>
+): boolean {
+    const daysInMonth = shifts.length;
+    if (toDay < 0 || toDay >= daysInMonth) return false;
+    if (fromDay < 0 || fromDay >= daysInMonth) return false;
+
+    // 1. Verifica se o dia destino é protegido
+    if (protectedIndicesSet.has(toDay)) return false;
+
+    // 2. Verifica se o dia destino estoura maxFolgas configurado
+    if (details) {
+        const destDayNum = toDay + 1;
+        const destDetail = details[destDayNum];
+        if (destDetail && typeof destDetail.maxFolgas === 'number' && allEmpShifts) {
+            const currentFolgasInDest = Object.values(allEmpShifts).filter(s => s[toDay] === 'F').length;
+            if (currentFolgasInDest + 1 > destDetail.maxFolgas) {
+                return false;
+            }
+        }
+    }
+
+    // 3 & 4. Simulação da troca e validação bidirecional do streak contínuo
+    const simulated = [...shifts];
+    simulated[fromDay] = 'T';
+    simulated[toDay] = 'F';
+
+    let curStreak = prevStreak;
+    for (let i = 0; i < daysInMonth; i++) {
+        const s = simulated[i];
+        if (['F', 'FE', 'AT', 'DO', 'N/A'].includes(s) || s?.startsWith('FF')) {
+            curStreak = 0;
+        } else {
+            curStreak++;
+            if (curStreak > maxStreak) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+/**
  * Otimiza a escala para QUALQUER conjunto customizado de Dias Protegidos / Períodos Sazonais.
  * 
  * Algoritmo Peak-Centric (Âncora no Pico -> Propagação para Trás e para Frente):
@@ -295,12 +354,27 @@ export function optimizeProtectedDays(
                         shifts[i] = 'F';
                         streak = 0;
                     } else {
-                        // Se o dia i for protegido, recua para encontrar o dia anterior não-protegido para folga
+                        // Se o dia i for protegido, busca dia não-protegido válido para swap (para trás ou para frente)
+                        let swapped = false;
                         for (let b = i - 1; b >= 0; b--) {
                             if (!protectedIndicesSet.has(b) && !getLegalOverride(emp, b) && shifts[b] === 'T') {
-                                shifts[b] = 'F';
-                                streak = i - b;
-                                break;
+                                if (isValidSwap(shifts, emp.id, i, b, maxStreak, prevStreak, protectedIndicesSet, details)) {
+                                    shifts[b] = 'F';
+                                    streak = i - b;
+                                    swapped = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!swapped) {
+                            for (let f = i + 1; f < daysInMonth; f++) {
+                                if (!protectedIndicesSet.has(f) && !getLegalOverride(emp, f) && shifts[f] === 'T') {
+                                    if (isValidSwap(shifts, emp.id, i, f, maxStreak, prevStreak, protectedIndicesSet, details)) {
+                                        shifts[f] = 'F';
+                                        swapped = true;
+                                        break;
+                                    }
+                                }
                             }
                         }
                     }

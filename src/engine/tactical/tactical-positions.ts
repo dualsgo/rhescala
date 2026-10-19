@@ -66,19 +66,20 @@ export function resolveTacticalDay(
     // Remaining candidates eligible for tactical positions (P1, PC, P2, P3, P4)
     const eligibleForStorePositions = autoMembers.filter(m => !result[m.id] && m.cargo !== 'Estoquista');
 
-    const isFiscalOrAprendiz = (m: Employee) =>
-      m.cargo === 'Fiscal' || m.cargo === 'Aprendiz' || m.isYoungApprentice === true;
+    const isFiscal = (m: Employee) => m.cargo === 'Fiscal';
+    const isAprendiz = (m: Employee) => m.cargo === 'Aprendiz' || m.isYoungApprentice === true;
 
-    // 3. Fill Mandatory P1 (at least 1 per shift if eligible candidates exist)
+    // 3. Função Vital 1: Aloca Caixa (P1) obrigatório (pelo menos 1 por turno com candidatos)
     if (!takenPositions.has('P1')) {
-      let p1Candidate = eligibleForStorePositions.find(m => !result[m.id] && m.preferredPosition1 === 'P1');
+      let p1Candidate = eligibleForStorePositions.find(m => !result[m.id] && m.preferredPosition1 === 'P1' && !isFiscal(m));
 
       if (!p1Candidate) {
-        p1Candidate = eligibleForStorePositions.find(m => !result[m.id] && m.preferredPosition2 === 'P1');
+        p1Candidate = eligibleForStorePositions.find(m => !result[m.id] && m.preferredPosition2 === 'P1' && !isFiscal(m));
       }
 
       if (!p1Candidate) {
-        p1Candidate = eligibleForStorePositions.find(m => !result[m.id] && !isFiscalOrAprendiz(m))
+        p1Candidate = eligibleForStorePositions.find(m => !result[m.id] && !isFiscal(m) && !isAprendiz(m))
+                   || eligibleForStorePositions.find(m => !result[m.id] && !isFiscal(m))
                    || eligibleForStorePositions.find(m => !result[m.id]);
       }
 
@@ -88,10 +89,40 @@ export function resolveTacticalDay(
       }
     }
 
-    // 4. Fill Mandatory P2 (at least 1 per shift if eligible candidates exist)
-    // Fiscal and Jovem Aprendiz HAVE PRIORITY for P2
+    // 4. Função Vital 2: Aloca Fiscal / Prevenção (P4) obrigatório
+    // Mandatório na ABERTURA e no FECHAMENTO quando houver >= 2 colaboradores disponíveis no cluster
+    const isVitalShift = groupName === 'Abertura' || groupName === 'Fechamento';
+    const remainingCount = eligibleForStorePositions.filter(m => !result[m.id]).length;
+    const shouldMandateP4 = !takenPositions.has('P4') && (
+      eligibleForStorePositions.some(m => !result[m.id] && isFiscal(m)) ||
+      (isVitalShift && remainingCount >= 1)
+    );
+
+    if (shouldMandateP4) {
+      let p4Candidate = eligibleForStorePositions.find(m => !result[m.id] && isFiscal(m));
+
+      if (!p4Candidate) {
+        p4Candidate = eligibleForStorePositions.find(m => !result[m.id] && m.preferredPosition1 === 'P4');
+      }
+
+      if (!p4Candidate) {
+        p4Candidate = eligibleForStorePositions.find(m => !result[m.id] && m.preferredPosition2 === 'P4');
+      }
+
+      if (!p4Candidate && isVitalShift) {
+        p4Candidate = eligibleForStorePositions.find(m => !result[m.id] && !isAprendiz(m))
+                   || eligibleForStorePositions.find(m => !result[m.id]);
+      }
+
+      if (p4Candidate) {
+        result[p4Candidate.id] = 'P4';
+        takenPositions.add('P4');
+      }
+    }
+
+    // 5. Preenche P2 (Reposição/Organização) se ainda houver candidatos
     if (!takenPositions.has('P2')) {
-      let p2Candidate = eligibleForStorePositions.find(m => !result[m.id] && isFiscalOrAprendiz(m));
+      let p2Candidate = eligibleForStorePositions.find(m => !result[m.id] && isAprendiz(m));
 
       if (!p2Candidate) {
         p2Candidate = eligibleForStorePositions.find(m => !result[m.id] && m.preferredPosition1 === 'P2');
@@ -101,7 +132,7 @@ export function resolveTacticalDay(
         p2Candidate = eligibleForStorePositions.find(m => !result[m.id] && m.preferredPosition2 === 'P2');
       }
 
-      if (!p2Candidate) {
+      if (!p2Candidate && eligibleForStorePositions.some(m => !result[m.id])) {
         p2Candidate = eligibleForStorePositions.find(m => !result[m.id]);
       }
 
@@ -111,19 +142,24 @@ export function resolveTacticalDay(
       }
     }
 
-    // 5. Fill Remaining Eligible Staff
+    // 6. Distribui os demais colaboradores para Vendas (P3), Pacote (PC) ou preferências
     eligibleForStorePositions.filter(m => !result[m.id]).forEach(m => {
       let assigned = false;
 
-      if (m.preferredPosition1 && POSITIONS.includes(m.preferredPosition1)) {
-        if (['PC', 'P4', 'P3', 'ESTQ'].includes(m.preferredPosition1)) {
+      if (isFiscal(m)) {
+        result[m.id] = 'P4';
+        assigned = true;
+      }
+
+      if (!assigned && m.preferredPosition1 && POSITIONS.includes(m.preferredPosition1)) {
+        if (['PC', 'P4', 'P3', 'P2', 'ESTQ'].includes(m.preferredPosition1)) {
           result[m.id] = m.preferredPosition1;
           assigned = true;
         }
       }
 
       if (!assigned && m.preferredPosition2 && POSITIONS.includes(m.preferredPosition2)) {
-        if (['PC', 'P4', 'P3', 'ESTQ'].includes(m.preferredPosition2)) {
+        if (['PC', 'P4', 'P3', 'P2', 'ESTQ'].includes(m.preferredPosition2)) {
           result[m.id] = m.preferredPosition2;
           assigned = true;
         }

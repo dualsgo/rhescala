@@ -1,3 +1,22 @@
+export type DecisionReason =
+  | 'LEGAL_IMMUTABLE'
+  | 'SUNDAY_ROTATION_OFF'
+  | 'CLT_MAX_STREAK_GUARD'
+  | 'PREFERRED_DAY_OFF'
+  | 'PRE_SUNDAY_GUARD'
+  | 'PEAK_DAY_SHIFTED'
+  | 'REGULAR_WORK';
+
+export const DECISION_REASON_LABELS: Record<DecisionReason, string> = {
+  LEGAL_IMMUTABLE: 'Bloqueio legal (Férias, Atestado, Curso ou Aniversário)',
+  SUNDAY_ROTATION_OFF: 'Folga de revezamento dominical (CLT)',
+  CLT_MAX_STREAK_GUARD: 'Folga obrigatória por limite de dias seguidos (Art. 67 CLT)',
+  PREFERRED_DAY_OFF: 'Folga fixa semanal preferencial',
+  PRE_SUNDAY_GUARD: 'Folga técnica de escala dominical (Pre-Sunday Guard)',
+  PEAK_DAY_SHIFTED: 'Folga remanejada por dia protegido de alta demanda',
+  REGULAR_WORK: 'Trabalho regular escalado',
+};
+
 export type TacticalShiftType = 'P1' | 'PC' | 'P2' | 'P3' | 'P4' | 'ESTQ';
 
 export type StandardShiftType = 
@@ -45,6 +64,7 @@ export interface Employee {
   shifts: Record<string, ShiftType[]>;     // Keyed by "YYYY-MM"
   dailyHours: Record<string, string[]>;    // Keyed by "YYYY-MM"
   tacticalPositions: Record<string, (string | null)[]>; // Keyed by "YYYY-MM", e.g. 'P1', 'P2'
+  decisionReasons?: Record<string, Record<number, DecisionReason>>; // Keyed by "YYYY-MM", then 0-indexed day
   workPeriod: string;                      // Default work period
   preferredDayOff: string;                 // e.g. 'Segunda-feira'
   preferredPosition1?: string;             // e.g. 'P1', 'ESTQ'

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings, ScheduleDiffItem, TacticalDisplayMode, ProtectedDaysConfig } from '../types';
+import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings, ScheduleDiffItem, TacticalDisplayMode, ProtectedDaysConfig, DECISION_REASON_LABELS } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, isEmployeeActiveInMonth, normalizeProtectedDaysConfig, getTacticalLabel, getTacticalCellCode, getTacticalEmoji } from '../constants';
 import { getShiftClassification, isWorkingShift, getPrevMonthWorkStreak, getPrevMonthConsecutive } from '../hooks/useScheduleEngine';
@@ -1212,25 +1212,47 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                        </div>
                                      )}
 
-                                     {/* Botão Principal de Turno */}
+                                     {/* Botão Principal de Turno com Explicabilidade Algorítmica */}
                                      <button
                                        type="button"
                                        onClick={() => onSelectDay(d.num - 1)}
-                                       aria-label={`${emp.name}: Dia ${d.num}, ${d.weekday}. Turno: ${shift === 'N/A' ? 'Fora de vigência' : shift}`}
+                                       aria-label={`${emp.name}: Dia ${d.num}, ${d.weekday}. Turno: ${shift === 'N/A' ? 'Fora de vigência' : shift}${emp.decisionReasons?.[monthKey]?.[d.num - 1] ? ' • Motivo: ' + DECISION_REASON_LABELS[emp.decisionReasons[monthKey][d.num - 1]] : ''}`}
                                        title={
-                                         shift === 'N/A' 
-                                           ? (emp.hiredAt && fullDate < emp.hiredAt 
+                                         (() => {
+                                           const decisionReason = emp.decisionReasons?.[monthKey]?.[d.num - 1];
+                                           const reasonLabel = decisionReason ? DECISION_REASON_LABELS[decisionReason] : undefined;
+                                           let baseTitle: string | undefined = undefined;
+
+                                           if (shift === 'N/A') {
+                                             baseTitle = emp.hiredAt && fullDate < emp.hiredAt 
                                                ? `Não admitido nesta data (Início: ${emp.hiredAt.split('-').reverse().join('/')})` 
                                                : emp.firedAt && fullDate > emp.firedAt 
                                                ? `Contrato encerrado nesta data (Término: ${emp.firedAt.split('-').reverse().join('/')})`
-                                               : 'Desconsiderado (N/A)') 
-                                           : shift?.startsWith('FF')
-                                           ? (() => {
-                                               const explicit = shift.split(' ')[1];
-                                               const matched = (holidayCredits[emp.id] || []).find(c => c.id === explicit || c.holidayDate === explicit);
-                                               return matched ? `Folga Feriado: ${matched.holidayName}` : 'Folga Feriado (FF)';
-                                             })()
-                                           : undefined
+                                               : 'Desconsiderado (N/A)';
+                                           } else if (shift?.startsWith('FF')) {
+                                             const explicit = shift.split(' ')[1];
+                                             const matched = (holidayCredits[emp.id] || []).find(c => c.id === explicit || c.holidayDate === explicit);
+                                             baseTitle = matched ? `Folga Feriado: ${matched.holidayName}` : 'Folga Feriado (FF)';
+                                           } else if (shift === 'FE') {
+                                             baseTitle = 'Férias (FE)';
+                                           } else if (shift === 'AT') {
+                                             baseTitle = 'Atestado Médico (AT)';
+                                           } else if (shift === 'DO') {
+                                             baseTitle = 'Day Off / Aniversário (DO)';
+                                           } else if (shift === 'C') {
+                                             baseTitle = 'Curso Jovem Aprendiz (C)';
+                                           } else if (shift === 'F') {
+                                             baseTitle = d.isSunday ? 'Folga de Domingo (F)' : 'Folga Semanal (F)';
+                                           } else if (isWorkingShift(shift)) {
+                                             const hour = (emp.dailyHours[monthKey] || [])[d.num - 1] || emp.workPeriod;
+                                             baseTitle = `Trabalho (${shift}): ${hour}`;
+                                           }
+
+                                           if (reasonLabel) {
+                                             return baseTitle ? `${baseTitle} • Motivo: ${reasonLabel}` : `Motivo: ${reasonLabel}`;
+                                           }
+                                           return baseTitle;
+                                         })()
                                        }
                                        className={`${isCompactMode ? 'w-8 h-8 rounded-lg text-[9px]' : 'w-10 h-10 rounded-xl text-[10px]'} flex items-center justify-center font-black transition-all shadow-xs relative ${
                                          dayRequest ? (

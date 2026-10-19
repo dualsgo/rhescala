@@ -4,7 +4,8 @@ import {
     Holiday,
     JornadaSettings,
     ProtectedDaysConfig,
-    ProtectedDayDetail
+    ProtectedDayDetail,
+    DecisionReason
 } from '../../../types';
 import {
     buildHolidaySet,
@@ -43,8 +44,8 @@ export function applyMonthUpdate(
     protectedDays?: ProtectedDaysConfig | number[],
     mode: 'suggested_retro' | 'all_working' = 'suggested_retro',
     targetEmpId?: string
-): Record<string, { shifts: ShiftType[]; hours: string[] }> {
-    const result: Record<string, { shifts: ShiftType[]; hours: string[] }> = {};
+): Record<string, { shifts: ShiftType[]; hours: string[]; decisionReasons?: Record<number, DecisionReason> }> {
+    const result: Record<string, { shifts: ShiftType[]; hours: string[]; decisionReasons?: Record<number, DecisionReason> }> = {};
 
     const activeRegular = employees.filter(e => e.status === 'active' && !e.isYoungApprentice);
     const activeApprentices = employees.filter(e => e.status === 'active' && e.isYoungApprentice);
@@ -60,6 +61,7 @@ export function applyMonthUpdate(
     // ── 1. Jovens Aprendizes ────────────────────────────────────────────────────
     activeApprentices.forEach(app => {
         const shifts: ShiftType[] = Array(daysInMonth).fill('T');
+        const decisionReasons: Record<number, DecisionReason> = {};
         const courseDayNorm = app.courseDay ? app.courseDay.replace('-feira', '').trim() : '';
 
         const hours: string[] = Array.from({ length: daysInMonth }, (_, i) => {
@@ -77,25 +79,30 @@ export function applyMonthUpdate(
             const legal = getLegalOverride(app, i);
             if (legal) {
                 shifts[i] = legal;
+                decisionReasons[i] = 'LEGAL_IMMUTABLE';
                 continue;
             }
 
             if (dow === 0 || dow === 6 || isHoliday) {
                 shifts[i] = 'F';
+                decisionReasons[i] = 'LEGAL_IMMUTABLE';
             } else if (courseDayNorm && WEEKDAY_NAMES[dow] === courseDayNorm) {
                 shifts[i] = 'C';
+                decisionReasons[i] = 'LEGAL_IMMUTABLE';
             } else {
                 shifts[i] = 'T';
+                decisionReasons[i] = 'REGULAR_WORK';
             }
         }
 
-        result[app.id] = { shifts, hours };
+        result[app.id] = { shifts, hours, decisionReasons };
     });
 
     // ── 2. MODO: 100% Trabalhado (Sem folgas automáticas para ajuste manual) ──────
     if (mode === 'all_working') {
         activeRegular.forEach(emp => {
             const shifts: ShiftType[] = Array(daysInMonth).fill('T');
+            const decisionReasons: Record<number, DecisionReason> = {};
             const hours: string[] = Array.from({ length: daysInMonth }, (_, i) => {
                 const dow = new Date(year, month, i + 1).getDay();
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
@@ -106,12 +113,14 @@ export function applyMonthUpdate(
                 const legal = getLegalOverride(emp, i);
                 if (legal) {
                     shifts[i] = legal;
+                    decisionReasons[i] = 'LEGAL_IMMUTABLE';
                 } else {
                     shifts[i] = 'T';
+                    decisionReasons[i] = 'REGULAR_WORK';
                 }
             }
 
-            result[emp.id] = { shifts, hours };
+            result[emp.id] = { shifts, hours, decisionReasons };
         });
         return result;
     }
@@ -141,6 +150,7 @@ export function applyMonthUpdate(
         const is5x2 = emp.jornada === '5x2';
         const maxStreak = is5x2 ? 5 : 6;
         const shifts: ShiftType[] = Array(daysInMonth).fill('T');
+        const decisionReasons: Record<number, DecisionReason> = {};
 
         const hours: string[] = Array.from({ length: daysInMonth }, (_, i) => {
             const dow = new Date(year, month, i + 1).getDay();
@@ -159,6 +169,7 @@ export function applyMonthUpdate(
             // 3.1 Se houver condição legal (Férias, Atestado, Aniversário, Não-contratado)
             if (legal) {
                 shifts[dayIdx] = legal;
+                decisionReasons[dayIdx] = 'LEGAL_IMMUTABLE';
                 currentStreak = 0;
                 continue;
             }
@@ -168,65 +179,103 @@ export function applyMonthUpdate(
             // 3.2 Se for domingo de folga da rotação CLT OU folga fixa no domingo OU Estoquista
             if (dow === 0) {
                 const isSundayRest = restSundays.has(dayIdx) || isPreferredDay || emp.cargo === 'Estoquista';
-                if (isSundayRest || (currentStreak + 1 > maxStreak)) {
+                if (isSundayRest) {
                     shifts[dayIdx] = 'F';
+                    decisionReasons[dayIdx] = 'SUNDAY_ROTATION_OFF';
+                    currentStreak = 0;
+                    continue;
+                } else if (currentStreak + 1 > maxStreak) {
+                    shifts[dayIdx] = 'F';
+                    decisionReasons[dayIdx] = 'CLT_MAX_STREAK_GUARD';
                     currentStreak = 0;
                     continue;
                 } else {
                     shifts[dayIdx] = 'T';
+                    decisionReasons[dayIdx] = 'REGULAR_WORK';
                     currentStreak++;
                     continue;
                 }
             }
 
-            // 3.3 Verificação de limite CLT 6x1 / 5x2 (se trabalhou 6 dias seguidos, o 7º dia é FOLGA OBRIGATÓRIA)
-            if (currentStreak + 1 > maxStreak) {
-                shifts[dayIdx] = 'F';
-                currentStreak = 0;
-                continue;
-            }
-
-            // 3.4 Preferência de folga fixa da semana
-            if (isPreferredDay) {
-                shifts[dayIdx] = 'F';
-                currentStreak = 0;
-                continue;
-            }
-
-            // 3.5 Para colaboradores sem folga fixa semanal que trabalharão no próximo domingo:
-            // Concede folga técnica no meio da semana (quarta ou quinta) para garantir que cheguem ao domingo sem violar o limite de 6 dias
+            // Para dias da semana (Segunda a Sábado):
             const nextSunday = sundaysInMonth.find(s => s >= dayIdx);
             const willWorkNextSunday = nextSunday !== undefined &&
                 !restSundays.has(nextSunday) &&
                 !isEmployeePreferredDayOff(emp, 0) &&
                 emp.cargo !== 'Estoquista';
-            const midWeekOffDow = 3 + (activeRegular.indexOf(emp) % 2);
 
-            if (
-                (!emp.preferredDayOff || emp.preferredDayOff === 'Nenhum') &&
-                willWorkNextSunday &&
-                dow === midWeekOffDow &&
-                nextSunday !== undefined &&
-                nextSunday - dayIdx <= 6
-            ) {
+            // Verifica se na janela da semana que antecede o próximo domingo já houve algum dia de descanso
+            const weekStartIdx = nextSunday !== undefined ? Math.max(0, nextSunday - 6) : 0;
+            const hasRestInWeek = nextSunday !== undefined && shifts.slice(weekStartIdx, dayIdx).some(s =>
+                ['F', 'FE', 'AT', 'DO', 'N/A'].includes(s) || s?.startsWith('FF')
+            );
+
+            // 3.3 Verificação de limite CLT 6x1 / 5x2 (se trabalhou 6 dias seguidos, o 7º dia é FOLGA OBRIGATÓRIA)
+            if (currentStreak + 1 > maxStreak) {
                 shifts[dayIdx] = 'F';
+                decisionReasons[dayIdx] = 'CLT_MAX_STREAK_GUARD';
                 currentStreak = 0;
                 continue;
+            }
+
+            // 3.4 Pre-Sunday Guard: Repressão de 2ª folga para regime 6x1 escalado no domingo
+            // Se já descansou na mesma semana (ex: streak guard no início da semana) e vai trabalhar no domingo,
+            // reprime a folga fixa para evitar folga dupla acidental que derruba a cobertura da loja.
+            if (isPreferredDay) {
+                if (willWorkNextSunday && !is5x2 && hasRestInWeek) {
+                    shifts[dayIdx] = 'T';
+                    decisionReasons[dayIdx] = 'REGULAR_WORK';
+                    currentStreak++;
+                    continue;
+                } else {
+                    shifts[dayIdx] = 'F';
+                    decisionReasons[dayIdx] = 'PREFERRED_DAY_OFF';
+                    currentStreak = 0;
+                    continue;
+                }
+            }
+
+            // 3.5 Pre-Sunday Guard: Para colaboradores que trabalharão no próximo domingo e ainda não descansaram na semana
+            if (willWorkNextSunday && !hasRestInWeek) {
+                const midWeekOffDow = 3 + (activeRegular.indexOf(emp) % 2); // Quarta ou Quinta
+
+                // Concede folga técnica no meio da semana se não houver folga fixa semanal
+                if (
+                    (!emp.preferredDayOff || emp.preferredDayOff === 'Nenhum') &&
+                    dow === midWeekOffDow &&
+                    nextSunday - dayIdx <= 6
+                ) {
+                    shifts[dayIdx] = 'F';
+                    decisionReasons[dayIdx] = 'PRE_SUNDAY_GUARD';
+                    currentStreak = 0;
+                    continue;
+                }
+
+                // Fallback de proteção Pre-Sunday: se chegar ao sábado (D - 1) sem descanso na semana,
+                // garante folga no sábado para que o colaborador inicie o domingo com streak zerado.
+                if (dayIdx === nextSunday - 1) {
+                    shifts[dayIdx] = 'F';
+                    decisionReasons[dayIdx] = 'PRE_SUNDAY_GUARD';
+                    currentStreak = 0;
+                    continue;
+                }
             }
 
             // 3.6 Para 5x2 sem dia preferido, folga aos sábados
             if (is5x2 && dow === 6) {
                 shifts[dayIdx] = 'F';
+                decisionReasons[dayIdx] = 'PREFERRED_DAY_OFF';
                 currentStreak = 0;
                 continue;
             }
 
             // 3.7 Senão, dia regular de trabalho
             shifts[dayIdx] = 'T';
+            decisionReasons[dayIdx] = 'REGULAR_WORK';
             currentStreak++;
         }
 
-        // 3.5 Para jornada 5x2: assegura 2 folgas por semana
+        // 3.8 Para jornada 5x2: assegura 2 folgas por semana
         if (is5x2) {
             for (let w = 0; w < daysInMonth; w += 7) {
                 const weekIndices: number[] = [];
@@ -239,12 +288,13 @@ export function applyMonthUpdate(
                     });
                     if (candidate !== undefined) {
                         shifts[candidate] = 'F';
+                        decisionReasons[candidate] = 'PREFERRED_DAY_OFF';
                     }
                 }
             }
         }
 
-        result[emp.id] = { shifts, hours };
+        result[emp.id] = { shifts, hours, decisionReasons };
     });
 
     // Se houver dias protegidos configurados, otimiza com Peak-Centric
@@ -252,8 +302,19 @@ export function applyMonthUpdate(
     if (configuredDays.length > 0) {
         const peakResult = optimizeProtectedDays(employees, monthKey, protectedDays || {}, customHolidays, deletedNationalHolidays, settings);
         activeRegular.forEach(emp => {
-            if (peakResult[emp.id]) {
-                result[emp.id].shifts = peakResult[emp.id].shifts;
+            if (peakResult[emp.id] && result[emp.id]) {
+                const oldShifts = result[emp.id].shifts;
+                const newShifts = peakResult[emp.id].shifts;
+                const reasons = result[emp.id].decisionReasons || {};
+
+                for (let d = 0; d < daysInMonth; d++) {
+                    if (oldShifts[d] !== newShifts[d]) {
+                        reasons[d] = 'PEAK_DAY_SHIFTED';
+                    }
+                }
+
+                result[emp.id].shifts = newShifts;
+                result[emp.id].decisionReasons = reasons;
             }
         });
     }
@@ -462,7 +523,11 @@ export function generateCleanMonthSchedule(
             return {
                 ...emp,
                 shifts: { ...emp.shifts, [targetKey]: d.shifts },
-                dailyHours: { ...emp.dailyHours, [targetKey]: d.hours }
+                dailyHours: { ...emp.dailyHours, [targetKey]: d.hours },
+                decisionReasons: {
+                    ...(emp.decisionReasons || {}),
+                    [targetKey]: d.decisionReasons || {}
+                }
             };
         }
         return emp;

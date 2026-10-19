@@ -535,7 +535,11 @@ const App: React.FC = () => {
           return {
             ...emp,
             shifts: { ...emp.shifts, [monthKey]: updatedData[emp.id].shifts },
-            dailyHours: { ...emp.dailyHours, [monthKey]: updatedData[emp.id].hours }
+            dailyHours: { ...emp.dailyHours, [monthKey]: updatedData[emp.id].hours },
+            decisionReasons: {
+              ...(emp.decisionReasons || {}),
+              [monthKey]: updatedData[emp.id].decisionReasons || {}
+            }
           };
         }
         return emp;
@@ -551,7 +555,11 @@ const App: React.FC = () => {
         return {
           ...emp,
           shifts: { ...emp.shifts, [targetKey]: updatedData[emp.id].shifts },
-          dailyHours: { ...emp.dailyHours, [targetKey]: updatedData[emp.id].hours }
+          dailyHours: { ...emp.dailyHours, [targetKey]: updatedData[emp.id].hours },
+          decisionReasons: {
+            ...(emp.decisionReasons || {}),
+            [targetKey]: updatedData[emp.id].decisionReasons || {}
+          }
         };
       }
       return emp;
@@ -566,7 +574,11 @@ const App: React.FC = () => {
           return {
             ...emp,
             shifts: { ...emp.shifts, [targetKey]: updatedData[emp.id].shifts },
-            dailyHours: { ...emp.dailyHours, [targetKey]: updatedData[emp.id].hours }
+            dailyHours: { ...emp.dailyHours, [targetKey]: updatedData[emp.id].hours },
+            decisionReasons: {
+              ...(emp.decisionReasons || {}),
+              [targetKey]: updatedData[emp.id].decisionReasons || {}
+            }
           };
         }
         return emp;
