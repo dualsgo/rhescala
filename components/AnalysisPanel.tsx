@@ -1,12 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { Employee, MonthYear, Holiday, ShiftType, JornadaSettings } from '../types';
-import { getShiftClassification, isWorkingShift } from '../hooks/useScheduleEngine';
-
+import { isWorkingShift } from '../hooks/useScheduleEngine';
 import { Icon } from './Icon';
-import { buildHolidaySet, SHIFT_HOURS, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth } from '../constants';
+import { 
+  buildHolidaySet, 
+  DEFAULT_JORNADA_SETTINGS, 
+  getShortName, 
+  isEmployeeActiveInMonth 
+} from '../constants';
 import { toPng } from 'html-to-image';
 import { addDaysToISODate } from '../src/utils/date';
-
+import { getShiftCellStyle, ROLE_VISUAL_MAP, normalizeEmployeeRole } from '../src/utils/design-system';
 
 interface AnalysisPanelProps {
   employees: Employee[];
@@ -23,28 +27,59 @@ const WEEKDAY_NAMES = [
   'Quinta-feira', 'Sexta-feira', 'Sábado',
 ];
 
-export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, currentMY, customHolidays, onClose, onUpdateShift, onUpdateHour, jornadaSettings = DEFAULT_JORNADA_SETTINGS }) => {
-  const [viewMode, setViewMode] = useState<'insights' | 'team-calendar'>('insights');
-  const [selectedEmpId, setSelectedEmpId] = useState<string | null>(employees.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month))[0]?.id || null);
-  const [showIndividualModal, setShowIndividualModal] = useState(false);
-  const [showMiniCalendar, setShowMiniCalendar] = useState(true);
+const WEEKDAY_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+const MONTH_NAMES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
+const SHIFT_OPTIONS: { value: ShiftType; label: string; desc: string }[] = [
+  { value: 'T', label: 'T', desc: 'Trabalho Regular' },
+  { value: 'F', label: 'F', desc: 'Folga Semanal' },
+  { value: 'FF', label: 'FF', desc: 'Folga Compensatória (Feriado)' },
+  { value: 'FE', label: 'FE', desc: 'Férias' },
+  { value: 'AT', label: 'AT', desc: 'Atestado Médico' },
+  { value: 'DO', label: 'DO', desc: 'Folga Aniversário (Day Off)' },
+  { value: 'C', label: 'C', desc: 'Curso Teórico' },
+];
+
+export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ 
+  employees, 
+  currentMY, 
+  customHolidays, 
+  onClose, 
+  onUpdateShift, 
+  onUpdateHour, 
+  jornadaSettings = DEFAULT_JORNADA_SETTINGS 
+}) => {
+  const [viewMode, setViewMode] = useState<'individual' | 'team'>('individual');
+  const [searchTerm, setSearchTerm] = useState('');
   
   const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
   const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
-  
-  const getEffectiveShift = (emp: Employee, dayIdx: number) => {
+
+  // Active employees for this month
+  const activeEmployees = useMemo(() => {
+    return employees.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
+  }, [employees, currentMY.year, currentMY.month]);
+
+  const [selectedEmpId, setSelectedEmpId] = useState<string | null>(
+    activeEmployees[0]?.id || null
+  );
+
+  const getEffectiveShift = (emp: Employee, dayIdx: number): ShiftType => {
     const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
     
-    // Check if employee is on vacation
+    // Check vacation
     if (emp.vacationStart) {
       const start = emp.vacationStart;
-      // If no vacationEnd, assume 30 days including start day (so start + 29 days)
-      const end = emp.vacationEnd || addDays(start, 29);
+      const end = emp.vacationEnd || addDaysToISODate(start, 29);
       if (dateStr >= start && dateStr <= end) return 'FE';
     }
 
-    // Check if it's their birthday
+    // Check birthday
     if (emp.birthday) {
       const empMD = emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday;
       const dateMD = dateStr.substring(5);
@@ -55,837 +90,811 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ employees, current
     return monthShifts[dayIdx] || 'F';
   };
 
-  // Helper inside AnalysisPanel for date math
-  function addDays(dateStr: string, days: number): string {
-    return addDaysToISODate(dateStr, days);
-  }
-
-  // ── Data Processing ──────────────────────────────────────────────────────────
-
-  const dailyCoverage = useMemo(() => {
-    const coverage = [];
-    for (let d = 0; d < daysInMonth; d++) {
-      const activeEmps = employees.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
-      const working = activeEmps.filter(e => {
-        const s = getEffectiveShift(e, d);
-        return isWorkingShift(s); // Conta como presença na LOJA
-      });
-
-
-      const shiftsCount = {
-        abertura: working.filter(e => e.shiftName === 'Abertura').length,
-        intermediario: working.filter(e => e.shiftName === 'Intermediário').length,
-        fechamento: working.filter(e => e.shiftName === 'Fechamento').length,
-      };
-
-      coverage.push({
-        day: d + 1,
-        total: working.length,
-        shifts: shiftsCount,
-        isSunday: new Date(currentMY.year, currentMY.month, d + 1).getDay() === 0,
-        isHoliday: holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`)
-      });
-    }
-    return coverage;
-  }, [employees, monthKey, daysInMonth, currentMY, holidaySet]);
-
-  const employeeStats = useMemo(() => {
-    // Standard workable days = Days in month - 1 mandatory leave per week (approx Sundays)
-    const sundaysCount = dailyCoverage.filter(d => d.isSunday).length;
-    const baseWorkableDays = daysInMonth - sundaysCount;
-    
-    return employees.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month)).map(emp => {
+  // Operational statistics per employee
+  const employeeSummaries = useMemo(() => {
+    return activeEmployees.map(emp => {
       let worked = 0;
-      let totalHours = 0;
-      let maxStreak = 0;
-      let currentStreak = 0;
-      let fullCycles = 0;
+      let folgas = 0;
       let sundaysWorked = 0;
+      let sundaysOff = 0;
       let holidaysWorked = 0;
-      let vacationDays = 0;
-      let ffDays = 0;
-      let courseDays = 0;
+      let currentStreak = 0;
+      let maxStreak = 0;
+      let totalHours = 0;
 
       for (let d = 0; d < daysInMonth; d++) {
         const s = getEffectiveShift(emp, d);
-        const dayType = new Date(currentMY.year, currentMY.month, d + 1).getDay();
-        const isSun = dayType === 0;
-        const isHol = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`);
-        const settings = jornadaSettings || DEFAULT_JORNADA_SETTINGS;
+        const date = new Date(currentMY.year, currentMY.month, d + 1);
+        const isSun = date.getDay() === 0;
+        const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`;
+        const isHol = holidaySet.has(dateStr);
 
         if (isWorkingShift(s)) {
           worked++;
-
           currentStreak++;
           if (currentStreak > maxStreak) maxStreak = currentStreak;
-          if (currentStreak === 6) fullCycles++;
           if (isSun) sundaysWorked++;
           if (isHol) holidaysWorked++;
-          totalHours += 7.33; 
+
+          // Daily hours
+          const dailyH = (emp.dailyHours?.[monthKey] || [])[d] || emp.workPeriod || '';
+          const match = dailyH.match(/(\d+):?(\d*)?\s*-\s*(\d+):?(\d*)?/);
+          if (match) {
+            const h1 = parseInt(match[1]);
+            const h2 = parseInt(match[3]);
+            const duration = (h2 >= h1 ? h2 - h1 : (24 - h1 + h2)) - 1; // approx lunch discount
+            totalHours += Math.max(4, Math.min(8.8, duration));
+          } else {
+            totalHours += 7.33;
+          }
         } else {
           currentStreak = 0;
-          if (s === 'FE') vacationDays++;
-          else if (s?.startsWith('FF')) ffDays++;
-          else if (s === 'C') courseDays++;
+          folgas++;
+          if (isSun) sundaysOff++;
         }
       }
 
-      // Adherence logic: Workable days for THIS employee
-      // Base - Vacations - FF - Course
-      const workableForEmp = Math.max(0, baseWorkableDays - vacationDays - ffDays - courseDays);
-      const extraOffs = Math.max(0, workableForEmp - worked);
-      const adherence = workableForEmp > 0 ? (worked / workableForEmp) * 100 : 0;
-
       return {
-        id: emp.id,
-        name: emp.name,
+        emp,
         worked,
-        totalHours: Math.round(totalHours),
-        theoreticalMax: workableForEmp,
-        extraOffs,
-        adherence,
-        fullCycles,
-        maxStreak,
+        folgas,
         sundaysWorked,
+        sundaysOff,
         holidaysWorked,
-        overlooked: maxStreak > 6,
-        isHeavy: adherence > 100, // Worked more than scheduled
-        emp
+        maxStreak,
+        totalHours: Math.round(totalHours),
+        hasCltAlert: maxStreak > 6,
       };
-    }).sort((a, b) => b.adherence - a.adherence);
-  }, [employees, daysInMonth, getEffectiveShift, monthKey, holidaySet, dailyCoverage, currentMY]);
+    });
+  }, [activeEmployees, daysInMonth, monthKey, holidaySet, currentMY]);
 
-  const bottlenecks = useMemo(() => {
-    return dailyCoverage.filter(c => c.total < 6);
-  }, [dailyCoverage]);
+  const selectedSummary = useMemo(() => {
+    return employeeSummaries.find(s => s.emp.id === selectedEmpId) || employeeSummaries[0] || null;
+  }, [employeeSummaries, selectedEmpId]);
 
-  const selectedEmployee = useMemo(() => 
-    employeeStats.find(s => s.id === selectedEmpId), [employeeStats, selectedEmpId]
-  );
+  // Filtered employees for sidebar
+  const filteredSummaries = useMemo(() => {
+    if (!searchTerm.trim()) return employeeSummaries;
+    const q = searchTerm.toLowerCase();
+    return employeeSummaries.filter(s => 
+      s.emp.name.toLowerCase().includes(q) ||
+      (s.emp.cargo || '').toLowerCase().includes(q) ||
+      (s.emp.shiftName || '').toLowerCase().includes(q)
+    );
+  }, [employeeSummaries, searchTerm]);
 
-  // ── Render Helpers ───────────────────────────────────────────────────────────
+  const handleDownloadPng = async () => {
+    const el = document.getElementById('individual-calendar-capture');
+    if (!el || !selectedSummary) return;
+
+    try {
+      const dataUrl = await toPng(el, {
+        backgroundColor: '#ffffff',
+        pixelRatio: 2,
+        style: {
+          padding: '24px',
+          borderRadius: '20px',
+        }
+      });
+      const link = document.createElement('a');
+      link.download = `calendario-semanal-${selectedSummary.emp.name.toLowerCase().replace(/\s+/g, '-')}-${monthKey}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Falha ao exportar imagem do calendário:', err);
+    }
+  };
 
   return (
-    <div className="flex flex-col h-full animate-fade-in transition-colors bg-white dark:bg-black">
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden flex flex-col flex-1">
+    <div className="flex flex-col h-full animate-fade-in bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 overflow-hidden">
+      
+      {/* ── Top Bar ── */}
+      <header className="px-4 sm:px-6 py-3.5 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3 shrink-0 no-print">
         
-        {/* Header */}
-        <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900 sticky top-0 z-10 transition-colors no-print">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
-               <Icon name="insights" className="text-2xl" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={onClose}
-                  className="p-1 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mr-1"
-                >
-                  <Icon name="arrow_back" />
-                </button>
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">Análise de Escala & Gargalos</h2>
-              </div>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-1">
-                Visualização de Sobrecarga e Cobertura Operacional • {(currentMY.month + 1).toString().padStart(2, '0')}/{currentMY.year}
-              </p>
-            </div>
-          </div>
+        {/* Left: Back & Title */}
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 transition-colors shrink-0"
+            title="Voltar para a Escala"
+            aria-label="Voltar para a Escala"
+          >
+            <Icon name="arrow_back" className="text-xl" />
+          </button>
           
-          <div className="flex items-center gap-3">
-             {showIndividualModal && selectedEmployee && (
-               <IndividualEditModal
-                 employee={selectedEmployee.emp}
-                 currentMY={currentMY}
-                 customHolidays={customHolidays}
-                 getEffectiveShift={getEffectiveShift}
-                 onUpdateShift={onUpdateShift}
-                 onUpdateHour={onUpdateHour}
-                 onClose={() => setShowIndividualModal(false)}
-                 jornadaSettings={jornadaSettings}
-               />
-             )}
-             <div className="bg-slate-100 dark:bg-zinc-800 p-1 rounded-2xl flex gap-1">
-                {viewMode === 'team-calendar' && (
-                  <button 
-                    onClick={() => window.print()}
-                    className="px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 bg-emerald-500 text-white hover:bg-emerald-600 transition-all shadow-sm mr-2"
-                  >
-                    <Icon name="print" className="text-sm" /> Imprimir
-                  </button>
-                )}
-                <button 
-                  onClick={() => setViewMode('insights')}
-                  className={`px-5 sm:px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${viewMode === 'insights' ? 'bg-white dark:bg-zinc-900 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
-                >
-                  <Icon name="analytics" className="text-sm" /> Insights
-                </button>
-                <button 
-                  onClick={() => setViewMode('team-calendar')}
-                  className={`px-5 sm:px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${viewMode === 'team-calendar' ? 'bg-white dark:bg-zinc-900 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
-                >
-                  <Icon name="calendar_view_month" className="text-sm" /> Escala Geral
-                </button>
-             </div>
-             <button onClick={onClose} className="p-2.5 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-full transition-colors order-last ml-2">
-               <Icon name="close" className="text-slate-400" />
-             </button>
+          <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0">
+            <Icon name="calendar_month" className="text-xl" />
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-black tracking-tight text-zinc-900 dark:text-zinc-100 truncate">
+                Calendário Semanal (Dom-Sáb)
+              </h2>
+              <span className="hidden sm:inline-flex px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                {MONTH_NAMES[currentMY.month]} {currentMY.year}
+              </span>
+            </div>
+            <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 truncate">
+              {viewMode === 'individual' 
+                ? (selectedSummary ? `Visualizando escala de ${selectedSummary.emp.name}` : 'Selecione um colaborador')
+                : 'Visão de equipe completa em semanas (Dom-Sáb)'}
+            </p>
           </div>
         </div>
 
-        {/* Scrollable Area */}
-        <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50  custom-scrollbar transition-colors">
+        {/* Right: Controls & Actions */}
+        <div className="flex items-center gap-2 shrink-0">
           
-          {viewMode === 'insights' ? (
-            <div className="space-y-8 animate-fade-in">
+          {/* Mode Switcher */}
+          <div className="bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl flex gap-1">
+            <button
+              onClick={() => setViewMode('individual')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                viewMode === 'individual'
+                  ? 'bg-white dark:bg-zinc-900 text-orange-600 dark:text-orange-400 shadow-xs'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+              }`}
+            >
+              <Icon name="person" className="text-sm" />
+              <span className="hidden sm:inline">Colaborador</span>
+            </button>
+            <button
+              onClick={() => setViewMode('team')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                viewMode === 'team'
+                  ? 'bg-white dark:bg-zinc-900 text-orange-600 dark:text-orange-400 shadow-xs'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+              }`}
+            >
+              <Icon name="groups" className="text-sm" />
+              <span className="hidden sm:inline">Equipe Completa</span>
+            </button>
+          </div>
+
+          {/* Download PNG (individual mode only) */}
+          {viewMode === 'individual' && selectedSummary && (
+            <button
+              onClick={handleDownloadPng}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 transition-colors"
+              title="Baixar imagem do calendário"
+            >
+              <Icon name="download" className="text-sm" />
+              <span className="hidden md:inline">Baixar PNG</span>
+            </button>
+          )}
+
+          {/* Print */}
+          <button
+            onClick={() => window.print()}
+            className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 transition-colors"
+            title="Imprimir visualização"
+          >
+            <Icon name="print" className="text-sm" />
+            <span className="hidden md:inline">Imprimir</span>
+          </button>
+
+          {/* Close */}
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 transition-colors ml-1"
+            title="Fechar"
+            aria-label="Fechar painel"
+          >
+            <Icon name="close" className="text-lg" />
+          </button>
+        </div>
+      </header>
+
+      {/* ── Main Content Area ── */}
+      <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+        
+        {viewMode === 'individual' ? (
+          <>
+            {/* ── Left Sidebar: Employee Selector ── */}
+            <aside className="w-full md:w-80 lg:w-96 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col shrink-0 no-print">
               
-              {/* Key Indicators */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <InsightCard 
-                  label="Horas Mensais" 
-                  description="Total de horas CLT"
-                  value={employeeStats.reduce((acc, s) => acc + s.totalHours, 0).toLocaleString('pt-BR') + 'h'} 
-                  icon="schedule" color="indigo" 
-                />
-                <InsightCard 
-                  label="Dias Críticos" 
-                  description="Abaixo de 6 pessoas"
-                  value={bottlenecks.length.toString()} 
-                  icon="warning" color="rose"
-                  urgent={bottlenecks.length > 0}
-                />
-                <InsightCard 
-                  label="Justiça de Escala" 
-                  description="Média de Domingos"
-                  value={(employeeStats.reduce((acc, s) => acc + s.sundaysWorked, 0) / employeeStats.length).toFixed(1)} 
-                  icon="balance" color="amber" 
-                />
-                <InsightCard 
-                  label="Escala Ativa" 
-                  description="Total de colaboradores"
-                  value={employeeStats.length.toString()} 
-                  icon="person" color="sky" 
-                />
+              {/* Search & Header */}
+              <div className="p-3.5 border-b border-zinc-200 dark:border-zinc-800">
+                <div className="relative">
+                  <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Buscar colaborador ou função..."
+                    className="w-full pl-8 pr-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 text-xs rounded-xl border border-transparent focus:border-orange-500 focus:bg-white dark:focus:bg-zinc-900 outline-none transition-all placeholder:text-zinc-400"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                    >
+                      <Icon name="close" className="text-xs" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center justify-between text-[11px] font-bold text-zinc-400 mt-2 px-1">
+                  <span>{filteredSummaries.length} colaboradores</span>
+                  <span>Mês: {MONTH_NAMES[currentMY.month]}</span>
+                </div>
               </div>
 
-              {/* Main Interactive Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                
-                {/* Left: Individual Weekly Calendar */}
-                <div className="lg:col-span-12 xl:col-span-5 flex flex-col gap-6">
-                  <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-6 sm:p-8 shadow-sm h-full flex flex-col transition-colors">
-                    <div className="mb-6 flex justify-between items-start">
-                        <div className="min-w-0">
-                            <h3 className="text-lg font-black text-slate-800 dark:text-zinc-100 truncate">
-                                {selectedEmployee?.name || 'Selecione um colaborador'}
-                            </h3>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Calendário Semanal (Dom-Sáb)</p>
-                        </div>
-                        {selectedEmployee?.overlooked && (
-                            <div className="bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 px-3 py-1 rounded-lg text-[11px] font-black animate-pulse">
-                                ALERTA 6x1
-                            </div>
-                        )}
-                        {selectedEmployee && (
-                          <button
-                            onClick={async () => {
-                              const el = document.getElementById('individual-calendar-capture');
-                              if (el) {
-                                const dataUrl = await toPng(el, { 
-                                  backgroundColor: '#ffffff',
-                                  pixelRatio: 2,
-                                  style: { 
-                                    padding: '20px', 
-                                    borderRadius: '24px',
-                                    transform: 'scale(0.9)',
-                                    transformOrigin: 'center'
-                                  }
-                                });
-                                const link = document.createElement('a');
-                                link.download = `escala-${selectedEmployee.name.toLowerCase().replace(/\s+/g, '-')}.png`;
-                                link.href = dataUrl;
-                                link.click();
-                              }
-                            }}
-                            className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center ml-2"
-                            title="Baixar Calendário"
-                          >
-                            <Icon name="download" className="text-sm" />
-                          </button>
-                        )}
-                    </div>
+              {/* Employee Scrollable List */}
+              <div className="flex-1 overflow-y-auto p-2 space-y-1.5 custom-scrollbar">
+                {filteredSummaries.map(s => {
+                  const isSelected = selectedSummary?.emp.id === s.emp.id;
+                  const roleKey = normalizeEmployeeRole(s.emp.cargo || s.emp.role || 'Vendas');
+                  const roleConfig = ROLE_VISUAL_MAP[roleKey];
 
-                    <div className="flex-1">
-                        <div id="individual-calendar-capture" className="bg-white dark:bg-zinc-900 p-4 rounded-2xl">
-                          <div className="mb-4 text-center border-b border-slate-100 dark:border-zinc-800 pb-4">
-                              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Escala Individual</p>
-                              <h3 className="text-lg font-black text-slate-800 dark:text-zinc-100 uppercase tracking-tight">{selectedEmployee?.name}</h3>
-                              <p className="text-[11px] font-bold text-slate-400 uppercase">{(currentMY.month + 1).toString().padStart(2, '0')}/{currentMY.year}</p>
-                          </div>
-                        {selectedEmployee && (
-                            <IndividualWeeklyCalendar 
-                                employee={selectedEmployee.emp} 
-                                currentMY={currentMY} 
-                                customHolidays={customHolidays}
-                                getEffectiveShift={getEffectiveShift}
-                                onUpdateShift={onUpdateShift}
-                            />
-                        )}
+                  return (
+                    <button
+                      key={s.emp.id}
+                      onClick={() => setSelectedEmpId(s.emp.id)}
+                      className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between gap-2.5 ${
+                        isSelected
+                          ? 'bg-orange-50 dark:bg-orange-950/30 border-orange-400 dark:border-orange-500/50 shadow-xs ring-1 ring-orange-400/40'
+                          : 'bg-white dark:bg-zinc-900 border-zinc-200/80 dark:border-zinc-800/80 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <p className={`text-xs font-black truncate uppercase ${
+                            isSelected ? 'text-orange-950 dark:text-orange-100' : 'text-zinc-900 dark:text-zinc-100'
+                          }`}>
+                            {s.emp.name}
+                          </p>
+                          {s.hasCltAlert && (
+                            <span 
+                              className="px-1 py-0.2 rounded text-[10px] font-black bg-rose-500 text-white shrink-0 animate-pulse"
+                              title={`Sequência de ${s.maxStreak} dias sem folga (alerta CLT)`}
+                            >
+                              7º
+                            </span>
+                          )}
                         </div>
-                        {!selectedEmployee && (
-                          <div className="flex items-center justify-center h-40 text-slate-300 dark:text-slate-600">
-                            <p className="text-sm font-bold">Selecione um colaborador no ranking →</p>
-                          </div>
-                        )}
-                    </div>
 
-                    <div className="mt-6 grid grid-cols-2 gap-4 pt-6 border-t border-slate-100 dark:border-zinc-800">
-                        <div className="bg-indigo-50 dark:bg-indigo-950/40 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900/50">
-                            <p className="text-[11px] font-bold text-indigo-400 uppercase">Horas Estimadas</p>
-                            <p className="text-2xl font-black text-indigo-700 dark:text-indigo-300">{selectedEmployee?.totalHours}h</p>
-                            <p className="text-[11px] font-medium text-indigo-400">Mês completo ({selectedEmployee?.worked}d)</p>
+                        <div className="flex items-center gap-2 text-[11px]">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-black uppercase ${roleConfig.badgeClass}`}>
+                            {roleConfig.code}
+                          </span>
+                          <span className="text-zinc-400 truncate">
+                            {s.emp.shiftName || 'Turno Padrão'}
+                          </span>
                         </div>
-                        <div className="bg-amber-50 dark:bg-amber-950/40 p-4 rounded-xl border border-amber-100 dark:border-amber-900/50">
-                            <p className="text-[11px] font-bold text-amber-500 uppercase">Domingos/Feriados</p>
-                            <p className="text-2xl font-black text-amber-700 dark:text-amber-300">{selectedEmployee?.sundaysWorked}D / {selectedEmployee?.holidaysWorked}F</p>
-                            <p className="text-[11px] font-medium text-amber-500">Presença em dias premium</p>
-                        </div>
-                        <div className="bg-rose-50 dark:bg-rose-950/40 p-4 rounded-xl border border-rose-100 dark:border-rose-900/50">
-                            <p className="text-[11px] font-bold text-rose-400 uppercase">Aderência</p>
-                            <p className="text-2xl font-black text-rose-600 dark:text-rose-400">{selectedEmployee?.adherence.toFixed(0)}%</p>
-                            <p className="text-[11px] font-medium text-rose-400">Frente aos dias trabalháveis ({selectedEmployee?.theoreticalMax}d)</p>
-                        </div>
-                        <div className="bg-slate-50 dark:bg-zinc-800/60 p-4 rounded-xl border border-slate-200 dark:border-zinc-700">
-                            <p className="text-[11px] font-bold text-slate-400 uppercase">Maior Sequência</p>
-                            <p className="text-2xl font-black text-slate-900 dark:text-zinc-100">{selectedEmployee?.maxStreak}d</p>
-                            <p className="text-[11px] font-medium text-slate-400">{selectedEmployee?.overlooked ? '⚠️ Excede limite legal' : 'Dentro do limite'}</p>
-                        </div>
-                    </div>
+                      </div>
+
+                      {/* Quick counts */}
+                      <div className="text-right shrink-0">
+                        <span className={`text-xs font-black tabular-nums block ${
+                          isSelected ? 'text-orange-600 dark:text-orange-400' : 'text-zinc-800 dark:text-zinc-200'
+                        }`}>
+                          {s.worked}d trab
+                        </span>
+                        <span className="text-[11px] font-bold text-zinc-400 tabular-nums">
+                          {s.folgas} folgas
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+
+                {filteredSummaries.length === 0 && (
+                  <div className="p-8 text-center text-zinc-400 text-xs">
+                    Nenhum colaborador encontrado com "{searchTerm}".
                   </div>
-                </div>
-
-                {/* Middle/Right: Overload Ranking with Click Interaction */}
-                <div className="lg:col-span-12 xl:col-span-7 flex flex-col gap-6">
-                   <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-6 sm:p-8 shadow-sm flex flex-col max-h-[600px] transition-colors">
-                        <div className="mb-6 flex items-center justify-between">
-                            <div>
-                              <h3 className="text-lg font-black text-slate-800 dark:text-zinc-100">Ranking de Escala</h3>
-                              <p className="text-xs font-bold text-slate-400">Clique para ver o calendário individual</p>
-                            </div>
-                            {selectedEmployee && onUpdateShift && (
-                              <button
-                                onClick={() => setShowIndividualModal(true)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-[11px] font-bold rounded-lg hover:bg-indigo-700 transition-all"
-                              >
-                                <Icon name="edit" className="text-xs" /> Editar Escala
-                              </button>
-                            )}
-                        </div>
-                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
-                            {employeeStats.map((s, idx) => (
-                                <button 
-                                    key={s.id} 
-                                    onClick={() => { setSelectedEmpId(s.id); }}
-                                    className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all border ${
-                                        selectedEmpId === s.id 
-                                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/20 scale-[1.01]' 
-                                        : 'bg-slate-50 dark:bg-zinc-800/60 border-slate-100 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-800 dark:text-zinc-200'
-                                    }`}
-                                >
-                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${
-                                        selectedEmpId === s.id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'
-                                    }`}>
-                                        {idx + 1}
-                                    </div>
-                                    <div className="flex-1 text-left min-w-0">
-                                        <p className={`text-xs font-black uppercase truncate ${selectedEmpId === s.id ? 'text-white' : 'text-slate-900'}`}>
-                                            {s.name}
-                                        </p>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${selectedEmpId === s.id ? 'bg-white/20' : 'bg-slate-200'}`}>
-                                                <div className={`h-full rounded-full ${s.isHeavy ? 'bg-rose-400' : 'bg-indigo-400'}`} style={{ width: `${(s.worked / daysInMonth) * 100}%` }}></div>
-                                            </div>
-                                            <span className={`text-[11px] font-black shrink-0 ${selectedEmpId === s.id ? 'text-white/80' : 'text-slate-500'}`}>
-                                                {s.adherence.toFixed(0)}% • {s.worked}/{s.theoreticalMax}d
-                                            </span>
-                                        </div>
-                                    </div>
-                                    {s.overlooked && (
-                                        <Icon name="timer" className={selectedEmpId === s.id ? 'text-white' : 'text-rose-500'} />
-                                    )}
-                                </button>
-                            ))}
-                        </div>
-                   </div>
-
-                   {/* Heatmap moved to bottom of middle section */}
-                   <div className="bg-white  rounded-[2rem] border border-slate-200  p-8 shadow-sm transition-colors">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-sm font-black text-slate-800  uppercase tracking-widest">Mapa de Cobertura Geral</h3>
-                            <div className="flex gap-4">
-                                <div className="flex items-center gap-1.5 text-[11px] font-black text-slate-400 ">
-                                    <span className="w-2.5 h-2.5 bg-indigo-500 rounded-sm"></span> OK
-                                </div>
-                                <div className="flex items-center gap-1.5 text-[11px] font-black text-slate-400 ">
-                                    <span className="w-2.5 h-2.5 bg-rose-500 rounded-sm"></span> Crítico
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                            {dailyCoverage.map(c => (
-                                <div 
-                                    key={c.day}
-                                        className={`w-8 h-8 flex flex-col items-center justify-center rounded-lg border text-[11px] font-black transition-all ${
-                                            c.total < 6 ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-indigo-50 border-indigo-100 text-indigo-600'
-                                        }`}
-                                >
-                                    {c.total}
-                                </div>
-                            ))}
-                        </div>
-                   </div>
-                </div>
-
+                )}
               </div>
+            </aside>
 
-              {/* Botlenecks Alert */}
-              {bottlenecks.length > 0 && (
-                <div className="bg-rose-50 border border-rose-100 rounded-[2.5rem] p-8">
-                   <div className="flex items-center gap-4 mb-6">
-                      <div className="w-10 h-10 bg-rose-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-rose-200">
-                         <Icon name="error" className="text-xl" />
+            {/* ── Main Hero Area: Dom-Sáb Calendar ── */}
+            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-zinc-100/60 dark:bg-zinc-950 custom-scrollbar">
+              {selectedSummary ? (
+                <div 
+                  id="individual-calendar-capture" 
+                  className="max-w-5xl mx-auto bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 sm:p-7 shadow-xs space-y-6"
+                >
+                  
+                  {/* Employee Hero Card & Metrics */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-200 dark:border-zinc-800">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center font-black text-lg uppercase shadow-sm shrink-0">
+                        {selectedSummary.emp.name.substring(0, 2)}
                       </div>
                       <div>
-                         <h3 className="text-lg font-black text-rose-900 uppercase tracking-tight">ALERTA DE EQUIPE INSUFICIENTE</h3>
-                         <p className="text-xs font-bold text-rose-700">Identificamos dias onde a equipe está abaixo do mínimo operacional (6 pessoas).</p>
-                      </div>
-                   </div>
-                   <div className="flex flex-wrap gap-3">
-                      {bottlenecks.map(b => (
-                        <div key={b.day} className="flex items-center gap-3 bg-white border border-rose-200 px-4 py-2 rounded-2xl shadow-sm">
-                           <div className="flex flex-col items-center">
-                              <span className="text-[11px] font-black text-rose-500 leading-none">{WEEKDAY_NAMES[new Date(currentMY.year, currentMY.month, b.day).getDay()].substring(0, 3)}</span>
-                              <span className="text-lg font-black text-slate-900 leading-none mt-1">{b.day}</span>
-                           </div>
-                           <div className="h-6 w-px bg-rose-100 mx-1"></div>
-                           <p className="text-sm font-black text-rose-600">{b.total} CLT's</p>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight uppercase">
+                            {selectedSummary.emp.name}
+                          </h3>
+                          {(() => {
+                            const role = normalizeEmployeeRole(selectedSummary.emp.cargo || selectedSummary.emp.role || 'Vendas');
+                            const meta = ROLE_VISUAL_MAP[role];
+                            return (
+                              <span className={`px-2 py-0.5 rounded-md text-[11px] font-black uppercase ${meta.badgeClass}`}>
+                                {meta.label}
+                              </span>
+                            );
+                          })()}
                         </div>
-                      ))}
-                   </div>
+                        <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mt-0.5">
+                          {selectedSummary.emp.shiftName || 'Turno Regular'} • Horário Base: {selectedSummary.emp.workPeriod || '09:40 - 18:00'}
+                          {selectedSummary.emp.preferredDayOff && (
+                            <span className="ml-2 text-rose-600 dark:text-rose-400 font-bold">
+                              • Folga Preferencial: {selectedSummary.emp.preferredDayOff}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Operational Summary Pill Bar */}
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-zinc-50 dark:bg-zinc-800/60 p-2.5 rounded-xl border border-zinc-200/70 dark:border-zinc-800 text-xs">
+                      <div className="px-2 py-1 text-center">
+                        <span className="block text-[10px] font-black uppercase text-zinc-400">Trabalhados</span>
+                        <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm tabular-nums">
+                          {selectedSummary.worked} dias
+                        </span>
+                      </div>
+                      <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700"></div>
+                      <div className="px-2 py-1 text-center">
+                        <span className="block text-[10px] font-black uppercase text-zinc-400">Folgas</span>
+                        <span className="font-black text-rose-600 dark:text-rose-400 text-sm tabular-nums">
+                          {selectedSummary.folgas} ({selectedSummary.sundaysOff}D)
+                        </span>
+                      </div>
+                      <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700"></div>
+                      <div className="px-2 py-1 text-center">
+                        <span className="block text-[10px] font-black uppercase text-zinc-400">Domingos Trab.</span>
+                        <span className="font-black text-amber-600 dark:text-amber-400 text-sm tabular-nums">
+                          {selectedSummary.sundaysWorked}D
+                        </span>
+                      </div>
+                      <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700"></div>
+                      <div className="px-2 py-1 text-center">
+                        <span className="block text-[10px] font-black uppercase text-zinc-400">Horas CLT</span>
+                        <span className="font-black text-indigo-600 dark:text-indigo-400 text-sm tabular-nums">
+                          {selectedSummary.totalHours}h
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── Calendário Semanal (Dom-Sáb) ── */}
+                  <IndividualWeeklyCalendarView
+                    employee={selectedSummary.emp}
+                    currentMY={currentMY}
+                    customHolidays={customHolidays}
+                    getEffectiveShift={getEffectiveShift}
+                    onUpdateShift={onUpdateShift}
+                    onUpdateHour={onUpdateHour}
+                    jornadaSettings={jornadaSettings}
+                  />
+
+                  {/* Legend Bar */}
+                  <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3 text-[11px] font-semibold text-zinc-500">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="font-bold text-zinc-400 uppercase tracking-wider text-[10px]">Legenda:</span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500"></span> 
+                        <strong className="text-zinc-700 dark:text-zinc-300">T</strong> Trabalho
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-xs bg-rose-500"></span> 
+                        <strong className="text-zinc-700 dark:text-zinc-300">F</strong> Folga
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-xs bg-fuchsia-500"></span> 
+                        <strong className="text-zinc-700 dark:text-zinc-300">FF</strong> Compensatória
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-xs bg-sky-500"></span> 
+                        <strong className="text-zinc-700 dark:text-zinc-300">FE</strong> Férias
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-xs bg-amber-500"></span> 
+                        <strong className="text-zinc-700 dark:text-zinc-300">AT</strong> Atestado
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-xs bg-purple-500"></span> 
+                        <strong className="text-zinc-700 dark:text-zinc-300">DO</strong> Day Off
+                      </span>
+                    </div>
+
+                    {onUpdateShift && (
+                      <span className="text-zinc-400 flex items-center gap-1">
+                        <Icon name="touch_app" className="text-xs text-orange-500" />
+                        Clique em qualquer dia para alterar o turno
+                      </span>
+                    )}
+                  </div>
+
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-64 text-zinc-400 text-sm font-semibold">
+                  Selecione um colaborador na lista ao lado para ver seu calendário.
                 </div>
               )}
+            </main>
+          </>
+        ) : (
+          /* ── Team Calendar (Dom-Sáb) ── */
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-zinc-100/60 dark:bg-zinc-950 custom-scrollbar">
+            <div id="printable-team-calendar" className="max-w-7xl mx-auto bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 sm:p-8 shadow-xs">
+              <div className="mb-6 pb-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-black uppercase tracking-tight text-zinc-900 dark:text-zinc-100">
+                    Escala Geral de Equipe — {MONTH_NAMES[currentMY.month]} {currentMY.year}
+                  </h3>
+                  <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                    Exibição de todos os colaboradores presentes por semana (Domingo a Sábado)
+                  </p>
+                </div>
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white transition-all shadow-xs"
+                >
+                  <Icon name="print" className="text-sm" /> Imprimir Escala
+                </button>
+              </div>
 
+              <TeamMonthlyCalendar
+                employees={employees}
+                currentMY={currentMY}
+                customHolidays={customHolidays}
+                getEffectiveShift={getEffectiveShift}
+              />
             </div>
-          ) : (
-            <div id="printable-team-calendar" className="h-full animate-fade-in bg-white  p-8 rounded-[2.5rem] border border-slate-200  shadow-sm overflow-auto transition-colors print:p-0 print:border-none print:shadow-none">
-               <TeamMonthlyCalendar 
-                 employees={employees} 
-                 currentMY={currentMY} 
-                 customHolidays={customHolidays} 
-                 getEffectiveShift={getEffectiveShift}
-               />
-            </div>
-          )}
-        </div>
+          </main>
+        )}
 
-        {/* Footer */}
-        <div className="px-10 py-6 bg-white  border-t border-slate-100  flex items-center justify-between sticky bottom-0 transition-colors no-print">
-           <p className="text-[11px] font-black text-slate-400  uppercase tracking-[0.2em]">Insights Operacionais Mensal • Ri Happy Dashboard v2.0</p>
-           <button 
-             onClick={onClose} 
-             className="px-10 py-3 bg-slate-950  text-white  text-xs font-black rounded-2xl hover:bg-indigo-600  transition-all shadow-xl active:scale-95"
-           >
-             Sair da Análise
-           </button>
-        </div>
       </div>
     </div>
   );
 };
 
- const InsightCard: React.FC<{ label: string, value: string, icon: any, color: any, description: string, urgent?: boolean }> = ({ label, value, icon, color, description, urgent }) => (
-  <div className={`bg-white dark:bg-zinc-900 border rounded-2xl p-5 sm:p-6 shadow-sm flex items-center gap-4 sm:gap-5 transition-all hover:translate-y-[-2px] hover:shadow-md ${urgent ? 'border-rose-300 dark:border-rose-800 ring-2 ring-rose-50 dark:ring-rose-950/40' : 'border-slate-100 dark:border-zinc-800'}`}>
-     <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
-       color === 'indigo' ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400' : 
-       color === 'rose' ? 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400' : 
-       color === 'amber' ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400' : 'bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400'
-     }`}>
-        <Icon name={icon} className="text-xl" />
-     </div>
-     <div className="min-w-0">
-        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
-        <h4 className={`text-xl font-black ${urgent ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-zinc-100'} leading-none`}>{value}</h4>
-        <p className="text-[11px] font-medium text-slate-400 dark:text-zinc-500 truncate mt-1">{description}</p>
-     </div>
-  </div>
-);
+// ─── Individual Weekly Calendar Grid ───────────────────────────────────────────
 
-const IndividualWeeklyCalendar: React.FC<{ 
-    employee: Employee, 
-    currentMY: MonthYear, 
-    customHolidays: Holiday[],
-    getEffectiveShift: (emp: Employee, dayIdx: number) => ShiftType,
-    onUpdateShift?: (empId: string, dayIdx: number, newShift: ShiftType) => void
-}> = ({ employee, currentMY, customHolidays, getEffectiveShift, onUpdateShift }) => {
-    const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
-    const firstDayOfMonth = new Date(currentMY.year, currentMY.month, 1).getDay(); // 0 is Sunday
-    const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
-    const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
-    const canEdit = !!onUpdateShift;
-
-    // Create a flat list of days including leading empty spaces for the first week
-    const calendarDays: any[] = [];
-    for (let i = 0; i < firstDayOfMonth; i++) {
-        calendarDays.push({ type: 'empty' });
-    }
-    for (let i = 1; i <= daysInMonth; i++) {
-        const dayIdx = i - 1;
-        const shift = getEffectiveShift(employee, dayIdx);
-        const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-        const isOff = !isWorkingShift(shift) && shift !== 'C'; 
-        const isCourse = shift === 'C';
-        const isVacation = shift === 'FE';
-        const isBirthday = shift === 'DO';
-        const isHoliday = holidaySet.has(dateStr);
-        const hours = (employee.dailyHours[monthKey] || [])[dayIdx] || employee.workPeriod;
-        calendarDays.push({ type: 'day', day: i, dayIdx, shift, isOff, isCourse, isVacation, isBirthday, isHoliday, hours });
-    }
-
-    const shiftBg = (s: ShiftType) => {
-        if (isWorkingShift(s)) return 'bg-indigo-600 border-indigo-700 text-white shadow-sm';
-        if (s==='F') return 'bg-orange-50 border-orange-100 text-orange-600';
-        if (s?.startsWith('FF')) return 'bg-red-50 border-red-100 text-red-600';
-        if (s==='C') return 'bg-teal-500 border-teal-600 text-white shadow-sm';
-        if (s==='FE') return 'bg-indigo-50 border-indigo-200 text-indigo-600';
-        if (s==='DO') return 'bg-fuchsia-600 border-fuchsia-700 text-white shadow-sm';
-        if (s==='AT') return 'bg-rose-50 border-rose-200 text-rose-600';
-        return 'bg-slate-50 border-slate-100 text-slate-400';
-    };
-
-    return (
-        <div className="w-full">
-            <div className="grid grid-cols-7 gap-2 mb-2">
-                {WEEKDAY_NAMES.map(wd => (
-                    <div key={wd} className="text-center text-[11px] font-black text-slate-400  uppercase tracking-tighter">
-                        {wd.substring(0, 3)}
-                    </div>
-                ))}
-            </div>
-            <div className="grid grid-cols-7 gap-2">
-                {calendarDays.map((cell, idx) => {
-                    if (cell.type === 'empty') return <div key={idx} className="aspect-square"></div>;
-                    
-                    return (
-                        <div 
-                            key={idx}
-                            title={cell.isVacation ? 'Férias' : (cell.shift as string)}
-                            className={`aspect-square rounded-xl border flex flex-col items-center justify-center transition-all relative ${shiftBg(cell.shift)} ${canEdit ? 'hover:scale-105 hover:shadow-md cursor-pointer' : ''}`}
-                        >
-                            <span className={`text-[11px] font-black absolute top-1 left-1 ${isWorkingShift(cell.shift) || cell.isCourse ? 'text-white/80' : 'text-slate-400'}`}>{cell.day}</span>
-                            <span className={`text-[11px] font-black mt-1 ${cell.isOff && !cell.isVacation && !cell.isBirthday && cell.shift !== 'AT' ? 'opacity-40' : ''}`}>{isWorkingShift(cell.shift) ? 'T' : cell.isCourse ? 'C' : cell.isVacation ? 'FE' : cell.isBirthday ? 'DO' : cell.shift === 'AT' ? 'AT' : (cell.shift?.startsWith('FF') ? 'FF' : 'F')}</span>
-
-
-                            {canEdit && (
-                                <select
-                                    value={cell.shift}
-                                    onChange={(e) => onUpdateShift(employee.id, cell.dayIdx, e.target.value as ShiftType)}
-                                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
-                                >
-                                    <option value="T">Trabalha (T)</option>
-                                    <option value="F">Folga (F)</option>
-                                    <option value="AT">Atestado (AT)</option>
-                                    <option value="C">Curso (C)</option>
-                                    <option value="FE">Férias (FE)</option>
-                                </select>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-            {canEdit && (
-                <p className="text-[11px] font-bold text-slate-400 mt-4 text-center animate-pulse">
-                    <Icon name="touch_app" className="text-xs" /> Clique nos dias para mudar o status
-                </p>
-            )}
-        </div>
-    );
-}
-
-const TeamMonthlyCalendar: React.FC<{ 
-    employees: Employee[], 
-    currentMY: MonthYear, 
-    customHolidays: Holiday[],
-    getEffectiveShift: (emp: Employee, dayIdx: number) => ShiftType
-}> = ({ employees, currentMY, customHolidays, getEffectiveShift }) => {
-  const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
-  const firstDayOfMonth = new Date(currentMY.year, currentMY.month, 1).getDay();
-  const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
-
-  const cells = [];
-  for (let i = 0; i < firstDayOfMonth; i++) cells.push({ type: 'empty' });
-  const sortedEmployees = [...employees]
-    .filter(e => !e.isHidden && e.status === 'active')
-    .sort((a, b) => {
-      const getStartHour = (wp: string) => {
-        const match = wp.match(/(\d+)h/);
-        return match ? parseInt(match[1]) : 99;
-      };
-      const hA = getStartHour(a.workPeriod || '');
-      const hB = getStartHour(b.workPeriod || '');
-      if (hA !== hB) return hA - hB;
-      return a.name.localeCompare(b.name, 'pt-BR');
-    });
-
-  for (let i = 1; i <= daysInMonth; i++) {
-    const workingDayData = sortedEmployees.map(emp => {
-      const shift = getEffectiveShift(emp, i - 1);
-      const hours = (emp.dailyHours[monthKey] || [])[i - 1] || emp.workPeriod;
-      const isOff = !isWorkingShift(shift) && shift !== 'C';
-
-      return { 
-        name: getShortName(emp.name, employees), 
-        shift, 
-        hours, 
-        isOff, 
-        isCourse: shift === 'C',
-        isVacation: shift === 'FE'
-      };
-    }).filter(d => !d.isOff || d.isCourse); // Mostramos T e C no calendário geral
-    cells.push({ type: 'day', date: i, dayData: workingDayData });
-  }
-
-  return (
-    <div className="w-full print:px-2">
-      <div className="grid grid-cols-7 gap-4 mb-4 print:gap-1 print:mb-2">
-        {WEEKDAY_NAMES.map(wd => (
-          <div key={wd} className="text-center text-[11px] font-black text-slate-400 uppercase tracking-widest">{wd}</div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-4 print:gap-1">
-        {cells.map((cell, idx) => (
-          <div key={idx} className={`min-h-[160px] print:min-h-0 rounded-[2rem] print:rounded-lg border p-5 print:p-2 flex flex-col gap-1.5 print:gap-1 transition-all ${cell.type === 'empty' ? 'border-transparent' : 'bg-white border-slate-100'}`}>
-            {cell.type === 'day' && (
-              <>
-                <div className="flex justify-between items-start mb-3 print:mb-1">
-                  <span className="text-xs font-black text-slate-400  print:text-[11px]">{cell.date}</span>
-                  <span className="text-[11px] font-black text-slate-300  uppercase tracking-tighter">
-                    {WEEKDAY_NAMES[new Date(currentMY.year, currentMY.month, cell.date).getDay()].split('-')[0]}
-                  </span>
-                </div>
-                <div className="space-y-1.5">
-                  {cell.dayData && cell.dayData.map((d, i) => (
-                    <div key={i} className={`flex items-center justify-between gap-1 p-2 print:p-1 rounded-xl print:rounded-md border ${d.isCourse ? 'bg-teal-50 border-teal-100 text-teal-700' : 'bg-slate-50 border-slate-100/50 text-slate-800'}`}>
-                       <span className="text-[11px] print:text-[11px] font-black uppercase truncate">{d.name}</span>
-                       <span className={`text-[11px] font-bold shrink-0 ${d.isCourse ? 'mt-[-2px]' : 'hidden'}`}>{d.isCourse && <Icon name="school" className="text-[11px]" />}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// ─── Individual Edit Modal ───────────────────────────────────────────────────
-
-const SHIFT_OPTIONS_MODAL = [
-  { value: 'T', label: 'T — Trabalho' },
-  { value: 'F', label: 'F — Folga' },
-  { value: 'AT', label: 'AT — Atestado Médico' },
-  { value: 'C', label: 'C — Curso' },
-  { value: 'FE', label: 'FE — Férias' },
-];
-
-interface IndividualEditModalProps {
+interface IndividualWeeklyCalendarViewProps {
   employee: Employee;
   currentMY: MonthYear;
   customHolidays: Holiday[];
   getEffectiveShift: (emp: Employee, dayIdx: number) => ShiftType;
   onUpdateShift?: (empId: string, dayIdx: number, newShift: ShiftType) => void;
   onUpdateHour?: (empId: string, dayIdx: number, newHour: string) => void;
-  onClose: () => void;
   jornadaSettings?: JornadaSettings;
 }
 
-const IndividualEditModal: React.FC<IndividualEditModalProps> = ({
-  employee, currentMY, customHolidays, getEffectiveShift,
-  onUpdateShift, onUpdateHour, onClose, jornadaSettings,
+const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> = ({
+  employee,
+  currentMY,
+  customHolidays,
+  getEffectiveShift,
+  onUpdateShift,
+  onUpdateHour,
+  jornadaSettings = DEFAULT_JORNADA_SETTINGS,
 }) => {
+  const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
+  const firstDayOfMonth = new Date(currentMY.year, currentMY.month, 1).getDay(); // 0 is Sunday
+  const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
+  const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
+  const canEdit = !!onUpdateShift;
+
+  const getAvailHours = (dayIdx: number): string[] => {
+    const date = new Date(currentMY.year, currentMY.month, dayIdx + 1);
+    const ds = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+    if (holidaySet.has(ds)) return jornadaSettings.shiftHours.holiday;
+    if (date.getDay() === 0) return jornadaSettings.shiftHours.sunday;
+    return jornadaSettings.shiftHours.weekday;
+  };
+
+  // Build calendar matrix (leading empty cells for first week)
+  const calendarCells: ({ type: 'empty' } | {
+    type: 'day';
+    day: number;
+    dayIdx: number;
+    shift: ShiftType;
+    isSunday: boolean;
+    isSaturday: boolean;
+    isHoliday: boolean;
+    hours: string;
+  })[] = [];
+
+  for (let i = 0; i < firstDayOfMonth; i++) {
+    calendarCells.push({ type: 'empty' });
+  }
+
+  for (let i = 1; i <= daysInMonth; i++) {
+    const dayIdx = i - 1;
+    const shift = getEffectiveShift(employee, dayIdx);
+    const date = new Date(currentMY.year, currentMY.month, i);
+    const ds = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+    const hours = (employee.dailyHours?.[monthKey] || [])[dayIdx] || employee.workPeriod || '';
+
+    calendarCells.push({
+      type: 'day',
+      day: i,
+      dayIdx,
+      shift,
+      isSunday: date.getDay() === 0,
+      isSaturday: date.getDay() === 6,
+      isHoliday: holidaySet.has(ds),
+      hours,
+    });
+  }
+
+  return (
+    <div className="w-full">
+      {/* Weekday Column Headers (Dom - Sáb) */}
+      <div className="grid grid-cols-7 gap-2 sm:gap-3 mb-2.5">
+        {WEEKDAY_NAMES.map((wd, idx) => {
+          const isSun = idx === 0;
+          return (
+            <div 
+              key={wd} 
+              className={`text-center py-2 px-1 rounded-xl font-black text-xs uppercase tracking-wider ${
+                isSun
+                  ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/40'
+                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300'
+              }`}
+            >
+              <span className="hidden sm:inline">{wd.split('-')[0]}</span>
+              <span className="sm:hidden">{WEEKDAY_SHORT[idx]}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Grid of Days */}
+      <div className="grid grid-cols-7 gap-2 sm:gap-3">
+        {calendarCells.map((cell, idx) => {
+          if (cell.type === 'empty') {
+            return (
+              <div 
+                key={`empty-${idx}`} 
+                className="aspect-square sm:aspect-[4/3] rounded-2xl border border-dashed border-zinc-200/60 dark:border-zinc-800/40 bg-zinc-50/30 dark:bg-zinc-900/20"
+              />
+            );
+          }
+
+          const { day, dayIdx, shift, isSunday, isHoliday, hours } = cell;
+          const isWorking = isWorkingShift(shift);
+          const cellStyle = getShiftCellStyle(shift);
+          const availHours = getAvailHours(dayIdx);
+
+          return (
+            <div
+              key={`day-${day}`}
+              className={`group relative aspect-square sm:aspect-[4/3] rounded-2xl border transition-all p-2 sm:p-2.5 flex flex-col justify-between ${cellStyle.bg} ${cellStyle.border} ${
+                canEdit ? 'hover:shadow-md cursor-pointer' : ''
+              }`}
+            >
+              {/* Day Header (Number & Flags) */}
+              <div className="flex items-center justify-between w-full">
+                <span className={`text-xs sm:text-sm font-black tabular-nums ${
+                  isSunday ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-700 dark:text-zinc-200'
+                }`}>
+                  {day}
+                </span>
+
+                {isHoliday && (
+                  <span 
+                    className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-fuchsia-500 text-white shadow-xs" 
+                    title="Feriado"
+                  >
+                    FER
+                  </span>
+                )}
+                {isSunday && !isHoliday && (
+                  <span className="text-[10px] font-black text-rose-500 dark:text-rose-400 uppercase">
+                    Dom
+                  </span>
+                )}
+              </div>
+
+              {/* Central Badge: Shift Status */}
+              <div className="flex flex-col items-center justify-center my-auto">
+                <span className={`text-base sm:text-lg font-black tracking-tight ${cellStyle.text}`}>
+                  {shift}
+                </span>
+                <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight line-clamp-1 text-center">
+                  {isWorking ? 'Trabalho' : shift === 'F' ? 'Folga' : shift?.startsWith('FF') ? 'Compensatória' : shift === 'FE' ? 'Férias' : shift === 'AT' ? 'Atestado' : shift === 'DO' ? 'Day Off' : shift === 'C' ? 'Curso' : 'Folga'}
+                </span>
+              </div>
+
+              {/* Bottom: Hours or Shift Detail */}
+              <div className="w-full text-center">
+                {isWorking ? (
+                  canEdit && onUpdateHour ? (
+                    <select
+                      value={hours}
+                      onChange={(e) => onUpdateHour(employee.id, dayIdx, e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full text-[10px] font-bold text-zinc-600 dark:text-zinc-300 bg-white/70 dark:bg-zinc-800/70 rounded border border-zinc-200/50 dark:border-zinc-700 py-0.5 px-0.5 text-center cursor-pointer outline-none truncate"
+                      title="Clique para alterar o horário"
+                    >
+                      {availHours.map(h => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                      {hours && !availHours.includes(hours) && (
+                        <option value={hours}>{hours}</option>
+                      )}
+                    </select>
+                  ) : (
+                    <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 truncate block">
+                      {hours ? hours.split(' ')[0] : '—'}
+                    </span>
+                  )
+                ) : (
+                  <span className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500 truncate block">
+                    —
+                  </span>
+                )}
+              </div>
+
+              {/* Direct Shift Selector overlay if editable */}
+              {canEdit && (
+                <select
+                  value={shift}
+                  onChange={(e) => onUpdateShift(employee.id, dayIdx, e.target.value as ShiftType)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  title={`Clique para alterar o status do dia ${day}`}
+                >
+                  {SHIFT_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label} — {opt.desc}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ─── Team Monthly Calendar View (Dom-Sáb) ─────────────────────────────────────
+
+const TeamMonthlyCalendar: React.FC<{ 
+  employees: Employee[]; 
+  currentMY: MonthYear; 
+  customHolidays: Holiday[];
+  getEffectiveShift: (emp: Employee, dayIdx: number) => ShiftType;
+}> = ({ employees, currentMY, customHolidays, getEffectiveShift }) => {
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMY.year, currentMY.month, 1).getDay();
   const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
   const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
-  const canEdit = !!onUpdateShift;
-  const MONTH_NAMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-  const getHour = (dayIdx: number): string => {
-    const mh = (employee.dailyHours || {})[monthKey] || [];
-    return mh[dayIdx] || employee.workPeriod || '';
-  };
+  const activeEmployees = useMemo(() => {
+    return employees
+      .filter(e => !e.isHidden && isEmployeeActiveInMonth(e, currentMY.year, currentMY.month))
+      .sort((a, b) => {
+        const getStartHour = (wp: string) => {
+          const match = wp.match(/(\d+)h/);
+          return match ? parseInt(match[1]) : 99;
+        };
+        const hA = getStartHour(a.workPeriod || '');
+        const hB = getStartHour(b.workPeriod || '');
+        if (hA !== hB) return hA - hB;
+        return a.name.localeCompare(b.name, 'pt-BR');
+      });
+  }, [employees, currentMY.year, currentMY.month]);
 
-  const getAvailHours = (dayIdx: number): string[] => {
-    const date = new Date(currentMY.year, currentMY.month, dayIdx + 1);
-    const ds = `${currentMY.year}-${String(currentMY.month+1).padStart(2,'0')}-${String(dayIdx+1).padStart(2,'0')}`;
-    const settings = jornadaSettings || DEFAULT_JORNADA_SETTINGS;
-    if (holidaySet.has(ds)) return settings.shiftHours.holiday;
-    if (date.getDay() === 0) return settings.shiftHours.sunday;
-    return settings.shiftHours.weekday;
-  };
-
-  type CellDay = { type: 'day'; day: number; dayIdx: number; shift: ShiftType; isHoliday: boolean; isSunday: boolean; isSaturday: boolean; hour: string };
-  type Cell = { type: 'empty' } | CellDay;
-  const cells: Cell[] = [];
-  for (let i = 0; i < firstDayOfMonth; i++) cells.push({ type: 'empty' });
-  for (let i = 1; i <= daysInMonth; i++) {
-    const dayIdx = i - 1;
-    const ds = `${currentMY.year}-${String(currentMY.month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-    const date = new Date(currentMY.year, currentMY.month, i);
-    cells.push({ type: 'day', day: i, dayIdx, shift: getEffectiveShift(employee, dayIdx),
-      isHoliday: holidaySet.has(ds), isSunday: date.getDay()===0, isSaturday: date.getDay()===6, hour: getHour(dayIdx) });
+  const cells = [];
+  for (let i = 0; i < firstDayOfMonth; i++) {
+    cells.push({ type: 'empty' as const });
   }
 
-  const shiftBg = (s: ShiftType) => {
-    if (s==='T') return 'bg-sky-600';
-    if (['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].includes(s as string)) return 'bg-emerald-600';
-    if (s==='F') return 'bg-orange-500';
-    if (s?.startsWith('FF')) return 'bg-red-500';
-    if (s==='C') return 'bg-teal-500';
-    if (s==='FE') return 'bg-indigo-600';
-    if (s==='DO') return 'bg-fuchsia-600';
-    return 'bg-slate-300';
-  };
+  for (let i = 1; i <= daysInMonth; i++) {
+    const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+    const date = new Date(currentMY.year, currentMY.month, i);
+    const isHoliday = holidaySet.has(dateStr);
+    const isSunday = date.getDay() === 0;
 
+    const workingEmps = activeEmployees.map(emp => {
+      const shift = getEffectiveShift(emp, i - 1);
+      const hours = (emp.dailyHours?.[monthKey] || [])[i - 1] || emp.workPeriod || '';
+      const isWorking = isWorkingShift(shift);
+      const isCourse = shift === 'C';
+
+      return {
+        emp,
+        name: getShortName(emp.name, employees),
+        shift,
+        hours,
+        isWorking,
+        isCourse,
+      };
+    }).filter(d => d.isWorking || d.isCourse);
+
+    cells.push({
+      type: 'day' as const,
+      day: i,
+      isHoliday,
+      isSunday,
+      workingEmps,
+    });
+  }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white  rounded-[2.5rem] w-full max-w-3xl shadow-2xl border border-slate-200  flex flex-col max-h-[92vh] overflow-hidden">
-        <div className="px-8 py-5 border-b border-slate-100  flex items-center justify-between sticky top-0 bg-white  z-10">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-100  text-indigo-600  flex items-center justify-center font-black text-lg uppercase shadow-sm">
-              {employee.name.substring(0,2)}
-            </div>
-            <div>
-              <h3 className="text-lg font-black text-slate-900  uppercase tracking-tight">{employee.name}</h3>
-              <p className="text-[11px] font-bold text-slate-400  uppercase tracking-widest">
-                Calendário Individual — {MONTH_NAMES[currentMY.month]} {currentMY.year}
-                {canEdit && <span className="ml-2 text-indigo-500">• Clique para editar</span>}
-              </p>
-            </div>
+    <div className="w-full">
+      {/* Weekday Headers */}
+      <div className="grid grid-cols-7 gap-2.5 mb-3 print:gap-1">
+        {WEEKDAY_NAMES.map((wd, idx) => (
+          <div 
+            key={wd} 
+            className={`text-center py-2 px-1 rounded-xl font-black text-xs uppercase tracking-wider ${
+              idx === 0 
+                ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400' 
+                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300'
+            }`}
+          >
+            {wd.split('-')[0]}
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={async () => {
-                const el = document.getElementById('modal-calendar-capture');
-                if (el) {
-                  const dataUrl = await toPng(el, { 
-                    backgroundColor: '#ffffff', 
-                    pixelRatio: 2,
-                    style: { 
-                      padding: '30px', 
-                      borderRadius: '32px',
-                      transform: 'scale(0.9)',
-                      transformOrigin: 'center'
-                    } 
-                  });
-                  const link = document.createElement('a');
-                  link.download = `escala-${employee.name.toLowerCase().replace(/\s+/g, '-')}.png`;
-                  link.href = dataUrl;
-                  link.click();
-                }
-              }}
-              className="p-2 hover:bg-indigo-50 text-indigo-600 rounded-full transition-colors"
-              title="Baixar Calendário"
+        ))}
+      </div>
+
+      {/* Grid of Weeks */}
+      <div className="grid grid-cols-7 gap-2.5 print:gap-1">
+        {cells.map((cell, idx) => {
+          if (cell.type === 'empty') {
+            return (
+              <div 
+                key={`empty-${idx}`} 
+                className="min-h-[140px] rounded-2xl border border-dashed border-zinc-200/50 dark:border-zinc-800/40 bg-zinc-50/20"
+              />
+            );
+          }
+
+          return (
+            <div
+              key={`day-${cell.day}`}
+              className={`min-h-[140px] rounded-2xl border p-3 flex flex-col justify-between transition-all ${
+                cell.isSunday
+                  ? 'bg-rose-50/30 dark:bg-rose-950/20 border-rose-200/60 dark:border-rose-900/40'
+                  : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800'
+              }`}
             >
-              <Icon name="download" />
-            </button>
-            <button onClick={onClose} className="p-2 hover:bg-slate-100  rounded-full transition-colors">
-              <Icon name="close" className="text-slate-400 " />
-            </button>
-          </div>
-        </div>
+              {/* Day Header */}
+              <div className="flex items-center justify-between mb-2">
+                <span className={`text-xs font-black tabular-nums ${
+                  cell.isSunday ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-700 dark:text-zinc-300'
+                }`}>
+                  {cell.day}
+                </span>
+                <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
+                  {cell.workingEmps.length} CLT
+                </span>
+              </div>
 
-        <div className="flex-1 overflow-y-auto p-6 bg-slate-50/40  custom-scrollbar">
-          <div id="modal-calendar-capture" className="bg-white p-6 rounded-3xl">
-            <div className="mb-6 text-center border-b border-slate-100 pb-4">
-                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Escala Individual</p>
-                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">{employee.name}</h3>
-                <p className="text-[11px] font-bold text-slate-400 uppercase">{MONTH_NAMES[currentMY.month]} {currentMY.year}</p>
+              {/* Working Employees List */}
+              <div className="space-y-1 flex-1 overflow-y-auto max-h-[130px] custom-scrollbar pr-0.5">
+                {cell.workingEmps.map((w, wIdx) => (
+                  <div
+                    key={wIdx}
+                    className={`flex items-center justify-between text-[11px] font-bold px-1.5 py-0.5 rounded-md border ${
+                      w.isCourse 
+                        ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200' 
+                        : 'bg-zinc-50 dark:bg-zinc-800/60 text-zinc-800 dark:text-zinc-200 border-zinc-200/60 dark:border-zinc-700/60'
+                    }`}
+                  >
+                    <span className="truncate">{w.name}</span>
+                    <span className="text-[10px] text-zinc-400 shrink-0 ml-1">
+                      {w.hours ? w.hours.split('-')[0].trim() : ''}
+                    </span>
+                  </div>
+                ))}
+                {cell.workingEmps.length === 0 && (
+                  <div className="text-[11px] text-zinc-400 italic text-center py-4">
+                    Nenhum colaborador
+                  </div>
+                )}
+              </div>
             </div>
-          <div className="grid grid-cols-7 gap-1.5 mb-2">
-            {WEEKDAY_NAMES.map(wd => (
-              <div key={wd} className="text-center text-[11px] font-black text-slate-400  uppercase">{wd.substring(0,3)}</div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-1.5">
-            {cells.map((cell, idx) => {
-              if (cell.type === 'empty') return <div key={idx} style={{minHeight:'70px'}} />;
-              const { day, dayIdx, shift, isHoliday, isSunday, isSaturday, hour } = cell;
-              const availH = getAvailHours(dayIdx);
-              return (
-                <div
-                  key={idx}
-                  style={{ minHeight: '70px' }}
-                  className={`rounded-xl border flex flex-col items-center justify-start pt-1 gap-0.5 p-1 relative ${
-                    isHoliday ? 'border-rose-300 bg-rose-50/70' :
-                    isSunday  ? 'border-orange-300 bg-orange-50/70' :
-                    isSaturday? 'border-slate-200 bg-slate-50' :
-                    'border-slate-100 bg-white'
-                  }`}
-                >
-                  <span className={`text-[11px] font-black self-start pl-0.5 ${isHoliday?'text-rose-400':isSunday?'text-orange-400':'text-slate-400'}`}>{day}</span>
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-extrabold text-white shadow-sm ${shiftBg(shift)}`}>{shift?.split(' ')[0]}</div>
-                  {canEdit && (
-                    <select
-                      value={shift}
-                      onChange={e => onUpdateShift!(employee.id, dayIdx, e.target.value as ShiftType)}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    >
-                      {SHIFT_OPTIONS_MODAL.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      {shift?.startsWith('FF ') && <option value={shift}>{shift}</option>}
-                    </select>
-                  )}
-                  {(shift==='T'||shift==='C') && (
-                    <div className="w-full px-0.5 relative z-20" onClick={e=>e.stopPropagation()}>
-                      {canEdit && onUpdateHour ? (
-                        <select
-                          value={hour}
-                          onChange={e=>onUpdateHour!(employee.id, dayIdx, e.target.value)}
-                          onClick={e=>e.stopPropagation()}
-                          className="w-full text-[11px] font-bold text-slate-500  bg-transparent border-none outline-none text-center cursor-pointer"
-                        >
-                          {availH.map(h=><option key={h} value={h}>{h}</option>)}
-                          {hour && !availH.includes(hour) && <option value={hour}>{hour}</option>}
-                        </select>
-                      ) : (
-                        <span className="text-[11px] font-bold text-slate-400 block text-center truncate">{hour.split(' ')[0]}</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          </div>
-          {canEdit && (
-            <div className="mt-4 p-3 bg-indigo-50  rounded-2xl border border-indigo-100  flex flex-wrap gap-3 items-center justify-center">
-              <p className="text-[11px] font-black text-indigo-500 uppercase tracking-widest w-full text-center">Clique em qualquer dia para alterar o turno • Alterações refletem na tabela principal</p>
-              {SHIFT_OPTIONS_MODAL.map(o => (
-                <div key={o.value} className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
-                  <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[11px] font-black text-white ${shiftBg(o.value as ShiftType)}`}>{o.value}</div>
-                  {o.label.split('—')[1]?.trim()}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="px-8 py-4 border-t border-slate-100  flex justify-end bg-white ">
-          <button onClick={onClose} className="px-8 py-2.5 bg-slate-900  text-white  text-xs font-black rounded-2xl hover:bg-indigo-600  transition-all shadow-lg active:scale-95">
-            Fechar
-          </button>
-        </div>
+          );
+        })}
       </div>
     </div>
   );
