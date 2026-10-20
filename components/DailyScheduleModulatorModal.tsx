@@ -147,7 +147,10 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
       if (!isWorkingShift(shift)) return;
 
       const hour = e.dailyHours?.[monthKey]?.[dayIdx] || getDefaultHourForDay(e, isHoliday, isSunday);
-      const pos = normalizeEmployeeRole(e.cargo || e.role);
+      const savedPos = e.tacticalPositions?.[monthKey]?.[dayIdx];
+      const pos = savedPos && savedPos !== 'AUTO'
+        ? normalizeEmployeeRole(savedPos)
+        : (resolvedPositions[e.id] || normalizeEmployeeRole(e.cargo || e.role));
       const posEmoji = getTacticalEmoji(pos);
 
       if (!initialGroups[hour]) initialGroups[hour] = [];
@@ -278,6 +281,89 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
       computeInitialState();
     }
   }, [isOpen, dayIdx, computeInitialState]);
+
+  // Distribuição Automática de Funções e Horários de Almoço
+  const handleAutoDistribute = useCallback(async () => {
+    const { isHoliday, isSunday } = dateInfo;
+    const activeEmps = (employees || []).filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
+
+    // Apenas colaboradores que estão incluídos e trabalhando
+    const includedEmpIds = new Set(items.filter(it => it.included).map(it => it.id));
+    const workingEmps = activeEmps.filter(e => includedEmpIds.has(e.id));
+
+    if (workingEmps.length === 0) {
+      await showDialog({
+        title: 'Nenhum Colaborador',
+        message: 'Não há colaboradores marcados como presentes para distribuir funções e almoço.',
+        type: 'alert'
+      });
+      return;
+    }
+
+    // Forçar cálculo autônomo de posições para os colaboradores presentes (sem travar em manual)
+    const empsForResolve = workingEmps.map(e => ({
+      ...e,
+      tacticalPositions: {
+        ...e.tacticalPositions,
+        [monthKey]: []
+      }
+    }));
+
+    const resolvedPositions = resolveTacticalDay(empsForResolve, monthKey, dayIdx, isHoliday, isSunday, jornadaSettings);
+
+    // Preparar lista plana com as horas e novas funções para o calculateLunches
+    const updatedMembersFlat = items.filter(it => it.included).map(it => {
+      const newPos = resolvedPositions[it.id] || it.pos || 'Vendas';
+      return {
+        ...it,
+        pos: newPos,
+        cargo: newPos,
+        role: newPos,
+      };
+    });
+
+    const calculatedLunches = calculateLunches(
+      updatedMembersFlat,
+      isHoliday,
+      isSunday,
+      undefined,
+      jornadaSettings
+    ) || [];
+
+    const memberLunchMap = new Map<string, string>();
+    updatedMembersFlat.forEach((m, idx) => {
+      memberLunchMap.set(m.id, calculatedLunches[idx] || m.lunch || '13h');
+    });
+
+    const newItems = items.map(it => {
+      if (!it.included) return it;
+      const newPos = resolvedPositions[it.id] || it.pos || 'Vendas';
+      const newEmoji = getTacticalEmoji(newPos);
+      const newLunch = memberLunchMap.get(it.id) || it.lunch;
+      return {
+        ...it,
+        pos: newPos,
+        posEmoji: newEmoji,
+        lunch: newLunch
+      };
+    });
+
+    setItems(newItems);
+
+    // Salvar posições distribuídas na base se callback fornecido
+    if (onSaveDayPositions) {
+      const posMap: Record<string, string> = {};
+      newItems.forEach(it => {
+        if (it.pos) posMap[it.id] = it.pos;
+      });
+      onSaveDayPositions(dayIdx, posMap);
+    }
+
+    await showDialog({
+      title: 'Funções e Almoço Distribuídos!',
+      message: 'As funções operacionais (Caixa, Pacote, Vendas, Apoio, Fiscal e Estoque) e os intervalos de almoço foram balanceados e escalonados automaticamente para a equipe presente.'
+    });
+  }, [dateInfo, employees, currentMY, items, monthKey, dayIdx, jornadaSettings, onSaveDayPositions, showDialog]);
 
   // Real-Time Generated Text Builder
   const generatedText = useMemo(() => {
@@ -487,21 +573,41 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
           }`}>
             
             {/* Quick Action Helper Banner */}
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 text-amber-800 dark:text-amber-300">
-              <div className="flex items-center gap-2">
-                <Icon name="tune" className="text-lg text-amber-600 dark:text-amber-400" />
-                <span className="text-xs font-bold">
-                  Ajuste horários e colaboradores abaixo. A pré-visualização ao lado atualiza em tempo real.
-                </span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-orange-50/80 to-amber-50/60 dark:from-orange-950/20 dark:to-amber-950/20 border border-orange-200/60 dark:border-orange-900/40 text-orange-900 dark:text-orange-200 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Icon name="auto_awesome" className="text-base" />
+                </div>
+                <div>
+                  <span className="text-xs font-black uppercase tracking-wider block">
+                    Distribuição Inteligente de Turno
+                  </span>
+                  <span className="text-[11px] font-normal text-zinc-500 dark:text-zinc-400 block">
+                    Aloca funções balanceadas e escala intervalos de almoço com trava CLT.
+                  </span>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={computeInitialState}
-                className="px-2.5 py-1 rounded-lg bg-amber-200/60 hover:bg-amber-200 dark:bg-amber-900/50 dark:hover:bg-amber-900 text-[11px] font-black uppercase tracking-wider shrink-0 transition-colors"
-                title="Redefinir todas as alterações para a sugestão calculada automaticamente"
-              >
-                Restaurar Padrão
-              </button>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleAutoDistribute}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-95 text-white text-[11px] font-black uppercase tracking-wider shadow-sm transition-all cursor-pointer"
+                  title="Distribuir postos de trabalho e horários de almoço automaticamente com inteligência de cobertura"
+                >
+                  <Icon name="magic_button" className="text-sm" />
+                  <span>Distribuir Funções & Almoço</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={computeInitialState}
+                  className="px-2.5 py-1.5 rounded-xl bg-zinc-200/70 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[11px] font-black uppercase tracking-wider transition-colors cursor-pointer"
+                  title="Redefinir todas as alterações para a sugestão calculada automaticamente"
+                >
+                  Restaurar
+                </button>
+              </div>
             </div>
 
             {/* Secao 1: Colaboradores e Horários de Almoço */}
@@ -880,8 +986,18 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
           <div className="flex items-center gap-2.5 w-full sm:w-auto">
             <button
               type="button"
+              onClick={handleAutoDistribute}
+              className="hidden sm:flex items-center gap-1.5 px-4 py-3 bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/40 dark:hover:bg-orange-900/40 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800 font-bold text-xs uppercase tracking-wider rounded-xl transition-all active:scale-95 shadow-xs cursor-pointer"
+              title="Distribuir postos de trabalho e horários de almoço automaticamente com inteligência de cobertura"
+            >
+              <Icon name="auto_awesome" className="text-base text-orange-500" />
+              <span>Auto Distribuir</span>
+            </button>
+
+            <button
+              type="button"
               onClick={onClose}
-              className="flex-1 sm:flex-none px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
+              className="flex-1 sm:flex-none px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer"
             >
               Fechar
             </button>
@@ -889,7 +1005,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
             <button
               type="button"
               onClick={handleCopy}
-              className={`flex-[2] sm:flex-none px-6 py-3 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95 ${
+              className={`flex-[2] sm:flex-none px-6 py-3 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer ${
                 isCopied
                   ? 'bg-emerald-700 text-white shadow-emerald-700/30'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'

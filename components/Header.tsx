@@ -345,7 +345,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-50 shadow-xs transition-colors h-16 px-2 sm:px-4 lg:px-6">
+    <header className="bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-50 shadow-xs transition-colors h-16 px-4 sm:px-6 lg:px-8 xl:px-10">
       {/* Backdrop overlay to prevent clicking behind open dropdowns */}
       {(showConfigMenu || showShareMenu || showProfileMenu || showFilterMenu || showActionsMenu || showPublishMenu) && (
         <div 
@@ -362,26 +362,13 @@ export const Header: React.FC<HeaderProps> = ({
         />
       )}
 
-      <div className="flex items-center justify-between h-full gap-1.5 sm:gap-2 xl:gap-3 w-full max-w-full relative z-50">
+      <div className="flex items-center justify-between h-full gap-2 sm:gap-4 xl:gap-6 w-full max-w-full relative z-50">
         
         {/* ============================================================== */}
         {/* BLOCO 1 (ESQUERDA): CONTEXTO & STATUS                          */}
-        {/* Logo/Loja + Seletor Mês/Ano (40px) + Sincronização + Status    */}
+        {/* Seletor Mês/Ano + Sincronização + Status                       */}
         {/* ============================================================== */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* Logo / Loja */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-sm font-black text-xs shrink-0">
-              RH
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-black tracking-tight text-zinc-900 dark:text-zinc-100 leading-none">Rhescala</span>
-              <span className="text-[11px] font-bold text-orange-600 dark:text-orange-400 tracking-wider uppercase leading-none mt-0.5">
-                {isReadOnly ? 'Colaborador' : 'Gestão'}
-              </span>
-            </div>
-          </div>
-
           {/* Seletor de Mês/Ano (com botões < e > de min-h-[38px] min-w-[38px]) */}
           <div className="flex items-center bg-zinc-100 dark:bg-zinc-900 rounded-xl p-0.5 border border-zinc-200/80 dark:border-zinc-800 shadow-inner">
             <button
@@ -468,100 +455,102 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Grade • Análise • Solicitações/Pedidos • Operações & Loja       */}
         {/* ============================================================== */}
         {!isReadOnly && (
-          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 bg-zinc-100 dark:bg-zinc-900 p-1 rounded-xl border border-zinc-200/50 dark:border-zinc-800 shrink-0">
-            {navItems.map(item => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onViewChange(item.id as any)}
-                aria-label={item.label}
-                title={`Visualizar ${item.label}`}
-                className={`relative px-2 xl:px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 xl:gap-1.5 whitespace-nowrap shrink-0 ${
-                  currentView === item.id 
-                    ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600 dark:text-orange-400 font-black' 
-                    : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
-                }`}
-              >
-                <Icon name={item.icon} className="text-sm shrink-0" />
-                {item.id === 'requests' ? (
-                  <>
-                    <span className="hidden xl:inline">{item.label}</span>
-                    <span className="inline xl:hidden">Pedidos</span>
-                  </>
-                ) : (
-                  <span>{item.label}</span>
-                )}
-                {item.id === 'requests' && pendingRequestsCount > 0 && (
-                  <span 
-                    className="flex h-4 w-4 ml-0.5 shrink-0" 
-                    aria-label={`${pendingRequestsCount} solicitações pendentes`}
-                  >
-                    <span className="animate-ping absolute inline-flex h-4 w-4 rounded-full bg-rose-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 items-center justify-center text-[11px] font-black text-white shadow-sm">
-                      {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
-                    </span>
-                  </span>
-                )}
-              </button>
-            ))}
-
-            {/* Operações & Loja Dropdown */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowConfigMenu(!showConfigMenu)}
-                onBlur={() => setTimeout(() => setShowConfigMenu(false), 200)}
-                aria-label="Menu Operações & Loja"
-                title="Menu Operações & Loja (Rotinas, Equipe, Jornada, Feriados e Dados)"
-                className={`px-2 xl:px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 xl:gap-1.5 whitespace-nowrap shrink-0 ${
-                  ['team','jornada','data','feriados','worked-holidays','cleaning','patrol','sections'].includes(currentView) 
-                    ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600 dark:text-orange-400 font-black' 
-                    : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
-                }`}
-              >
-                <Icon name="tune" className="text-sm shrink-0" />
-                <span className="hidden 2xl:inline">Operações & Loja</span>
-                <span className="inline 2xl:hidden">Operações</span>
-                <Icon name={showConfigMenu ? 'expand_less' : 'expand_more'} className="text-xs shrink-0" />
-              </button>
-
-              {showConfigMenu && (
-                <div 
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 animate-in fade-in slide-in-from-top-1 duration-150 space-y-2"
+          <div className="hidden lg:flex items-center justify-center flex-1 mx-2 xl:mx-6">
+            <nav className="flex items-center gap-0.5 xl:gap-1 bg-zinc-100 dark:bg-zinc-900 p-1 rounded-xl border border-zinc-200/50 dark:border-zinc-800 shrink-0">
+              {navItems.map(item => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onViewChange(item.id as any)}
+                  aria-label={item.label}
+                  title={`Visualizar ${item.label}`}
+                  className={`relative px-2 xl:px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 xl:gap-1.5 whitespace-nowrap shrink-0 ${
+                    currentView === item.id 
+                      ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600 dark:text-orange-400 font-black' 
+                      : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
+                  }`}
                 >
-                  {operationsSections.map((section, sIdx) => (
-                    <div key={section.title} className={sIdx > 0 ? 'pt-1.5 border-t border-zinc-100 dark:border-zinc-800' : ''}>
-                      <div className="px-2.5 py-1 text-[11px] font-black uppercase text-zinc-400 dark:text-zinc-500 tracking-wider">
-                        {section.title}
+                  <Icon name={item.icon} className="text-sm shrink-0" />
+                  {item.id === 'requests' ? (
+                    <>
+                      <span className="hidden xl:inline">{item.label}</span>
+                      <span className="inline xl:hidden">Pedidos</span>
+                    </>
+                  ) : (
+                    <span>{item.label}</span>
+                  )}
+                  {item.id === 'requests' && pendingRequestsCount > 0 && (
+                    <span 
+                      className="flex h-4 w-4 ml-0.5 shrink-0" 
+                      aria-label={`${pendingRequestsCount} solicitações pendentes`}
+                    >
+                      <span className="animate-ping absolute inline-flex h-4 w-4 rounded-full bg-rose-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 items-center justify-center text-[11px] font-black text-white shadow-sm">
+                        {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
+                      </span>
+                    </span>
+                  )}
+                </button>
+              ))}
+
+              {/* Operações & Loja Dropdown */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowConfigMenu(!showConfigMenu)}
+                  onBlur={() => setTimeout(() => setShowConfigMenu(false), 200)}
+                  aria-label="Menu Operações & Loja"
+                  title="Menu Operações & Loja (Rotinas, Equipe, Jornada, Feriados e Dados)"
+                  className={`px-2 xl:px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 xl:gap-1.5 whitespace-nowrap shrink-0 ${
+                    ['team','jornada','data','feriados','worked-holidays','cleaning','patrol','sections'].includes(currentView) 
+                      ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600 dark:text-orange-400 font-black' 
+                      : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
+                  }`}
+                >
+                  <Icon name="tune" className="text-sm shrink-0" />
+                  <span className="hidden 2xl:inline">Operações & Loja</span>
+                  <span className="inline 2xl:hidden">Operações</span>
+                  <Icon name={showConfigMenu ? 'expand_less' : 'expand_more'} className="text-xs shrink-0" />
+                </button>
+
+                {showConfigMenu && (
+                  <div 
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 animate-in fade-in slide-in-from-top-1 duration-150 space-y-2"
+                  >
+                    {operationsSections.map((section, sIdx) => (
+                      <div key={section.title} className={sIdx > 0 ? 'pt-1.5 border-t border-zinc-100 dark:border-zinc-800' : ''}>
+                        <div className="px-2.5 py-1 text-[11px] font-black uppercase text-zinc-400 dark:text-zinc-500 tracking-wider">
+                          {section.title}
+                        </div>
+                        <div className="space-y-0.5">
+                          {section.items.map(item => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                onViewChange(item.id as any);
+                                setShowConfigMenu(false);
+                              }}
+                              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all text-left ${
+                                currentView === item.id 
+                                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 font-bold' 
+                                  : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                              }`}
+                            >
+                              <Icon name={item.icon} className="text-base text-zinc-400 shrink-0" />
+                              <span className="truncate">{item.label}</span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      <div className="space-y-0.5">
-                        {section.items.map(item => (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              onViewChange(item.id as any);
-                              setShowConfigMenu(false);
-                            }}
-                            className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all text-left ${
-                              currentView === item.id 
-                                ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 font-bold' 
-                                : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-                            }`}
-                          >
-                            <Icon name={item.icon} className="text-base text-zinc-400 shrink-0" />
-                            <span className="truncate">{item.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </nav>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </nav>
+          </div>
         )}
 
         {/* ============================================================== */}
