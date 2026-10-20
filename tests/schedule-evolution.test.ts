@@ -111,11 +111,11 @@ describe('Motor de Escalas — Evoluções e Edge Cases Operacionais', () => {
 
       const positions = resolveTacticalDay(emps, monthKey, dayIdx, false, false, DEFAULT_JORNADA_SETTINGS);
 
-      // As funções canônicas oficiais são atribuídas diretamente aos colaboradores
-      expect(positions['e_ab1']).toBe('Vendas');
+      // Garante 1 Caixa prioritário e 1 Fiscal na Abertura e Fechamento
+      expect(positions['e_ab1']).toBe('Caixa');
       expect(positions['e_ab2']).toBe('Vendas');
       expect(positions['e_fe1']).toBe('Fiscal');
-      expect(positions['e_fe2']).toBe('Vendas');
+      expect(positions['e_fe2']).toBe('Caixa');
     });
   });
 

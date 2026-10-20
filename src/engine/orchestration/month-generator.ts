@@ -1,5 +1,6 @@
 import {
     Employee,
+    EmployeeRole,
     ShiftType,
     Holiday,
     JornadaSettings,
@@ -10,7 +11,8 @@ import {
 import {
     buildHolidaySet,
     DEFAULT_JORNADA_SETTINGS,
-    normalizeProtectedDaysDetails
+    normalizeProtectedDaysDetails,
+    normalizeProtectedDaysConfig
 } from '../config/schedule-constants';
 import {
     WEEKDAY_NAMES,
@@ -25,6 +27,8 @@ import {
 } from '../clt/sunday-rotation';
 import { getLegalOverrideForDay } from '../clt/legal-overrides';
 import { optimizeProtectedDays } from '../peaks/protected-days';
+import { getShiftClassification } from '../shifts/shift-predicates';
+import { assignDailyRolesForMonth, isEmployeeCaixaEligible } from '../tactical/tactical-positions';
 
 /**
  * "Smart Update" para geração/atualização mensal completa de escala.
@@ -43,8 +47,8 @@ export function applyMonthUpdate(
     protectedDays?: ProtectedDaysConfig | number[],
     mode: 'suggested_retro' | 'all_working' = 'suggested_retro',
     targetEmpId?: string
-): Record<string, { shifts: ShiftType[]; hours: string[]; decisionReasons?: Record<number, DecisionReason> }> {
-    const result: Record<string, { shifts: ShiftType[]; hours: string[]; decisionReasons?: Record<number, DecisionReason> }> = {};
+): Record<string, { shifts: ShiftType[]; hours: string[]; decisionReasons?: Record<number, DecisionReason>; dailyAssignedRoles?: Record<number, EmployeeRole> }> {
+    const result: Record<string, { shifts: ShiftType[]; hours: string[]; decisionReasons?: Record<number, DecisionReason>; dailyAssignedRoles?: Record<number, EmployeeRole> }> = {};
 
     const activeRegular = employees.filter(e => e.status === 'active' && !e.isYoungApprentice);
     const activeApprentices = employees.filter(e => e.status === 'active' && e.isYoungApprentice);
@@ -297,6 +301,105 @@ export function applyMonthUpdate(
         result[emp.id] = { shifts, hours, decisionReasons };
     });
 
+    // 3.9 Validador Coletivo de Cobertura Diária por Turno (Segunda a Sábado)
+    // Se múltiplos colaboradores do mesmo turno tiverem a mesma preferredDayOff, deixando o turno
+    // sem Caixa, desloca a folga de um deles para um dia vizinho válido da mesma semana (D-1 ou D+1),
+    // desde que não viole o limite máximo de 6 dias trabalhados (currentStreak <= 6) nem o Pre-Sunday Guard.
+    if (mode === 'suggested_retro' && !targetEmpId) {
+        const turnos = ['Abertura', 'Fechamento'] as const;
+
+        for (let d = 0; d < daysInMonth; d++) {
+            const date = new Date(year, month, d + 1);
+            const dow = date.getDay();
+            if (dow === 0) continue; // Domingos já resolvidos pelo algoritmo dominical
+
+            const nextSunday = sundaysInMonth.find(s => s >= d);
+
+            for (const turno of turnos) {
+                const empsInTurno = activeRegular.filter(e =>
+                    getShiftClassification(e.workPeriod, false, settings) === turno
+                );
+                if (empsInTurno.length < 2) continue;
+
+                const caixasTotal = empsInTurno.filter(isEmployeeCaixaEligible);
+                if (caixasTotal.length < 2) continue;
+
+                const caixasWorking = caixasTotal.filter(e => result[e.id]?.shifts[d] === 'T');
+                if (caixasWorking.length > 0) continue; // Turno já tem caixa trabalhando
+
+                // Zero caixas trabalhando no turno neste dia útil: procurar colaboradores de folga fixa
+                const caixasOffByPref = caixasTotal.filter(e =>
+                    result[e.id]?.shifts[d] === 'F' &&
+                    result[e.id]?.decisionReasons?.[d] === 'PREFERRED_DAY_OFF'
+                );
+
+                if (caixasOffByPref.length >= 2) {
+                    const candidate = caixasOffByPref[1];
+                    const candData = result[candidate.id];
+                    if (!candData) continue;
+
+                    const maxStreak = candidate.jornada === '5x2' ? 5 : 6;
+                    const neighborOffsets = [1, -1, 2, -2];
+
+                    for (const offset of neighborOffsets) {
+                        const altD = d + offset;
+                        if (altD < 0 || altD >= daysInMonth) continue;
+                        const altDate = new Date(year, month, altD + 1);
+                        if (altDate.getDay() === 0) continue;
+
+                        const dateStrAlt = `${year}-${String(month + 1).padStart(2, '0')}-${String(altD + 1).padStart(2, '0')}`;
+                        if (holidaySet.has(dateStrAlt)) continue;
+
+                        if (candData.shifts[altD] !== 'T' || getLegalOverride(candidate, altD)) continue;
+
+                        const simulatedShifts = [...candData.shifts];
+                        simulatedShifts[d] = 'T';
+                        simulatedShifts[altD] = 'F';
+
+                        let validStreak = true;
+                        let runStreak = prevStreaks.get(candidate.id) || 0;
+                        for (let k = 0; k < daysInMonth; k++) {
+                            if (['F', 'FE', 'AT', 'DO', 'N/A'].includes(simulatedShifts[k]) || simulatedShifts[k]?.startsWith('FF')) {
+                                runStreak = 0;
+                            } else {
+                                runStreak++;
+                                if (runStreak > maxStreak) {
+                                    validStreak = false;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!validStreak) continue;
+
+                        if (nextSunday !== undefined) {
+                            const restSundays = sundayAssignments.get(candidate.id) ?? new Set<number>();
+                            const willWorkSun = !restSundays.has(nextSunday) && !isEmployeePreferredDayOff(candidate, 0);
+                            if (willWorkSun) {
+                                const weekStart = Math.max(0, nextSunday - 6);
+                                const hasRestInWeek = simulatedShifts.slice(weekStart, nextSunday).some(s =>
+                                    ['F', 'FE', 'AT', 'DO', 'N/A'].includes(s) || s?.startsWith('FF')
+                                );
+                                if (!hasRestInWeek) continue;
+                            }
+                        }
+
+                        const caixasWorkingOnAlt = caixasTotal.filter(e =>
+                            (e.id === candidate.id ? 'F' : result[e.id]?.shifts[altD]) === 'T'
+                        );
+                        if (caixasWorkingOnAlt.length === 0) continue;
+
+                        candData.shifts[d] = 'T';
+                        if (candData.decisionReasons) candData.decisionReasons[d] = 'REGULAR_WORK';
+                        candData.shifts[altD] = 'F';
+                        if (candData.decisionReasons) candData.decisionReasons[altD] = 'PREFERRED_DAY_OFF';
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     // Se houver dias protegidos configurados, otimiza com Peak-Centric
     const configuredDays = Object.keys(normalizeProtectedDaysDetails(protectedDays)).map(Number);
     if (configuredDays.length > 0) {
@@ -317,6 +420,34 @@ export function applyMonthUpdate(
                 result[emp.id].decisionReasons = reasons;
             }
         });
+    }
+
+    // 3.10 Computa as funções atribuídas diariamente por turno e dupla preferência
+    const simulatedEmployees: Employee[] = employees.map(emp => ({
+        ...emp,
+        shifts: {
+            ...emp.shifts,
+            [monthKey]: result[emp.id]?.shifts || emp.shifts[monthKey] || []
+        },
+        dailyHours: {
+            ...emp.dailyHours,
+            [monthKey]: result[emp.id]?.hours || emp.dailyHours[monthKey] || []
+        }
+    }));
+
+    const dailyAssignedMatrix = assignDailyRolesForMonth(
+        simulatedEmployees,
+        year,
+        month,
+        (dStr) => holidaySet.has(dStr),
+        settings,
+        configuredDays.length > 0 ? normalizeProtectedDaysConfig(protectedDays) : undefined
+    );
+
+    for (const emp of employees) {
+        if (result[emp.id]) {
+            result[emp.id].dailyAssignedRoles = dailyAssignedMatrix[emp.id] || {};
+        }
     }
 
     return result;
@@ -498,6 +629,10 @@ export function generateCleanMonthSchedule(
                 decisionReasons: {
                     ...(emp.decisionReasons || {}),
                     [targetKey]: d.decisionReasons || {}
+                },
+                dailyAssignedRoles: {
+                    ...(emp.dailyAssignedRoles || {}),
+                    [targetKey]: d.dailyAssignedRoles || {}
                 }
             };
         }

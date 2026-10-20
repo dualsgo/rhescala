@@ -6,7 +6,8 @@ import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { 
   isWorkingShift, 
   getShiftClassification, 
-  calculateLunches 
+  calculateLunches,
+  calculateDetailedLunches 
 } from '../hooks/useScheduleEngine';
 import { buildHolidaySet, getShortName, isEmployeeActiveInMonth, isEmployeeActiveOnDay } from '../constants';
 import { STORAGE_KEYS } from '../src/infrastructure/storage/storageKeys';
@@ -167,16 +168,19 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     const isWorking = isWorkingShift(shift);
     const hour = (currentEmp.dailyHours[monthKey] || [])[currentDayIdx] || currentEmp.workPeriod || '10h às 18h20';
     const classification = getShiftClassification(hour, isSunday, jornadaSettings);
-    const role = normalizeEmployeeRole(currentEmp.cargo || currentEmp.role);
+    const assignedRole = currentEmp.dailyAssignedRoles?.[monthKey]?.[currentDayIdx] || normalizeEmployeeRole(currentEmp.primaryRole || currentEmp.cargo || currentEmp.role);
+    const primaryRoleNorm = normalizeEmployeeRole(currentEmp.primaryRole || currentEmp.cargo || currentEmp.role);
+    const isDifferentFromPrimary = assignedRole !== primaryRoleNorm;
+    const role = assignedRole;
 
     // Cálculo escalonado de almoço
     const workingToday = activeEmployees.filter(e => isWorkingShift((e.shifts[monthKey] || [])[currentDayIdx]));
-    const lunchTimes = calculateLunches(workingToday, isHoliday, isSunday, undefined, jornadaSettings, {
+    const detailedLunches = calculateDetailedLunches(workingToday, isHoliday, isSunday, undefined, jornadaSettings, {
       monthKey,
       dayIdx: currentDayIdx,
     });
-    const empIdxInWorking = workingToday.findIndex(e => e.id === currentEmp.id);
-    const lunchInfo = empIdxInWorking !== -1 ? lunchTimes[empIdxInWorking] : null;
+    const myDetailedLunch = detailedLunches.find(dl => (dl.employeeId || dl.member?.id) === currentEmp.id);
+    const lunchInfo = myDetailedLunch?.lunchSlot || myDetailedLunch?.timeStr || null;
 
     return {
       dayNum: currentDayIdx + 1,
@@ -187,7 +191,13 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
       hour,
       classification,
       role,
+      assignedRole,
+      primaryRoleNorm,
+      isDifferentFromPrimary,
       lunchInfo,
+      isCoveringCashier: myDetailedLunch?.isCoveringCashier,
+      coveringCashierTime: myDetailedLunch?.coveringCashierTime,
+      coveredByEmployeeName: myDetailedLunch?.coveredByEmployeeName,
       isHoliday,
       isSunday,
       isToday: isCurrentMonth && currentDayIdx === todayDayIdx,
@@ -781,33 +791,56 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
 
             {/* Subcard Dedicado para o Horário de Almoço/Refeição Calculado */}
             {todayDetails.isWorking && (
-              <div className="p-3.5 rounded-2xl bg-orange-50/70 dark:bg-orange-950/30 border border-orange-200/80 dark:border-orange-800/60 flex items-center justify-between gap-3 shadow-2xs">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-orange-500 text-white flex items-center justify-center text-base shadow-xs shrink-0">
-                    <Icon name="restaurant" />
+              <div className="p-3.5 rounded-2xl bg-orange-50/70 dark:bg-orange-950/30 border border-orange-200/80 dark:border-orange-800/60 flex flex-col gap-2.5 shadow-2xs">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-orange-500 text-white flex items-center justify-center text-base shadow-xs shrink-0">
+                      <Icon name="restaurant" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-black uppercase text-orange-950 dark:text-orange-300 tracking-wider block">
+                        Horário de Almoço / Refeição
+                      </span>
+                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
+                        Intervalo sugerido na escala
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[11px] font-black uppercase text-orange-950 dark:text-orange-300 tracking-wider block">
-                      Horário de Almoço / Refeição
-                    </span>
-                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
-                      Intervalo sugerido na escala
+                  <div className="text-right shrink-0">
+                    <span className="inline-block text-sm font-black tabular-nums text-orange-700 dark:text-orange-300 bg-white dark:bg-zinc-900 px-3 py-1.5 rounded-xl border border-orange-300/80 dark:border-orange-700/80 shadow-2xs">
+                      {todayDetails.lunchInfo || 'Conforme escala'}
                     </span>
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <span className="inline-block text-sm font-black tabular-nums text-orange-700 dark:text-orange-300 bg-white dark:bg-zinc-900 px-3 py-1.5 rounded-xl border border-orange-300/80 dark:border-orange-700/80 shadow-2xs">
-                    {todayDetails.lunchInfo || 'Conforme escala'}
-                  </span>
-                </div>
+
+                {todayDetails.isCoveringCashier && (
+                  <div className="pt-2 border-t border-orange-200/60 dark:border-orange-800/60 flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-300">
+                    <Icon name="swap_horiz" className="text-amber-500 text-sm" />
+                    <span>Cobrirá o Caixa durante o almoço do colega {todayDetails.coveringCashierTime ? `às ${todayDetails.coveringCashierTime}` : ''}</span>
+                  </div>
+                )}
+
+                {todayDetails.coveredByEmployeeName && (
+                  <div className="pt-2 border-t border-orange-200/60 dark:border-orange-800/60 flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                    <Icon name="verified_user" className="text-emerald-500 text-sm" />
+                    <span>Caixa titular — coberto por {todayDetails.coveredByEmployeeName} durante seu intervalo</span>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Função Oficial */}
             <div className="pt-2.5 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-              <span className="text-[11px] font-bold text-zinc-400 uppercase">Função Oficial</span>
-              <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${roleMeta.badgeClass}`}>
-                {roleMeta.label} ({roleMeta.code})
+              <div>
+                <span className="text-[11px] font-bold text-zinc-400 uppercase block">Função no Dia</span>
+                {todayDetails.isDifferentFromPrimary && (
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">
+                    (1ª Função: {todayDetails.primaryRoleNorm})
+                  </span>
+                )}
+              </div>
+              <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${ROLE_VISUAL_MAP[todayDetails.assignedRole]?.badgeClass || roleMeta.badgeClass}`}>
+                {ROLE_VISUAL_MAP[todayDetails.assignedRole]?.label || todayDetails.assignedRole} ({ROLE_VISUAL_MAP[todayDetails.assignedRole]?.code || todayDetails.assignedRole})
               </span>
             </div>
           </div>

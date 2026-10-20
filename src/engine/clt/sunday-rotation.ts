@@ -1,6 +1,7 @@
 import { Employee, JornadaSettings, ProtectedDayDetail } from '../../../types';
 import { DEFAULT_JORNADA_SETTINGS, normalizeProtectedDaysDetails } from '../config/schedule-constants';
 import { isWorkingShift, isBirthday, isEmployeePreferredDayOff } from './clt-rules';
+import { getShiftClassification } from '../shifts/shift-predicates';
 
 /**
  * Returns true if `emp` is UNAVAILABLE to work (or rest via rotation) on the
@@ -182,21 +183,49 @@ export function buildSundayAssignments(
         ? Math.max(effectiveMinWorkers, available.length - maxRestAllowed)
         : effectiveMinWorkers;
 
-      regularCanWork.sort((a, b) => {
+      const isCaixaApto = (emp: Employee) =>
+        emp.primaryRole === 'Caixa' || emp.secondaryRole === 'Caixa' || emp.cargo === 'Caixa' || emp.role === 'Caixa';
+      const isVendasApto = (emp: Employee) =>
+        emp.primaryRole === 'Vendas' || emp.secondaryRole === 'Vendas' || emp.primaryRole === 'Apoio' || emp.secondaryRole === 'Apoio' || emp.primaryRole === 'Pacote' || emp.secondaryRole === 'Pacote' || emp.cargo === 'Vendas';
+
+      const compareByStreakAndRot = (a: Employee, b: Employee) => {
         const streakA = consecutive.get(a.id) ?? 0;
         const streakB = consecutive.get(b.id) ?? 0;
         if (streakA !== streakB) return streakA - streakB;
         return rotIdx(a) - rotIdx(b);
-      });
+      };
 
-      estoquistasCanWork.sort((a, b) => {
-        const streakA = consecutive.get(a.id) ?? 0;
-        const streakB = consecutive.get(b.id) ?? 0;
-        if (streakA !== streakB) return streakA - streakB;
-        return rotIdx(a) - rotIdx(b);
-      });
+      const aberturaCandidates = regularCanWork.filter(e => getShiftClassification(e.workPeriod, true, settings) === 'Abertura');
+      const fechamentoCandidates = regularCanWork.filter(e => getShiftClassification(e.workPeriod, true, settings) !== 'Abertura');
 
-      for (const emp of regularCanWork) {
+      aberturaCandidates.sort(compareByStreakAndRot);
+      fechamentoCandidates.sort(compareByStreakAndRot);
+
+      // Prioridade 1: Garantir pelo menos 1 Caixa Apto na Abertura e 1 no Fechamento
+      const pickPriorityWorker = (candidates: Employee[], predicate: (e: Employee) => boolean) => {
+        if (working.size >= neededWorkers) return;
+        const candidate = candidates.find(e => !working.has(e.id) && !resting.has(e.id) && predicate(e));
+        if (candidate) {
+          working.add(candidate.id);
+        }
+      };
+
+      pickPriorityWorker(aberturaCandidates, isCaixaApto);
+      pickPriorityWorker(fechamentoCandidates, isCaixaApto);
+
+      // Prioridade 2: Garantir pelo menos 2 Vendas na Abertura e 2 no Fechamento
+      for (let i = 0; i < 2; i++) {
+        pickPriorityWorker(aberturaCandidates, isVendasApto);
+        pickPriorityWorker(fechamentoCandidates, isVendasApto);
+      }
+
+      // Ordenar os remanescentes de regularCanWork para preencher as vagas restantes do domingo
+      const remainingRegular = regularCanWork.filter(e => !working.has(e.id) && !resting.has(e.id));
+      remainingRegular.sort(compareByStreakAndRot);
+
+      estoquistasCanWork.sort(compareByStreakAndRot);
+
+      for (const emp of remainingRegular) {
         if (working.size < neededWorkers) {
           working.add(emp.id);
         } else if (resting.size < maxRestAllowed) {

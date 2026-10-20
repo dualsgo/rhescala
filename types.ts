@@ -155,6 +155,8 @@ export interface Employee {
   isYoungApprentice: boolean;
   contractType?: 'CLT' | 'Sazonal';
   jornada?: '6x1' | '5x2';
+  primaryRole?: EmployeeRole;      // 1ª Função Principal (sincronizada com cargo/role)
+  secondaryRole?: 'Caixa' | 'Pacote' | 'Vendas' | 'Apoio'; // 2ª Aptidão Operacional
   cargo?: EmployeeRole;           // 6 funções canônicas oficiais
   role?: EmployeeRole;            // Alias moderno para cargo
   courseDay?: string; // e.g. 'Segunda-feira'
@@ -162,6 +164,7 @@ export interface Employee {
   statusColor: string;
   shifts: Record<string, ShiftType[]>;     // Keyed by "YYYY-MM"
   dailyHours: Record<string, string[]>;    // Keyed by "YYYY-MM"
+  dailyAssignedRoles?: Record<string, Record<number, EmployeeRole>>; // Keyed by "YYYY-MM", then 0-indexed day
   tacticalPositions?: Record<string, (string | null)[]>; // Legado mantido opcional
   decisionReasons?: Record<string, Record<number, DecisionReason>>; // Keyed by "YYYY-MM", then 0-indexed day
   workPeriod: string;                      // Default work period
@@ -179,6 +182,14 @@ export interface Employee {
   isHidden?: boolean;      // To hide collaborator from the grid
   password?: string;       // Personal password for individual access
   requests?: EmployeeRequest[];
+}
+
+export interface LunchAllocationMetadata {
+  coveredByEmployeeId?: string;
+  coveredByEmployeeName?: string;
+  coveringCashierTime?: string;
+  isCoveringCashier?: boolean;
+  coveringEmployeeId?: string;
 }
 
 export interface EmployeeRequest {

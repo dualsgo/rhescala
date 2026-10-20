@@ -143,7 +143,8 @@ describe('Horários, Almoços e Posições Táticas', () => {
       });
 
       const res = resolveTacticalDay([empOther, empP1Fan], MONTH_KEY, DAY_IDX, false, false);
-      expect(res['emp-fan']).toBe('Vendas');
+      expect(res['emp-fan']).toBe('Caixa');
+      expect(res['emp-other']).toBe('Vendas');
     });
 
     it('ignora colaboradores de folga ou afastamento', () => {

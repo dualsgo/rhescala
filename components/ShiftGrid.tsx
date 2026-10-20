@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings, ScheduleDiffItem, TacticalDisplayMode, ProtectedDaysConfig, DECISION_REASON_LABELS, EmployeeRole, EMPLOYEE_ROLES, ROLE_METADATA_MAP, normalizeEmployeeRole } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, isEmployeeActiveInMonth, normalizeProtectedDaysConfig, getTacticalLabel, getTacticalCellCode, getTacticalEmoji } from '../constants';
-import { getShiftClassification, isWorkingShift, getPrevMonthWorkStreak, getPrevMonthConsecutive, calculateLunches } from '../hooks/useScheduleEngine';
+import { getShiftClassification, isWorkingShift, getPrevMonthWorkStreak, getPrevMonthConsecutive, calculateLunches, calculateDetailedLunches, DetailedLunchAssignment } from '../hooks/useScheduleEngine';
 import { OperationalGuideModal } from './OperationalGuideModal';
 import { MobileDayScheduleView } from './MobileDayScheduleView';
 import { MobileFilterDrawer } from './MobileFilterDrawer';
@@ -264,8 +264,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
   const protectedConfig = useMemo(() => normalizeProtectedDaysConfig(protectedDaysConfig), [protectedDaysConfig]);
 
-  const dailyLunchesMap = useMemo(() => {
-    const map = new Map<string, string>();
+  const dailyDetailedLunchesMap = useMemo(() => {
+    const map = new Map<string, DetailedLunchAssignment>();
     days.forEach(d => {
       const dayIdx = d.num - 1;
       const isSun = d.isSunday;
@@ -275,19 +275,24 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
         const s = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
         return isWorkingShift(s) || s === 'C';
       });
-      const lunches = calculateLunches(workingInDay, isHol, isSun, undefined, jornadaSettings, {
+      const detailedLunches = calculateDetailedLunches(workingInDay, isHol, isSun, undefined, jornadaSettings, {
         monthKey,
         dayIdx,
       });
-      workingInDay.forEach((emp, i) => {
-        const lunchStr = lunches[i];
-        if (lunchStr) {
-          map.set(`${emp.id}_${dayIdx}`, lunchStr);
-        }
+      detailedLunches.forEach((dl) => {
+        map.set(`${dl.employeeId || dl.member?.id}_${dayIdx}`, dl);
       });
     });
     return map;
   }, [days, employees, currentMY.year, currentMY.month, monthKey, jornadaSettings]);
+
+  const dailyLunchesMap = useMemo(() => {
+    const map = new Map<string, string>();
+    dailyDetailedLunchesMap.forEach((dl, key) => {
+      if (dl.lunchSlot) map.set(key, dl.lunchSlot);
+    });
+    return map;
+  }, [dailyDetailedLunchesMap]);
 
   const daysRemainingCount = isCurrentMonth ? Math.max(0, daysInMonth - todayDayNum + 1) : 0;
 
@@ -1326,7 +1331,25 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                          <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-mono">-</span>
                                         ) : isWorkingShift(shift) ? (
                                           <div className="flex flex-col items-center justify-center leading-none">
-                                            <span className="text-[13px] font-bold">T</span>
+                                            <span className="text-[13px] font-bold">
+                                              {(() => {
+                                                const assignedRole = emp.dailyAssignedRoles?.[monthKey]?.[d.num - 1] || normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
+                                                const primaryRoleNorm = normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
+                                                const isDiff = assignedRole !== primaryRoleNorm;
+                                                if (tacticalDisplayMode === 'roles' || tacticalDisplayMode === 'positions' || isDiff) {
+                                                  const codeMap: Record<string, string> = {
+                                                    'Caixa': 'CX',
+                                                    'Pacote': 'PC',
+                                                    'Vendas': 'VEND',
+                                                    'Apoio': 'AP',
+                                                    'Fiscal': 'FISC',
+                                                    'Estoque': 'ESTQ'
+                                                  };
+                                                  return codeMap[assignedRole] || 'T';
+                                                }
+                                                return 'T';
+                                              })()}
+                                            </span>
                                             <span className="text-[11px] font-medium tabular-nums opacity-80 leading-none mt-0.5">
                                               {(() => {
                                                 const rawHour = (emp.dailyHours[monthKey] || [])[d.num - 1] || emp.workPeriod || '';
@@ -1414,6 +1437,34 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                       </div>
 
                                       <div className="space-y-1.5 text-[11px]">
+                                        {isWorkingDay && (() => {
+                                          const assignedRole = emp.dailyAssignedRoles?.[monthKey]?.[d.num - 1] || normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
+                                          const primaryRoleNorm = normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
+                                          const isDiff = assignedRole !== primaryRoleNorm;
+                                          const dl = dailyDetailedLunchesMap.get(`${emp.id}_${d.num - 1}`);
+
+                                          return (
+                                            <>
+                                              <div className="flex items-start justify-between gap-2">
+                                                <span className="text-zinc-400 font-medium">Função Alocada:</span>
+                                                <span className={`font-semibold text-right ${isDiff ? 'text-amber-300 font-bold' : 'text-zinc-100'}`}>
+                                                  {assignedRole} {isDiff ? `(1ª: ${primaryRoleNorm})` : ''}
+                                                </span>
+                                              </div>
+                                              {dl?.isCoveringCashier && (
+                                                <div className="p-1 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-bold flex items-center gap-1">
+                                                  <span>🔄 Cobrirá Caixa no almoço ({dl.coveringCashierTime})</span>
+                                                </div>
+                                              )}
+                                              {dl?.coveredByEmployeeName && (
+                                                <div className="p-1 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold flex items-center gap-1">
+                                                  <span>🛡️ Coberto por {dl.coveredByEmployeeName} no almoço</span>
+                                                </div>
+                                              )}
+                                            </>
+                                          );
+                                        })()}
+
                                         {isWorkingDay && (
                                           <div className="flex items-start justify-between gap-2">
                                             <span className="text-zinc-400 font-medium">Jornada:</span>
@@ -1527,8 +1578,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                       const dayIdx = d.num - 1;
                       const count = displayedEmployees.filter(emp => {
                         if (!isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month)) return false;
-                        const empRole = normalizeEmployeeRole(emp.cargo || emp.role);
-                        if (empRole !== role) return false;
+                        const assignedRole = emp.dailyAssignedRoles?.[monthKey]?.[dayIdx] || normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
+                        if (assignedRole !== role) return false;
                         const s = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
                         return isWorkingShift(s) || s === 'C';
                       }).length;
@@ -1555,6 +1606,63 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   </tr>
                 );
               })}
+
+              {/* Linha de Auditoria de Meta 1 CX + 2 VEND por Turno */}
+              {isSectorCoverageExpanded && (
+                <tr className="bg-zinc-50/50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800 text-[10px]">
+                  <td className="sticky left-0 z-30 bg-zinc-50/90 dark:bg-zinc-900/90 py-1.5 px-3 border-r border-zinc-200 dark:border-zinc-800 w-[240px] min-w-[240px] max-w-[240px] shadow-[4px_0_12px_-2px_rgba(0,0,0,0.08)]">
+                    <div className="flex items-center gap-1.5">
+                      <Icon name="verified_user" className="text-emerald-500 text-xs" />
+                      <span className="font-black uppercase text-zinc-700 dark:text-zinc-200">Meta (1 CX + 2 VEND)</span>
+                    </div>
+                  </td>
+                  {filteredDays.map(d => {
+                    const dayIdx = d.num - 1;
+                    const isSun = d.isSunday;
+
+                    const activeEmps = displayedEmployees.filter(emp => {
+                      if (!isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month)) return false;
+                      const s = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
+                      return isWorkingShift(s);
+                    });
+
+                    let abCx = 0, abVend = 0, fcCx = 0, fcVend = 0;
+                    activeEmps.forEach(emp => {
+                      const h = emp.dailyHours[monthKey]?.[dayIdx] || emp.workPeriod || '';
+                      const group = getShiftClassification(h, isSun, jornadaSettings);
+                      const role = emp.dailyAssignedRoles?.[monthKey]?.[dayIdx] || normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
+                      if (group === 'Abertura') {
+                        if (role === 'Caixa') abCx++;
+                        if (role === 'Vendas') abVend++;
+                      } else if (group === 'Fechamento') {
+                        if (role === 'Caixa') fcCx++;
+                        if (role === 'Vendas') fcVend++;
+                      }
+                    });
+
+                    const abOk = abCx >= 1 && abVend >= 2;
+                    const fcOk = fcCx >= 1 && fcVend >= 2;
+                    const fullOk = abOk && fcOk;
+                    const partialOk = (abCx >= 1 && fcCx >= 1) || (abVend >= 2 || fcVend >= 2);
+
+                    return (
+                      <td key={d.num} className="py-1 px-1 text-center font-black">
+                        <span className={`inline-block px-1 py-0.5 rounded text-[9px] font-bold ${
+                          fullOk 
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' 
+                            : partialOk 
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300' 
+                            : 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+                        }`}
+                        title={`Abertura: ${abCx} CX / ${abVend} VEND (${abOk ? 'OK' : 'Falta'}). Fechamento: ${fcCx} CX / ${fcVend} VEND (${fcOk ? 'OK' : 'Falta'})`}
+                        >
+                          {fullOk ? '100%' : `${abCx + fcCx}C|${abVend + fcVend}V`}
+                        </span>
+                      </td>
+                    );
+                  })}
+                </tr>
+              )}
             </tfoot>
           </table>
         </div>

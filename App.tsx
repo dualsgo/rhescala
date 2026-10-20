@@ -387,9 +387,9 @@ const App: React.FC = () => {
     setEmployees(prev => prev.filter(emp => emp.id !== empId));
   }, [setEmployees]);
 
-  const onAddEmployee = useCallback((name: string, isYoung: boolean, courseDay: string, cargo: any, birthday: string, contractType?: 'CLT' | 'Sazonal', jornada?: '6x1' | '5x2', hiredAt?: string, firedAt?: string) => {
+  const onAddEmployee = useCallback((name: string, isYoung: boolean, courseDay: string, cargo: any, birthday: string, contractType?: 'CLT' | 'Sazonal', jornada?: '6x1' | '5x2', hiredAt?: string, firedAt?: string, secondaryRole?: 'Caixa' | 'Pacote' | 'Vendas' | 'Apoio') => {
     let preferredDayOff = '';
-    if (cargo === 'Estoquista') preferredDayOff = 'Domingo';
+    if (cargo === 'Estoquista' || cargo === 'Estoque') preferredDayOff = 'Domingo';
     if (cargo === 'Aprendiz') preferredDayOff = 'Sábado';
 
     const newEmp: Employee = {
@@ -400,7 +400,10 @@ const App: React.FC = () => {
       courseDay: isYoung ? courseDay : undefined,
       contractType: contractType || 'CLT',
       jornada: jornada || '6x1',
+      primaryRole: cargo,
+      secondaryRole: secondaryRole || undefined,
       cargo,
+      role: cargo,
       birthday,
       hiredAt: hiredAt || undefined,
       firedAt: firedAt || undefined,
@@ -408,6 +411,7 @@ const App: React.FC = () => {
       status: 'active',
       shifts: {},
       dailyHours: {},
+      dailyAssignedRoles: {},
       tacticalPositions: {},
     };
     setEmployees(prev => [...prev.filter(e => e.id !== PLACEHOLDER_EMPLOYEE_ID), newEmp]);
@@ -529,6 +533,10 @@ const App: React.FC = () => {
             decisionReasons: {
               ...(emp.decisionReasons || {}),
               [monthKey]: updatedData[emp.id].decisionReasons || {}
+            },
+            dailyAssignedRoles: {
+              ...(emp.dailyAssignedRoles || {}),
+              [monthKey]: updatedData[emp.id].dailyAssignedRoles || {}
             }
           };
         }
@@ -549,6 +557,10 @@ const App: React.FC = () => {
           decisionReasons: {
             ...(emp.decisionReasons || {}),
             [targetKey]: updatedData[emp.id].decisionReasons || {}
+          },
+          dailyAssignedRoles: {
+            ...(emp.dailyAssignedRoles || {}),
+            [targetKey]: updatedData[emp.id].dailyAssignedRoles || {}
           }
         };
       }
@@ -568,6 +580,10 @@ const App: React.FC = () => {
             decisionReasons: {
               ...(emp.decisionReasons || {}),
               [targetKey]: updatedData[emp.id].decisionReasons || {}
+            },
+            dailyAssignedRoles: {
+              ...(emp.dailyAssignedRoles || {}),
+              [targetKey]: updatedData[emp.id].dailyAssignedRoles || {}
             }
           };
         }

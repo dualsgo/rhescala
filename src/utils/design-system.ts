@@ -200,11 +200,23 @@ export function sanitizeEmployeeData(emp: Employee): Employee {
     }
   }
 
+  const canonicalPrimary = normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
+  let secondary: 'Caixa' | 'Pacote' | 'Vendas' | 'Apoio' | undefined = undefined;
+  if (emp.secondaryRole) {
+    const normSec = normalizeEmployeeRole(emp.secondaryRole);
+    if (['Caixa', 'Pacote', 'Vendas', 'Apoio'].includes(normSec) && normSec !== canonicalPrimary) {
+      secondary = normSec as 'Caixa' | 'Pacote' | 'Vendas' | 'Apoio';
+    }
+  }
+
   return {
     ...emp,
-    cargo: canonicalRole,
-    role: canonicalRole,
+    primaryRole: canonicalPrimary,
+    secondaryRole: secondary,
+    cargo: canonicalPrimary,
+    role: canonicalPrimary,
     shifts: sanitizedShifts,
+    dailyAssignedRoles: emp.dailyAssignedRoles || {},
   };
 }
 

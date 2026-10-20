@@ -115,12 +115,35 @@ export function useScheduleCommands(params: UseScheduleCommandsParams): Schedule
     const curHour = targetEmp.dailyHours[monthKey]?.[dayIdx] || targetEmp.workPeriod || '';
 
     const applyChange = (justification?: string) => {
-      setEmployees(prev => prev.map(emp => {
-        if (emp.id !== empId) return emp;
-        const sfs = [...(emp.shifts[monthKey] || [])];
-        sfs[dayIdx] = newShift;
-        return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
-      }));
+      setEmployees(prev => {
+        const next = prev.map(emp => {
+          if (emp.id !== empId) return emp;
+          const sfs = [...(emp.shifts[monthKey] || [])];
+          sfs[dayIdx] = newShift;
+          return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
+        });
+
+        const dateStrIso = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+        const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(dateStrIso);
+        const isSunday = new Date(currentMY.year, currentMY.month, dayIdx + 1).getDay() === 0;
+        const activeEmps = next.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
+        const dayRoles = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, jornadaSettings);
+
+        return next.map(emp => {
+          if (dayRoles[emp.id]) {
+            const currentMonthRoles = { ...(emp.dailyAssignedRoles?.[monthKey] || {}) };
+            currentMonthRoles[dayIdx] = dayRoles[emp.id];
+            return {
+              ...emp,
+              dailyAssignedRoles: {
+                ...(emp.dailyAssignedRoles || {}),
+                [monthKey]: currentMonthRoles
+              }
+            };
+          }
+          return emp;
+        });
+      });
 
       if (justification) {
         const c = classifyShiftChange(targetEmp.name, dateStr, oldShift, newShift, curHour);
@@ -161,7 +184,7 @@ export function useScheduleCommands(params: UseScheduleCommandsParams): Schedule
     } else {
       applyChange();
     }
-  }, [isReadOnly, employees, monthKey, currentMY, isValidated, setEmployees, setAuditLogs, setPendingAuditAction]);
+  }, [isReadOnly, employees, monthKey, currentMY, isValidated, setEmployees, setAuditLogs, setPendingAuditAction, customHolidays, deletedNationalHolidays, jornadaSettings]);
 
   /**
    * 2. Atualização em lote de turnos
@@ -176,13 +199,47 @@ export function useScheduleCommands(params: UseScheduleCommandsParams): Schedule
     if (effectiveUpdates.length === 0) return;
 
     const applyChange = (justification?: string) => {
-      setEmployees(prev => prev.map(emp => {
-        const empU = effectiveUpdates.filter(u => u.empId === emp.id);
-        if (empU.length === 0) return emp;
-        const sfs = [...(emp.shifts[monthKey] || [])];
-        empU.forEach(u => { sfs[u.dayIdx] = u.newShift; });
-        return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
-      }));
+      setEmployees(prev => {
+        const next = prev.map(emp => {
+          const empU = effectiveUpdates.filter(u => u.empId === emp.id);
+          if (empU.length === 0) return emp;
+          const sfs = [...(emp.shifts[monthKey] || [])];
+          empU.forEach(u => { sfs[u.dayIdx] = u.newShift; });
+          return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
+        });
+
+        const affectedDays = Array.from(new Set(effectiveUpdates.map(u => u.dayIdx)));
+        const activeEmps = next.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
+        const holidaySet = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays);
+
+        const rolesByDay: Record<number, Record<string, any>> = {};
+        for (const d of affectedDays) {
+          const dateStrIso = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`;
+          const isHoliday = holidaySet.has(dateStrIso);
+          const isSunday = new Date(currentMY.year, currentMY.month, d + 1).getDay() === 0;
+          rolesByDay[d] = resolveTacticalDay(activeEmps, monthKey, d, isHoliday, isSunday, jornadaSettings);
+        }
+
+        return next.map(emp => {
+          let updatedRolesForEmp: Record<number, any> | null = null;
+          for (const d of affectedDays) {
+            if (rolesByDay[d]?.[emp.id]) {
+              if (!updatedRolesForEmp) updatedRolesForEmp = { ...(emp.dailyAssignedRoles?.[monthKey] || {}) };
+              updatedRolesForEmp[d] = rolesByDay[d][emp.id];
+            }
+          }
+          if (updatedRolesForEmp) {
+            return {
+              ...emp,
+              dailyAssignedRoles: {
+                ...(emp.dailyAssignedRoles || {}),
+                [monthKey]: updatedRolesForEmp
+              }
+            };
+          }
+          return emp;
+        });
+      });
 
       if (justification) {
         const newLogs: AuditLogEntry[] = effectiveUpdates.map(u => {

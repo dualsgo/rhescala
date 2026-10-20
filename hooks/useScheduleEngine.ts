@@ -36,6 +36,10 @@ import {
     calculateLunches,
     calculateDetailedLunches
 } from '../src/engine/tactical/lunch-scheduler';
+import type {
+    LunchAllocation,
+    DetailedLunchAssignment
+} from '../src/engine/tactical/lunch-scheduler';
 
 import {
     getCleaningSchedule
@@ -106,4 +110,9 @@ export {
     getLegalOverrideForDay,
     isProtectedShift,
     WORKING_TACTICAL_CODES
+};
+
+export type {
+    LunchAllocation,
+    DetailedLunchAssignment
 };

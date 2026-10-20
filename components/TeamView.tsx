@@ -19,7 +19,8 @@ interface TeamViewProps {
     contractType?: 'CLT' | 'Sazonal', 
     jornada?: '6x1' | '5x2',
     hiredAt?: string,
-    firedAt?: string
+    firedAt?: string,
+    secondaryRole?: 'Caixa' | 'Pacote' | 'Vendas' | 'Apoio'
   ) => void;
   onClose?: () => void;
 }
@@ -181,7 +182,8 @@ interface AddEmployeeModalProps {
     contractType?: 'CLT' | 'Sazonal', 
     jornada?: '6x1' | '5x2',
     hiredAt?: string,
-    firedAt?: string
+    firedAt?: string,
+    secondaryRole?: 'Caixa' | 'Pacote' | 'Vendas' | 'Apoio'
   ) => void;
 }
 
@@ -190,6 +192,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
   const [isYoung, setIsYoung] = useState(false);
   const [courseDay, setCourseDay] = useState('Segunda-feira');
   const [newCargo, setNewCargo] = useState<EmployeeCargo>('Apoio');
+  const [newSecondaryRole, setNewSecondaryRole] = useState<'Caixa' | 'Pacote' | 'Vendas' | 'Apoio' | undefined>(undefined);
   const [newBirthday, setNewBirthday] = useState('');
   const [newHiredAt, setNewHiredAt] = useState('');
   const [newFiredAt, setNewFiredAt] = useState('');
@@ -222,7 +225,8 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
           newContractType, 
           newJornada,
           newHiredAt || undefined,
-          newFiredAt || undefined
+          newFiredAt || undefined,
+          newSecondaryRole
         );
         onClose();
       }
@@ -267,7 +271,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
           </div>
 
           <div>
-            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-1">Função / Cargo</label>
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-1">1ª Função Principal *</label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {CARGO_OPTIONS.map(c => {
                 const meta = ROLE_METADATA_MAP[c];
@@ -289,6 +293,29 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
                     }`}>
                       {meta.code}
                     </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-1">2ª Função / Aptidão Secundária (Opcional)</label>
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+              {(['Nenhuma', 'Caixa', 'Pacote', 'Vendas', 'Apoio'] as const).map(sec => {
+                const isSelected = sec === 'Nenhuma' ? !newSecondaryRole : newSecondaryRole === sec;
+                return (
+                  <button
+                    key={sec}
+                    type="button"
+                    onClick={() => setNewSecondaryRole(sec === 'Nenhuma' ? undefined : sec)}
+                    className={`py-2 px-2 rounded-xl text-xs font-black uppercase border transition-all flex flex-col items-center justify-center gap-0.5 ${
+                      isSelected
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                        : 'bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-700 hover:border-indigo-300'
+                    }`}
+                  >
+                    <span>{sec}</span>
                   </button>
                 );
               })}
@@ -540,13 +567,14 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
               </div>
 
               <div>
-                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-1">Cargo / Função Oficial</label>
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-1">1ª Função Principal</label>
                 <select
                   disabled={isReadOnly}
-                  value={normalizeEmployeeRole(employee.cargo || employee.role)}
+                  value={normalizeEmployeeRole(employee.primaryRole || employee.cargo || employee.role)}
                   onChange={(e) => {
                     const newCargo = normalizeEmployeeRole(e.target.value);
                     onUpdateEmployee(employee.id, { 
+                      primaryRole: newCargo,
                       cargo: newCargo,
                       role: newCargo
                     });
@@ -556,6 +584,27 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   {EMPLOYEE_ROLES.map(c => (
                     <option key={c} value={c}>{c} ({ROLE_METADATA_MAP[c].code})</option>
                   ))}
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-1">2ª Função / Aptidão Secundária (Opcional)</label>
+                <select
+                  disabled={isReadOnly}
+                  value={employee.secondaryRole || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    onUpdateEmployee(employee.id, { 
+                      secondaryRole: val ? (val as 'Caixa' | 'Pacote' | 'Vendas' | 'Apoio') : undefined
+                    });
+                  }}
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-orange-500"
+                >
+                  <option value="">Nenhuma (Foco 100% na função principal)</option>
+                  <option value="Caixa">Caixa (Apoio e cobertura de checkout)</option>
+                  <option value="Pacote">Pacote (Empacotamento e auxílio)</option>
+                  <option value="Vendas">Vendas (Atendimento e abordagem de pista)</option>
+                  <option value="Apoio">Apoio (Organização e suporte de salão)</option>
                 </select>
               </div>
             </div>
@@ -1176,7 +1225,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                         {(() => {
-                          const r = normalizeEmployeeRole(emp.cargo || emp.role);
+                          const r = normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
                           const meta = ROLE_METADATA_MAP[r];
                           return (
                             <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded-md border ${meta.badgeColor}`}>
@@ -1184,6 +1233,11 @@ export const TeamView: React.FC<TeamViewProps> = ({
                             </span>
                           );
                         })()}
+                        {emp.secondaryRole && (
+                          <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200/50">
+                            2ª: {emp.secondaryRole}
+                          </span>
+                        )}
                         {emp.contractType === 'Sazonal' && (
                           <span className="text-[11px] px-1.5 py-0.2 rounded font-black bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 uppercase">Sazonal</span>
                         )}
