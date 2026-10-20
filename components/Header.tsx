@@ -345,7 +345,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-50 shadow-xs transition-colors h-16 px-4 sm:px-6 lg:px-8 xl:px-10">
+    <header className="bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-50 shadow-xs transition-colors h-16 px-2 sm:px-4 lg:px-6">
       {/* Backdrop overlay to prevent clicking behind open dropdowns */}
       {(showConfigMenu || showShareMenu || showProfileMenu || showFilterMenu || showActionsMenu || showPublishMenu) && (
         <div 
@@ -362,7 +362,7 @@ export const Header: React.FC<HeaderProps> = ({
         />
       )}
 
-      <div className="flex items-center justify-between h-full gap-2 sm:gap-4 xl:gap-6 w-full max-w-full relative z-50">
+      <div className="flex items-center justify-between h-full gap-1.5 sm:gap-2.5 lg:gap-3 w-full relative z-50">
         
         {/* ============================================================== */}
         {/* BLOCO 1 (ESQUERDA): CONTEXTO & STATUS                          */}
@@ -455,7 +455,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Grade • Análise • Solicitações/Pedidos • Operações & Loja       */}
         {/* ============================================================== */}
         {!isReadOnly && (
-          <div className="hidden lg:flex items-center justify-center flex-1 mx-2 xl:mx-6">
+          <div className="hidden lg:flex items-center justify-center shrink-0">
             <nav className="flex items-center gap-0.5 xl:gap-1 bg-zinc-100 dark:bg-zinc-900 p-1 rounded-xl border border-zinc-200/50 dark:border-zinc-800 shrink-0">
               {navItems.map(item => (
                 <button
@@ -596,10 +596,10 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 lg:gap-2 shrink-0">
             {/* 1. GRUPO AUDITORIA & ALERTAS (Diffs + Inconsistências CLT Agrupados em Pod) */}
             {((isValidated && onOpenDiffModal && diffCount > 0) || (onOpenInconsistencyModal && inconsistencyCount > 0)) && (
-              <div className="hidden lg:inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800/80 p-0.5 shadow-xs shrink-0">
+              <div className="hidden sm:inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800/80 p-0.5 shadow-xs shrink-0">
                 {onOpenInconsistencyModal && inconsistencyCount > 0 && (
                   <button
                     type="button"
@@ -651,7 +651,7 @@ export const Header: React.FC<HeaderProps> = ({
                     title={densityMode === 'audit' ? 'Alternar para Visão Limpa (ocultar contadores secundários)' : 'Alternar para Visão de Auditoria (exibir todos os badges e horários)'}
                   >
                     <Icon name={densityMode === 'audit' ? 'troubleshoot' : 'visibility'} className="text-xs shrink-0" />
-                    <span className="hidden xl:inline">{densityMode === 'audit' ? 'Auditoria' : 'Limpa'}</span>
+                    <span className="hidden 2xl:inline">{densityMode === 'audit' ? 'Auditoria' : 'Limpa'}</span>
                   </button>
                 </>
               )}
@@ -664,7 +664,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={onManualSave}
                 disabled={isSaving}
                 aria-label={isSaving ? 'Salvando escala...' : isJustSaved ? 'Escala salva com sucesso' : 'Salvar escala agora (Atalho Ctrl+S)'}
-                className={`hidden sm:flex items-center gap-1 sm:gap-1.5 px-3 min-h-[38px] rounded-lg border font-bold text-[11px] sm:text-xs tabular-nums uppercase tracking-wider transition-all shadow-sm ${
+                className={`hidden sm:flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 min-h-[38px] rounded-lg border font-bold text-[11px] sm:text-xs tabular-nums uppercase tracking-wider transition-all shadow-sm ${
                   isJustSaved
                     ? 'bg-emerald-600 border-emerald-700 text-white shadow-emerald-500/30 scale-[1.02]'
                     : isSaving
@@ -687,7 +687,7 @@ export const Header: React.FC<HeaderProps> = ({
             )}
 
             {/* 4. GRUPO AÇÕES DA ESCALA & PUBLICAÇÃO (Automação + Publicar Agrupados) */}
-            <div className="hidden lg:inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-0.5 shadow-xs shrink-0">
+            <div className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-0.5 shadow-xs shrink-0">
               {/* Automação & Ferramentas de Escala */}
               <div className="relative">
                 <button
@@ -700,7 +700,7 @@ export const Header: React.FC<HeaderProps> = ({
                     setShowProfileMenu(false);
                   }}
                   aria-label="Menu de Ações, Ferramentas e Exportação da Escala"
-                  className={`flex items-center gap-1.5 px-3 min-h-[34px] rounded-md text-xs font-semibold uppercase tracking-wider transition-all ${
+                  className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 min-h-[34px] rounded-md text-xs font-semibold uppercase tracking-wider transition-all ${
                     showActionsMenu
                       ? 'bg-zinc-800 text-white shadow-xs'
                       : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
@@ -709,7 +709,8 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <Icon name="tune" className="text-sm text-zinc-500 dark:text-zinc-400 shrink-0" />
                   <span className="hidden 2xl:inline">Automação & Escala</span>
-                  <span className="inline 2xl:hidden">Escala</span>
+                  <span className="hidden sm:inline 2xl:hidden">Automação</span>
+                  <span className="inline sm:hidden">Escala</span>
                   <Icon name={showActionsMenu ? 'expand_less' : 'expand_more'} className="text-xs opacity-70 shrink-0" />
                 </button>
 
@@ -936,12 +937,12 @@ export const Header: React.FC<HeaderProps> = ({
                     setShowProfileMenu(false);
                   }}
                   aria-label="Publicar ou Exportar Escala"
-                  className="flex items-center gap-1.5 px-3.5 min-h-[34px] rounded-md bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs uppercase tracking-wider shadow-xs active:scale-95 transition-all"
+                  className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 min-h-[34px] rounded-md bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs uppercase tracking-wider shadow-xs active:scale-95 transition-all"
                   title="Publicar e Exportar Escala (Oficializar, WhatsApp, Imprimir)"
                 >
                   <Icon name="rocket_launch" className="text-sm shrink-0" />
-                  <span className="hidden xl:inline">Publicar / Exportar</span>
-                  <span className="inline xl:hidden">Publicar</span>
+                  <span className="hidden 2xl:inline">Publicar / Exportar</span>
+                  <span className="inline 2xl:hidden">Publicar</span>
                   <Icon name={showPublishMenu ? 'expand_less' : 'expand_more'} className="text-xs shrink-0" />
                 </button>
 
@@ -1053,13 +1054,13 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
             {/* 7. Menu do Usuário & Perfil */}
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
                 type="button"
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 onBlur={() => setTimeout(() => setShowProfileMenu(false), 200)}
                 aria-label="Menu de Conta e Sessão"
-                className="flex items-center gap-1.5 p-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all border border-zinc-200 dark:border-zinc-700"
+                className="flex items-center gap-1.5 p-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all border border-zinc-200 dark:border-zinc-700 shrink-0"
                 title="Conta e Sessão"
               >
                 <div className="w-6 h-6 rounded-lg bg-orange-500 text-white flex items-center justify-center font-black text-[11px] uppercase shadow-sm shrink-0">
