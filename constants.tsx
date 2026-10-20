@@ -25,7 +25,7 @@ export const TACTICAL_ROLE_MAP: Record<string, {
     colorBg: 'bg-red-600',
     colorText: 'text-white',
     colorRing: 'ring-red-400',
-    emoji: '🔴'
+    emoji: '🟥'
   },
   Pacote: {
     positionCode: 'PC',
@@ -36,7 +36,7 @@ export const TACTICAL_ROLE_MAP: Record<string, {
     colorBg: 'bg-orange-500',
     colorText: 'text-white',
     colorRing: 'ring-orange-400',
-    emoji: '🟠'
+    emoji: '🟧'
   },
   Vendas: {
     positionCode: 'VEND',
@@ -47,7 +47,7 @@ export const TACTICAL_ROLE_MAP: Record<string, {
     colorBg: 'bg-emerald-600',
     colorText: 'text-white',
     colorRing: 'ring-emerald-400',
-    emoji: '🟢'
+    emoji: '🟩'
   },
   Apoio: {
     positionCode: 'AP',
@@ -58,7 +58,7 @@ export const TACTICAL_ROLE_MAP: Record<string, {
     colorBg: 'bg-blue-600',
     colorText: 'text-white',
     colorRing: 'ring-blue-400',
-    emoji: '🔵'
+    emoji: '🟦'
   },
   Fiscal: {
     positionCode: 'FISC',
@@ -69,7 +69,7 @@ export const TACTICAL_ROLE_MAP: Record<string, {
     colorBg: 'bg-amber-500',
     colorText: 'text-white',
     colorRing: 'ring-amber-300',
-    emoji: '🟡'
+    emoji: '🟨'
   },
   Estoque: {
     positionCode: 'ESTQ',
@@ -80,18 +80,18 @@ export const TACTICAL_ROLE_MAP: Record<string, {
     colorBg: 'bg-zinc-700',
     colorText: 'text-white',
     colorRing: 'ring-zinc-500',
-    emoji: '📦'
+    emoji: '⬛'
   },
   // Aliases legados mapeados diretamente para as 6 funções
-  P1: { positionCode: 'CX', roleCode: 'CX', positionLabel: 'Caixa', roleLabel: 'Caixa', shortRoleLabel: 'Caixa', colorBg: 'bg-red-600', colorText: 'text-white', colorRing: 'ring-red-400', emoji: '🔴' },
-  PC: { positionCode: 'PC', roleCode: 'PC', positionLabel: 'Pacote', roleLabel: 'Pacote', shortRoleLabel: 'Pacote', colorBg: 'bg-orange-500', colorText: 'text-white', colorRing: 'ring-orange-400', emoji: '🟠' },
-  P2: { positionCode: 'AP', roleCode: 'AP', positionLabel: 'Apoio', roleLabel: 'Apoio', shortRoleLabel: 'Apoio', colorBg: 'bg-blue-600', colorText: 'text-white', colorRing: 'ring-blue-400', emoji: '🔵' },
-  REP: { positionCode: 'AP', roleCode: 'AP', positionLabel: 'Apoio', roleLabel: 'Apoio', shortRoleLabel: 'Apoio', colorBg: 'bg-blue-600', colorText: 'text-white', colorRing: 'ring-blue-400', emoji: '🔵' },
-  P3: { positionCode: 'VEND', roleCode: 'VEND', positionLabel: 'Vendas', roleLabel: 'Vendas', shortRoleLabel: 'Vendas', colorBg: 'bg-emerald-600', colorText: 'text-white', colorRing: 'ring-emerald-400', emoji: '🟢' },
-  VEND: { positionCode: 'VEND', roleCode: 'VEND', positionLabel: 'Vendas', roleLabel: 'Vendas', shortRoleLabel: 'Vendas', colorBg: 'bg-emerald-600', colorText: 'text-white', colorRing: 'ring-emerald-400', emoji: '🟢' },
-  P4: { positionCode: 'FISC', roleCode: 'FISC', positionLabel: 'Fiscal', roleLabel: 'Fiscal', shortRoleLabel: 'Fiscal', colorBg: 'bg-amber-500', colorText: 'text-white', colorRing: 'ring-amber-300', emoji: '🟡' },
-  FISC: { positionCode: 'FISC', roleCode: 'FISC', positionLabel: 'Fiscal', roleLabel: 'Fiscal', shortRoleLabel: 'Fiscal', colorBg: 'bg-amber-500', colorText: 'text-white', colorRing: 'ring-amber-300', emoji: '🟡' },
-  ESTQ: { positionCode: 'ESTQ', roleCode: 'ESTQ', positionLabel: 'Estoque', roleLabel: 'Estoque', shortRoleLabel: 'Estoque', colorBg: 'bg-zinc-700', colorText: 'text-white', colorRing: 'ring-zinc-500', emoji: '📦' }
+  P1: { positionCode: 'CX', roleCode: 'CX', positionLabel: 'Caixa', roleLabel: 'Caixa', shortRoleLabel: 'Caixa', colorBg: 'bg-red-600', colorText: 'text-white', colorRing: 'ring-red-400', emoji: '🟥' },
+  PC: { positionCode: 'PC', roleCode: 'PC', positionLabel: 'Pacote', roleLabel: 'Pacote', shortRoleLabel: 'Pacote', colorBg: 'bg-orange-500', colorText: 'text-white', colorRing: 'ring-orange-400', emoji: '🟧' },
+  P2: { positionCode: 'AP', roleCode: 'AP', positionLabel: 'Apoio', roleLabel: 'Apoio', shortRoleLabel: 'Apoio', colorBg: 'bg-blue-600', colorText: 'text-white', colorRing: 'ring-blue-400', emoji: '🟦' },
+  REP: { positionCode: 'AP', roleCode: 'AP', positionLabel: 'Apoio', roleLabel: 'Apoio', shortRoleLabel: 'Apoio', colorBg: 'bg-blue-600', colorText: 'text-white', colorRing: 'ring-blue-400', emoji: '🟦' },
+  P3: { positionCode: 'VEND', roleCode: 'VEND', positionLabel: 'Vendas', roleLabel: 'Vendas', shortRoleLabel: 'Vendas', colorBg: 'bg-emerald-600', colorText: 'text-white', colorRing: 'ring-emerald-400', emoji: '🟩' },
+  VEND: { positionCode: 'VEND', roleCode: 'VEND', positionLabel: 'Vendas', roleLabel: 'Vendas', shortRoleLabel: 'Vendas', colorBg: 'bg-emerald-600', colorText: 'text-white', colorRing: 'ring-emerald-400', emoji: '🟩' },
+  P4: { positionCode: 'FISC', roleCode: 'FISC', positionLabel: 'Fiscal', roleLabel: 'Fiscal', shortRoleLabel: 'Fiscal', colorBg: 'bg-amber-500', colorText: 'text-white', colorRing: 'ring-amber-300', emoji: '🟨' },
+  FISC: { positionCode: 'FISC', roleCode: 'FISC', positionLabel: 'Fiscal', roleLabel: 'Fiscal', shortRoleLabel: 'Fiscal', colorBg: 'bg-amber-500', colorText: 'text-white', colorRing: 'ring-amber-300', emoji: '🟨' },
+  ESTQ: { positionCode: 'ESTQ', roleCode: 'ESTQ', positionLabel: 'Estoque', roleLabel: 'Estoque', shortRoleLabel: 'Estoque', colorBg: 'bg-zinc-700', colorText: 'text-white', colorRing: 'ring-zinc-500', emoji: '⬛' }
 };
 
 export const TACTICAL_POSITIONS_LIST = ['CX', 'PC', 'VEND', 'AP', 'FISC', 'ESTQ'];
@@ -113,18 +113,18 @@ export function getTacticalCellCode(posCode: string, _mode?: TacticalDisplayMode
 }
 
 /**
- * Retorna o emoji descritivo da função oficial.
+ * Retorna o emoji descritivo da função oficial (quadrados coloridos canônicos).
  */
 export function getTacticalEmoji(posCode: string): string {
   const role = normalizeEmployeeRole(posCode);
   switch (role) {
-    case 'Caixa': return '🟢';
-    case 'Pacote': return '🩵';
-    case 'Vendas': return '🟠';
-    case 'Apoio': return '🔵';
-    case 'Fiscal': return '🟣';
-    case 'Estoque': return '🟡';
-    default: return '💼';
+    case 'Caixa': return '🟥';
+    case 'Pacote': return '🟧';
+    case 'Vendas': return '🟩';
+    case 'Apoio': return '🟦';
+    case 'Fiscal': return '🟨';
+    case 'Estoque': return '⬛';
+    default: return '🟦';
   }
 }
 

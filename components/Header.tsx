@@ -169,7 +169,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const configItems = operationsSections.flatMap(s => s.items);
 
-  const renderFilterDropdown = () => {
+  const renderFilterDropdown = (embedded = false) => {
     if (currentView !== 'grid') return null;
 
     return (
@@ -181,8 +181,14 @@ export const Header: React.FC<HeaderProps> = ({
             setShowConfigMenu(false);
             setShowShareMenu(false);
             setShowProfileMenu(false);
+            setShowActionsMenu(false);
+            setShowPublishMenu(false);
           }}
-          className={`flex items-center gap-1.5 px-3 min-h-[38px] rounded-lg border text-xs font-semibold uppercase tracking-wider transition-all shadow-xs ${
+          className={embedded ? `flex items-center gap-1.5 px-2.5 min-h-[34px] rounded-md text-xs font-semibold uppercase tracking-wider transition-all ${
+            activeFiltersCount > 0
+              ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 font-black'
+              : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+          }` : `flex items-center gap-1.5 px-3 min-h-[38px] rounded-lg border text-xs font-semibold uppercase tracking-wider transition-all shadow-xs ${
             activeFiltersCount > 0
               ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-500 text-orange-600 dark:text-orange-400 font-black shadow-sm'
               : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200 hover:border-orange-400'
@@ -601,54 +607,68 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-1 sm:gap-1.5 xl:gap-2 shrink-0">
-            {/* 1. Toggle Rápido: Visão Limpa / Auditoria */}
-            {onToggleDensityMode && (
-              <button
-                type="button"
-                onClick={onToggleDensityMode}
-                className={`hidden xl:flex items-center gap-1.5 px-3 min-h-[38px] rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all shadow-xs ${
-                  densityMode === 'audit'
-                    ? 'bg-blue-600 border-blue-600 text-white shadow-blue-500/20'
-                    : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                }`}
-                title={densityMode === 'audit' ? 'Alternar para Visão Limpa (ocultar contadores secundários)' : 'Alternar para Visão de Auditoria (exibir todos os badges e horários)'}
-              >
-                <Icon name={densityMode === 'audit' ? 'troubleshoot' : 'visibility'} className="text-xs shrink-0" />
-                <span className="hidden 2xl:inline">{densityMode === 'audit' ? 'Auditoria' : 'Visão Limpa'}</span>
-              </button>
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* 1. GRUPO AUDITORIA & ALERTAS (Diffs + Inconsistências CLT Agrupados em Pod) */}
+            {((isValidated && onOpenDiffModal && diffCount > 0) || (onOpenInconsistencyModal && inconsistencyCount > 0)) && (
+              <div className="hidden lg:inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800/80 p-0.5 shadow-xs shrink-0">
+                {onOpenInconsistencyModal && inconsistencyCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={onOpenInconsistencyModal}
+                    aria-label={`${inconsistencyCount} alerta${inconsistencyCount === 1 ? '' : 's'} de inconsistência CLT`}
+                    className="flex items-center gap-1 px-2.5 min-h-[34px] rounded-md bg-rose-500 hover:bg-rose-600 text-white font-bold text-[11px] tabular-nums uppercase tracking-wider transition-all animate-pulse"
+                    title={`Central de Alertas: ${inconsistencyCount} inconformidade${inconsistencyCount === 1 ? '' : 's'} com regras da CLT ou escalas`}
+                  >
+                    <Icon name="warning" className="text-xs shrink-0" />
+                    <span className="font-black">{inconsistencyCount}</span>
+                    <span className="hidden 2xl:inline">{inconsistencyCount === 1 ? 'Alerta' : 'Alertas'}</span>
+                  </button>
+                )}
+
+                {isValidated && onOpenDiffModal && diffCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={onOpenDiffModal}
+                    aria-label={`${diffCount} divergência${diffCount === 1 ? '' : 's'} pós-oficialização`}
+                    className={`flex items-center gap-1 px-2.5 min-h-[34px] rounded-md bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] tabular-nums uppercase tracking-wider transition-all ${
+                      onOpenInconsistencyModal && inconsistencyCount > 0 ? 'ml-0.5' : ''
+                    }`}
+                    title={`Auditoria: ${diffCount} divergência${diffCount === 1 ? '' : 's'} em relação à versão oficial impressa`}
+                  >
+                    <Icon name="difference" className="text-xs shrink-0" />
+                    <span className="font-black">{diffCount}</span>
+                    <span className="hidden 2xl:inline">{diffCount === 1 ? 'Alt.' : 'Alts.'}</span>
+                  </button>
+                )}
+              </div>
             )}
 
-            {/* 2. Badges de Auditoria & Alertas */}
-            {isValidated && onOpenDiffModal && diffCount > 0 && (
-              <button
-                type="button"
-                onClick={onOpenDiffModal}
-                aria-label={`${diffCount} divergência${diffCount === 1 ? '' : 's'} pós-oficialização`}
-                className="hidden lg:flex items-center gap-1 px-2.5 min-h-[38px] rounded-lg border bg-amber-500 border-amber-600 text-white shadow-sm font-bold text-[11px] tabular-nums uppercase tracking-wider hover:scale-105 transition-all"
-                title={`Auditoria: ${diffCount} divergência${diffCount === 1 ? '' : 's'} em relação à versão oficial impressa`}
-              >
-                <Icon name="difference" className="text-xs shrink-0" />
-                <span className="font-black">{diffCount}</span>
-                <span className="hidden 2xl:inline">{diffCount === 1 ? 'Alt.' : 'Alts.'}</span>
-              </button>
-            )}
+            {/* 2. GRUPO VISUALIZAÇÃO & FILTROS (Filtros da Grade + Visão Limpa/Auditoria) */}
+            <div className="hidden lg:inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-0.5 shadow-xs shrink-0">
+              {renderFilterDropdown(true)}
 
-            {onOpenInconsistencyModal && inconsistencyCount > 0 && (
-              <button
-                type="button"
-                onClick={onOpenInconsistencyModal}
-                aria-label={`${inconsistencyCount} alerta${inconsistencyCount === 1 ? '' : 's'} de inconsistência CLT`}
-                className="hidden lg:flex items-center gap-1 px-2.5 min-h-[38px] rounded-lg border bg-rose-500 border-rose-600 text-white shadow-sm font-bold text-[11px] tabular-nums uppercase tracking-wider animate-pulse hover:scale-105 transition-all"
-                title={`Central de Alertas: ${inconsistencyCount} inconformidade${inconsistencyCount === 1 ? '' : 's'} com regras da CLT ou escalas`}
-              >
-                <Icon name="warning" className="text-xs shrink-0" />
-                <span className="font-black">{inconsistencyCount}</span>
-                <span className="hidden 2xl:inline">{inconsistencyCount === 1 ? 'Alerta' : 'Alertas'}</span>
-              </button>
-            )}
+              {onToggleDensityMode && (
+                <>
+                  <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-800 mx-0.5 shrink-0" />
+                  <button
+                    type="button"
+                    onClick={onToggleDensityMode}
+                    aria-label={densityMode === 'audit' ? 'Alternar para Visão Limpa' : 'Alternar para Visão de Auditoria'}
+                    className={`flex items-center gap-1 px-2.5 min-h-[34px] rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${
+                      densityMode === 'audit'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                    }`}
+                    title={densityMode === 'audit' ? 'Alternar para Visão Limpa (ocultar contadores secundários)' : 'Alternar para Visão de Auditoria (exibir todos os badges e horários)'}
+                  >
+                    <Icon name={densityMode === 'audit' ? 'troubleshoot' : 'visibility'} className="text-xs shrink-0" />
+                    <span className="hidden xl:inline">{densityMode === 'audit' ? 'Auditoria' : 'Limpa'}</span>
+                  </button>
+                </>
+              )}
+            </div>
 
-            {/* 3. Salvar Manual com Atalho Ctrl+S */}
+            {/* 3. SALVAR MANUAL COM ATALHO CTRL+S */}
             {onManualSave && (
               <button
                 type="button"
@@ -677,266 +697,266 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* 4. Menu de Filtros */}
-            <div className="hidden lg:block">
-              {renderFilterDropdown()}
-            </div>
-
-            {/* 5. Dropdown Menu "Ferramentas de Escala" */}
-            <div className="relative hidden lg:block">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowActionsMenu(!showActionsMenu);
-                  setShowPublishMenu(false);
-                  setShowConfigMenu(false);
-                  setShowFilterMenu(false);
-                  setShowProfileMenu(false);
-                }}
-                aria-label="Menu de Ações, Ferramentas e Exportação da Escala"
-                className={`flex items-center gap-1.5 px-3 min-h-[38px] rounded-lg border text-xs font-semibold uppercase tracking-wider transition-all shadow-xs ${
-                  showActionsMenu
-                    ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm'
-                    : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200 hover:border-zinc-300'
-                }`}
-                title="Automação & Escala (Gerar Escala, Sorteio de Domingos, Dias Protegidos, Configurações da Loja)"
-              >
-                <Icon name="tune" className="text-sm text-zinc-500 dark:text-zinc-400 shrink-0" />
-                <span className="hidden 2xl:inline">Automação & Escala</span><span className="inline 2xl:hidden">Escala</span>
-                <Icon name={showActionsMenu ? 'expand_less' : 'expand_more'} className="text-xs opacity-70 shrink-0" />
-              </button>
-
-              {showActionsMenu && (
-                <div 
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute top-full right-0 mt-2 w-80 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2.5 flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-150 text-zinc-800 dark:text-zinc-100"
+            {/* 4. GRUPO AÇÕES DA ESCALA & PUBLICAÇÃO (Automação + Publicar Agrupados) */}
+            <div className="hidden lg:inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-0.5 shadow-xs shrink-0">
+              {/* Automação & Ferramentas de Escala */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowActionsMenu(!showActionsMenu);
+                    setShowPublishMenu(false);
+                    setShowConfigMenu(false);
+                    setShowFilterMenu(false);
+                    setShowProfileMenu(false);
+                  }}
+                  aria-label="Menu de Ações, Ferramentas e Exportação da Escala"
+                  className={`flex items-center gap-1.5 px-3 min-h-[34px] rounded-md text-xs font-semibold uppercase tracking-wider transition-all ${
+                    showActionsMenu
+                      ? 'bg-zinc-800 text-white shadow-xs'
+                      : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                  }`}
+                  title="Automação & Escala (Gerar Escala, Sorteio de Domingos, Dias Protegidos, Configurações da Loja)"
                 >
-                  {/* Seção 1: Automação & Escala */}
-                  <div>
-                    <div className="px-2 py-1 text-[11px] font-black uppercase text-orange-600 dark:text-orange-400 tracking-wider flex items-center gap-1.5">
-                      <Icon name="auto_fix_high" className="text-xs" />
-                      <span>Automação & Escala</span>
-                    </div>
+                  <Icon name="tune" className="text-sm text-zinc-500 dark:text-zinc-400 shrink-0" />
+                  <span className="hidden 2xl:inline">Automação & Escala</span>
+                  <span className="inline 2xl:hidden">Escala</span>
+                  <Icon name={showActionsMenu ? 'expand_less' : 'expand_more'} className="text-xs opacity-70 shrink-0" />
+                </button>
 
-                    <div className="space-y-1 mt-1">
-                      {/* Gerar Nova Escala */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onCreateMonth();
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-orange-50 dark:hover:bg-orange-950/40 transition-all text-left"
-                      >
-                        <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-900/50 text-orange-600 shrink-0">
-                          <Icon name="add_circle" className="text-sm" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-black uppercase text-[11px]">Gerar Escala do Mês</span>
-                          <span className="text-[11px] text-zinc-400">Sugestão inteligente ou base trabalhada</span>
-                        </div>
-                      </button>
+                {showActionsMenu && (
+                  <div 
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute top-full right-0 mt-2 w-80 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2.5 flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-150 text-zinc-800 dark:text-zinc-100"
+                  >
+                    {/* Seção 1: Automação & Escala */}
+                    <div>
+                      <div className="px-2 py-1 text-[11px] font-black uppercase text-orange-600 dark:text-orange-400 tracking-wider flex items-center gap-1.5">
+                        <Icon name="auto_fix_high" className="text-xs" />
+                        <span>Automação & Escala</span>
+                      </div>
 
-                      {/* Sorteio de Domingos */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onSortearDomingo();
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
-                      >
-                        <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600 shrink-0">
-                          <Icon name="casino" className="text-sm" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-black uppercase text-[11px]">Sorteio de Domingos</span>
-                          <span className="text-[11px] text-zinc-400">Revezamento conforme teto CLT</span>
-                        </div>
-                      </button>
-
-                      {/* Aplicar Folgas Inteligentes */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onApplyFolgas();
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
-                      >
-                        <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 shrink-0">
-                          <Icon name="event_available" className="text-sm" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-black uppercase text-[11px]">Aplicar Folgas 6x1</span>
-                          <span className="text-[11px] text-zinc-400">Distribuição com preferências de equipe</span>
-                        </div>
-                      </button>
-
-                      {/* Dias Protegidos & Presets */}
-                      {(onOpenPresetModal || showActionsModal) && (
+                      <div className="space-y-1 mt-1">
+                        {/* Gerar Nova Escala */}
                         <button
                           type="button"
                           onClick={() => {
-                            if (onOpenPresetModal) onOpenPresetModal();
-                            else setShowActionsModal(true);
+                            onCreateMonth();
+                            setShowActionsMenu(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-orange-50 dark:hover:bg-orange-950/40 transition-all text-left"
+                        >
+                          <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-900/50 text-orange-600 shrink-0">
+                            <Icon name="add_circle" className="text-sm" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-black uppercase text-[11px]">Gerar Escala do Mês</span>
+                            <span className="text-[11px] text-zinc-400">Sugestão inteligente ou base trabalhada</span>
+                          </div>
+                        </button>
+
+                        {/* Sorteio de Domingos */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onSortearDomingo();
                             setShowActionsMenu(false);
                           }}
                           className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
                         >
-                          <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/50 text-purple-600 shrink-0">
-                            <Icon name="shield" className="text-sm" />
+                          <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600 shrink-0">
+                            <Icon name="casino" className="text-sm" />
                           </div>
                           <div className="flex flex-col">
-                            <span className="font-black uppercase text-[11px]">Dias Protegidos & Presets</span>
-                            <span className="text-[11px] text-zinc-400">Picos sazonais (Natal, Dia das Crianças)</span>
+                            <span className="font-black uppercase text-[11px]">Sorteio de Domingos</span>
+                            <span className="text-[11px] text-zinc-400">Revezamento conforme teto CLT</span>
                           </div>
                         </button>
-                      )}
 
-                      {/* Configurações da Loja & Jornada */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onViewChange('jornada');
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
-                      >
-                        <div className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0">
-                          <Icon name="settings_suggest" className="text-sm" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-black uppercase text-[11px]">Configurações da Loja</span>
-                          <span className="text-[11px] text-zinc-400">Faixas de turno e limites de domingo</span>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="h-px bg-zinc-100 dark:bg-zinc-800" />
-
-                  {/* Seção 2: Validação & Auditoria */}
-                  <div>
-                    <div className="px-2.5 py-1 text-[11px] font-black uppercase text-rose-600 dark:text-rose-400 tracking-wider flex items-center gap-1">
-                      <Icon name="verified_user" className="text-xs" />
-                      <span>Validação & Conformidade</span>
-                    </div>
-
-                    <div className="space-y-1 mt-1">
-                      {onOpenInconsistencyModal && (
+                        {/* Aplicar Folgas Inteligentes */}
                         <button
                           type="button"
                           onClick={() => {
-                            onOpenInconsistencyModal();
+                            onApplyFolgas();
                             setShowActionsMenu(false);
                           }}
-                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all text-left"
+                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
                         >
-                          <div className="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-900/50 text-rose-600">
-                            <Icon name="gavel" className="text-sm" />
+                          <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 shrink-0">
+                            <Icon name="event_available" className="text-sm" />
                           </div>
                           <div className="flex flex-col">
-                            <span className="font-black uppercase text-[11px]">Auditoria CLT Completa</span>
-                            <span className="text-[11px] text-zinc-400">6x1, domingos e desfalques de equipe</span>
+                            <span className="font-black uppercase text-[11px]">Aplicar Folgas 6x1</span>
+                            <span className="text-[11px] text-zinc-400">Distribuição com preferências de equipe</span>
                           </div>
                         </button>
-                      )}
 
-                      {isValidated && onOpenDiffModal && (
+                        {/* Dias Protegidos & Presets */}
+                        {(onOpenPresetModal || showActionsModal) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (onOpenPresetModal) onOpenPresetModal();
+                              else setShowActionsModal(true);
+                              setShowActionsMenu(false);
+                            }}
+                            className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
+                          >
+                            <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/50 text-purple-600 shrink-0">
+                              <Icon name="shield" className="text-sm" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="font-black uppercase text-[11px]">Dias Protegidos & Presets</span>
+                              <span className="text-[11px] text-zinc-400">Picos sazonais (Natal, Dia das Crianças)</span>
+                            </div>
+                          </button>
+                        )}
+
+                        {/* Configurações da Loja & Jornada */}
                         <button
                           type="button"
                           onClick={() => {
-                            onOpenDiffModal();
+                            onViewChange('jornada');
                             setShowActionsMenu(false);
                           }}
-                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-all text-left"
+                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
                         >
-                          <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600">
-                            <Icon name="difference" className="text-sm" />
+                          <div className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0">
+                            <Icon name="settings_suggest" className="text-sm" />
                           </div>
                           <div className="flex flex-col">
-                            <span className="font-black uppercase text-[11px]">Divergências Pós-Oficial</span>
-                            <span className="text-[11px] text-zinc-400">Comparar com snapshot congelado</span>
+                            <span className="font-black uppercase text-[11px]">Configurações da Loja</span>
+                            <span className="text-[11px] text-zinc-400">Faixas de turno e limites de domingo</span>
                           </div>
                         </button>
-                      )}
+                      </div>
+                    </div>
+
+                    <div className="h-px bg-zinc-100 dark:bg-zinc-800" />
+
+                    {/* Seção 2: Validação & Auditoria */}
+                    <div>
+                      <div className="px-2.5 py-1 text-[11px] font-black uppercase text-rose-600 dark:text-rose-400 tracking-wider flex items-center gap-1">
+                        <Icon name="verified_user" className="text-xs" />
+                        <span>Validação & Conformidade</span>
+                      </div>
+
+                      <div className="space-y-1 mt-1">
+                        {onOpenInconsistencyModal && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onOpenInconsistencyModal();
+                              setShowActionsMenu(false);
+                            }}
+                            className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all text-left"
+                          >
+                            <div className="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-900/50 text-rose-600">
+                              <Icon name="gavel" className="text-sm" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="font-black uppercase text-[11px]">Auditoria CLT Completa</span>
+                              <span className="text-[11px] text-zinc-400">6x1, domingos e desfalques de equipe</span>
+                            </div>
+                          </button>
+                        )}
+
+                        {isValidated && onOpenDiffModal && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onOpenDiffModal();
+                              setShowActionsMenu(false);
+                            }}
+                            className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-all text-left"
+                          >
+                            <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600">
+                              <Icon name="difference" className="text-sm" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="font-black uppercase text-[11px]">Divergências Pós-Oficial</span>
+                              <span className="text-[11px] text-zinc-400">Comparar com snapshot congelado</span>
+                            </div>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="h-px bg-zinc-100 dark:bg-zinc-800" />
+
+                    {/* Seção 3: Configurações & Mural */}
+                    <div>
+                      <div className="px-2.5 py-1 text-[11px] font-black uppercase text-zinc-400 dark:text-zinc-500 tracking-wider flex items-center gap-1">
+                        <Icon name="settings" className="text-xs" />
+                        <span>Configurações & Anotações</span>
+                      </div>
+
+                      <div className="space-y-1 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onToggleNotes();
+                            setShowActionsMenu(false);
+                          }}
+                          className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold transition-all text-left ${
+                            showNotes ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600' : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                          }`}
+                        >
+                          <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600">
+                            <Icon name="edit_note" className="text-sm" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-black uppercase text-[11px]">{showNotes ? 'Ocultar Recados' : 'Mural de Recados'}</span>
+                            <span className="text-[11px] text-zinc-400">Anotações no rodapé da impressão</span>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onViewChange('jornada');
+                            setShowActionsMenu(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
+                        >
+                          <div className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600">
+                            <Icon name="schedule" className="text-sm" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-black uppercase text-[11px]">Parâmetros de Jornada</span>
+                            <span className="text-[11px] text-zinc-400">Faixas de turno e regras de almoço</span>
+                          </div>
+                        </button>
+                      </div>
                     </div>
                   </div>
+                )}
+              </div>
 
-                  <div className="h-px bg-zinc-100 dark:bg-zinc-800" />
+              <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-800 mx-0.5 shrink-0" />
 
-                  {/* Seção 3: Configurações & Mural */}
-                  <div>
-                    <div className="px-2.5 py-1 text-[11px] font-black uppercase text-zinc-400 dark:text-zinc-500 tracking-wider flex items-center gap-1">
-                      <Icon name="settings" className="text-xs" />
-                      <span>Configurações & Anotações</span>
-                    </div>
+              {/* Publicar / Exportar Escala */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPublishMenu(!showPublishMenu);
+                    setShowActionsMenu(false);
+                    setShowConfigMenu(false);
+                    setShowFilterMenu(false);
+                    setShowProfileMenu(false);
+                  }}
+                  aria-label="Publicar ou Exportar Escala"
+                  className="flex items-center gap-1.5 px-3.5 min-h-[34px] rounded-md bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs uppercase tracking-wider shadow-xs active:scale-95 transition-all"
+                  title="Publicar e Exportar Escala (Oficializar, WhatsApp, Imprimir)"
+                >
+                  <Icon name="rocket_launch" className="text-sm shrink-0" />
+                  <span className="hidden xl:inline">Publicar / Exportar</span>
+                  <span className="inline xl:hidden">Publicar</span>
+                  <Icon name={showPublishMenu ? 'expand_less' : 'expand_more'} className="text-xs shrink-0" />
+                </button>
 
-                    <div className="space-y-1 mt-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onToggleNotes();
-                          setShowActionsMenu(false);
-                        }}
-                        className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold transition-all text-left ${
-                          showNotes ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600' : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-                        }`}
-                      >
-                        <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600">
-                          <Icon name="edit_note" className="text-sm" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-black uppercase text-[11px]">{showNotes ? 'Ocultar Recados' : 'Mural de Recados'}</span>
-                          <span className="text-[11px] text-zinc-400">Anotações no rodapé da impressão</span>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onViewChange('jornada');
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
-                      >
-                        <div className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600">
-                          <Icon name="schedule" className="text-sm" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-black uppercase text-[11px]">Parâmetros de Jornada</span>
-                          <span className="text-[11px] text-zinc-400">Faixas de turno e regras de almoço</span>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 6. CTA Primário Destacado em Laranja: "Publicar / Exportar" */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowPublishMenu(!showPublishMenu);
-                  setShowActionsMenu(false);
-                  setShowConfigMenu(false);
-                  setShowFilterMenu(false);
-                  setShowProfileMenu(false);
-                }}
-                aria-label="Publicar ou Exportar Escala"
-                className="flex items-center gap-1.5 px-4 min-h-[38px] rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs uppercase tracking-wider shadow-md shadow-orange-500/25 active:scale-95 transition-all"
-                title="Publicar e Exportar Escala (Oficializar, WhatsApp, Imprimir)"
-              >
-                <Icon name="rocket_launch" className="text-sm" />
-                <span className="hidden xl:inline">Publicar / Exportar</span>
-                <span className="inline xl:hidden">Publicar</span>
-                <Icon name={showPublishMenu ? 'expand_less' : 'expand_more'} className="text-xs" />
-              </button>
-
-              {showPublishMenu && (
+                {showPublishMenu && (
                 <div 
                   onClick={(e) => e.stopPropagation()}
                   className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 flex flex-col gap-1 animate-in fade-in slide-in-from-top-1 duration-150 text-zinc-800 dark:text-zinc-100"
@@ -1041,6 +1061,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               )}
             </div>
+          </div>
 
             {/* 7. Menu do Usuário & Perfil */}
             <div className="relative">

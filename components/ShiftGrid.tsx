@@ -1330,35 +1330,26 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                       ) : shift === 'N/A' ? (
                                          <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-mono">-</span>
                                         ) : isWorkingShift(shift) ? (
-                                          <div className="flex flex-col items-center justify-center leading-none">
-                                            <span className="text-[13px] font-bold">
-                                              {(() => {
+                                          <span className="text-[13px] font-bold">
+                                            {tacticalDisplayMode === 'roles' ? (
+                                              (() => {
                                                 const assignedRole = emp.dailyAssignedRoles?.[monthKey]?.[d.num - 1] || normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
-                                                const primaryRoleNorm = normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
-                                                const isDiff = assignedRole !== primaryRoleNorm;
-                                                if (tacticalDisplayMode === 'roles' || tacticalDisplayMode === 'positions' || isDiff) {
-                                                  const codeMap: Record<string, string> = {
-                                                    'Caixa': 'CX',
-                                                    'Pacote': 'PC',
-                                                    'Vendas': 'VEND',
-                                                    'Apoio': 'AP',
-                                                    'Fiscal': 'FISC',
-                                                    'Estoque': 'ESTQ'
-                                                  };
-                                                  return codeMap[assignedRole] || 'T';
-                                                }
-                                                return 'T';
-                                              })()}
-                                            </span>
-                                            <span className="text-[11px] font-medium tabular-nums opacity-80 leading-none mt-0.5">
-                                              {(() => {
-                                                const rawHour = (emp.dailyHours[monthKey] || [])[d.num - 1] || emp.workPeriod || '';
-                                                if (rawHour.includes('às')) return rawHour.split('às')[0].trim();
-                                                const splitH = rawHour.split('h')[0];
-                                                return splitH ? `${splitH}h` : '';
-                                              })()}
-                                            </span>
-                                          </div>
+                                                const codeMap: Record<string, string> = {
+                                                  'Caixa': 'CX',
+                                                  'Pacote': 'PC',
+                                                  'Vendas': 'VEND',
+                                                  'Apoio': 'AP',
+                                                  'Fiscal': 'FISC',
+                                                  'Estoque': 'ESTQ'
+                                                };
+                                                return codeMap[assignedRole] || 'T';
+                                              })()
+                                            ) : tacticalDisplayMode === 'positions' ? (
+                                              getTacticalCellCode(emp.tacticalPositions?.[monthKey]?.[d.num - 1] || resolvedPositions[emp.id]) || 'T'
+                                            ) : (
+                                              'T'
+                                            )}
+                                          </span>
                                         ) : (
                                           <span className="text-[13px] font-bold">{shift.startsWith('FF') ? 'FF' : shift}</span>
                                         )}
