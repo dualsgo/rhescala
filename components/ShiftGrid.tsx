@@ -211,13 +211,13 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
   const legendItems = useMemo(() => {
     const baseItems = [
-      { code: 'T', label: 'Trabalho Normal', color: 'bg-emerald-600' },
-      { code: 'F', label: 'Folga Comum', color: 'bg-rose-500' },
-      { code: 'FF', label: 'Folga de Feriado', color: 'bg-amber-500' },
-      { code: 'FE', label: 'Férias', color: 'bg-emerald-500' },
-      { code: 'DO', label: 'Aniversário / Especial', color: 'bg-fuchsia-600' },
-      { code: 'C', label: 'Curso / Treinamento', color: 'bg-zinc-500' },
-      { code: 'AT', label: 'Atestado Médico', color: 'bg-rose-400' },
+      { code: 'T', label: 'Trabalho Regular (T)', color: 'bg-emerald-500' },
+      { code: 'F', label: 'Folga Semanal (F)', color: 'bg-rose-500' },
+      { code: 'FF', label: 'Folga Feriado (FF)', color: 'bg-fuchsia-500' },
+      { code: 'FE', label: 'Férias (FE)', color: 'bg-sky-500' },
+      { code: 'DO', label: 'Aniversário / Day Off', color: 'bg-purple-500' },
+      { code: 'C', label: 'Curso Aprendiz (C)', color: 'bg-indigo-500' },
+      { code: 'AT', label: 'Atestado Médico (AT)', color: 'bg-amber-500' },
       { code: '1/6..6/6', label: 'Dias Seguidos 6x1', color: 'bg-zinc-600' },
       { code: '7º', label: '7º Dia: Violação 6x1', color: 'bg-rose-600' },
       { code: '1D / 2D', label: 'Domingos Trabalhados', color: 'bg-amber-500' },

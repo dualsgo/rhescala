@@ -136,14 +136,14 @@ export const HelpCenter: React.FC<HelpCenterProps> = ({ onClose }) => {
   ];
 
   const shiftLegend = [
-    { code: 'T / DOM', label: 'Trabalho Normal / Domingo', desc: 'Dia de trabalho regular conforme o horário cadastrado da escala.', bg: 'bg-indigo-600 text-white' },
-    { code: 'F', label: 'Folga Semanal', desc: 'Descanso Semanal Remunerado (DSR) regular do colaborador.', bg: 'bg-rose-500 text-white' },
-    { code: 'FF', label: 'Folga Feriado', desc: 'Compensação por feriado trabalhado (crédito adquirido).', bg: 'bg-red-600 text-white' },
-    { code: 'FE', label: 'Férias', desc: 'Período oficial de descanso anual remunerado.', bg: 'bg-purple-600 text-white' },
-    { code: 'DO', label: 'Day Off (Aniversário)', desc: 'Folga comemorativa concedida no dia de aniversário.', bg: 'bg-fuchsia-600 text-white' },
-    { code: 'AT', label: 'Atestado Médico', desc: 'Ausência justificada por atestado médico homologado.', bg: 'bg-rose-700 text-white' },
-    { code: 'C', label: 'Curso / Teórico', desc: 'Dia destinado ao curso de capacitação do Jovem Aprendiz.', bg: 'bg-teal-600 text-white' },
-    { code: 'N/A', label: 'Não Vigente', desc: 'Data anterior à admissão ou posterior ao desligamento.', bg: 'bg-slate-400 text-white' }
+    { code: 'T', label: 'Trabalho Regular (T)', desc: 'Dia de trabalho regular conforme o horário cadastrado da escala.', bg: 'bg-emerald-600 text-white' },
+    { code: 'F', label: 'Folga Semanal (F)', desc: 'Descanso Semanal Remunerado (DSR) regular do colaborador.', bg: 'bg-rose-500 text-white' },
+    { code: 'FF', label: 'Folga Feriado (FF)', desc: 'Compensação por feriado trabalhado (crédito adquirido).', bg: 'bg-fuchsia-600 text-white' },
+    { code: 'FE', label: 'Férias (FE)', desc: 'Período oficial de descanso anual remunerado.', bg: 'bg-sky-600 text-white' },
+    { code: 'DO', label: 'Day Off / Aniversário', desc: 'Folga comemorativa concedida no dia de aniversário.', bg: 'bg-purple-600 text-white' },
+    { code: 'AT', label: 'Atestado Médico (AT)', desc: 'Ausência justificada por atestado médico homologado.', bg: 'bg-amber-600 text-white' },
+    { code: 'C', label: 'Curso Aprendiz (C)', desc: 'Dia destinado ao curso de capacitação do Jovem Aprendiz.', bg: 'bg-indigo-600 text-white' },
+    { code: 'N/A', label: 'Não Vigente', desc: 'Data anterior à admissão ou posterior ao desligamento.', bg: 'bg-zinc-400 text-white' }
   ];
 
   return (
