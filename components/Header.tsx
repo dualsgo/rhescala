@@ -136,8 +136,6 @@ export const Header: React.FC<HeaderProps> = ({
 
   const navItems = [
     { id: 'grid', label: 'Grade', fullLabel: 'Grade Mensal', icon: 'grid_view' },
-    { id: 'daily', label: 'Calendário', fullLabel: 'Calendário Diário', icon: 'calendar_view_day' },
-    { id: 'team', label: 'Equipe', fullLabel: 'Equipe & Cargos', icon: 'groups' },
     { id: 'analysis', label: 'Análise', fullLabel: 'Relatórios/Análise', icon: 'insights' },
     { id: 'requests', label: 'Solicitações', fullLabel: 'Solicitações', icon: 'assignment' },
   ];
@@ -146,6 +144,7 @@ export const Header: React.FC<HeaderProps> = ({
     {
       title: 'Rotinas da Loja',
       items: [
+        { id: 'daily', label: 'Calendário Diário', icon: 'calendar_view_day' },
         { id: 'cleaning', label: 'Limpeza da Copa', icon: 'cleaning_services' },
         { id: 'patrol', label: 'Ronda da Loja', icon: 'local_police' },
         { id: 'sections', label: 'Donos de Seção', icon: 'category' },
@@ -192,7 +191,7 @@ export const Header: React.FC<HeaderProps> = ({
           title="Filtros da Escala (Turnos, Presença, Contrato e Período)"
         >
           <Icon name="tune" className={`text-sm shrink-0 ${activeFiltersCount > 0 ? 'text-orange-500' : 'text-zinc-500 dark:text-zinc-400'}`} />
-          <span>Filtros</span>
+          <span className="hidden xl:inline">Filtros</span>
           {activeFiltersCount > 0 && (
             <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[11px] font-black flex items-center justify-center shrink-0">
               {activeFiltersCount}
@@ -357,7 +356,7 @@ export const Header: React.FC<HeaderProps> = ({
         />
       )}
 
-      <div className="flex items-center justify-between h-full gap-2 sm:gap-3 max-w-full relative z-50">
+      <div className="flex items-center justify-between h-full gap-1.5 sm:gap-2 xl:gap-3 w-full max-w-full relative z-50">
         
         {/* ============================================================== */}
         {/* BLOCO 1 (ESQUERDA): CONTEXTO & STATUS                          */}
@@ -454,7 +453,7 @@ export const Header: React.FC<HeaderProps> = ({
             title={isReadOnly ? 'Status da Escala' : (isValidated ? 'Oficializada! Clique para alternar para Rascunho' : 'Rascunho. Clique para oficializar escala')}
           >
             <Icon name={isValidated ? 'verified' : 'pending_actions'} className="text-xs sm:text-sm shrink-0" />
-            <span>{isValidated ? 'Oficial' : 'Rascunho'}</span>
+            <span className="hidden xl:inline">{isValidated ? 'Oficial' : 'Rascunho'}</span>
           </button>
         </div>
 
@@ -602,7 +601,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 xl:gap-2 shrink-0">
             {/* 1. Toggle Rápido: Visão Limpa / Auditoria */}
             {onToggleDensityMode && (
               <button
@@ -615,8 +614,8 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
                 title={densityMode === 'audit' ? 'Alternar para Visão Limpa (ocultar contadores secundários)' : 'Alternar para Visão de Auditoria (exibir todos os badges e horários)'}
               >
-                <Icon name={densityMode === 'audit' ? 'troubleshoot' : 'visibility'} className="text-xs" />
-                <span>{densityMode === 'audit' ? 'Auditoria' : 'Visão Limpa'}</span>
+                <Icon name={densityMode === 'audit' ? 'troubleshoot' : 'visibility'} className="text-xs shrink-0" />
+                <span className="hidden 2xl:inline">{densityMode === 'audit' ? 'Auditoria' : 'Visão Limpa'}</span>
               </button>
             )}
 
@@ -631,7 +630,7 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Icon name="difference" className="text-xs shrink-0" />
                 <span className="font-black">{diffCount}</span>
-                <span className="hidden xl:inline">{diffCount === 1 ? 'Alt.' : 'Alts.'}</span>
+                <span className="hidden 2xl:inline">{diffCount === 1 ? 'Alt.' : 'Alts.'}</span>
               </button>
             )}
 
@@ -645,7 +644,7 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Icon name="warning" className="text-xs shrink-0" />
                 <span className="font-black">{inconsistencyCount}</span>
-                <span className="hidden xl:inline">{inconsistencyCount === 1 ? 'Alerta' : 'Alertas'}</span>
+                <span className="hidden 2xl:inline">{inconsistencyCount === 1 ? 'Alerta' : 'Alertas'}</span>
               </button>
             )}
 
@@ -703,7 +702,7 @@ export const Header: React.FC<HeaderProps> = ({
                 title="Automação & Escala (Gerar Escala, Sorteio de Domingos, Dias Protegidos, Configurações da Loja)"
               >
                 <Icon name="tune" className="text-sm text-zinc-500 dark:text-zinc-400 shrink-0" />
-                <span className="hidden xl:inline">Automação & Escala</span><span className="inline xl:hidden">Escala</span>
+                <span className="hidden 2xl:inline">Automação & Escala</span><span className="inline 2xl:hidden">Escala</span>
                 <Icon name={showActionsMenu ? 'expand_less' : 'expand_more'} className="text-xs opacity-70 shrink-0" />
               </button>
 
@@ -932,8 +931,8 @@ export const Header: React.FC<HeaderProps> = ({
                 title="Publicar e Exportar Escala (Oficializar, WhatsApp, Imprimir)"
               >
                 <Icon name="rocket_launch" className="text-sm" />
-                <span className="hidden sm:inline">Publicar / Exportar</span>
-                <span className="inline sm:hidden">Publicar</span>
+                <span className="hidden xl:inline">Publicar / Exportar</span>
+                <span className="inline xl:hidden">Publicar</span>
                 <Icon name={showPublishMenu ? 'expand_less' : 'expand_more'} className="text-xs" />
               </button>
 

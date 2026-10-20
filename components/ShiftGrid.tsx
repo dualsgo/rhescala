@@ -890,11 +890,26 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   return (
                     <React.Fragment key={groupName}>
                       {/* Group Header Row */}
-                      <tr className="bg-zinc-100/90 dark:bg-zinc-900/90 backdrop-blur-md sticky z-20">
-                        <td className="sticky left-0 py-1.5 px-3 font-bold text-[11px] uppercase text-zinc-600 dark:text-zinc-400 border-r border-zinc-200 dark:border-zinc-800 bg-inherit shadow-[4px_0_12px_-2px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_12px_-2px_rgba(0,0,0,0.4)] w-[240px] min-w-[240px] max-w-[240px]">
-                          {groupName} ({emps.length})
+                      <tr className="bg-zinc-100 dark:bg-zinc-900 border-y border-zinc-200 dark:border-zinc-800">
+                        <td className="sticky left-0 z-20 py-1.5 px-3 font-bold text-[11px] uppercase text-zinc-700 dark:text-zinc-200 border-r border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 shadow-[4px_0_12px_-2px_rgba(0,0,0,0.08)] w-[240px] min-w-[240px] max-w-[240px]">
+                          <div className="flex items-center justify-between">
+                            <span>{groupName}</span>
+                            <span className="text-[11px] font-black px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                              {emps.length}
+                            </span>
+                          </div>
                         </td>
-                        <td colSpan={filteredDays.length} className="bg-inherit h-7" />
+                        {filteredDays.map(d => {
+                          const isWeekend = d.isSunday || d.weekday === 'SÁB' || d.weekday === 'DOM';
+                          return (
+                            <td 
+                              key={d.num} 
+                              className={`h-7 border-b border-zinc-200/80 dark:border-zinc-800 min-w-[46px] w-[48px] ${
+                                isWeekend ? 'bg-zinc-200/50 dark:bg-zinc-850' : 'bg-zinc-100/50 dark:bg-zinc-900'
+                              }`} 
+                            />
+                          );
+                        })}
                       </tr>
 
                       {/* Employee Rows */}
@@ -1306,8 +1321,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                           })()}
                                         </div>
                                       ) : shift === 'C' ? (
-                                         <span className="text-[11px] font-bold">CURSO</span>
-                                       ) : shift === 'N/A' ? (
+                                        <span className="text-[13px] font-bold">C</span>
+                                      ) : shift === 'N/A' ? (
                                          <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-mono">-</span>
                                         ) : isWorkingShift(shift) ? (
                                           <div className="flex flex-col items-center justify-center leading-none">
