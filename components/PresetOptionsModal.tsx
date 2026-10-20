@@ -71,7 +71,7 @@ export const PresetOptionsModal: React.FC<PresetOptionsModalProps> = ({
         <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar flex-1">
           {/* Escolha do Escopo */}
           <div>
-            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-zinc-500 mb-2 block">
+            <label className="text-[11px] font-black uppercase tracking-wider text-slate-400 dark:text-zinc-500 mb-2 block">
               1. Para quem deseja aplicar?
             </label>
             <div className="grid grid-cols-2 gap-2 bg-slate-100 dark:bg-zinc-800 p-1.5 rounded-2xl">
@@ -113,7 +113,7 @@ export const PresetOptionsModal: React.FC<PresetOptionsModalProps> = ({
                   ))}
                 </select>
                 {targetEmployee && (
-                  <p className="text-[10px] text-slate-400 mt-1 font-medium italic">
+                  <p className="text-[11px] text-slate-400 mt-1 font-medium italic">
                     Horário padrão atual: <strong>{targetEmployee.workPeriod}</strong> | Folga preferencial: <strong>{targetEmployee.preferredDayOff || 'Não definida'}</strong>
                   </p>
                 )}
@@ -123,7 +123,7 @@ export const PresetOptionsModal: React.FC<PresetOptionsModalProps> = ({
 
           {/* Escolha do que Aplicar */}
           <div>
-            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-zinc-500 mb-2 block">
+            <label className="text-[11px] font-black uppercase tracking-wider text-slate-400 dark:text-zinc-500 mb-2 block">
               2. O que você deseja recalcular?
             </label>
             <div className="space-y-2">
@@ -146,7 +146,7 @@ export const PresetOptionsModal: React.FC<PresetOptionsModalProps> = ({
                 <div className="flex-1">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-black text-slate-800 dark:text-zinc-100">Apenas Horários Diários</span>
-                    <span className="text-[9px] px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 font-black rounded-md uppercase">Seguro</span>
+                    <span className="text-[11px] px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 font-black rounded-md uppercase">Seguro</span>
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5 font-medium">
                     Atualiza os horários de entrada/saída conforme o padrão do colaborador, <strong>mantendo todas as folgas, férias e atestados 100% intactos</strong>.

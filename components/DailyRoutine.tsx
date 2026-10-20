@@ -67,7 +67,7 @@ export const DailyRoutine: React.FC<DailyRoutineProps> = ({ currentMY, customHol
             </div>
             <div>
               <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Rotina Semanal de Loja</h2>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Atividades Diárias de Segunda a Domingo</p>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Atividades Diárias de Segunda a Domingo</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -139,7 +139,7 @@ export const DailyRoutine: React.FC<DailyRoutineProps> = ({ currentMY, customHol
                         <p className="text-[11px] font-bold text-amber-700 dark:text-amber-400">A rotina diária garante uma loja limpa, precificada e pronta para o cliente.</p>
                     </div>
                 </div>
-                <p className="text-[10px] font-black text-amber-300 dark:text-amber-500 uppercase tracking-widest">Ri Happy • Operação Padrão</p>
+                <p className="text-[11px] font-black text-amber-300 dark:text-amber-500 uppercase tracking-widest">Ri Happy • Operação Padrão</p>
             </div>
           </div>
         </div>

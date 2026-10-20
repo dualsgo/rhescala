@@ -136,7 +136,7 @@ export const PatrolSchedule: React.FC<PatrolScheduleProps> = ({ employees, curre
             </div>
             <div>
               <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Escala de Ronda na Loja</h2>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{MONTH_NAMES[currentMY.month]} {currentMY.year}</p>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{MONTH_NAMES[currentMY.month]} {currentMY.year}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -164,7 +164,7 @@ export const PatrolSchedule: React.FC<PatrolScheduleProps> = ({ employees, curre
 
             <div className="grid grid-cols-7 gap-2 mb-2">
               {WEEKDAY_NAMES.map(wd => (
-                <div key={wd} className="text-center py-2 text-[10px] font-black uppercase tracking-widest border-b-2 border-black">
+                <div key={wd} className="text-center py-2 text-[11px] font-black uppercase tracking-widest border-b-2 border-black">
                   {wd}
                 </div>
               ))}
@@ -186,17 +186,17 @@ export const PatrolSchedule: React.FC<PatrolScheduleProps> = ({ employees, curre
                         <span className="text-sm font-black">
                           {cell.day}
                         </span>
-                        {cell.isSunday && <span className="text-[9px] font-black uppercase">DOM</span>}
-                        {cell.isHoliday && <span className="text-[9px] font-black uppercase border border-black px-1">FER</span>}
+                        {cell.isSunday && <span className="text-[11px] font-black uppercase">DOM</span>}
+                        {cell.isHoliday && <span className="text-[11px] font-black uppercase border border-black px-1">FER</span>}
                       </div>
                       <div className="flex-1 flex flex-col justify-center gap-1.5">
                         <div className="flex items-center justify-between border border-black rounded-sm px-1 py-1">
-                          <span className="text-[8px] font-black uppercase">ABERT.</span>
-                          <span className="text-[10px] font-black uppercase truncate max-w-[60px]">{cell.aberturaName}</span>
+                          <span className="text-[11px] font-black uppercase">ABERT.</span>
+                          <span className="text-[11px] font-black uppercase truncate max-w-[60px]">{cell.aberturaName}</span>
                         </div>
                         <div className="flex items-center justify-between border border-black rounded-sm px-1 py-1">
-                          <span className="text-[8px] font-black uppercase">FECH.</span>
-                          <span className="text-[10px] font-black uppercase truncate max-w-[60px]">{cell.fechamentoName}</span>
+                          <span className="text-[11px] font-black uppercase">FECH.</span>
+                          <span className="text-[11px] font-black uppercase truncate max-w-[60px]">{cell.fechamentoName}</span>
                         </div>
                       </div>
                     </>

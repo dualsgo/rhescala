@@ -105,17 +105,17 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
                       <div className="flex-1 space-y-4">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-slate-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center text-[10px] font-black text-slate-500 uppercase">
+                            <div className="w-10 h-10 bg-slate-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center text-[11px] font-black text-slate-500 uppercase">
                               {employee.name.substring(0, 2)}
                             </div>
                             <div>
                               <h4 className="text-[12px] font-black text-slate-800 dark:text-slate-100 uppercase">{employee.name}</h4>
-                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{reqDate}</p>
+                              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{reqDate}</p>
                             </div>
                           </div>
                           
                           <div className="flex items-center gap-2">
-                            <span className={`text-[10px] font-black px-3 py-1 rounded-xl uppercase tracking-widest ${
+                            <span className={`text-[11px] font-black px-3 py-1 rounded-xl uppercase tracking-widest ${
                               req.status === 'granted' ? 'bg-emerald-100 text-emerald-700' :
                               req.status === 'refused' ? 'bg-red-100 text-red-700' :
                               req.status === 'seen' ? 'bg-blue-100 text-blue-700' :
@@ -126,7 +126,7 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
                                req.status === 'seen' ? 'Visto' : 'Pendente'}
                             </span>
                             {req.type === 'troca_turno' && (
-                              <span className="text-[9px] font-black px-3 py-1 rounded-xl uppercase tracking-widest bg-purple-100 text-purple-700 border border-purple-200">
+                              <span className="text-[11px] font-black px-3 py-1 rounded-xl uppercase tracking-widest bg-purple-100 text-purple-700 border border-purple-200">
                                 Troca de Turno
                               </span>
                             )}
@@ -136,7 +136,7 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
                         <div className="bg-slate-100/50 dark:bg-zinc-950 p-4 rounded-xl border border-slate-200 dark:border-zinc-800">
                           <div className="flex items-center gap-2 mb-2">
                             <Icon name="event" className="text-slate-400 text-sm" />
-                            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">
+                            <span className="text-[11px] font-black uppercase text-slate-500 tracking-widest">
                               Data Solicitada: {(req.date || '').split('-').reverse().join('/')}
                             </span>
                           </div>
@@ -147,7 +147,7 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
                         
                         {req.feedback && (
                           <div className="pl-4 border-l-2 border-slate-200 dark:border-slate-700 mt-4">
-                            <p className="text-[9px] font-black uppercase text-slate-400 mb-1 tracking-widest">Sua Resposta</p>
+                            <p className="text-[11px] font-black uppercase text-slate-400 mb-1 tracking-widest">Sua Resposta</p>
                             <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 italic">"{req.feedback}"</p>
                           </div>
                         )}
@@ -187,7 +187,7 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
                                   }
                                 }
                               }}
-                              className="w-full px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase transition-colors shadow-md shadow-emerald-500/20 active:scale-95 flex items-center justify-center gap-2"
+                              className="w-full px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[11px] font-black uppercase transition-colors shadow-md shadow-emerald-500/20 active:scale-95 flex items-center justify-center gap-2"
                             >
                               <Icon name="event_available" className="text-sm" /> Dar Folga (F)
                             </button>
@@ -254,7 +254,7 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
                                   }
                                 }
                               }}
-                              className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-[10px] font-black uppercase transition-colors shadow-md shadow-purple-500/20 active:scale-95 flex items-center justify-center gap-2"
+                              className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-[11px] font-black uppercase transition-colors shadow-md shadow-purple-500/20 active:scale-95 flex items-center justify-center gap-2"
                             >
                               <Icon name="swap_horiz" className="text-sm" /> Efetuar Troca (Auto)
                             </button>
@@ -277,7 +277,7 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
                                 onUpdateEmployee(employee.id, { requests: updated });
                               }
                             }}
-                            className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-700 rounded-xl text-[10px] font-black uppercase transition-colors text-slate-700 dark:text-slate-300"
+                            className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-700 rounded-xl text-[11px] font-black uppercase transition-colors text-slate-700 dark:text-slate-300"
                           >
                             <Icon name="check" className="text-sm inline mr-1" /> Aprovar (Outro)
                           </button>
@@ -289,7 +289,7 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
                               );
                               onUpdateEmployee(employee.id, { requests: updated });
                             }}
-                            className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-700 rounded-xl text-[10px] font-black uppercase transition-colors text-blue-600 dark:text-blue-400"
+                            className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-700 rounded-xl text-[11px] font-black uppercase transition-colors text-blue-600 dark:text-blue-400"
                           >
                             <Icon name="visibility" className="text-sm inline mr-1" /> Ciente (Aviso)
                           </button>
@@ -310,7 +310,7 @@ export const RequestManager: React.FC<RequestManagerProps> = ({
                                 onUpdateEmployee(employee.id, { requests: updated });
                               }
                             }}
-                            className="w-full px-4 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/20 dark:hover:bg-rose-900/40 text-rose-600 rounded-xl text-[10px] font-black uppercase transition-colors"
+                            className="w-full px-4 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/20 dark:hover:bg-rose-900/40 text-rose-600 rounded-xl text-[11px] font-black uppercase transition-colors"
                           >
                             <Icon name="close" className="text-sm inline mr-1" /> Recusar
                           </button>

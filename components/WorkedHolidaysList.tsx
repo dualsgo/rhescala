@@ -144,13 +144,13 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
         <div className="flex items-center gap-3">
           <button 
             onClick={handleCopyPending}
-            className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white hover:bg-rose-700 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all shadow-md active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white hover:bg-rose-700 rounded-xl font-black uppercase text-[11px] tracking-widest transition-all shadow-md active:scale-95"
           >
             <Icon name="content_copy" className="text-sm" /> Pendentes
           </button>
           <button 
             onClick={handleCopyScheduled}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white hover:bg-amber-700 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all shadow-md active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white hover:bg-amber-700 rounded-xl font-black uppercase text-[11px] tracking-widest transition-all shadow-md active:scale-95"
           >
             <Icon name="event_available" className="text-sm" /> Agendadas
           </button>
@@ -167,12 +167,12 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
                <Icon name="history" className="text-sm" />
             </div>
             <div>
-               <p className="text-[10px] font-black uppercase text-amber-900 dark:text-amber-500 tracking-tight">Marco Zero dos Créditos</p>
-               <p className="text-[9px] font-bold text-amber-700/60 dark:text-amber-600/60 uppercase">Ignorar feriados e folgas antes desta data</p>
+               <p className="text-[11px] font-black uppercase text-amber-900 dark:text-amber-500 tracking-tight">Marco Zero dos Créditos</p>
+               <p className="text-[11px] font-bold text-amber-700/60 dark:text-amber-600/60 uppercase">Ignorar feriados e folgas antes desta data</p>
             </div>
          </div>
          <div className="flex items-center gap-2">
-            <span className="text-[9px] font-black uppercase text-amber-800 dark:text-amber-400">Contar a partir de:</span>
+            <span className="text-[11px] font-black uppercase text-amber-800 dark:text-amber-400">Contar a partir de:</span>
             <input 
                type="date" 
                value={trackingStartDate || ''} 
@@ -200,12 +200,12 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
                       </div>
                       <div>
                         <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase">{holiday.name}</h4>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
                            {holiday.type === 'national' ? 'Feriado Nacional' : 'Feriado Local'}
                         </p>
                       </div>
                    </div>
-                   <div className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-full text-[10px] font-black uppercase">
+                   <div className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-full text-[11px] font-black uppercase">
                      {workers.length} Colaboradores
                    </div>
                 </div>
@@ -217,34 +217,34 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
                      return credits.map((credit, idx) => (
                        <div key={`${worker.id}-${credit.id || idx}`} className={`flex items-center justify-between bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800 ${idx > 0 ? 'mt-2' : ''}`}>
                           <div className="flex items-center gap-3">
-                             <div className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center text-[10px] font-black text-slate-500">
+                             <div className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center text-[11px] font-black text-slate-500">
                                {worker.name.charAt(0)}
                              </div>
                              <div>
                                <p className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase">{worker.name}</p>
                                <div className="flex items-center gap-2">
-                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{worker.cargo}</p>
+                                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{worker.cargo}</p>
                                  {credits.length > 1 && (
-                                   <span className="text-[8px] font-black bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 px-1.5 py-0.5 rounded uppercase">{credit.holidayName.includes('Folga 2') ? '2ª FOLGA' : '1ª FOLGA'}</span>
+                                   <span className="text-[11px] font-black bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 px-1.5 py-0.5 rounded uppercase">{credit.holidayName.includes('Folga 2') ? '2ª FOLGA' : '1ª FOLGA'}</span>
                                  )}
                                </div>
                              </div>
                           </div>
                           <div className="flex flex-col items-end gap-1">
                              {credit?.status === 'pending' ? (
-                                <span className="text-[8px] font-black uppercase text-rose-500 bg-rose-50 dark:bg-rose-900/20 px-2 py-1 rounded-md">FOLGA PENDENTE</span>
+                                <span className="text-[11px] font-black uppercase text-rose-500 bg-rose-50 dark:bg-rose-900/20 px-2 py-1 rounded-md">FOLGA PENDENTE</span>
                              ) : credit?.status === 'scheduled' ? (
                                 <div className="flex flex-col items-end">
-                                  <span className="text-[8px] font-black uppercase text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-md">AGENDADA</span>
-                                  <span className="text-[7px] font-bold text-slate-400 mt-0.5">{credit.offDate?.split('-').reverse().join('/')}</span>
+                                  <span className="text-[11px] font-black uppercase text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-md">AGENDADA</span>
+                                  <span className="text-[11px] font-bold text-slate-400 mt-0.5">{credit.offDate?.split('-').reverse().join('/')}</span>
                                 </div>
                              ) : credit?.status === 'granted' ? (
                                 <div className="flex flex-col items-end">
-                                  <span className="text-[8px] font-black uppercase text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-md">CONCEDIDA</span>
-                                  <span className="text-[7px] font-bold text-slate-400 mt-0.5">{credit.offDate?.split('-').reverse().join('/')}</span>
+                                  <span className="text-[11px] font-black uppercase text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-md">CONCEDIDA</span>
+                                  <span className="text-[11px] font-bold text-slate-400 mt-0.5">{credit.offDate?.split('-').reverse().join('/')}</span>
                                 </div>
                              ) : (
-                                <span className="text-[8px] font-black uppercase text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-md">
+                                <span className="text-[11px] font-black uppercase text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-md">
                                   {holiday.date < todayStr ? 'TRABALHOU' : 'ESCALADO'}
                                 </span>
                              )}
@@ -252,7 +252,7 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
                        </div>
                      ));
                    }) : (
-                     <p className="text-[10px] font-bold text-slate-400 uppercase text-center py-4">
+                     <p className="text-[11px] font-bold text-slate-400 uppercase text-center py-4">
                        {holiday.date < todayStr ? 'Ninguém trabalhou neste dia' : 'Ninguém escalado para trabalhar'}
                      </p>
                    )}

@@ -197,6 +197,14 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
   const [newJornada, setNewJornada] = useState<'6x1' | '5x2'>('6x1');
   const { showDialog } = useDialog();
 
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newName.trim()) {
@@ -222,11 +230,11 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-zinc-950/60 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl max-w-lg w-full shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
-        <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
-          <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-zinc-100 flex items-center gap-2.5">
+        <div className="p-5 sm:p-6 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+          <h4 className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-orange-100 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 flex items-center justify-center">
               <Icon name="person_add" className="text-xl" />
             </div>
@@ -235,7 +243,9 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
           <button 
             type="button" 
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all"
+            aria-label="Fechar modal de cadastro"
+            title="Fechar (Esc)"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:outline-none"
           >
             <Icon name="close" className="text-lg" />
           </button>
@@ -244,7 +254,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
         {/* Modal Form Body */}
         <form onSubmit={handleAddSubmit} className="overflow-y-auto custom-scrollbar p-5 sm:p-6 space-y-4 flex-1">
           <div>
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Nome Completo *</label>
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-1">Nome Completo *</label>
             <input 
               autoFocus 
               required
@@ -257,7 +267,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
           </div>
 
           <div>
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Função / Cargo</label>
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-1">Função / Cargo</label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {CARGO_OPTIONS.map(c => {
                 const meta = ROLE_METADATA_MAP[c];
@@ -274,7 +284,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
                     }`}
                   >
                     <span>{c}</span>
-                    <span className={`text-[9px] px-1 py-0.5 rounded font-black ${
+                    <span className={`text-[11px] px-1 py-0.5 rounded font-black ${
                       isSelected ? 'bg-white/20 text-white' : meta.badgeColor
                     }`}>
                       {meta.code}
@@ -287,7 +297,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Tipo de Contrato</label>
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-1">Tipo de Contrato</label>
               <select 
                 value={newContractType} 
                 onChange={(e) => setNewContractType(e.target.value as any)}
@@ -298,7 +308,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
               </select>
             </div>
             <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Jornada</label>
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-1">Jornada</label>
               <select 
                 value={newJornada} 
                 onChange={(e) => setNewJornada(e.target.value as any)}
@@ -326,7 +336,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
                 </label>
               </div>
               {newContractType === 'Sazonal' && (
-                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-200/70 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200">
+                <span className="text-[11px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-200/70 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200">
                   Temporário
                 </span>
               )}
@@ -334,7 +344,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 dark:text-zinc-400 block mb-1">
+                <label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 block mb-1">
                   Início / Admissão {newContractType === 'Sazonal' && '*'}
                 </label>
                 <input 
@@ -343,11 +353,11 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
                   onChange={(e) => setNewHiredAt(e.target.value)} 
                   className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2 font-bold text-xs text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-orange-500" 
                 />
-                <span className="text-[9px] text-slate-400 block mt-0.5">Antes desta data: N/A</span>
+                <span className="text-[11px] text-slate-400 block mt-0.5">Antes desta data: N/A</span>
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-slate-500 dark:text-zinc-400 block mb-1">
+                <label className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 block mb-1">
                   Término do Contrato {newContractType === 'Sazonal' ? '(Previsto)' : '(Opcional)'}
                 </label>
                 <input 
@@ -356,11 +366,11 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
                   onChange={(e) => setNewFiredAt(e.target.value)} 
                   className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-2 font-bold text-xs text-slate-800 dark:text-zinc-200 outline-none focus:ring-2 focus:ring-orange-500" 
                 />
-                <span className="text-[9px] text-slate-400 block mt-0.5">Após esta data: N/A</span>
+                <span className="text-[11px] text-slate-400 block mt-0.5">Após esta data: N/A</span>
               </div>
             </div>
 
-            <p className={`text-[10px] font-medium leading-relaxed ${
+            <p className={`text-[11px] font-medium leading-relaxed ${
               newContractType === 'Sazonal' ? 'text-amber-800 dark:text-amber-300/90' : 'text-orange-700 dark:text-orange-400/90'
             }`}>
               💡 <strong>Automação Inteligente:</strong> Os dias fora do período de contrato são automaticamente desconsiderados (marcados como <strong>N/A</strong>). Não é necessário preencher folgas (F) caso o colaborador só atue em parte do mês.
@@ -368,7 +378,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
           </div>
 
           <div>
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Data de Aniversário</label>
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-1">Data de Aniversário</label>
             <input 
               type="date" 
               value={newBirthday} 
@@ -392,7 +402,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
 
           {isYoung && (
             <div className="p-3 bg-sky-50 dark:bg-sky-950/30 border border-sky-100 dark:border-sky-900/50 rounded-xl space-y-2">
-              <label className="text-[10px] font-black text-sky-600 dark:text-sky-400 uppercase tracking-widest block">Dia do Curso Teórico</label>
+              <label className="text-[11px] font-black text-sky-600 dark:text-sky-400 uppercase tracking-widest block">Dia do Curso Teórico</label>
               <select 
                 value={courseDay} 
                 onChange={(e) => setCourseDay(e.target.value)} 
@@ -400,22 +410,22 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ onClose, onAddEmplo
               >
                 {['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'].map(d => <option key={d}>{d}</option>)}
               </select>
-              <p className="text-[9px] text-sky-600 dark:text-sky-400 font-bold uppercase tracking-tight">Nota: Aprendizes folgam aos Sábados e Domingos automaticamente.</p>
+              <p className="text-[11px] text-sky-600 dark:text-sky-400 font-bold uppercase tracking-tight">Nota: Aprendizes folgam aos Sábados e Domingos automaticamente.</p>
             </div>
           )}
 
           {/* Modal Actions */}
-          <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
+          <div className="flex gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800">
             <button 
               type="button" 
               onClick={onClose} 
-              className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-zinc-700 rounded-xl font-black text-xs uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all"
+              className="flex-1 px-4 py-2.5 h-11 min-h-[44px] md:h-10 md:min-h-[38px] border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-xs uppercase text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:outline-none"
             >
               Cancelar
             </button>
             <button 
               type="submit" 
-              className="flex-1 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl font-black text-xs uppercase shadow-md shadow-orange-500/20 transition-all"
+              className="flex-1 px-4 py-2.5 h-11 min-h-[44px] md:h-10 md:min-h-[38px] bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-xs uppercase shadow-md shadow-orange-500/20 transition-all focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:outline-none"
             >
               Cadastrar Colaborador
             </button>
@@ -444,6 +454,14 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
 }) => {
   const { showDialog } = useDialog();
 
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const [atestadoStartEdit, setAtestadoStartEdit] = useState(employee.atestadoStart || '');
   const [atestadoDurationEdit, setAtestadoDurationEdit] = useState<number>(() => {
     if (employee.atestadoStart && employee.atestadoEnd) {
@@ -456,9 +474,9 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-zinc-950/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl max-w-2xl w-full shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/80">
+        <div className="p-5 sm:p-6 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-900/80">
           <div className="flex items-center gap-3">
             <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm uppercase shadow-sm ${
               employee.isYoungApprentice
@@ -471,17 +489,17 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-zinc-100 uppercase">
+                <h4 className="text-base sm:text-lg font-black text-zinc-900 dark:text-zinc-100 uppercase">
                   {employee.name}
                 </h4>
-                <span className={`w-2 h-2 rounded-full ${employee.status === 'active' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                <span className={`w-2 h-2 rounded-full ${employee.status === 'active' ? 'bg-emerald-500' : 'bg-zinc-400'}`} />
               </div>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[10px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400">
+                <span className="text-[11px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400">
                   {employee.cargo || 'Atendente'}
                 </span>
-                <span className="text-[10px] text-slate-400">•</span>
-                <span className="text-[10px] font-bold text-slate-400">
+                <span className="text-[11px] text-zinc-400">•</span>
+                <span className="text-[11px] font-bold text-zinc-400">
                   ID: {employee.id}
                 </span>
               </div>
@@ -491,7 +509,9 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
           <button 
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all"
+            aria-label="Fechar modal de edição"
+            title="Fechar (Esc)"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:outline-none"
           >
             <Icon name="close" className="text-xl" />
           </button>
@@ -508,7 +528,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Nome Completo</label>
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-1">Nome Completo</label>
                 <input
                   type="text"
                   disabled={isReadOnly}
@@ -520,7 +540,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
               </div>
 
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Cargo / Função Oficial</label>
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-1">Cargo / Função Oficial</label>
                 <select
                   disabled={isReadOnly}
                   value={normalizeEmployeeRole(employee.cargo || employee.role)}
@@ -564,7 +584,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                 </div>
 
                 {employee.contractType === 'Sazonal' && (
-                  <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200">
+                  <span className="text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200">
                     Contrato Temporário
                   </span>
                 )}
@@ -574,11 +594,11 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                 {/* Data de Início / Admissão */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-black text-slate-600 dark:text-zinc-300 uppercase tracking-wider">
+                    <label className="text-[11px] font-black text-slate-600 dark:text-zinc-300 uppercase tracking-wider">
                       Início / Admissão
                     </label>
                     {employee.hiredAt && (
-                      <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400">
+                      <span className="text-[11px] font-bold text-orange-600 dark:text-orange-400">
                         {formatDateBR(employee.hiredAt)}
                       </span>
                     )}
@@ -594,7 +614,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                     }}
                     className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-orange-500"
                   />
-                  <p className="text-[9px] text-slate-400">
+                  <p className="text-[11px] text-slate-400">
                     Antes desta data: <strong>N/A</strong> automático
                   </p>
                 </div>
@@ -602,7 +622,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                 {/* Data de Término / Fim de Contrato */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-black text-slate-600 dark:text-zinc-300 uppercase tracking-wider">
+                    <label className="text-[11px] font-black text-slate-600 dark:text-zinc-300 uppercase tracking-wider">
                       Término do Contrato
                     </label>
                     {employee.firedAt && !isReadOnly && (
@@ -612,7 +632,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                           const syncedShifts = syncEmployeeContractShifts(employee, employee.hiredAt, undefined);
                           onUpdateEmployee(employee.id, { firedAt: undefined, shifts: syncedShifts });
                         }}
-                        className="text-[9px] font-bold text-rose-500 hover:text-rose-700 underline"
+                        className="text-[11px] font-bold text-rose-500 hover:text-rose-700 underline"
                         title="Remover data de término"
                       >
                         Limpar término
@@ -630,13 +650,13 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                     }}
                     className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-orange-500"
                   />
-                  <p className="text-[9px] text-slate-400">
+                  <p className="text-[11px] text-slate-400">
                     Após esta data: <strong>N/A</strong> automático
                   </p>
                 </div>
               </div>
 
-              <p className={`text-[10px] font-medium leading-relaxed ${
+              <p className={`text-[11px] font-medium leading-relaxed ${
                 employee.contractType === 'Sazonal' ? 'text-amber-800 dark:text-amber-300/90' : 'text-orange-800 dark:text-orange-300/90'
               }`}>
                 💡 <strong>Automação de Folgas & Período:</strong> Qualquer dia fora do período de vigência ([início] até [término]) é automaticamente considerado <strong>N/A</strong>. Você <strong>não precisa colocar folga (F)</strong> caso o colaborador trabalhe apenas uma parte do mês!
@@ -645,7 +665,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Tipo de Contrato</label>
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-1">Tipo de Contrato</label>
                 <select
                   disabled={isReadOnly}
                   value={employee.contractType || 'CLT'}
@@ -658,7 +678,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
               </div>
 
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Jornada</label>
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-1">Jornada</label>
                 <select
                   disabled={isReadOnly}
                   value={employee.jornada || '6x1'}
@@ -671,7 +691,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
               </div>
 
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Data de Aniversário</label>
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-1">Data de Aniversário</label>
                 <input
                   type="date"
                   disabled={isReadOnly}
@@ -692,7 +712,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Horário Base</label>
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-1">Horário Base</label>
                 <select
                   disabled={isReadOnly}
                   value={employee.workPeriod}
@@ -713,7 +733,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
               </div>
 
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Folga Fixa Semanal</label>
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-1">Folga Fixa Semanal</label>
                 <select
                   disabled={isReadOnly}
                   value={employee.preferredDayOff}
@@ -747,7 +767,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   </div>
                   <div>
                     <span className="text-xs font-black text-slate-800 dark:text-zinc-200 uppercase">Jovem Aprendiz</span>
-                    <p className="text-[10px] text-slate-400">Folga automática aos Sábados, Domingos e Feriados</p>
+                    <p className="text-[11px] text-slate-400">Folga automática aos Sábados, Domingos e Feriados</p>
                   </div>
                 </div>
 
@@ -764,7 +784,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
 
               {employee.isYoungApprentice && (
                 <div className="pt-2 border-t border-slate-200 dark:border-zinc-700">
-                  <label className="text-[10px] font-black text-sky-600 dark:text-sky-400 uppercase tracking-widest block mb-1">Dia do Curso Teórico</label>
+                  <label className="text-[11px] font-black text-sky-600 dark:text-sky-400 uppercase tracking-widest block mb-1">Dia do Curso Teórico</label>
                   <select
                     disabled={isReadOnly}
                     value={employee.courseDay || 'Segunda-feira'}
@@ -781,7 +801,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
             {!employee.isYoungApprentice && (
               <div className="p-3.5 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <label className="text-[11px] font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
                     <Icon name="beach_access" className="text-emerald-500 text-sm" />
                     Férias (Início)
                   </label>
@@ -790,7 +810,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                       type="button"
                       disabled={isReadOnly}
                       onClick={() => handleVacationStart(employee, '', onUpdateEmployee)}
-                      className="text-[9px] font-black text-rose-500 hover:underline uppercase"
+                      className="text-[11px] font-black text-rose-500 hover:underline uppercase"
                     >
                       Limpar Férias
                     </button>
@@ -804,7 +824,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-zinc-200 outline-none"
                 />
                 {employee.vacationStart && employee.vacationEnd && (
-                  <div className="bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-900/50 flex items-center justify-between text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                  <div className="bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-900/50 flex items-center justify-between text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
                     <span>Fim: {formatDateBR(employee.vacationEnd)}</span>
                     <span>Retorno: {formatDateBR(addDays(employee.vacationEnd, 1))}</span>
                   </div>
@@ -815,7 +835,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
             {/* Atestado Médico */}
             <div className="p-3.5 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 space-y-2.5">
               <div className="flex items-center justify-between">
-                <label className="text-[10px] font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+                <label className="text-[11px] font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
                   <Icon name="medical_services" className="text-rose-500 text-sm" />
                   Atestado Médico (Lançar por Período)
                 </label>
@@ -828,7 +848,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                       setAtestadoStartEdit('');
                       setAtestadoDurationEdit(1);
                     }}
-                    className="text-[9px] font-black text-rose-500 hover:underline uppercase"
+                    className="text-[11px] font-black text-rose-500 hover:underline uppercase"
                   >
                     Limpar Atestado
                   </button>
@@ -836,7 +856,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Data Início</span>
+                  <span className="text-[11px] font-bold text-slate-400 uppercase block mb-1">Data Início</span>
                   <input
                     type="date"
                     disabled={isReadOnly}
@@ -846,7 +866,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   />
                 </div>
                 <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Duração (Dias)</span>
+                  <span className="text-[11px] font-bold text-slate-400 uppercase block mb-1">Duração (Dias)</span>
                   <input
                     type="number"
                     min={1}
@@ -860,7 +880,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
               </div>
               {atestadoStartEdit && (
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-zinc-700/60">
-                  <div className="text-[10px] font-bold text-slate-600 dark:text-zinc-300">
+                  <div className="text-[11px] font-bold text-slate-600 dark:text-zinc-300">
                     <span>Fim: {formatDateBR(addDays(atestadoStartEdit, atestadoDurationEdit - 1))}</span>
                     <span className="ml-2 text-emerald-600 dark:text-emerald-400">Retorno: {formatDateBR(addDays(atestadoStartEdit, atestadoDurationEdit))}</span>
                   </div>
@@ -870,7 +890,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                       onClick={() => {
                         handleAtestadoSave(employee, atestadoStartEdit, atestadoDurationEdit, onUpdateEmployee);
                       }}
-                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-1"
+                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-1"
                     >
                       <Icon name="save" className="text-xs" />
                       Salvar Atestado
@@ -892,12 +912,12 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
               {/* Senha */}
               <div className="p-3 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Senha Individual</label>
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Senha Individual</label>
                   {!isReadOnly && (
                     <button 
                       type="button"
                       onClick={() => onUpdateEmployee(employee.id, { password: '1234' })}
-                      className="text-[9px] font-black text-orange-500 hover:underline uppercase"
+                      className="text-[11px] font-black text-orange-500 hover:underline uppercase"
                     >
                       Resetar (1234)
                     </button>
@@ -919,8 +939,8 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
               {/* Visibilidade */}
               <div className="p-3 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 flex flex-col justify-between gap-2">
                 <div>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Visibilidade na Grade</span>
-                  <p className="text-[10px] text-slate-500 mt-0.5">
+                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest block">Visibilidade na Grade</span>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
                     {employee.isHidden ? 'Oculto na escala principal' : 'Visível na escala principal'}
                   </p>
                 </div>
@@ -944,7 +964,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/80">
+        <div className="p-4 sm:p-5 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/80 dark:bg-zinc-900/80">
           {!isReadOnly && (
             <button
               type="button"
@@ -958,7 +978,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   onClose();
                 }
               }}
-              className="px-3.5 py-2 rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 font-black text-xs uppercase transition-all flex items-center gap-1.5 border border-transparent hover:border-rose-200"
+              className="h-11 min-h-[44px] md:h-10 md:min-h-[38px] px-3.5 rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 font-bold text-xs uppercase transition-all flex items-center gap-1.5 border border-rose-200 dark:border-rose-900/40 focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none"
             >
               <Icon name="delete" className="text-sm" />
               <span>Excluir</span>
@@ -969,7 +989,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl font-black text-xs uppercase shadow-md shadow-orange-500/20 transition-all flex items-center gap-1.5"
+              className="h-11 min-h-[44px] md:h-10 md:min-h-[38px] px-5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-xs uppercase shadow-md shadow-orange-500/20 transition-all flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:outline-none"
             >
               <Icon name="check" className="text-base" />
               <span>Concluir & Fechar</span>
@@ -1080,7 +1100,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
               <button
                 key={c}
                 onClick={() => setCargoFilter(c)}
-                className={`h-full px-2.5 sm:px-3 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center ${
+                className={`h-full px-2.5 sm:px-3 rounded-lg text-[11px] font-bold uppercase transition-all flex items-center ${
                   cargoFilter === c 
                     ? 'bg-orange-500 text-white shadow-sm' 
                     : 'text-slate-500 hover:text-slate-700 dark:text-zinc-400'
@@ -1159,19 +1179,19 @@ export const TeamView: React.FC<TeamViewProps> = ({
                           const r = normalizeEmployeeRole(emp.cargo || emp.role);
                           const meta = ROLE_METADATA_MAP[r];
                           return (
-                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${meta.badgeColor}`}>
+                            <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded-md border ${meta.badgeColor}`}>
                               {meta.label} ({meta.code})
                             </span>
                           );
                         })()}
                         {emp.contractType === 'Sazonal' && (
-                          <span className="text-[8px] px-1.5 py-0.2 rounded font-black bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 uppercase">Sazonal</span>
+                          <span className="text-[11px] px-1.5 py-0.2 rounded font-black bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 uppercase">Sazonal</span>
                         )}
                         {emp.jornada === '5x2' && (
-                          <span className="text-[8px] px-1.5 py-0.2 rounded font-black bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-400 uppercase">5x2</span>
+                          <span className="text-[11px] px-1.5 py-0.2 rounded font-black bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-400 uppercase">5x2</span>
                         )}
                         {emp.isHidden && (
-                          <span className="text-[8px] px-1.5 py-0.2 rounded font-black bg-slate-100 dark:bg-zinc-800 text-slate-500 uppercase">Oculto</span>
+                          <span className="text-[11px] px-1.5 py-0.2 rounded font-black bg-slate-100 dark:bg-zinc-800 text-slate-500 uppercase">Oculto</span>
                         )}
                       </div>
                     </div>
@@ -1186,7 +1206,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
                 <div className="flex flex-col gap-1.5 text-[11px] font-bold text-slate-600 dark:text-zinc-300 pt-2 border-t border-slate-100 dark:border-zinc-800">
                   {/* Período de Contrato / Início & Término */}
                   {(emp.hiredAt || emp.firedAt) && (
-                    <div className={`flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-lg border w-fit ${
+                    <div className={`flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-lg border w-fit ${
                       emp.contractType === 'Sazonal'
                         ? 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/40 font-black'
                         : 'text-orange-600 dark:text-orange-400 bg-orange-50/70 dark:bg-orange-950/30 border-orange-100 dark:border-orange-900/30'
@@ -1218,7 +1238,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
 
                   {/* Aniversário */}
                   {emp.birthday && (
-                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 text-[10px]">
+                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 text-[11px]">
                       <Icon name="cake" className="text-xs text-fuchsia-500 shrink-0" />
                       <span>Aniversário: {formatDateBR(emp.birthday).substring(0, 5)}</span>
                     </div>
@@ -1226,7 +1246,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
 
                   {/* Férias */}
                   {emp.vacationStart && emp.vacationEnd && (
-                    <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-[10px] bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-lg w-fit">
+                    <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-[11px] bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-lg w-fit">
                       <Icon name="beach_access" className="text-xs shrink-0" />
                       <span>Férias: {formatDateBR(emp.vacationStart).substring(0, 5)} a {formatDateBR(emp.vacationEnd).substring(0, 5)}</span>
                     </div>
@@ -1234,7 +1254,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
 
                   {/* Atestado */}
                   {emp.atestadoStart && emp.atestadoEnd && (
-                    <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 text-[10px] bg-rose-50 dark:bg-rose-950/30 px-2 py-0.5 rounded-lg w-fit">
+                    <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 text-[11px] bg-rose-50 dark:bg-rose-950/30 px-2 py-0.5 rounded-lg w-fit">
                       <Icon name="medical_services" className="text-xs shrink-0" />
                       <span>Atestado: {formatDateBR(emp.atestadoStart).substring(0, 5)} a {formatDateBR(emp.atestadoEnd).substring(0, 5)}</span>
                     </div>
@@ -1243,7 +1263,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
 
                 {/* Bottom Action Strip */}
                 <div className="flex items-center justify-between pt-2 mt-auto border-t border-slate-100 dark:border-zinc-800">
-                  <span className="text-[10px] font-black text-orange-500 dark:text-orange-400 uppercase tracking-wider group-hover:underline flex items-center gap-1">
+                  <span className="text-[11px] font-black text-orange-500 dark:text-orange-400 uppercase tracking-wider group-hover:underline flex items-center gap-1">
                     <Icon name="settings" className="text-xs" />
                     Editar Colaborador
                   </span>

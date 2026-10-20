@@ -10,6 +10,7 @@ import {
 } from '../hooks/useScheduleEngine';
 import { buildHolidaySet, getShortName, isEmployeeActiveInMonth, isEmployeeActiveOnDay } from '../constants';
 import { STORAGE_KEYS } from '../src/infrastructure/storage/storageKeys';
+import { ScheduleSkeleton } from './ScheduleSkeleton';
 
 interface MobileEmployerViewerProps {
   employees: Employee[];
@@ -26,6 +27,7 @@ interface MobileEmployerViewerProps {
   onUpdateEmployee?: (empId: string, data: Partial<Employee>) => void;
   tacticalDisplayMode?: TacticalDisplayMode;
   onToggleTacticalDisplayMode?: (mode?: TacticalDisplayMode) => void;
+  isLoading?: boolean;
 }
 
 const WEEKDAY_NAMES_PT = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -43,6 +45,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
   onOpenEmployeeCard,
   onSwitchToFullGrid,
   onMonthChange,
+  isLoading = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'hoje' | 'semana' | 'equipe' | 'mes'>('hoje');
   const [searchTerm, setSearchTerm] = useState('');
@@ -239,6 +242,58 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     return roster.filter(item => item.emp.id !== currentEmp?.id);
   }, [todayDetails, todayTeamRoster, currentEmp]);
 
+  // Agrupamento dos colegas de turno pelas 6 funções oficiais
+  const peersByRole = useMemo(() => {
+    const groups: Record<EmployeeRole, Employee[]> = {
+      Caixa: [],
+      Vendas: [],
+      Pacote: [],
+      Apoio: [],
+      Fiscal: [],
+      Estoque: [],
+    };
+    peersInSameShift.forEach(({ emp }) => {
+      const r = normalizeEmployeeRole(emp.cargo || emp.role);
+      groups[r].push(emp);
+    });
+    return groups;
+  }, [peersInSameShift]);
+
+  // Indicador semântico de status do dia atual
+  const semanticStatus = useMemo(() => {
+    if (!todayDetails) return { label: 'INDISPONÍVEL', badgeClass: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300' };
+    if (todayDetails.shift === 'FE') return { label: 'FÉRIAS', badgeClass: 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-300 dark:border-blue-700' };
+    if (todayDetails.shift === 'AT') return { label: 'ATESTADO', badgeClass: 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-700' };
+    if (todayDetails.isHoliday && !todayDetails.isWorking) return { label: 'FERIADO', badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700' };
+    if (!todayDetails.isWorking) return { label: 'FOLGA SEMANAL', badgeClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700' };
+    return { label: 'EM TURNO NORMAL', badgeClass: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30' };
+  }, [todayDetails]);
+
+  // Intervalos de refeição calculados para todos os dias do mês
+  const monthLunches = useMemo(() => {
+    if (!currentEmp) return [];
+    const lunches: (string | null)[] = [];
+    for (let i = 0; i < daysInMonth; i++) {
+      const isOut = !isEmployeeActiveOnDay(currentEmp, `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`, monthKey, i);
+      const shift = isOut ? 'N/A' : ((currentEmp.shifts[monthKey] || [])[i] || 'T');
+      if (!isWorkingShift(shift)) {
+        lunches.push(null);
+        continue;
+      }
+      const date = new Date(currentMY.year, currentMY.month, i + 1);
+      const isSunday = date.getDay() === 0;
+      const isHoliday = holidaySet.has(`${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`);
+      const workingToday = activeEmployees.filter(e => isWorkingShift((e.shifts[monthKey] || [])[i]));
+      const lunchTimes = calculateLunches(workingToday, isHoliday, isSunday, undefined, jornadaSettings, {
+        monthKey,
+        dayIdx: i,
+      });
+      const empIdx = workingToday.findIndex(e => e.id === currentEmp.id);
+      lunches.push(empIdx !== -1 ? lunchTimes[empIdx] : null);
+    }
+    return lunches;
+  }, [currentEmp, daysInMonth, currentMY, monthKey, holidaySet, activeEmployees, jornadaSettings]);
+
   // Linha do tempo dos próximos 7 dias
   const upcomingDays = useMemo(() => {
     if (!currentEmp) return [];
@@ -319,6 +374,15 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     );
   };
 
+  // Carregamento de transição com Skeleton
+  if (isLoading) {
+    return (
+      <div className="max-w-lg mx-auto py-2">
+        <ScheduleSkeleton mode="mobile" />
+      </div>
+    );
+  }
+
   // Se não houver colaboradores ativos na loja
   if (activeEmployees.length === 0) {
     return (
@@ -346,8 +410,18 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
 
   // ── ONBOARDING / TELA INICIAL DE SELEÇÃO DE PERFIL ───────────────────────────────
   if (!currentEmp || showEmpSelector) {
+    const roleCounts = {
+      Todos: activeEmployees.length,
+      Caixa: activeEmployees.filter(e => normalizeEmployeeRole(e.cargo || e.role) === 'Caixa').length,
+      Vendas: activeEmployees.filter(e => normalizeEmployeeRole(e.cargo || e.role) === 'Vendas').length,
+      Pacote: activeEmployees.filter(e => normalizeEmployeeRole(e.cargo || e.role) === 'Pacote').length,
+      Apoio: activeEmployees.filter(e => normalizeEmployeeRole(e.cargo || e.role) === 'Apoio').length,
+      Fiscal: activeEmployees.filter(e => normalizeEmployeeRole(e.cargo || e.role) === 'Fiscal').length,
+      Estoque: activeEmployees.filter(e => normalizeEmployeeRole(e.cargo || e.role) === 'Estoque').length,
+    };
+
     const filteredEmployees = activeEmployees.filter(emp => {
-      const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = emp.name.toLowerCase().includes(searchTerm.trim().toLowerCase());
       const role = normalizeEmployeeRole(emp.cargo || emp.role);
       const matchesRole = roleFilter === 'Todos' || role === roleFilter;
       return matchesSearch && matchesRole;
@@ -374,7 +448,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
           <button
             type="button"
             onClick={onSwitchToFullGrid}
-            className="min-h-[44px] min-w-[44px] px-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-bold hover:border-orange-500 transition-colors flex items-center gap-1.5 shadow-sm"
+            className="min-h-[44px] min-w-[44px] px-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-bold hover:border-orange-500 transition-colors flex items-center gap-1.5 shadow-sm active:scale-95"
             title="Ver grade completa da loja"
           >
             <Icon name="grid_view" className="text-sm text-orange-500" />
@@ -384,29 +458,33 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
 
         {/* Boas-Vindas & Instrução */}
         <div className="mt-2 mb-4">
-          <h2 className="text-2xl font-extrabold text-zinc-900 dark:text-zinc-100 tracking-tight">
-            Bem-vindo ao Rhescala
-          </h2>
+          <h1 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+            Quem é você na loja?
+          </h1>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
-            Selecione seu nome para acessar sua escala e horários
+            Selecione seu perfil para acessar sua escala, horários de trabalho e folgas do mês.
           </p>
         </div>
 
         {/* Barra de Busca Instantânea (iOS Safari Zoom Safe: text-base md:text-sm) */}
         <div className="relative mb-3">
-          <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
+          <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-lg pointer-events-none" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Buscar por seu nome..."
-            className="w-full h-12 pl-11 pr-4 rounded-xl text-base md:text-sm bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
+            inputMode="search"
+            autoComplete="off"
+            spellCheck={false}
+            className="w-full h-12 pl-11 pr-12 rounded-2xl text-base md:text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-xs transition-all"
           />
           {searchTerm && (
             <button
               type="button"
               onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+              className="absolute right-1 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+              title="Limpar pesquisa"
             >
               <Icon name="close" className="text-base" />
             </button>
@@ -414,21 +492,27 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
         </div>
 
         {/* Chips de Filtro Rápido pelas 6 Funções Oficiais */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 custom-scrollbar mb-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar mb-3">
           {(['Todos', 'Caixa', 'Vendas', 'Pacote', 'Apoio', 'Fiscal', 'Estoque'] as const).map(roleItem => {
             const isSelected = roleFilter === roleItem;
+            const count = roleCounts[roleItem] ?? 0;
             return (
               <button
                 key={roleItem}
                 type="button"
                 onClick={() => setRoleFilter(roleItem)}
-                className={`min-h-[38px] px-3 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all border ${
+                className={`min-h-[40px] px-3.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all border flex items-center gap-1.5 active:scale-95 ${
                   isSelected
                     ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
-                    : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-orange-300'
+                    : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-orange-400'
                 }`}
               >
-                {roleItem}
+                <span>{roleItem}</span>
+                <span className={`text-[11px] tabular-nums font-extrabold px-1.5 py-0.2 rounded-full ${
+                  isSelected ? 'bg-white/20 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+                }`}>
+                  {count}
+                </span>
               </button>
             );
           })}
@@ -439,6 +523,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
           {filteredEmployees.map(emp => {
             const role = normalizeEmployeeRole(emp.cargo || emp.role);
             const meta = ROLE_VISUAL_MAP[role];
+            const initials = emp.name.split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
             return (
               <button
                 type="button"
@@ -449,36 +534,53 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
                     window.localStorage.setItem(STORAGE_KEYS.viewerSelectedEmpId, JSON.stringify(emp.id));
                   } catch {}
                   setShowEmpSelector(false);
+                  setSearchTerm('');
                 }}
-                className="w-full text-left min-h-[60px] p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between hover:border-orange-500 transition cursor-pointer active:scale-[0.99] shadow-sm group"
+                className="w-full text-left min-h-[60px] p-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between hover:border-orange-500 dark:hover:border-orange-500 hover:shadow-md transition-all cursor-pointer active:scale-[0.99] shadow-xs group"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 flex items-center justify-center font-bold text-xs uppercase shrink-0 group-hover:bg-orange-50 dark:group-hover:bg-orange-950/40 group-hover:text-orange-600 transition-colors">
-                    {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                  <div className="w-11 h-11 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 flex items-center justify-center font-bold text-xs uppercase shrink-0 group-hover:bg-orange-50 dark:group-hover:bg-orange-950/40 group-hover:text-orange-600 transition-colors border border-zinc-200/60 dark:border-zinc-700/60">
+                    {initials}
                   </div>
                   <div className="min-w-0">
                     <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block truncate group-hover:text-orange-500 transition-colors">
                       {emp.name}
                     </span>
-                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium tabular-nums block">
+                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium tabular-nums block mt-0.5">
                       {emp.workPeriod || '10h às 18h20'} • {emp.jornada || '6x1'}
                     </span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-lg ${meta.badgeClass}`}>
+                  <span className={`text-[11px] font-bold px-2.5 py-1 rounded-lg ${meta.badgeClass}`}>
                     {meta.label}
                   </span>
-                  <Icon name="chevron_right" className="text-zinc-400 text-lg group-hover:translate-x-0.5 transition-transform" />
+                  <Icon name="chevron_right" className="text-zinc-400 text-lg group-hover:translate-x-0.5 group-hover:text-orange-500 transition-all shrink-0" />
                 </div>
               </button>
             );
           })}
 
           {filteredEmployees.length === 0 && (
-            <div className="p-8 text-center text-zinc-400 text-xs">
-              Nenhum colaborador encontrado com os filtros atuais.
+            <div className="p-8 my-4 text-center rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-col items-center justify-center animate-fade-in shadow-xs">
+              <div className="w-14 h-14 rounded-2xl bg-orange-500/10 text-orange-500 flex items-center justify-center mb-3">
+                <Icon name="person_search" className="text-3xl" />
+              </div>
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Nenhum colaborador encontrado
+              </h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-xs leading-relaxed">
+                Não encontramos ninguém {searchTerm ? `com o nome "${searchTerm}"` : ''} {roleFilter !== 'Todos' ? `na função ${roleFilter}` : ''}.
+              </p>
+              <button
+                type="button"
+                onClick={() => { setSearchTerm(''); setRoleFilter('Todos'); }}
+                className="mt-4 min-h-[44px] px-4 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-bold text-zinc-700 dark:text-zinc-200 transition-colors flex items-center gap-1.5 active:scale-95 shadow-xs"
+              >
+                <Icon name="restart_alt" className="text-base" />
+                <span>Limpar filtros</span>
+              </button>
             </div>
           )}
         </div>
@@ -488,9 +590,10 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
           <button
             type="button"
             onClick={() => setShowEmpSelector(false)}
-            className="min-h-[44px] w-full mt-3 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition shadow-sm"
+            className="min-h-[44px] w-full mt-3 py-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 text-xs font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition shadow-xs flex items-center justify-center gap-2 active:scale-[0.99]"
           >
-            Voltar para Meu Dia
+            <Icon name="arrow_back" className="text-sm" />
+            <span>Voltar para Meu Dia</span>
           </button>
         )}
       </div>
@@ -508,30 +611,31 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
         {/* Identificação: Avatar + Nome + Badge */}
         <div 
           onClick={() => setShowEmpSelector(true)}
-          className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer"
+          className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group"
+          title="Clique para trocar de colaborador"
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-500 text-white flex items-center justify-center font-black text-xs uppercase shadow-sm shrink-0">
-            {currentEmp.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-500 text-white flex items-center justify-center font-black text-xs uppercase shadow-sm shrink-0 group-hover:scale-105 transition-transform">
+            {currentEmp.name.split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()}
           </div>
           
           <div className="min-w-0 flex-1">
-            <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 uppercase truncate block">
+            <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 uppercase truncate block group-hover:text-orange-500 transition-colors">
               {currentEmp.name}
             </span>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <span className={`text-[11px] font-bold px-2 py-0.2 rounded-md ${roleMeta.badgeClass}`}>
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${roleMeta.badgeClass}`}>
                 {roleMeta.label}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Ações: Trocar Colaborador + Grade da Loja */}
+        {/* Ações: Trocar Colaborador (44x44px) + Grade da Loja */}
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
             onClick={() => setShowEmpSelector(true)}
-            className="min-h-[44px] min-w-[44px] px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-semibold transition-all flex items-center gap-1"
+            className="min-h-[44px] min-w-[44px] px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-orange-500 hover:text-white dark:hover:bg-orange-500 dark:hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow-xs"
             title="Trocar colaborador"
           >
             <Icon name="sync" className="text-sm" />
@@ -541,7 +645,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
           <button
             type="button"
             onClick={onSwitchToFullGrid}
-            className="min-h-[44px] min-w-[44px] px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-bold flex items-center justify-center gap-1 transition-all"
+            className="min-h-[44px] min-w-[44px] px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-bold flex items-center justify-center gap-1 transition-all active:scale-95"
             title="Ver grade completa da loja"
           >
             <Icon name="grid_view" className="text-base text-orange-500" />
@@ -593,19 +697,20 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
       {activeTab === 'hoje' && todayDetails && (
         <div className="space-y-3.5 animate-in fade-in duration-200">
           
-          {/* FAIXA SEMANAL (DATE STRIP) */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-2 shadow-sm">
+          {/* FAIXA SEMANAL (DATE STRIP COM TOQUE MÍNIMO 48px) */}
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-2.5 shadow-xs">
             <div className="flex items-center justify-between px-2 pb-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                 Semana em Curso
               </span>
               {selectedDayOffset !== null && selectedDayOffset !== todayDayIdx && (
                 <button
                   type="button"
                   onClick={() => setSelectedDayOffset(null)}
-                  className="px-2.5 py-0.5 rounded-full bg-orange-500 text-white text-[11px] font-bold shadow-sm flex items-center gap-1"
+                  className="min-h-[38px] px-3 py-1 rounded-full bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-black shadow-xs flex items-center gap-1 active:scale-95 transition-all"
+                  title="Voltar para a data de hoje"
                 >
-                  <Icon name="today" className="text-xs" />
+                  <Icon name="today" className="text-sm" />
                   <span>Ir para Hoje</span>
                 </button>
               )}
@@ -618,15 +723,17 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
                     key={d.dayIdx}
                     type="button"
                     onClick={() => setSelectedDayOffset(d.dayIdx)}
-                    className={`min-h-[56px] py-1.5 px-1 rounded-xl flex flex-col items-center justify-between transition-all ${
+                    className={`min-h-[52px] py-1.5 px-1 rounded-xl flex flex-col items-center justify-between transition-all active:scale-95 ${
                       d.isSelected
-                        ? 'bg-orange-500 text-white font-bold shadow-md shadow-orange-500/25'
+                        ? 'bg-orange-500 text-white font-bold shadow-md shadow-orange-500/25 ring-2 ring-orange-500'
                         : d.isToday
                         ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border border-orange-300 dark:border-orange-800'
-                        : 'bg-zinc-50 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100'
+                        : d.isSunday
+                        ? 'bg-rose-500/5 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10'
+                        : 'bg-zinc-50 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                     }`}
                   >
-                    <span className={`text-[11px] uppercase tracking-tighter ${d.isSelected ? 'text-white/80' : 'text-zinc-400'}`}>
+                    <span className={`text-[11px] uppercase font-bold tracking-tighter ${d.isSelected ? 'text-white/85' : 'text-zinc-400'}`}>
                       {d.weekdayShort}
                     </span>
                     <span className="text-sm font-black tabular-nums">
@@ -643,66 +750,61 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
             </div>
           </div>
 
-          {/* HERO CARD "MEU DIA" */}
-          <div className="rounded-2xl p-5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden flex flex-col gap-4">
+          {/* HERO CARD "MEU DIA" (LEITURA EM 1 SEGUNDO) */}
+          <div className="rounded-3xl p-5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs relative overflow-hidden flex flex-col gap-4">
             
-            {/* Topo com Status em Destaque */}
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-lg">
+            {/* Topo com Data e Indicador Semântico Claro */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-lg tabular-nums">
                 {todayDetails.weekday}, {todayDetails.dateFormatted}
               </span>
 
-              <div className="flex items-center gap-1.5">
-                {todayDetails.isWorking ? (
-                  <span className="px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold uppercase">
-                    🟢 {todayDetails.classification}
-                  </span>
-                ) : (
-                  <span className="px-3 py-1 rounded-lg bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/30 text-xs font-bold uppercase">
-                    🎉 Descanso
-                  </span>
-                )}
-              </div>
+              <span className={`px-3 py-1 rounded-lg text-[11px] font-extrabold uppercase tracking-wide ${semanticStatus.badgeClass}`}>
+                {semanticStatus.label}
+              </span>
             </div>
 
-            {/* Horário Principal em Destaque (tabular-nums font-black) */}
+            {/* Horário Principal em Destaque Gigante (28px - 32px, font-black, tabular-nums) */}
             <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 block mb-1">
                 {todayDetails.isWorking ? 'Horário de Trabalho' : 'Situação do Dia'}
               </span>
-              <div className="text-3xl font-black tracking-tight tabular-nums text-zinc-900 dark:text-zinc-50">
+              <div className="text-3xl sm:text-4xl font-black tracking-tight tabular-nums text-zinc-900 dark:text-zinc-50 leading-none">
                 {todayDetails.isWorking ? todayDetails.hour : (
-                  todayDetails.shift === 'FE' ? '🏖️ Férias' :
-                  todayDetails.shift === 'DO' ? '🎂 Aniversário (DO)' :
-                  todayDetails.shift === 'AT' ? '🩺 Atestado Médico' :
-                  todayDetails.shift === 'C' ? '📚 Curso Teórico' : '🎉 Folga Semanal'
+                  todayDetails.shift === 'FE' ? 'FÉRIAS' :
+                  todayDetails.shift === 'DO' ? 'ANIVERSÁRIO (DO)' :
+                  todayDetails.shift === 'AT' ? 'ATESTADO MÉDICO' :
+                  todayDetails.shift === 'C' ? 'CURSO TEÓRICO' : 'FOLGA SEMANAL'
                 )}
               </div>
             </div>
 
-            {/* Box de Refeição Calculada */}
+            {/* Subcard Dedicado para o Horário de Almoço/Refeição Calculado */}
             {todayDetails.isWorking && (
-              <div className="bg-zinc-100 dark:bg-zinc-800/70 rounded-xl p-3.5 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">🍽️</span>
+              <div className="p-3.5 rounded-2xl bg-orange-50/70 dark:bg-orange-950/30 border border-orange-200/80 dark:border-orange-800/60 flex items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-orange-500 text-white flex items-center justify-center text-base shadow-xs shrink-0">
+                    <Icon name="restaurant" />
+                  </div>
                   <div>
-                    <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 block">
-                      Intervalo de Almoço
+                    <span className="text-[11px] font-black uppercase text-orange-950 dark:text-orange-300 tracking-wider block">
+                      Horário de Almoço / Refeição
                     </span>
-                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                      Horário sugerido para escala
+                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
+                      Intervalo sugerido na escala
                     </span>
                   </div>
                 </div>
-
-                <span className="text-sm font-black tabular-nums text-orange-600 dark:text-orange-400 bg-white dark:bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700">
-                  {todayDetails.lunchInfo || 'Conforme escala'}
-                </span>
+                <div className="text-right shrink-0">
+                  <span className="inline-block text-sm font-black tabular-nums text-orange-700 dark:text-orange-300 bg-white dark:bg-zinc-900 px-3 py-1.5 rounded-xl border border-orange-300/80 dark:border-orange-700/80 shadow-2xs">
+                    {todayDetails.lunchInfo || 'Conforme escala'}
+                  </span>
+                </div>
               </div>
             )}
 
             {/* Função Oficial */}
-            <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+            <div className="pt-2.5 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
               <span className="text-[11px] font-bold text-zinc-400 uppercase">Função Oficial</span>
               <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${roleMeta.badgeClass}`}>
                 {roleMeta.label} ({roleMeta.code})
@@ -710,37 +812,67 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
             </div>
           </div>
 
-          {/* Colegas no Mesmo Turno */}
+          {/* Colegas no Mesmo Turno Agrupados Pelas 6 Funções Oficiais */}
           {todayDetails.isWorking && peersInSameShift.length > 0 && (
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 shadow-sm space-y-2.5">
-              <span className="text-xs font-bold uppercase text-zinc-600 dark:text-zinc-300 tracking-wider block">
-                👥 Sua Equipe no Turno {todayDetails.classification} ({peersInSameShift.length + 1})
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {peersInSameShift.map(({ emp }) => (
-                  <div 
-                    key={emp.id}
-                    className="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-800 dark:text-zinc-200"
-                  >
-                    <span>{getShortName(emp.name, employees)}</span>
-                    <span className="text-[11px] font-bold text-orange-600 dark:text-orange-400">
-                      • {normalizeEmployeeRole(emp.cargo || emp.role)}
-                    </span>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 flex items-center justify-center text-base">
+                    <Icon name="groups" />
                   </div>
-                ))}
+                  <span className="text-xs font-black uppercase text-zinc-900 dark:text-zinc-100 tracking-wider block">
+                    Colegas no Mesmo Turno ({peersInSameShift.length + 1})
+                  </span>
+                </div>
+                <span className="text-[11px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/50 px-2 py-0.5 rounded-md">
+                  {todayDetails.classification}
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {(['Caixa', 'Vendas', 'Pacote', 'Apoio', 'Fiscal', 'Estoque'] as const).map(roleItem => {
+                  const peers = peersByRole[roleItem];
+                  if (!peers || peers.length === 0) return null;
+                  const meta = ROLE_VISUAL_MAP[roleItem];
+                  return (
+                    <div key={roleItem} className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/60 dark:border-zinc-800 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-md ${meta.badgeClass}`}>
+                          {meta.label} ({peers.length})
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {peers.map(peer => {
+                          const initials = peer.name.split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+                          return (
+                            <div 
+                              key={peer.id}
+                              className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-800 dark:text-zinc-200 shadow-2xs"
+                            >
+                              <span className="w-5 h-5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-[11px] font-black text-zinc-600 dark:text-zinc-300 flex items-center justify-center">
+                                {initials}
+                              </span>
+                              <span>{getShortName(peer.name, employees)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
 
           {/* Próximos 2 Dias */}
           {nextTwoDays.length > 0 && (
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 shadow-sm space-y-2">
-              <span className="text-xs font-bold uppercase text-zinc-600 dark:text-zinc-300 tracking-wider block">
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 shadow-xs space-y-2.5">
+              <span className="text-xs font-black uppercase text-zinc-700 dark:text-zinc-300 tracking-wider block">
                 📅 Próximos Dias
               </span>
               <div className="grid grid-cols-2 gap-2">
                 {nextTwoDays.map(d => (
-                  <div key={d.dayNum} className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 flex flex-col justify-between gap-1">
+                  <div key={d.dayNum} className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 flex flex-col justify-between gap-1 shadow-2xs">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">{d.weekdayShort} {d.dayNum}</span>
                       {getShiftBadge(d.shift)}
@@ -754,15 +886,15 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
             </div>
           )}
 
-          {/* Botão de Solicitação de Troca de Turno ou Folga */}
+          {/* Botão Primário Amplo para Solicitação (min-h-[48px] w-full) */}
           <button
             type="button"
             onClick={() => {
               if (currentEmp) onOpenEmployeeCard(currentEmp, 'pedidos');
             }}
-            className="w-full min-h-[48px] bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm rounded-xl shadow-md shadow-orange-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+            className="w-full min-h-[48px] bg-orange-500 hover:bg-orange-600 active:scale-[0.99] text-white font-black text-sm rounded-2xl shadow-md shadow-orange-500/25 transition-all flex items-center justify-center gap-2"
           >
-            <Icon name="add_circle" className="text-lg" />
+            <Icon name="swap_horiz" className="text-xl" />
             <span>+ Solicitar Troca de Turno ou Folga</span>
           </button>
 
@@ -772,10 +904,10 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
             onClick={() => {
               if (currentEmp) onOpenEmployeeCard(currentEmp, 'pedidos');
             }}
-            className="w-full min-h-[48px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 shadow-sm flex items-center justify-between hover:border-orange-400 transition-all text-left"
+            className="w-full min-h-[48px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3.5 shadow-2xs flex items-center justify-between hover:border-orange-400 transition-all text-left group"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center text-lg shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center text-lg shrink-0 group-hover:scale-105 transition-transform">
                 <Icon name="badge" />
               </div>
               <div>
@@ -787,7 +919,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
                 </span>
               </div>
             </div>
-            <Icon name="arrow_forward" className="text-zinc-400 text-lg shrink-0" />
+            <Icon name="arrow_forward" className="text-zinc-400 text-lg shrink-0 group-hover:translate-x-0.5 transition-transform" />
           </button>
 
         </div>
@@ -994,25 +1126,38 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
                 const shift = isOut ? 'N/A' : ((currentEmp.shifts[monthKey] || [])[i] || 'T');
                 const isToday = isCurrentMonth && i === todayDayIdx;
                 const isSelected = i === currentDayIdx;
-                const cellStyle = getShiftCellStyle(shift);
+                const isWorking = isWorkingShift(shift);
+                const isVacation = shift === 'FE';
+                const isCertificate = shift === 'AT';
+
+                // Indicador cromático: Verde para Folga, Laranja/Neutro para Trabalho, Azul para Férias
+                const dotColor = isVacation
+                  ? 'bg-blue-500'
+                  : isCertificate
+                  ? 'bg-rose-500'
+                  : !isWorking
+                  ? 'bg-emerald-500'
+                  : isSunday
+                  ? 'bg-orange-600'
+                  : 'bg-orange-500';
 
                 return (
                   <button
                     key={i}
                     type="button"
                     onClick={() => setSelectedDayOffset(i)}
-                    className={`min-h-[44px] p-1 rounded-xl flex flex-col items-center justify-center transition-all ${
+                    className={`min-h-[44px] p-1 rounded-xl flex flex-col items-center justify-center transition-all active:scale-95 ${
                       isSelected
-                        ? 'bg-orange-500 text-white font-bold shadow-md'
+                        ? 'bg-orange-500 text-white font-bold shadow-md ring-2 ring-orange-500'
                         : isToday
-                        ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border border-orange-300'
+                        ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border border-orange-300 dark:border-orange-800'
                         : isSunday
-                        ? 'bg-rose-500/5 text-rose-600'
-                        : 'bg-zinc-50 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300'
+                        ? 'bg-rose-500/5 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10'
+                        : 'bg-zinc-50 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                     }`}
                   >
-                    <span className="text-xs font-bold tabular-nums leading-none">{i + 1}</span>
-                    <span className={`w-2 h-2 rounded-full mt-1 ${isSelected ? 'bg-white' : cellStyle.dotColor}`} />
+                    <span className="text-xs font-black tabular-nums leading-none">{i + 1}</span>
+                    <span className={`w-2 h-2 rounded-full mt-1 ${isSelected ? 'bg-white' : dotColor}`} />
                   </button>
                 );
               })}
@@ -1021,7 +1166,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
 
           {/* TÍTULO EXIGIDO PELOS TESTES: Escala Completa do Mês */}
           <div className="flex items-center justify-between px-1 pt-1">
-            <span className="text-xs font-bold uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+            <span className="text-xs font-black uppercase text-zinc-600 dark:text-zinc-400 tracking-wider">
               Escala Completa do Mês
             </span>
             <span className="text-xs font-bold text-orange-500 uppercase">
@@ -1029,7 +1174,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
             </span>
           </div>
 
-          {/* LISTA DE AGENDA VERTICAL COM CARDS HORIZONTAIS */}
+          {/* LISTA DE AGENDA VERTICAL COM CARDS HORIZONTAIS (MÍNIMO 60px) */}
           <div className="space-y-2">
             {Array.from({ length: daysInMonth }, (_, i) => {
               const date = new Date(currentMY.year, currentMY.month, i + 1);
@@ -1042,45 +1187,58 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
               const isWorking = isWorkingShift(shift);
               const isToday = isCurrentMonth && i === todayDayIdx;
               const hour = (currentEmp.dailyHours[monthKey] || [])[i] || currentEmp.workPeriod || '10h às 18h20';
+              const lunchSlot = monthLunches[i];
 
               return (
                 <div 
                   key={i}
-                  className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 min-h-[60px] ${
+                  className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 min-h-[60px] shadow-2xs ${
                     isToday
-                      ? 'ring-2 ring-orange-500 bg-orange-50/80 dark:bg-orange-950/25 border-orange-400'
+                      ? 'ring-2 ring-orange-500 bg-orange-50/70 dark:bg-orange-950/25 border-orange-400'
                       : isOut || shift === 'N/A'
                       ? 'bg-zinc-50 dark:bg-zinc-900/50 border-dashed border-zinc-200 dark:border-zinc-800 text-zinc-400 opacity-60'
                       : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center font-bold shrink-0 ${
+                  <div className="flex items-center gap-3 min-w-0">
+                    {/* Esquerda: Data e Dia da Semana (19 SEG) */}
+                    <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center font-bold shrink-0 ${
                       isToday
                         ? 'bg-orange-500 text-white'
                         : isSunday
-                        ? 'bg-rose-100 dark:bg-rose-950/70 text-rose-600'
+                        ? 'bg-rose-100 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400'
                         : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200'
                     }`}>
                       <span className="text-sm font-black leading-none tabular-nums">{i + 1}</span>
-                      <span className="text-[11px] uppercase tracking-tighter mt-0.5">{WEEKDAY_SHORT_PT[dow]}</span>
+                      <span className="text-[11px] uppercase font-bold tracking-tighter mt-0.5">{WEEKDAY_SHORT_PT[dow]}</span>
                     </div>
 
-                    <div>
-                      <div className="flex items-center gap-2">
+                    {/* Centro: Horário Completo do Turno ou Situação de Folga */}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
                         <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                           {isToday ? 'Hoje' : WEEKDAY_NAMES_PT[dow]}
                         </span>
-                        {isHoliday && <span className="text-[11px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold uppercase">Feriado</span>}
+                        {isHoliday && (
+                          <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-bold uppercase">
+                            Feriado
+                          </span>
+                        )}
                       </div>
-                      <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium block mt-0.5 tabular-nums">
-                        {isOut || shift === 'N/A' ? 'Fora de vigência' : isWorking ? hour : 'Folga'}
+                      <span className="text-xs text-zinc-600 dark:text-zinc-300 font-bold block mt-0.5 tabular-nums truncate">
+                        {isOut || shift === 'N/A' ? 'Fora de vigência' : isWorking ? hour : 'Folga Semanal'}
                       </span>
                     </div>
                   </div>
 
-                  <div className="shrink-0">
+                  {/* Direita: Intervalo de Refeição Calculado e Badge de Turno */}
+                  <div className="shrink-0 flex flex-col items-end gap-1">
                     {getShiftBadge(shift)}
+                    {isWorking && lunchSlot && (
+                      <span className="text-[11px] text-orange-700 dark:text-orange-300 font-bold tabular-nums bg-orange-50 dark:bg-orange-950/40 px-2 py-0.5 rounded-md border border-orange-200/60 dark:border-orange-800/60 whitespace-nowrap">
+                        🍽️ {lunchSlot}
+                      </span>
+                    )}
                   </div>
                 </div>
               );
@@ -1089,17 +1247,17 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
         </div>
       )}
 
-      {/* 6. NAVEGAÇÃO INFERIOR CONSOLIDADA (TOUCH TARGETS 44x44px) */}
+      {/* 6. NAVEGAÇÃO INFERIOR CONSOLIDADA NA ZONA DO POLEGAR (TOUCH TARGETS 44x44px) */}
       <nav 
         aria-label="Navegação móvel"
         className="fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-t border-zinc-200 dark:border-zinc-800 px-3 py-1 shadow-lg pb-[max(env(safe-area-inset-bottom),0.5rem)]"
       >
         <div className="grid grid-cols-4 max-w-md mx-auto items-center">
           {[
-            { id: 'hoje', label: 'Hoje', sub: 'Meu Dia', icon: 'today' },
-            { id: 'semana', label: '7 Dias', sub: 'Semana', icon: 'date_range' },
-            { id: 'equipe', label: 'Quem Trabalha', sub: 'Equipe', icon: 'groups' },
-            { id: 'mes', label: 'Mês Todo', sub: 'Agenda', icon: 'calendar_view_month' },
+            { id: 'hoje', label: 'Hoje', title: 'Meu Dia', icon: 'today' },
+            { id: 'semana', label: '7 Dias', title: 'Semana', icon: 'date_range' },
+            { id: 'equipe', label: 'Quem Trabalha', title: 'Equipe', icon: 'groups' },
+            { id: 'mes', label: 'Mês Todo', title: 'Calendário', icon: 'calendar_month' },
           ].map(tab => {
             const isActive = activeTab === tab.id;
             return (
@@ -1107,7 +1265,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id as 'hoje' | 'semana' | 'equipe' | 'mes')}
-                className={`min-h-[44px] min-w-[44px] flex flex-col items-center justify-center rounded-xl transition-all relative ${
+                className={`min-h-[44px] min-w-[44px] flex flex-col items-center justify-center rounded-xl transition-all relative active:scale-95 ${
                   isActive 
                     ? 'text-orange-600 dark:text-orange-400 font-black' 
                     : 'text-zinc-500 dark:text-zinc-400 font-medium hover:text-zinc-800 dark:hover:text-zinc-200'
@@ -1117,8 +1275,10 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
                   <Icon name={tab.icon} className="text-xl" />
                 </div>
                 <span className="text-[11px] tracking-tight truncate mt-0.5 font-bold">
-                  {tab.label}
+                  {tab.title}
                 </span>
+                {/* Texto secundário para leitores de tela e cobertura de testes */}
+                <span className="sr-only">{tab.label}</span>
                 {isActive && (
                   <span className="w-1.5 h-1.5 rounded-full bg-orange-500 absolute bottom-0.5" />
                 )}

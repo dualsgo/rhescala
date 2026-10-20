@@ -135,10 +135,11 @@ export const Header: React.FC<HeaderProps> = ({
   const currentMonthName = months[currentMY.month];
 
   const navItems = [
-    { id: 'grid', label: 'Grade', icon: 'grid_view' },
-    { id: 'analysis', label: 'Análise', icon: 'insights' },
-    { id: 'team', label: 'Equipe', icon: 'groups' },
-    { id: 'requests', label: 'Solicitações', icon: 'assignment' },
+    { id: 'grid', label: 'Grade', fullLabel: 'Grade Mensal', icon: 'grid_view' },
+    { id: 'daily', label: 'Calendário', fullLabel: 'Calendário Diário', icon: 'calendar_view_day' },
+    { id: 'team', label: 'Equipe', fullLabel: 'Equipe & Cargos', icon: 'groups' },
+    { id: 'analysis', label: 'Análise', fullLabel: 'Relatórios/Análise', icon: 'insights' },
+    { id: 'requests', label: 'Solicitações', fullLabel: 'Solicitações', icon: 'assignment' },
   ];
 
   const operationsSections = [
@@ -339,7 +340,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-50 shadow-sm transition-colors h-14">
+    <header className="bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-50 shadow-xs transition-colors h-16 px-2 sm:px-4 lg:px-6">
       {/* Backdrop overlay to prevent clicking behind open dropdowns */}
       {(showConfigMenu || showShareMenu || showProfileMenu || showFilterMenu || showActionsMenu || showPublishMenu) && (
         <div 
@@ -356,7 +357,7 @@ export const Header: React.FC<HeaderProps> = ({
         />
       )}
 
-      <div className="flex items-center justify-between px-2 sm:px-4 h-full gap-2 sm:gap-3 max-w-full relative z-50">
+      <div className="flex items-center justify-between h-full gap-2 sm:gap-3 max-w-full relative z-50">
         
         {/* ============================================================== */}
         {/* BLOCO 1 (ESQUERDA): CONTEXTO & STATUS                          */}
@@ -699,77 +700,118 @@ export const Header: React.FC<HeaderProps> = ({
                     ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm'
                     : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200 hover:border-zinc-300'
                 }`}
-                title="Automação & Regras da Escala (Planejamento, Otimização CLT e Ajustes)"
+                title="Automação & Escala (Gerar Escala, Sorteio de Domingos, Dias Protegidos, Configurações da Loja)"
               >
-                <Icon name="handyman" className="text-sm text-zinc-500 dark:text-zinc-400 shrink-0" />
-                <span className="hidden xl:inline">Automação & Regras</span><span className="inline xl:hidden">Regras</span>
+                <Icon name="tune" className="text-sm text-zinc-500 dark:text-zinc-400 shrink-0" />
+                <span className="hidden xl:inline">Automação & Escala</span><span className="inline xl:hidden">Escala</span>
                 <Icon name={showActionsMenu ? 'expand_less' : 'expand_more'} className="text-xs opacity-70 shrink-0" />
               </button>
 
               {showActionsMenu && (
                 <div 
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 flex flex-col gap-1.5 animate-in fade-in slide-in-from-top-1 duration-150 text-zinc-800 dark:text-zinc-100"
+                  className="absolute top-full right-0 mt-2 w-80 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2.5 flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-150 text-zinc-800 dark:text-zinc-100"
                 >
-                  {/* Seção 1: Planejamento */}
+                  {/* Seção 1: Automação & Escala */}
                   <div>
-                    <div className="px-2.5 py-1 text-[11px] font-black uppercase text-zinc-400 dark:text-zinc-500 tracking-wider flex items-center gap-1">
-                      <Icon name="event_note" className="text-xs text-orange-500" />
-                      <span>Planejamento</span>
+                    <div className="px-2 py-1 text-[11px] font-black uppercase text-orange-600 dark:text-orange-400 tracking-wider flex items-center gap-1.5">
+                      <Icon name="auto_fix_high" className="text-xs" />
+                      <span>Automação & Escala</span>
                     </div>
 
                     <div className="space-y-1 mt-1">
-                      {/* Modo Edição */}
-                      {currentView === 'grid' && (
+                      {/* Gerar Nova Escala */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onCreateMonth();
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-orange-50 dark:hover:bg-orange-950/40 transition-all text-left"
+                      >
+                        <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-900/50 text-orange-600 shrink-0">
+                          <Icon name="add_circle" className="text-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-black uppercase text-[11px]">Gerar Escala do Mês</span>
+                          <span className="text-[11px] text-zinc-400">Sugestão inteligente ou base trabalhada</span>
+                        </div>
+                      </button>
+
+                      {/* Sorteio de Domingos */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSortearDomingo();
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
+                      >
+                        <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600 shrink-0">
+                          <Icon name="casino" className="text-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-black uppercase text-[11px]">Sorteio de Domingos</span>
+                          <span className="text-[11px] text-zinc-400">Revezamento conforme teto CLT</span>
+                        </div>
+                      </button>
+
+                      {/* Aplicar Folgas Inteligentes */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onApplyFolgas();
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
+                      >
+                        <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 shrink-0">
+                          <Icon name="event_available" className="text-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-black uppercase text-[11px]">Aplicar Folgas 6x1</span>
+                          <span className="text-[11px] text-zinc-400">Distribuição com preferências de equipe</span>
+                        </div>
+                      </button>
+
+                      {/* Dias Protegidos & Presets */}
+                      {(onOpenPresetModal || showActionsModal) && (
                         <button
                           type="button"
                           onClick={() => {
-                            onToggleEdit();
+                            if (onOpenPresetModal) onOpenPresetModal();
+                            else setShowActionsModal(true);
+                            setShowActionsMenu(false);
                           }}
-                          className={`w-full flex items-center justify-between p-2 rounded-xl text-xs font-bold transition-all text-left ${
-                            isEditable
-                              ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300'
-                              : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-                          }`}
+                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
                         >
-                          <div className="flex items-center gap-2.5">
-                            <div className={`p-1.5 rounded-lg ${isEditable ? 'bg-indigo-600 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300'}`}>
-                              <Icon name={isEditable ? 'lock_open' : 'edit'} className="text-sm" />
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="font-black uppercase text-[11px]">Modo Edição</span>
-                              <span className="text-[11px] text-zinc-400">
-                                {isEditable ? 'Edição liberada nas células' : 'Bloqueado contra cliques acidentais'}
-                              </span>
-                            </div>
+                          <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/50 text-purple-600 shrink-0">
+                            <Icon name="shield" className="text-sm" />
                           </div>
-                          <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded-full ${
-                            isEditable ? 'bg-indigo-600 text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
-                          }`}>
-                            {isEditable ? 'Ativo' : 'Bloq.'}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="font-black uppercase text-[11px]">Dias Protegidos & Presets</span>
+                            <span className="text-[11px] text-zinc-400">Picos sazonais (Natal, Dia das Crianças)</span>
+                          </div>
                         </button>
                       )}
 
-                      {/* Abrir Painel de Ações Inteligentes (Modal) */}
-                      {currentView === 'grid' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowActionsModal(true);
-                            setShowActionsMenu(false);
-                          }}
-                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-orange-50 dark:hover:bg-orange-950/40 transition-all text-left"
-                        >
-                          <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-900/50 text-orange-600">
-                            <Icon name="psychology" className="text-sm" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-black uppercase text-[11px]">Opções & Automações</span>
-                            <span className="text-[11px] text-zinc-400">Sorteio de domingos, folgas e funções</span>
-                          </div>
-                        </button>
-                      )}
+                      {/* Configurações da Loja & Jornada */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onViewChange('jornada');
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
+                      >
+                        <div className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0">
+                          <Icon name="settings_suggest" className="text-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-black uppercase text-[11px]">Configurações da Loja</span>
+                          <span className="text-[11px] text-zinc-400">Faixas de turno e limites de domingo</span>
+                        </div>
+                      </button>
                     </div>
                   </div>
 

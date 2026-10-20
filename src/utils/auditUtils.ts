@@ -9,12 +9,12 @@ export const SHIFT_NAMES: Record<string, string> = {
   DO: 'Aniversário (DO)',
   C: 'Curso',
   T: 'Trabalho (T)',
-  P1: 'P1 (Caixa)',
-  PC: 'PC (Pacote)',
-  P2: 'P2 (Porta)',
-  P3: 'P3 (Atendimento)',
-  P4: 'P4 (Apoio)',
-  ESTQ: 'ESTQ (Estoque)',
+  P1: 'Caixa (CX)',
+  PC: 'Pacote (PC)',
+  P2: 'Apoio (AP)',
+  P3: 'Vendas (VEND)',
+  P4: 'Fiscal (FISC)',
+  ESTQ: 'Estoque (ESTQ)',
 };
 
 export function getFriendlyShiftName(shift: string, hour?: string): string {

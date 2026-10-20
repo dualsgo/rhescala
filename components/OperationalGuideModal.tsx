@@ -40,14 +40,14 @@ export const OperationalGuideModal: React.FC<OperationalGuideModalProps> = ({ on
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {/* Caixa / Pacote (P1) */}
+            {/* Caixa (CX) */}
             <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500" />
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-3xl">🟥</span>
                 <div>
                   <h4 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight">Caixa (CX)</h4>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Âncora de Finalização</p>
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Âncora de Finalização</p>
                 </div>
               </div>
               <ul className="space-y-3 text-sm text-slate-600 dark:text-zinc-300 font-bold">
@@ -57,14 +57,14 @@ export const OperationalGuideModal: React.FC<OperationalGuideModalProps> = ({ on
               </ul>
             </div>
 
-            {/* Reposição / Organização (P2) */}
+            {/* Apoio / Reposição (AP) */}
             <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-500" />
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-3xl">🟨</span>
                 <div>
                   <h4 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight">Apoio / Reposição (AP)</h4>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filtro, Entrada & Gôndolas</p>
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Filtro, Entrada & Gôndolas</p>
                 </div>
               </div>
               <ul className="space-y-3 text-sm text-slate-600 dark:text-zinc-300 font-bold">
@@ -74,14 +74,14 @@ export const OperationalGuideModal: React.FC<OperationalGuideModalProps> = ({ on
               </ul>
             </div>
 
-            {/* Vendas / Atendimento (P3) */}
+            {/* Vendas (VEND) */}
             <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500" />
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-3xl">🟩</span>
                 <div>
                   <h4 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight">Vendas (VEND)</h4>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Salão / Consultor de Loja</p>
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Salão / Consultor de Loja</p>
                 </div>
               </div>
               <ul className="space-y-3 text-sm text-slate-600 dark:text-zinc-300 font-bold">
@@ -91,14 +91,14 @@ export const OperationalGuideModal: React.FC<OperationalGuideModalProps> = ({ on
               </ul>
             </div>
 
-            {/* Fiscal / Suporte (P4) */}
+            {/* Fiscal (FISC) */}
             <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500" />
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-3xl">🟦</span>
                 <div>
                   <h4 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-tight">Fiscal (FISC)</h4>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Prevenção & Apoio Flexível</p>
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Prevenção & Apoio Flexível</p>
                 </div>
               </div>
               <ul className="space-y-3 text-sm text-slate-600 dark:text-zinc-300 font-bold">
@@ -119,7 +119,7 @@ export const OperationalGuideModal: React.FC<OperationalGuideModalProps> = ({ on
             </p>
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 bg-white dark:bg-zinc-900 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-zinc-800">
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Ida para o Caixa (Cobrir Filas)</p>
+                <p className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-2">Ida para o Caixa (Cobrir Filas)</p>
                 <div className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-zinc-300">
                   <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400 px-2 py-1 rounded">1º Fiscal</span>
                   <Icon name="arrow_forward" className="text-slate-400" />
@@ -129,7 +129,7 @@ export const OperationalGuideModal: React.FC<OperationalGuideModalProps> = ({ on
                 </div>
               </div>
               <div className="flex-1 bg-white dark:bg-zinc-900 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-zinc-800">
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Retorno ao Salão (Fim da Fila)</p>
+                <p className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-2">Retorno ao Salão (Fim da Fila)</p>
                 <div className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-zinc-300">
                   <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400 px-2 py-1 rounded">1º Reposição</span>
                   <Icon name="arrow_forward" className="text-slate-400" />

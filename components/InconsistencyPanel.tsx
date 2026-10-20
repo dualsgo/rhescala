@@ -310,12 +310,12 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
       >
         <Icon name="warning" className="text-sm" />
         {errors.length > 0 && (
-          <span className="bg-red-500 text-white text-[9px] font-black rounded-full min-w-[16px] h-4 px-0.5 flex items-center justify-center">
+          <span className="bg-red-500 text-white text-[11px] font-black rounded-full min-w-[16px] h-4 px-0.5 flex items-center justify-center">
             {errors.length}
           </span>
         )}
         {warnings.length > 0 && (
-          <span className="bg-amber-400 text-white text-[9px] font-black rounded-full min-w-[16px] h-4 px-0.5 flex items-center justify-center">
+          <span className="bg-amber-400 text-white text-[11px] font-black rounded-full min-w-[16px] h-4 px-0.5 flex items-center justify-center">
             {warnings.length}
           </span>
         )}
@@ -341,7 +341,7 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
                 </div>
                 <div>
                   <h4 className="font-extrabold text-sm text-slate-900 ">Inconsistências da Escala</h4>
-                  <p className="text-[10px] text-slate-400  font-medium">
+                  <p className="text-[11px] text-slate-400  font-medium">
                     Apenas o mês atual · {issues.length} problema{issues.length > 1 ? 's' : ''} encontrado{issues.length > 1 ? 's' : ''}
                   </p>
                 </div>
@@ -350,7 +350,7 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
                 {issues.some(i => i.fix) && (
                   <button
                     onClick={handleApplyAll}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-extrabold rounded-lg transition-all"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-extrabold rounded-lg transition-all"
                   >
                     <Icon name="auto_fix_high" className="text-xs" />
                     Corrigir Todos
@@ -364,15 +364,15 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
 
             {/* Legend */}
             <div className="flex items-center gap-4 px-5 py-2.5 bg-white  border-b border-slate-100 ">
-              <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 ">
+              <span className="flex items-center gap-1.5 text-[11px] font-bold text-red-600 ">
                 <span className="w-2 h-2 rounded-full bg-red-500  inline-block" />
                 Erro (6×1)
               </span>
-              <span className="text-[10px] font-bold text-red-600  flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-red-600  flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-red-500  inline-block" />
                 Inconsistência Crítica
               </span>
-              <span className="ml-auto text-[10px] text-slate-400  font-medium italic">
+              <span className="ml-auto text-[11px] text-slate-400  font-medium italic">
                 Clique em "Aplicar"
               </span>
             </div>
@@ -409,20 +409,20 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
                           <span className="text-[11px] font-extrabold text-slate-900 ">
                             {displayName}
                           </span>
-                          <span className={`text-[9px] font-extrabold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-red-100 text-red-700`}>
+                          <span className={`text-[11px] font-extrabold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-red-100 text-red-700`}>
                             {issue.type === 'consecutive_work' ? 'Quebra 6×1' :
                              issue.type === 'consecutive_sunday' ? '3+ Dom. Seguidos' :
                              'Dom. Insuficiente'}
                           </span>
                         </div>
                         {/* Detail */}
-                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">{issue.detail}</p>
+                        <p className="text-[11px] text-slate-500 font-medium mt-0.5">{issue.detail}</p>
 
                         {/* Fix suggestion */}
                         {issue.fix && (
                           <div className="mt-2 flex items-center gap-2 bg-blue-50  border border-blue-100  rounded-lg px-3 py-1.5 transition-colors">
                             <Icon name="auto_fix_high" className="text-blue-500  text-xs flex-shrink-0" />
-                            <span className="text-[10px] font-bold text-blue-700  flex-1">{issue.fix.label}</span>
+                            <span className="text-[11px] font-bold text-blue-700  flex-1">{issue.fix.label}</span>
                           </div>
                         )}
                       </div>
@@ -431,7 +431,7 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
                       <div className="flex flex-col gap-1.5 flex-shrink-0">
                         <button
                           onClick={() => { onSelectDay(issue.dayIdx); setOpen(false); }}
-                          className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-extrabold text-slate-600  bg-slate-100  hover:bg-slate-200  rounded-lg transition-all"
+                          className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-extrabold text-slate-600  bg-slate-100  hover:bg-slate-200  rounded-lg transition-all"
                         >
                           <Icon name="arrow_forward" className="text-[11px]" />
                           Ver
@@ -439,7 +439,7 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
                         {issue.fix && (
                           <button
                             onClick={() => handleApplyFix(issue)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-extrabold text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-all"
+                            className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-extrabold text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-all"
                           >
                             <Icon name="check" className="text-[11px]" />
                             Aplicar
@@ -454,7 +454,7 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
 
             {/* Footer */}
             <div className="px-5 py-3 border-t border-slate-100  bg-slate-50  transition-colors">
-              <p className="text-[9px] text-slate-400  font-medium">
+              <p className="text-[11px] text-slate-400  font-medium">
                 * As correções aplicam folgas nos dias críticos. Revise manualmente se necessário.
               </p>
             </div>

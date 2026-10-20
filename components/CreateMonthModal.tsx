@@ -56,7 +56,7 @@ export const CreateMonthModal: React.FC<CreateMonthModalProps> = ({
 
         {/* Content */}
         <div className="p-6 overflow-y-auto space-y-4 custom-scrollbar flex-1">
-          <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-zinc-500 block">
+          <label className="text-[11px] font-black uppercase tracking-wider text-slate-400 dark:text-zinc-500 block">
             Selecione como a escala deve ser gerada:
           </label>
 
@@ -81,14 +81,14 @@ export const CreateMonthModal: React.FC<CreateMonthModalProps> = ({
                 <span className="text-xs font-black text-slate-900 dark:text-zinc-100 uppercase tracking-tight">
                   1. Escala Sugerida Inteligente (Retroativo CLT)
                 </span>
-                <span className="text-[9px] px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-black rounded-md uppercase">
+                <span className="text-[11px] px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-black rounded-md uppercase">
                   Recomendado
                 </span>
               </div>
               <p className="text-[11px] text-slate-600 dark:text-zinc-300 leading-relaxed font-medium">
                 Gera as folgas semanais a partir do <strong>último dia trabalhado no mês anterior</strong>:
               </p>
-              <ul className="text-[10px] text-slate-500 dark:text-zinc-400 space-y-1 list-disc list-inside font-medium">
+              <ul className="text-[11px] text-slate-500 dark:text-zinc-400 space-y-1 list-disc list-inside font-medium">
                 <li>Folga no dia 31 $\rightarrow$ trabalha de 1 a 6 e <strong>folga obrigatória no dia 7</strong>.</li>
                 <li>Se trabalhou nos 2 últimos domingos anteriores $\rightarrow$ <strong>folga obrigatória no 1º domingo</strong>.</li>
                 <li>Contratação no dia 1 $\rightarrow$ trabalha de 1 a 6 e <strong>folga no dia 7</strong>.</li>
@@ -118,14 +118,14 @@ export const CreateMonthModal: React.FC<CreateMonthModalProps> = ({
                 <span className="text-xs font-black text-slate-900 dark:text-zinc-100 uppercase tracking-tight">
                   2. Escala Base 100% Trabalhada (Ajuste Manual)
                 </span>
-                <span className="text-[9px] px-2 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 font-black rounded-md uppercase">
+                <span className="text-[11px] px-2 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 font-black rounded-md uppercase">
                   Manual
                 </span>
               </div>
               <p className="text-[11px] text-slate-600 dark:text-zinc-300 leading-relaxed font-medium">
                 Preenche <strong>todos os dias com turno de trabalho ("T")</strong> e horários diários oficiais, <strong>sem gerar folgas automáticas</strong>.
               </p>
-              <ul className="text-[10px] text-slate-500 dark:text-zinc-400 space-y-1 list-disc list-inside font-medium">
+              <ul className="text-[11px] text-slate-500 dark:text-zinc-400 space-y-1 list-disc list-inside font-medium">
                 <li>Ideal para quem prefere lançar as folgas manualmente uma a uma no grid.</li>
                 <li>Preserva apenas férias ativas, atestados, aniversários e regras legais de aprendiz.</li>
               </ul>

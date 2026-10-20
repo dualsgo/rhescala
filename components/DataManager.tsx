@@ -277,7 +277,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
         {/* Lado Esquerdo: Status e Segurança */}
         <div className="space-y-6">
           <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Status do Banco de Dados</h3>
+            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Status do Banco de Dados</h3>
             <div className="flex items-center gap-4">
               <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${getStatusColor(syncStatus.state)}`}>
                 <Icon name={syncStatus.state === 'synced' ? 'cloud_done' : syncStatus.state === 'syncing' ? 'cloud_sync' : syncStatus.state === 'error' ? 'cloud_off' : 'cloud'} className="text-3xl" />
@@ -294,20 +294,20 @@ export const DataManager: React.FC<DataManagerProps> = ({
           {/* Gerenciamento de Senhas - Apenas Admin */}
           {role === 'admin' && (
             <div className="bg-slate-900 dark:bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-inner">
-              <h3 className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-4">Configurações de Acesso</h3>
+              <h3 className="text-[11px] font-black text-orange-500 uppercase tracking-widest mb-4">Configurações de Acesso</h3>
               <p className="text-[11px] text-slate-400 mb-4 font-medium">Altere as senhas armazenadas na sua planilha Google.</p>
               
               <div className="space-y-4">
                 <div className="flex bg-slate-800 rounded-xl p-1">
                   <button 
                     onClick={() => setPassForm({...passForm, role: 'admin'})}
-                    className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${passForm.role === 'admin' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                    className={`flex-1 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all ${passForm.role === 'admin' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
                   >
                     Admin
                   </button>
                   <button 
                     onClick={() => setPassForm({...passForm, role: 'viewer'})}
-                    className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${passForm.role === 'viewer' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                    className={`flex-1 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all ${passForm.role === 'viewer' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
                   >
                     Viewer
                   </button>
@@ -326,14 +326,14 @@ export const DataManager: React.FC<DataManagerProps> = ({
                 <button 
                   onClick={handleUpdatePassword}
                   disabled={isUpdatingPass || !passForm.password}
-                  className="w-full py-3 bg-white text-slate-900 rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-white text-slate-900 rounded-xl font-black uppercase text-[11px] tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {isUpdatingPass ? (
                     <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-900 rounded-full animate-spin" />
                   ) : 'Atualizar na Planilha'}
                 </button>
                 
-                <p className="text-[9px] text-slate-500 text-center italic mt-2">Dica: As senhas são salvas na aba "Config" da sua planilha.</p>
+                <p className="text-[11px] text-slate-500 text-center italic mt-2">Dica: As senhas são salvas na aba "Config" da sua planilha.</p>
               </div>
             </div>
           )}
@@ -342,7 +342,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
         {/* Lado Direito: Histórico e Backup */}
         <div className="space-y-6">
           <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Arquivos e Backups</h3>
+            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Arquivos e Backups</h3>
             <div className="flex flex-col gap-3">
               <button onClick={handleExportBackup} className="flex items-center justify-center gap-2 w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold uppercase text-[11px] tracking-widest transition-colors shadow-sm">
                 <Icon name="download" className="text-base" />
@@ -380,7 +380,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                     await showDialog({ title: 'Sucesso', message: 'Mural de pedidos limpo!' });
                   }
                 }}
-                className="flex items-center justify-center gap-2 w-full py-2.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl font-bold uppercase text-[10px] tracking-widest transition-all"
+                className="flex items-center justify-center gap-2 w-full py-2.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl font-bold uppercase text-[11px] tracking-widest transition-all"
               >
                 <Icon name="delete_sweep" className="text-base" />
                 Limpar Todos os Pedidos
@@ -406,7 +406,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                     }
                   }
                 }}
-                className="flex items-center justify-center gap-2 w-full py-2.5 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 rounded-xl font-bold uppercase text-[10px] tracking-widest transition-all"
+                className="flex items-center justify-center gap-2 w-full py-2.5 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 rounded-xl font-bold uppercase text-[11px] tracking-widest transition-all"
               >
                 <Icon name="auto_fix_high" className="text-base" />
                 Otimizar Planilha (Nuvem)
@@ -415,7 +415,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
           </div>
 
           <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col max-h-[300px]">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Histórico de Sincronização</h3>
+            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Histórico de Sincronização</h3>
             <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-3">
               {syncStatus.history && syncStatus.history.length > 0 ? (
                 syncStatus.history.map((log, idx) => (
@@ -425,7 +425,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                     </div>
                     <div>
                       <p className="text-[11px] font-black text-slate-700 dark:text-slate-200">{log.message || 'Sincronização'}</p>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{log.timestamp}</p>
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{log.timestamp}</p>
                     </div>
                   </div>
                 ))

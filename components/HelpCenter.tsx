@@ -6,13 +6,20 @@ interface HelpCenterProps {
 }
 
 export const HelpCenter: React.FC<HelpCenterProps> = ({ onClose }) => {
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
   const [activeTab, setActiveTab] = useState<'posicoes' | 'funcoes' | 'legenda'>('posicoes');
 
   const tacticalPositions = [
     {
       code: 'CX',
       posCode: 'P1',
-      name: 'Caixa (Equivalente a P1)',
+      name: 'Caixa (CX)',
       color: 'bg-red-600 text-white',
       badgeBg: 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900/50',
       icon: 'point_of_sale',
@@ -27,7 +34,7 @@ export const HelpCenter: React.FC<HelpCenterProps> = ({ onClose }) => {
     {
       code: 'PC',
       posCode: 'P1',
-      name: 'Pacote (Equivalente a P1)',
+      name: 'Pacote (PC)',
       color: 'bg-orange-500 text-white',
       badgeBg: 'bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-900/50',
       icon: 'inventory_2',
@@ -42,7 +49,7 @@ export const HelpCenter: React.FC<HelpCenterProps> = ({ onClose }) => {
     {
       code: 'REP',
       posCode: 'P2',
-      name: 'Reposição / Organização (Equivalente a P2)',
+      name: 'Apoio / Reposição (AP)',
       color: 'bg-amber-500 text-white',
       badgeBg: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/50',
       icon: 'inventory',
@@ -57,7 +64,7 @@ export const HelpCenter: React.FC<HelpCenterProps> = ({ onClose }) => {
     {
       code: 'VEND',
       posCode: 'P3',
-      name: 'Vendas / Atendimento (Equivalente a P3)',
+      name: 'Vendas / Atendimento (VEND)',
       color: 'bg-emerald-600 text-white',
       badgeBg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900/50',
       icon: 'toys',
@@ -153,7 +160,7 @@ export const HelpCenter: React.FC<HelpCenterProps> = ({ onClose }) => {
               <h2 className="text-base sm:text-lg font-black uppercase text-slate-800 dark:text-slate-100 tracking-tight">
                 Guia de Funções (Correlatas)
               </h2>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
                 Ri Happy Shift Management • Padrões Operacionais
               </p>
             </div>
@@ -232,11 +239,11 @@ export const HelpCenter: React.FC<HelpCenterProps> = ({ onClose }) => {
                     </p>
 
                     <div className="space-y-1.5 pt-2 border-t border-black/5 dark:border-white/5">
-                      <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest block">
+                      <span className="text-[11px] font-black uppercase text-slate-400 tracking-widest block">
                         Principais Atividades:
                       </span>
                       {pos.responsibilities.map((r, i) => (
-                        <div key={i} className="flex items-start gap-1.5 text-[10px] text-slate-600 dark:text-slate-400">
+                        <div key={i} className="flex items-start gap-1.5 text-[11px] text-slate-600 dark:text-slate-400">
                           <span className="text-orange-500 font-bold">•</span>
                           <span>{r}</span>
                         </div>
@@ -281,7 +288,7 @@ export const HelpCenter: React.FC<HelpCenterProps> = ({ onClose }) => {
                     <h5 className="text-[11px] font-black uppercase text-slate-800 dark:text-slate-100 tracking-tight">
                       {item.label}
                     </h5>
-                    <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
+                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
                       {item.desc}
                     </p>
                   </div>

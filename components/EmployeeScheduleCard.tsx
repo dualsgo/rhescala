@@ -171,7 +171,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
             </div>
             <div>
               <h3 className="text-xl font-black text-slate-800 dark:text-zinc-100 uppercase tracking-tight leading-tight">{employee.name}</h3>
-              <p className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">{employee.cargo || 'Colaborador'} • {months[currentMY.month]} {currentMY.year}</p>
+              <p className="text-[11px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">{employee.cargo || 'Colaborador'} • {months[currentMY.month]} {currentMY.year}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -222,7 +222,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
             <Icon name="history_edu" className="text-sm" />
             <span>Histórico</span>
             {myAuditLogs.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-orange-500 text-white text-[9px] font-black shadow-xs">
+              <span className="px-1.5 py-0.2 rounded-full bg-orange-500 text-white text-[11px] font-black shadow-xs">
                 {myAuditLogs.length}
               </span>
             )}
@@ -246,13 +246,13 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
             
             {/* Calendar Section */}
             <div className="space-y-4">
-              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <Icon name="calendar_month" className="text-orange-500" /> Sua Escala do Mês
               </h4>
               
               <div className="grid grid-cols-7 gap-1">
                 {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
-                  <div key={i} className="text-center text-[9px] font-black text-slate-300 py-1 uppercase">{d}</div>
+                  <div key={i} className="text-center text-[11px] font-black text-slate-300 py-1 uppercase">{d}</div>
                 ))}
                 {(() => {
                   const firstDay = new Date(currentMY.year, currentMY.month, 1).getDay();
@@ -281,7 +281,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         className={`aspect-square rounded-xl flex flex-col items-center justify-center text-[11px] font-black transition-all border-2 ${bgClass} ${borderClass}`}
                       >
                         <span>{d}</span>
-                        {shift !== 'T' && shift !== 'F' && <span className="text-[7px] opacity-70 leading-none mt-0.5">{
+                        {shift !== 'T' && shift !== 'F' && <span className="text-[11px] opacity-70 leading-none mt-0.5">{
                           (shift === 'FE' && employee.vacationStart && employee.vacationEnd) ? (() => {
                             const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                             if (fullDate >= employee.vacationStart && fullDate <= employee.vacationEnd) {
@@ -318,19 +318,19 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
               <div className="flex flex-wrap gap-2 pt-2">
                 <div className="flex items-center gap-1.5 px-2 py-1 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
                   <div className="w-2 h-2 rounded-full bg-indigo-600" />
-                  <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 uppercase">Trabalha</span>
+                  <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase">Trabalha</span>
                 </div>
                 <div className="flex items-center gap-1.5 px-2 py-1 bg-rose-50 dark:bg-rose-900/20 rounded-lg">
                   <div className="w-2 h-2 rounded-full bg-rose-500" />
-                  <span className="text-[9px] font-bold text-rose-500 dark:text-rose-400 uppercase">Folga</span>
+                  <span className="text-[11px] font-bold text-rose-500 dark:text-rose-400 uppercase">Folga</span>
                 </div>
                 <div className="flex items-center gap-1.5 px-2 py-1 bg-rose-50 dark:bg-rose-950/40 rounded-lg">
                   <div className="w-2 h-2 rounded-full bg-rose-400" />
-                  <span className="text-[9px] font-bold text-rose-600 dark:text-rose-400 uppercase">Atestado</span>
+                  <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase">Atestado</span>
                 </div>
                 <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
                   <div className="w-2 h-2 rounded-full bg-amber-500" />
-                  <span className="text-[9px] font-bold text-amber-500 dark:text-amber-400 uppercase">Feriado</span>
+                  <span className="text-[11px] font-bold text-amber-500 dark:text-amber-400 uppercase">Feriado</span>
                 </div>
               </div>
             </div>
@@ -340,7 +340,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
               
               {/* Holiday Credits */}
               <div className="space-y-4">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                   <Icon name="history" className="text-emerald-500" /> Feriados e Folgas Especiais
                 </h4>
                 
@@ -354,17 +354,17 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                           </div>
                           <div>
                             <p className="text-[11px] font-black text-slate-800 dark:text-zinc-100 uppercase">{c.holidayName}</p>
-                            <p className="text-[9px] font-bold text-amber-600 uppercase tracking-tighter">Pendente de Agendamento</p>
+                            <p className="text-[11px] font-bold text-amber-600 uppercase tracking-tighter">Pendente de Agendamento</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className="text-[10px] font-black text-slate-400 uppercase">{c.holidayDate.split('-').reverse().slice(0, 2).join('/')}</span>
+                          <span className="text-[11px] font-black text-slate-400 uppercase">{c.holidayDate.split('-').reverse().slice(0, 2).join('/')}</span>
                         </div>
                       </div>
                     ))
                   ) : (
                     <div className="p-4 bg-slate-50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800 text-center">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">Nenhum feriado pendente</p>
+                      <p className="text-[11px] font-bold text-slate-400 uppercase">Nenhum feriado pendente</p>
                     </div>
                   )}
 
@@ -376,7 +376,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         </div>
                         <div>
                           <p className="text-[11px] font-black text-slate-800 dark:text-zinc-100 uppercase">{c.holidayName}</p>
-                          <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-tighter">Agendado para {c.offDate?.split('-').reverse().slice(0, 2).join('/')}</p>
+                          <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-tighter">Agendado para {c.offDate?.split('-').reverse().slice(0, 2).join('/')}</p>
                         </div>
                       </div>
                       <Icon name="done_all" className="text-emerald-500" />
@@ -392,7 +392,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                     <Icon name="schedule" className="text-xl" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Carga Horária Base</p>
+                    <p className="text-[11px] font-bold text-white/50 uppercase tracking-widest">Carga Horária Base</p>
                     <p className="text-sm font-black uppercase">{employee.workPeriod || '44h Semanais'}</p>
                   </div>
                 </div>
@@ -402,7 +402,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                     <Icon name="celebration" className="text-xl" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Preferência de Folga</p>
+                    <p className="text-[11px] font-bold text-white/50 uppercase tracking-widest">Preferência de Folga</p>
                     <p className="text-sm font-black uppercase text-orange-400">{employee.preferredDayOff || 'Variável'}</p>
                   </div>
                 </div>
@@ -416,7 +416,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
           {activeTab === 'atual' && (
             <div className="space-y-4 animate-fade-in">
             <div className="flex items-center justify-between px-2">
-              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <Icon name="format_list_bulleted" className="text-indigo-500" /> Sua Escala Atual
               </h4>
             </div>
@@ -446,7 +446,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex flex-col items-center justify-center w-10 h-10 bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-slate-100 dark:border-zinc-800">
-                        <span className="text-[8px] font-black text-slate-300 uppercase leading-none">{dow.substring(0, 3)}</span>
+                        <span className="text-[11px] font-black text-slate-300 uppercase leading-none">{dow.substring(0, 3)}</span>
                         <span className={`text-sm font-black ${isSun ? 'text-rose-500' : 'text-slate-700 dark:text-zinc-200'}`}>{d}</span>
                       </div>
                       <div>
@@ -474,7 +474,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                           })() : shift === 'C' ? 'Curso' : shift === 'DO' ? 'Aniversário' : shift}
                         </p>
                         <div className="flex items-center gap-2">
-                           <p className="text-[9px] font-bold text-slate-400 uppercase">{isWorkingShift(shift) ? hour : '---'}</p>
+                           <p className="text-[11px] font-bold text-slate-400 uppercase">{isWorkingShift(shift) ? hour : '---'}</p>
                            {hasReq && (
                              <span className={`w-1.5 h-1.5 rounded-full ${hasReq.status === 'granted' ? 'bg-emerald-500' : hasReq.status === 'seen' ? 'bg-blue-500' : 'bg-orange-500 animate-pulse'}`} />
                            )}
@@ -483,7 +483,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                     </div>
                     {isWorkingShift(shift) ? (
                       <div className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/40 rounded-full">
-                        <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Presente</span>
+                        <span className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Presente</span>
                       </div>
                     ) : null}
                   </div>
@@ -497,7 +497,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
           {activeTab === 'pedidos' && (
             <div className="space-y-6 animate-fade-in">
             <div className="flex items-center justify-between">
-              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <Icon name="add_circle" className="text-orange-500" /> Nova Solicitação
               </h4>
             </div>
@@ -509,13 +509,13 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                 <div className="flex bg-slate-100 dark:bg-zinc-950 p-1 rounded-2xl gap-1 w-full max-w-sm">
                   <button 
                     onClick={() => setRequestType('folga_aviso')}
-                    className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${requestType === 'folga_aviso' ? 'bg-white dark:bg-zinc-800 text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`flex-1 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${requestType === 'folga_aviso' ? 'bg-white dark:bg-zinc-800 text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                   >
                     Folga / Aviso
                   </button>
                   <button 
                     onClick={() => setRequestType('troca_turno')}
-                    className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${requestType === 'troca_turno' ? 'bg-white dark:bg-zinc-800 text-purple-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`flex-1 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${requestType === 'troca_turno' ? 'bg-white dark:bg-zinc-800 text-purple-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                   >
                     Troca de Turno
                   </button>
@@ -523,7 +523,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Data Desejada</label>
+                      <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Data Desejada</label>
                       <input 
                         type="date"
                         className="w-full bg-slate-100 dark:bg-zinc-950 border-none rounded-xl px-4 py-3 text-xs font-bold outline-none ring-1 ring-slate-200 dark:ring-zinc-800 focus:ring-2 focus:ring-orange-500 transition-all"
@@ -533,7 +533,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                    </div>
                    {requestType === 'folga_aviso' ? (
                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Justificativa (Breve)</label>
+                        <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Justificativa (Breve)</label>
                         <input 
                           type="text"
                           className="w-full bg-slate-100 dark:bg-zinc-950 border-none rounded-xl px-4 py-3 text-xs font-bold outline-none ring-1 ring-slate-200 dark:ring-zinc-800 focus:ring-2 focus:ring-orange-500 transition-all"
@@ -544,7 +544,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                      </div>
                    ) : (
                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Trocar com quem?</label>
+                        <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Trocar com quem?</label>
                         <select 
                           className="w-full bg-slate-100 dark:bg-zinc-950 border-none rounded-xl px-4 py-3 text-xs font-bold outline-none ring-1 ring-slate-200 dark:ring-zinc-800 focus:ring-2 focus:ring-orange-500 transition-all text-slate-700 dark:text-zinc-300"
                           value={targetEmployeeId}
@@ -562,7 +562,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                 </div>
                 
                 <div className="flex items-center justify-between gap-4 pt-2">
-                  <p className="text-[9px] text-slate-400 font-bold italic leading-tight max-w-[60%]">
+                  <p className="text-[11px] text-slate-400 font-bold italic leading-tight max-w-[60%]">
                     {requestType === 'folga_aviso' 
                       ? '* Esta é uma solicitação sujeita a análise e não garante a folga até que o gestor a valide na escala oficial.'
                       : '* A troca só será validada após a confirmação do gestor. Avise seu colega!'}
@@ -588,7 +588,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                       setShowSubmitFeedback(true);
                       setTimeout(() => setShowSubmitFeedback(false), 8000);
                     }}
-                    className={`whitespace-nowrap px-6 py-3 text-white rounded-xl text-[10px] font-black uppercase transition-all shadow-md active:scale-95 disabled:opacity-50 ${requestType === 'troca_turno' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-orange-500 hover:bg-orange-600'}`}
+                    className={`whitespace-nowrap px-6 py-3 text-white rounded-xl text-[11px] font-black uppercase transition-all shadow-md active:scale-95 disabled:opacity-50 ${requestType === 'troca_turno' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-orange-500 hover:bg-orange-600'}`}
                   >
                     Enviar Pedido
                   </button>
@@ -602,7 +602,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         <Icon name="info" className="text-lg" />
                       </div>
                       <div className="space-y-1">
-                        <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Solicitação Enviada!</p>
+                        <p className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Solicitação Enviada!</p>
                         <p className="text-[11px] font-bold text-blue-800 dark:text-blue-300 leading-relaxed">
                           Sua solicitação foi enviada e será analisada durante a criação da escala. Ela será atendida sempre que possível, desde que não onere a operação da loja.
                         </p>
@@ -613,13 +613,13 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
               </div>
             ) : (
               <div className="p-4 bg-slate-50 dark:bg-zinc-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-700 text-center">
-                 <p className="text-[10px] font-bold text-slate-400 uppercase italic">Acesse com sua senha para enviar solicitações.</p>
+                 <p className="text-[11px] font-bold text-slate-400 uppercase italic">Acesse com sua senha para enviar solicitações.</p>
               </div>
             )}
 
             {/* List existing requests */}
             <div className="space-y-4">
-              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 px-2">
+              <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 px-2">
                 <Icon name="history" className="text-slate-400" /> Suas Solicitações
               </h4>
               <div className="space-y-3">
@@ -632,7 +632,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                   }`}>
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-2">
-                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest ${
+                      <span className={`text-[11px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest ${
                         req.status === 'granted' && (isAdmin || isValidated) ? 'bg-emerald-100 text-emerald-700' :
                         req.status === 'refused' && (isAdmin || isValidated) ? 'bg-red-100 text-red-700' :
                         req.status === 'seen' && (isAdmin || isValidated) ? 'bg-blue-100 text-blue-700' :
@@ -641,18 +641,18 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         {(req.date || '').split('-').reverse().join('/')}
                       </span>
                       {req.type === 'troca_turno' && (
-                        <span className="text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest bg-purple-100 text-purple-700 border border-purple-200">
+                        <span className="text-[11px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest bg-purple-100 text-purple-700 border border-purple-200">
                           Troca de Turno
                         </span>
                       )}
-                      <span className="text-[8px] font-black text-slate-400 uppercase">
+                      <span className="text-[11px] font-black text-slate-400 uppercase">
                         {req.status === 'granted' && (isAdmin || isValidated) ? 'Pedido Aprovado' : 
                          req.status === 'refused' && (isAdmin || isValidated) ? 'Pedido Recusado' : 
                          req.status === 'seen' && (isAdmin || isValidated) ? 'Gestor Ciente (Aviso)' : 
                          'Em Análise (Pendente)'}
                       </span>
                     </div>
-                    <span className="text-[8px] font-bold text-slate-400 uppercase">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase">
                       {(() => {
                         try {
                           return req.createdAt ? new Date(req.createdAt).toLocaleDateString('pt-BR') : '---';
@@ -666,14 +666,14 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                   
                   {req.feedback && (isAdmin || isValidated) && (
                     <div className="mt-3 p-2 bg-slate-50 dark:bg-zinc-900 rounded-lg border border-slate-100 dark:border-zinc-800">
-                      <p className="text-[9px] font-black uppercase text-slate-400 mb-0.5">Justificativa do Gerente:</p>
-                      <p className="text-[10px] font-bold text-slate-600 dark:text-zinc-300 italic">{req.feedback}</p>
+                      <p className="text-[11px] font-black uppercase text-slate-400 mb-0.5">Justificativa do Gerente:</p>
+                      <p className="text-[11px] font-bold text-slate-600 dark:text-zinc-300 italic">{req.feedback}</p>
                     </div>
                   )}
                   
                   {isAdmin && onUpdateEmployee && req.status === 'pending' && (
                     <div className="mt-4 flex flex-wrap gap-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
-                      <p className="w-full text-[9px] font-black uppercase text-slate-400">Ação do Gestor:</p>
+                      <p className="w-full text-[11px] font-black uppercase text-slate-400">Ação do Gestor:</p>
                       
                       <button 
                         onClick={async () => {
@@ -700,7 +700,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                             }
                           }
                         }}
-                        className="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg text-[9px] font-black uppercase transition-colors flex items-center gap-1 shadow-sm"
+                        className="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg text-[11px] font-black uppercase transition-colors flex items-center gap-1 shadow-sm"
                       >
                         <Icon name="event_available" className="text-[11px]" /> Dar Folga (F)
                       </button>
@@ -768,7 +768,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                               }
                             }
                           }}
-                          className="px-3 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg text-[9px] font-black uppercase transition-colors flex items-center gap-1 shadow-sm"
+                          className="px-3 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg text-[11px] font-black uppercase transition-colors flex items-center gap-1 shadow-sm"
                         >
                           <Icon name="swap_horiz" className="text-[11px]" /> Efetuar Troca (Auto)
                         </button>
@@ -792,7 +792,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                             onUpdateEmployee(employee.id, { requests: updated });
                           }
                         }}
-                        className="px-3 py-1.5 bg-teal-100 hover:bg-teal-200 text-teal-700 rounded-lg text-[9px] font-black uppercase transition-colors flex items-center gap-1 shadow-sm"
+                        className="px-3 py-1.5 bg-teal-100 hover:bg-teal-200 text-teal-700 rounded-lg text-[11px] font-black uppercase transition-colors flex items-center gap-1 shadow-sm"
                       >
                         <Icon name="check_circle" className="text-[11px]" /> Aprovar (Outro)
                       </button>
@@ -805,7 +805,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                           );
                           onUpdateEmployee(employee.id, { requests: updated });
                         }}
-                        className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-[9px] font-black uppercase transition-colors flex items-center gap-1 shadow-sm"
+                        className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-[11px] font-black uppercase transition-colors flex items-center gap-1 shadow-sm"
                       >
                         <Icon name="visibility" className="text-[11px]" /> Ciente (Aviso)
                       </button>
@@ -827,7 +827,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                             onUpdateEmployee(employee.id, { requests: updated });
                           }
                         }}
-                        className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-[9px] font-black uppercase transition-colors flex items-center gap-1 shadow-sm"
+                        className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-[11px] font-black uppercase transition-colors flex items-center gap-1 shadow-sm"
                       >
                         <Icon name="cancel" className="text-[11px]" /> Recusar
                       </button>
@@ -899,7 +899,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
               ) : (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between px-1">
-                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                    <span className="text-[11px] font-black uppercase text-slate-400 tracking-wider">
                       {myAuditLogs.length} alteraç{myAuditLogs.length === 1 ? 'ão registrada' : 'ões registradas'} (Mais recentes primeiro)
                     </span>
                   </div>
@@ -935,7 +935,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         {/* Antes e Depois */}
                         <div className="flex items-center gap-3 text-xs font-semibold flex-wrap">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-black uppercase text-slate-400">Antes:</span>
+                            <span className="text-[11px] font-black uppercase text-slate-400">Antes:</span>
                             <span className="px-2.5 py-1 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-black border border-rose-200 dark:border-rose-900/50 line-through opacity-85">
                               {log.beforeVal}
                             </span>
@@ -944,7 +944,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                           <Icon name="arrow_forward" className="text-xs text-slate-400 shrink-0" />
 
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-black uppercase text-slate-400">Depois:</span>
+                            <span className="text-[11px] font-black uppercase text-slate-400">Depois:</span>
                             <span className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-black border border-emerald-200 dark:border-emerald-900/50 shadow-xs">
                               {log.afterVal}
                             </span>
@@ -955,7 +955,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                         <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-100 dark:border-zinc-800 flex items-start gap-2">
                           <Icon name="comment" className="text-xs text-orange-500 shrink-0 mt-0.5" />
                           <div className="text-xs">
-                            <span className="font-black text-slate-500 dark:text-zinc-400 uppercase text-[10px] mr-1.5">
+                            <span className="font-black text-slate-500 dark:text-zinc-400 uppercase text-[11px] mr-1.5">
                               Motivo:
                             </span>
                             <span className="font-semibold text-slate-800 dark:text-zinc-200">
@@ -988,11 +988,11 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                   <div className="flex items-center gap-3">
                     <span className="w-3 h-3 rounded-full bg-rose-500 inline-block animate-pulse" />
                     <div>
-                      <p className="text-[10px] font-black uppercase text-slate-400">Atestado Ativo Cadastrado</p>
+                      <p className="text-[11px] font-black uppercase text-slate-400">Atestado Ativo Cadastrado</p>
                       <p className="text-xs font-bold text-slate-800 dark:text-zinc-100">
                         {new Date(employee.atestadoStart + 'T00:00:00').toLocaleDateString('pt-BR')} até {new Date(employee.atestadoEnd + 'T00:00:00').toLocaleDateString('pt-BR')}
                       </p>
-                      <p className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                      <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
                         Retorno previsto ao trabalho: {new Date(addDaysStr(employee.atestadoEnd, 1) + 'T00:00:00').toLocaleDateString('pt-BR')}
                       </p>
                     </div>
@@ -1013,7 +1013,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Data de Início do Atestado</label>
+                    <label className="block text-[11px] font-black uppercase text-slate-400 mb-1">Data de Início do Atestado</label>
                     <input
                       type="date"
                       value={atestadoStartInput}
@@ -1023,7 +1023,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Duração (Dias)</label>
+                    <label className="block text-[11px] font-black uppercase text-slate-400 mb-1">Duração (Dias)</label>
                     <input
                       type="number"
                       min={1}

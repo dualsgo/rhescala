@@ -147,7 +147,7 @@ export const HolidayCreditPanel: React.FC<HolidayCreditPanelProps> = ({
                 </div>
                 <div>
                     <h3 className="text-lg font-black text-slate-900 ">Gestão de Folgas de Feriado</h3>
-                    <p className="text-[10px] font-extrabold text-slate-400  uppercase tracking-widest">Compensação Mensal de Créditos de Feriados</p>
+                    <p className="text-[11px] font-extrabold text-slate-400  uppercase tracking-widest">Compensação Mensal de Créditos de Feriados</p>
                 </div>
             </div>
             <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
@@ -167,7 +167,7 @@ export const HolidayCreditPanel: React.FC<HolidayCreditPanelProps> = ({
             <div className="border border-slate-200  rounded-xl overflow-hidden shadow-sm transition-colors">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50  text-[10px] font-extrabold text-slate-500  uppercase tracking-widest border-b border-slate-200 ">
+                  <tr className="bg-slate-50  text-[11px] font-extrabold text-slate-500  uppercase tracking-widest border-b border-slate-200 ">
                     <th className="p-4">Feriado</th>
                     <th className="p-4">Colaborador</th>
                     <th className="p-4">Sugestão de Folga</th>
@@ -182,14 +182,14 @@ export const HolidayCreditPanel: React.FC<HolidayCreditPanelProps> = ({
                         <td className="p-4">
                           <div className="flex flex-col">
                             <span className="text-xs font-black text-slate-900 ">{item.holidayName}</span>
-                            <span className="text-[10px] font-bold text-slate-400  truncate">
+                            <span className="text-[11px] font-bold text-slate-400  truncate">
                               {String(hDate.getDate()).padStart(2, '0')}/{String(hDate.getMonth() + 1).padStart(2, '0')}
                             </span>
                           </div>
                         </td>
                         <td className="p-4">
                           <div className="flex items-center gap-2">
-                             <div className="w-6 h-6 rounded-full bg-slate-100  flex items-center justify-center text-[10px] font-black text-slate-500  uppercase">
+                             <div className="w-6 h-6 rounded-full bg-slate-100  flex items-center justify-center text-[11px] font-black text-slate-500  uppercase">
                                 {item.empName.charAt(0)}
                              </div>
                              <span className="text-xs font-bold text-slate-700  uppercase">{item.empName}</span>
@@ -207,7 +207,7 @@ export const HolidayCreditPanel: React.FC<HolidayCreditPanelProps> = ({
                               const holidayLabel = `${String(hDate.getDate()).padStart(2, '0')}/${String(hDate.getMonth() + 1).padStart(2, '0')}`;
                               onApplyFix(item.empId, item.suggestedDayIdx, `FF ${holidayLabel}`);
                             }}
-                            className="bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black px-4 py-2 rounded-lg transition-all shadow-sm active:scale-95"
+                            className="bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-black px-4 py-2 rounded-lg transition-all shadow-sm active:scale-95"
                           >
                             Aplicar Folga
                           </button>

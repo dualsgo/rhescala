@@ -113,7 +113,7 @@ export const JornadaManager: React.FC<JornadaManagerProps> = ({
           </div>
           <div>
             <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Configurações de Jornada</h2>
-            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Defina horários padrão e regras de escala</p>
+            <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Defina horários padrão e regras de escala</p>
           </div>
         </div>
         <button 
@@ -137,7 +137,7 @@ export const JornadaManager: React.FC<JornadaManagerProps> = ({
             </div>
             
             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-6 border border-slate-100 dark:border-slate-800">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Operação Mínima (Colaboradores)</label>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Operação Mínima (Colaboradores)</label>
               <div className="flex items-center gap-4">
                 <input 
                   type="range" 
@@ -171,7 +171,7 @@ export const JornadaManager: React.FC<JornadaManagerProps> = ({
               {(['weekday', 'sunday', 'holiday', 'apprentice', 'extended'] as const).map((cat) => (
                 <div key={cat} className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
                       {cat === 'weekday' ? 'Dias de Semana' : cat === 'sunday' ? 'Domingos' : cat === 'holiday' ? 'Feriados' : cat === 'apprentice' ? 'Jovem Aprendiz' : 'Horário Estendido / Sazonal'}
                     </label>
                     {!isReadOnly && (
@@ -223,7 +223,7 @@ export const JornadaManager: React.FC<JornadaManagerProps> = ({
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-6 border border-slate-100 dark:border-slate-800">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1 font-bold uppercase tracking-tighter">Feriados (Fixo)</label>
+                    <label className="block text-[11px] text-slate-400 mb-1 font-bold uppercase tracking-tighter">Feriados (Fixo)</label>
                     <input 
                       type="text"
                       value={localSettings.lunchRules.holiday}
@@ -233,7 +233,7 @@ export const JornadaManager: React.FC<JornadaManagerProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1 font-bold uppercase tracking-tighter">Aprendiz (Fixo)</label>
+                    <label className="block text-[11px] text-slate-400 mb-1 font-bold uppercase tracking-tighter">Aprendiz (Fixo)</label>
                     <input 
                       type="text"
                       value={localSettings.lunchRules.apprentice}
@@ -247,10 +247,10 @@ export const JornadaManager: React.FC<JornadaManagerProps> = ({
 
               {/* Sunday Lunch */}
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 space-y-4">
-                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Domingos</h4>
+                <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Domingos</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                    <div>
-                      <label className="block text-[10px] text-slate-400 mb-1">Abertura (Fixo)</label>
+                      <label className="block text-[11px] text-slate-400 mb-1">Abertura (Fixo)</label>
                       <input 
                         type="text"
                         value={localSettings.lunchRules.sundayOpening}
@@ -264,9 +264,9 @@ export const JornadaManager: React.FC<JornadaManagerProps> = ({
                    </div>
                    <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Fechamento (Slots)</label>
+                        <label className="block text-[11px] text-slate-400 font-bold uppercase tracking-tighter">Fechamento (Slots)</label>
                         {!isReadOnly && (
-                          <button onClick={() => addLunchSlot('sundayClosing')} className="text-[9px] font-black text-indigo-600 uppercase">+ Add</button>
+                          <button onClick={() => addLunchSlot('sundayClosing')} className="text-[11px] font-black text-indigo-600 uppercase">+ Add</button>
                         )}
                       </div>
                       <div className="space-y-2">
@@ -291,13 +291,13 @@ export const JornadaManager: React.FC<JornadaManagerProps> = ({
 
               {/* Weekday Lunch */}
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 space-y-4">
-                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dias de Semana</h4>
+                <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Dias de Semana</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                    <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Abertura (Slots)</label>
+                        <label className="block text-[11px] text-slate-400 font-bold uppercase tracking-tighter">Abertura (Slots)</label>
                         {!isReadOnly && (
-                          <button onClick={() => addLunchSlot('weekdayOpening')} className="text-[9px] font-black text-indigo-600 uppercase">+ Add</button>
+                          <button onClick={() => addLunchSlot('weekdayOpening')} className="text-[11px] font-black text-indigo-600 uppercase">+ Add</button>
                         )}
                       </div>
                       <div className="space-y-2">
@@ -319,9 +319,9 @@ export const JornadaManager: React.FC<JornadaManagerProps> = ({
                    </div>
                    <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Fechamento (Slots)</label>
+                        <label className="block text-[11px] text-slate-400 font-bold uppercase tracking-tighter">Fechamento (Slots)</label>
                         {!isReadOnly && (
-                          <button onClick={() => addLunchSlot('weekdayClosing')} className="text-[9px] font-black text-indigo-600 uppercase">+ Add</button>
+                          <button onClick={() => addLunchSlot('weekdayClosing')} className="text-[11px] font-black text-indigo-600 uppercase">+ Add</button>
                         )}
                       </div>
                       <div className="space-y-2">

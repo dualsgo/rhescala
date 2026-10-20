@@ -65,7 +65,7 @@ export const EssentialActivities: React.FC<EssentialActivitiesProps> = ({ curren
             </div>
             <div>
               <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Atividades Essenciais Semanais</h2>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cronograma Fixo de Segunda a Domingo</p>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Cronograma Fixo de Segunda a Domingo</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -115,7 +115,7 @@ export const EssentialActivities: React.FC<EssentialActivitiesProps> = ({ curren
                       {activities.map((act, i) => (
                         <div key={i} className="flex items-start gap-2.5 group">
                           <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${isSunday ? 'bg-rose-400' : 'bg-indigo-400'}`} />
-                          <p className="text-[10px] font-black uppercase leading-tight text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 transition-colors">
+                          <p className="text-[11px] font-black uppercase leading-tight text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 transition-colors">
                             {act}
                           </p>
                         </div>
@@ -134,7 +134,7 @@ export const EssentialActivities: React.FC<EssentialActivitiesProps> = ({ curren
                         <p className="text-[11px] font-bold text-indigo-700 dark:text-indigo-400">Este cronograma define as tarefas críticas para o sucesso da loja durante a semana.</p>
                     </div>
                 </div>
-                <p className="text-[10px] font-black text-indigo-300 dark:text-indigo-500 uppercase tracking-widest">Ri Happy • Excelência em Operação</p>
+                <p className="text-[11px] font-black text-indigo-300 dark:text-indigo-500 uppercase tracking-widest">Ri Happy • Excelência em Operação</p>
             </div>
           </div>
         </div>

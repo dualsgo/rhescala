@@ -136,12 +136,7 @@ export function generateScheduleCsvContent(
         } else if (rawShift.startsWith('FF')) {
           cellValue = 'FF';
         } else if (isWorkingShift(rawShift)) {
-          // Preserva posições táticas específicas como P1, PC, P2, P3, P4, ESTQ se definidas
-          if (['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].includes(rawShift)) {
-            cellValue = rawShift;
-          } else {
-            cellValue = 'T';
-          }
+          cellValue = 'T';
         } else {
           cellValue = rawShift;
         }

@@ -87,7 +87,7 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
           
           {/* Seção 1: Modos de Edição da Grade */}
           <div>
-            <div className="px-1 text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-widest flex items-center gap-1.5 mb-2.5">
+            <div className="px-1 text-[11px] font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-widest flex items-center gap-1.5 mb-2.5">
               <Icon name="tune" className="text-xs" />
               <span>Controles de Edição da Grade</span>
             </div>
@@ -109,13 +109,13 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-black uppercase text-slate-800 dark:text-zinc-100">Modo Edição</span>
-                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                      <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded-full ${
                         isEditable ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-400'
                       }`}>
                         {isEditable ? 'Ativo' : 'Bloqueado'}
                       </span>
                     </div>
-                    <span className="text-[10px] text-slate-500 dark:text-zinc-400">
+                    <span className="text-[11px] text-slate-500 dark:text-zinc-400">
                       Permite alterar células, turnos e horários na grade
                     </span>
                   </div>
@@ -142,13 +142,13 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-black uppercase text-slate-800 dark:text-zinc-100">Edição Retroativa</span>
-                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                      <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded-full ${
                         allowRetroactive ? 'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-400'
                       }`}>
                         {allowRetroactive ? 'Permitido' : 'Protegido'}
                       </span>
                     </div>
-                    <span className="text-[10px] text-slate-500 dark:text-zinc-400">
+                    <span className="text-[11px] text-slate-500 dark:text-zinc-400">
                       Permite editar dias anteriores a hoje no mês corrente
                     </span>
                   </div>
@@ -167,7 +167,7 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
 
           {/* Seção 2: Automação & Geração Inteligente */}
           <div>
-            <div className="px-1 text-[10px] font-black uppercase text-orange-600 dark:text-orange-400 tracking-widest flex items-center gap-1.5 mb-2.5">
+            <div className="px-1 text-[11px] font-black uppercase text-orange-600 dark:text-orange-400 tracking-widest flex items-center gap-1.5 mb-2.5">
               <Icon name="psychology" className="text-xs" />
               <span>Automações & Inteligência</span>
             </div>
@@ -189,7 +189,7 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
                   <span className="text-xs font-black uppercase text-orange-700 dark:text-orange-300">
                     Criar Novo Mês
                   </span>
-                  <span className="text-[10px] text-slate-500 dark:text-zinc-400">
+                  <span className="text-[11px] text-slate-500 dark:text-zinc-400">
                     Gera escala sugerida ou base com análise retroativa CLT
                   </span>
                 </div>
@@ -213,7 +213,7 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
                   <span className="text-xs font-black uppercase text-indigo-700 dark:text-indigo-300">
                     Aplicar Pré-definições
                   </span>
-                  <span className="text-[10px] text-slate-500 dark:text-zinc-400">
+                  <span className="text-[11px] text-slate-500 dark:text-zinc-400">
                     Reaplicar seletivamente apenas horários, folgas ou funções
                   </span>
                 </div>
@@ -236,7 +236,7 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
                   <span className="text-xs font-black uppercase text-slate-800 dark:text-zinc-200">
                     Sortear Domingos CLT
                   </span>
-                  <span className="text-[10px] text-slate-500 dark:text-zinc-400">
+                  <span className="text-[11px] text-slate-500 dark:text-zinc-400">
                     Revezamento com limite de 2 domingos consecutivos
                   </span>
                 </div>
@@ -264,7 +264,7 @@ export const ActionsOptionsModal: React.FC<ActionsOptionsModalProps> = ({
                     <span className="text-xs font-black uppercase text-emerald-700 dark:text-emerald-300">
                       Salvar Escala em CSV (.csv)
                     </span>
-                    <span className="text-[10px] text-slate-500 dark:text-zinc-400">
+                    <span className="text-[11px] text-slate-500 dark:text-zinc-400">
                       Exporta a grade completa preservando colunas e linhas para Excel
                     </span>
                   </div>

@@ -132,7 +132,7 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
             <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-blue-600 dark:text-blue-400">
               <Icon name="wb_sunny" className="text-sm" />
               <span>Turno Abertura</span>
-              <span className="px-1.5 py-0.2 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-[10px] font-black">
+              <span className="px-1.5 py-0.2 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-[11px] font-black">
                 {categorized.abertura.length}
               </span>
             </div>
@@ -150,7 +150,7 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
             <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
               <Icon name="wb_twilight" className="text-sm" />
               <span>Turno Intermediário</span>
-              <span className="px-1.5 py-0.2 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 text-[10px] font-black">
+              <span className="px-1.5 py-0.2 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 text-[11px] font-black">
                 {categorized.intermediario.length}
               </span>
             </div>
@@ -168,7 +168,7 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
             <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-purple-600 dark:text-purple-400">
               <Icon name="nights_stay" className="text-sm" />
               <span>Turno Fechamento</span>
-              <span className="px-1.5 py-0.2 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 text-[10px] font-black">
+              <span className="px-1.5 py-0.2 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 text-[11px] font-black">
                 {categorized.fechamento.length}
               </span>
             </div>
@@ -186,7 +186,7 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
             <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
               <Icon name="work" className="text-sm" />
               <span>Trabalho / Outros</span>
-              <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-black">
+              <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[11px] font-black">
                 {categorized.outrosTrabalho.length}
               </span>
             </div>
@@ -208,7 +208,7 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
             <div className="flex items-center gap-2">
               <Icon name="beach_access" className="text-rose-500 text-base" />
               <span>Folgas, Férias & Ausências do Dia</span>
-              <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 text-[10px] font-black">
+              <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 text-[11px] font-black">
                 {categorized.folgas.length}
               </span>
             </div>
@@ -278,7 +278,7 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
                       className={`p-2 rounded-xl text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95 ${s.color}`}
                     >
                       <span className="text-sm font-black">{s.code}</span>
-                      <span className="text-[9px] opacity-90 truncate w-full">{s.label}</span>
+                      <span className="text-[11px] opacity-90 truncate w-full">{s.label}</span>
                     </button>
                   ))}
                 </div>
@@ -342,7 +342,7 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
                 {shortName}
               </span>
               {item.emp.contractType === 'Sazonal' && (
-                <span className="px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 text-[9px] font-black uppercase">
+                <span className="px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 text-[11px] font-black uppercase">
                   Sazonal
                 </span>
               )}
@@ -371,7 +371,7 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
                 const role = normalizeEmployeeRole(item.emp.cargo || item.emp.role);
                 const meta = ROLE_METADATA_MAP[role];
                 return (
-                  <span className={`px-1.5 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-wider inline-block mt-0.5 ${meta.badgeColor}`}>
+                  <span className={`px-1.5 py-0.5 rounded-md border text-[11px] font-black uppercase tracking-wider inline-block mt-0.5 ${meta.badgeColor}`}>
                     {meta.label} ({meta.code})
                   </span>
                 );

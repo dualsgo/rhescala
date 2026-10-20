@@ -93,7 +93,7 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
             </div>
             <div>
               <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">Feriados {year}</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Gestão de Datas Não-Ativas</p>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Gestão de Datas Não-Ativas</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-full transition-all text-slate-400">
@@ -107,11 +107,11 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-3">
                   <div className="space-y-1 flex items-center justify-between">
-                      <label className={`text-[9px] font-black uppercase tracking-widest pl-1 ${editingId ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`}>
+                      <label className={`text-[11px] font-black uppercase tracking-widest pl-1 ${editingId ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`}>
                         {editingId ? 'Editando Feriado' : 'Novo Feriado Local'}
                       </label>
                       {editingId && (
-                        <button onClick={handleCancelEdit} className="text-[10px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest">
+                        <button onClick={handleCancelEdit} className="text-[11px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest">
                           Cancelar
                         </button>
                       )}
@@ -147,7 +147,7 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
         <div className="px-6 py-4 bg-amber-50/50 dark:bg-amber-950/30 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
            <div className="flex items-center gap-2">
               <Icon name="history" className="text-amber-600 dark:text-amber-400 text-sm" />
-              <span className="text-[10px] font-bold uppercase text-amber-900 dark:text-amber-300 tracking-tight">Considerar Feriados a partir de:</span>
+              <span className="text-[11px] font-bold uppercase text-amber-900 dark:text-amber-300 tracking-tight">Considerar Feriados a partir de:</span>
            </div>
            <input 
               type="date" 
@@ -163,12 +163,12 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
           {grouped.length === 0 ? (
             <div className="text-center py-12 opacity-30 select-none">
               <Icon name="event_available" className="text-5xl text-slate-300 mb-2" />
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nenhum feriado registrado</p>
+              <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Nenhum feriado registrado</p>
             </div>
           ) : (
             grouped.map(({ monthName, items }) => (
               <div key={monthName} className="space-y-3">
-                <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{monthName}</h5>
+                <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">{monthName}</h5>
                 <div className="grid grid-cols-1 gap-2">
                   {items.map((h: Holiday) => (
                     <div key={h.id} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
@@ -180,7 +180,7 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
                         </div>
                         <div>
                           <p className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-tight leading-none mb-1">{h.name}</p>
-                          <p className={`text-[9px] font-bold uppercase tracking-widest ${h.type === 'national' ? 'text-rose-400' : 'text-slate-400'}`}>
+                          <p className={`text-[11px] font-bold uppercase tracking-widest ${h.type === 'national' ? 'text-rose-400' : 'text-slate-400'}`}>
                           {h.type === 'national' ? '🇧🇷 Feriado Nacional' : h.type === 'state' ? '🏛 Feriado Estadual' : h.type === 'municipal' ? '🏙 Feriado Municipal' : '🏙 Feriado Local'}
                           </p>
                         </div>

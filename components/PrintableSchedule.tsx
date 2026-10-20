@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Employee, MonthYear, Holiday } from '../types';
+import { Employee, MonthYear, Holiday, ROLE_METADATA_MAP, normalizeEmployeeRole } from '../types';
 import { buildHolidaySet, getNationalHolidays, getShortName, isEmployeeActiveInMonth, isEmployeeActiveOnDay } from '../constants';
 
 interface PrintableScheduleProps {
@@ -86,7 +86,7 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
           <h1 className="text-[28px] font-black tracking-tight leading-none mb-1">ESCALA DE REVEZAMENTO 6 POR 1</h1>
           <h2 className="text-[12px] font-black">{monthName} {currentMY.year}</h2>
         </div>
-        <div className="text-[10px] font-bold">
+        <div className="text-[11px] font-bold">
           Gerado em {new Date().toLocaleDateString('pt-BR')}, {new Date().toLocaleTimeString('pt-BR')}
         </div>
       </div>
@@ -99,24 +99,32 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
             {days.map(d => (
               <th key={d.num} className="border border-black p-0.5 w-6 text-center">
                 <div className="font-black text-[11px]">{d.num}</div>
-                <div className="text-[7px] font-bold">{'DOM SEG TER QUA QUI SEX SAB'.split(' ')[d.dow]}</div>
+                <div className="text-[11px] font-bold">{'DOM SEG TER QUA QUI SEX SAB'.split(' ')[d.dow]}</div>
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {activeEmployees.map(emp => (
-            <tr key={emp.id}>
-              <td className="border border-black px-1.5 py-1 truncate max-w-[120px] font-black uppercase">
-                {getShortName(emp.name, activeEmployees)}
-              </td>
-              <td className="border border-black px-1 py-1 text-center font-black uppercase">
-                {emp.workPeriod || ''}
-              </td>
+          {activeEmployees.map(emp => {
+            const role = normalizeEmployeeRole(emp.cargo || emp.role);
+            const roleMeta = ROLE_METADATA_MAP[role];
+            return (
+              <tr key={emp.id}>
+                <td className="border border-black px-1.5 py-1 max-w-[130px] font-black uppercase">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="truncate">{getShortName(emp.name, activeEmployees)}</span>
+                    <span className="text-[11px] px-1 py-0.5 border border-black font-black shrink-0">
+                      {roleMeta.code}
+                    </span>
+                  </div>
+                </td>
+                <td className="border border-black px-1 py-1 text-center font-black uppercase text-[11px]">
+                  {emp.workPeriod || ''}
+                </td>
               {days.map(d => {
                 const isOut = !isEmployeeActiveOnDay(emp, d.dateStr, monthKey, d.num - 1);
                 const shift = isOut ? 'N/A' : (emp.shifts[monthKey]?.[d.num - 1] || 'T');
-                const isWorking = shift === 'T' || ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'].includes(shift);
+                const isWorking = shift === 'T';
                 const display = (isOut || shift === 'N/A') ? '-' : (isWorking ? '' : (shift === 'AT' ? '+' : (shift.startsWith('FF') ? 'FF' : shift)));
                 return (
                   <td key={d.num} className={`border border-black p-1 text-center font-black ${(isOut || shift === 'N/A') ? 'text-gray-400 bg-gray-50' : ''}`}>
@@ -125,54 +133,55 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
                 );
               })}
             </tr>
-          ))}
+          );
+        })}
         </tbody>
       </table>
 
-      <div className="grid grid-cols-2 gap-4 text-[9px] mb-3">
+      <div className="grid grid-cols-2 gap-4 text-[11px] mb-3">
         {/* Bloco 1: INFORMAÇÕES */}
         <div className="border-2 border-black p-2 flex flex-col">
           <h3 className="font-black uppercase mb-1.5 text-[11px] border-b border-black text-center pb-0.5">INFORMAÇÕES E AVISOS</h3>
           <div className="grid grid-cols-2 gap-2 flex-1">
             <div className="border border-black p-1 flex flex-col">
-              <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Férias programadas</h4>
+              <h4 className="font-black text-[11px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Férias programadas</h4>
               <div className="space-y-0.5 flex-1">
                 {onVacation.length > 0 ? onVacation.map(e => {
                   const s = e.vacationStart!.split('-').reverse().join('/');
                   const end = e.vacationEnd!.split('-').reverse().join('/');
-                  return <div key={e.id} className="text-[7px] font-bold uppercase">{getShortName(e.name, employees)}: {s.substring(0,5)} A {end.substring(0,5)}</div>;
-                }) : <div className="text-[7px] font-medium text-center">Nenhuma Férias</div>}
+                  return <div key={e.id} className="text-[11px] font-bold uppercase">{getShortName(e.name, employees)}: {s.substring(0,5)} A {end.substring(0,5)}</div>;
+                }) : <div className="text-[11px] font-medium text-center">Nenhuma Férias</div>}
               </div>
             </div>
             <div className="border border-black p-1 flex flex-col">
-              <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Atestados / Retornos</h4>
+              <h4 className="font-black text-[11px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Atestados / Retornos</h4>
               <div className="space-y-0.5 flex-1">
                 {onMedicalLeave.length > 0 ? onMedicalLeave.map(e => {
                   if (e.atestadoStart && e.atestadoEnd) {
                     const retDate = new Date(e.atestadoEnd + 'T00:00:00');
                     retDate.setDate(retDate.getDate() + 1);
                     const retStr = retDate.toLocaleDateString('pt-BR').substring(0,5);
-                    return <div key={e.id} className="text-[7px] font-bold uppercase">{getShortName(e.name, employees)}: RETORNO {retStr}</div>;
+                    return <div key={e.id} className="text-[11px] font-bold uppercase">{getShortName(e.name, employees)}: RETORNO {retStr}</div>;
                   }
                   const atDays = (e.shifts[monthKey] || []).map((s, i) => s === 'AT' ? String(i + 1) : null).filter(Boolean);
-                  return <div key={e.id} className="text-[7px] font-bold uppercase">{getShortName(e.name, employees)}: DIA {atDays.join(', ')}</div>;
-                }) : <div className="text-[7px] font-medium text-center">Nenhum Atestado</div>}
+                  return <div key={e.id} className="text-[11px] font-bold uppercase">{getShortName(e.name, employees)}: DIA {atDays.join(', ')}</div>;
+                }) : <div className="text-[11px] font-medium text-center">Nenhum Atestado</div>}
               </div>
             </div>
             <div className="border border-black p-1 flex flex-col">
-              <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Aniversariantes</h4>
+              <h4 className="font-black text-[11px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Aniversariantes</h4>
               <div className="space-y-0.5 flex-1">
                 {birthdaysInMonth.length > 0 ? birthdaysInMonth.map(e => (
-                  <div key={e.id} className="text-[8px] font-bold uppercase">Dia {e.birthday?.split('-')[2]} - {getShortName(e.name, employees)}</div>
-                )) : <div className="text-[8px] font-medium text-center">Nenhum no mês</div>}
+                  <div key={e.id} className="text-[11px] font-bold uppercase">Dia {e.birthday?.split('-')[2]} - {getShortName(e.name, employees)}</div>
+                )) : <div className="text-[11px] font-medium text-center">Nenhum no mês</div>}
               </div>
             </div>
             <div className="border border-black p-1 flex flex-col">
-              <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Feriados no mês</h4>
+              <h4 className="font-black text-[11px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Feriados no mês</h4>
               <div className="space-y-0.5 flex-1">
                 {holidaysInMonth.length > 0 ? holidaysInMonth.map(h => (
-                  <div key={h.id} className="text-[8px] font-bold uppercase">{h.date.split('-').reverse().join('/').substring(0,5)} - {h.name}</div>
-                )) : <div className="text-[8px] font-medium text-center">Nenhum Feriado</div>}
+                  <div key={h.id} className="text-[11px] font-bold uppercase">{h.date.split('-').reverse().join('/').substring(0,5)} - {h.name}</div>
+                )) : <div className="text-[11px] font-medium text-center">Nenhum Feriado</div>}
               </div>
             </div>
           </div>
@@ -184,8 +193,8 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
           
           <div className="grid grid-cols-2 gap-2 mt-1">
             <div className="border border-black p-1">
-               <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Dias de Semana e Sábados</h4>
-               <div className="text-[8px] font-bold space-y-0.5">
+               <h4 className="font-black text-[11px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Dias de Semana e Sábados</h4>
+               <div className="text-[11px] font-bold space-y-0.5">
                  <div className="flex justify-between border-b border-gray-300"><span>12h00</span> <span>Máx. 1 Colaborador</span></div>
                  <div className="flex justify-between border-b border-gray-300"><span>13h00</span> <span>Máx. 1 Colaborador</span></div>
                  <div className="flex justify-between border-b border-gray-300"><span>14h00</span> <span>Máx. 1 Colaborador</span></div>
@@ -195,8 +204,8 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
             </div>
 
             <div className="border border-black p-1">
-               <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Domingos</h4>
-               <div className="text-[8px] font-bold space-y-0.5">
+               <h4 className="font-black text-[11px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Domingos</h4>
+               <div className="text-[11px] font-bold space-y-0.5">
                  <div className="flex justify-between border-b border-gray-300"><span>14h30</span> <span>Máx. 1 Colaborador</span></div>
                  <div className="flex justify-between border-b border-gray-300"><span>15h00</span> <span>Máx. 1 Colaborador</span></div>
                  <div className="flex justify-between border-b border-gray-300"><span>15h30</span> <span>Máx. 1 Colaborador</span></div>
@@ -210,14 +219,14 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
       </div>
 
       {/* FOOTER 2: FUNÇÕES DA EQUIPE E RECADOS */}
-      <div className="grid grid-cols-2 gap-4 text-[9px]">
+      <div className="grid grid-cols-2 gap-4 text-[11px]">
         {/* Bloco: FUNÇÕES DA EQUIPE */}
         <div className="border-2 border-black p-2 flex flex-col justify-between">
            <h3 className="font-black uppercase mb-1 text-[11px] border-b border-black pb-0.5 text-center">FUNÇÕES DA EQUIPE (CORRELATAS) & OBSERVAÇÕES</h3>
            <div className="grid grid-cols-2 gap-2 mt-1">
              <div className="border border-black p-1">
-                <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Horários de Saída</h4>
-                <div className="text-[8px] font-bold space-y-0.5">
+                <h4 className="font-black text-[11px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Horários de Saída</h4>
+                <div className="text-[11px] font-bold space-y-0.5">
                   <div className="flex justify-between border-b border-gray-300"><span>18h20</span> <span>Saída Abertura</span></div>
                   <div className="flex justify-between border-b border-gray-300"><span>20h20</span> <span>Saída Intermediário</span></div>
                   <div className="flex justify-between"><span>22h00</span> <span>Saída Fechamento</span></div>
@@ -225,8 +234,8 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
              </div>
              <div className="flex flex-col gap-1.5">
                 <div className="border border-black p-1">
-                  <h4 className="font-black text-[8px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Funções (Correlatas)</h4>
-                  <div className="text-[8px] font-bold space-y-1">
+                  <h4 className="font-black text-[11px] bg-gray-200 text-center py-0.5 mb-1 uppercase">Funções (Correlatas)</h4>
+                  <div className="text-[11px] font-bold space-y-1">
                       <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-red-400 border border-black"></div><span>CX (Caixa)</span></div>
                       <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-orange-400 border border-black"></div><span>PC (Pacote)</span></div>
                       <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-amber-400 border border-black"></div><span>REP (Reposição/Org.)</span></div>
@@ -235,7 +244,7 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
                        <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-slate-400 border border-black"></div><span>ESTQ (Estoque)</span></div>
                   </div>
                 </div>
-                <div className="text-[7.5px] font-black italic border border-black p-1 bg-gray-100 flex-1 flex items-center justify-center text-center leading-tight">
+                <div className="text-[11px] font-black italic border border-black p-1 bg-gray-100 flex-1 flex items-center justify-center text-center leading-tight">
                   * FERIADOS: PAUSAS DE 15 MINUTOS, UM COLABORADOR POR VEZ A PARTIR DE 14H.
                 </div>
              </div>
@@ -245,7 +254,7 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ employees,
         {/* Bloco: RECADOS */}
         <div className="border-2 border-black p-2 flex flex-col">
           <h3 className="font-black uppercase mb-1 text-[11px] border-b border-black pb-0.5 text-center">RECADOS IMPORTANTES</h3>
-          <div className="text-[10px] font-bold p-1 whitespace-pre-wrap leading-tight flex-1">
+          <div className="text-[11px] font-bold p-1 whitespace-pre-wrap leading-tight flex-1">
             {monthNotes && monthNotes.trim().length > 0 ? monthNotes : 'Nenhum recado cadastrado para este mês.'}
           </div>
         </div>

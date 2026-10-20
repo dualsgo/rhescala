@@ -787,13 +787,13 @@ const App: React.FC = () => {
                      <div className="w-24 h-24 bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-xl shadow-amber-500/10">
                        <Icon name="construction" className="text-5xl" />
                      </div>
-                     <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight mb-3">Escala em Construção</h3>
-                     <p className="text-slate-500 dark:text-slate-400 font-bold text-sm max-w-sm leading-relaxed">
+                     <h3 className="text-2xl font-black text-zinc-800 dark:text-zinc-100 uppercase tracking-tight mb-3">Escala em Construção</h3>
+                     <p className="text-zinc-500 dark:text-zinc-400 font-bold text-sm max-w-sm leading-relaxed">
                        O gerente ainda está preparando a escala para este mês. 
                        Assim que for oficializada, você poderá visualizá-la aqui.
                      </p>
                      <div className="mt-10 flex gap-4">
-                        <button onClick={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })} className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Voltar</button>
+                        <button onClick={() => setCurrentMY(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 })} className="px-6 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 rounded-xl font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">Voltar</button>
                      </div>
                    </div>
                  );
@@ -859,6 +859,7 @@ const App: React.FC = () => {
                     onOpenEmployeeCard={handleOpenEmployeeCard}
                     densityMode={densityMode}
                     onToggleDensityMode={() => setDensityMode(prev => prev === 'clean' ? 'audit' : 'clean')}
+                    protectedDaysConfig={protectedDaysMap[monthKey]}
                   />
                 );
 
@@ -881,6 +882,7 @@ const App: React.FC = () => {
                           onUpdateEmployee={onUpdateEmployee}
                           tacticalDisplayMode={tacticalDisplayMode}
                           onToggleTacticalDisplayMode={(mode) => { if (mode) setTacticalDisplayMode(mode); else setTacticalDisplayMode(prev => prev === "off" ? "positions" : prev === "positions" ? "roles" : "off"); }}
+                          isLoading={isChangingMonth}
                         />
                       </div>
                       <div className="hidden lg:block h-full">
@@ -892,6 +894,70 @@ const App: React.FC = () => {
 
                 return renderShiftGrid();
               }
+              case 'daily': {
+                return (
+                  <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center">
+                    <div className="max-w-4xl w-full space-y-4">
+                      <div className="flex items-center justify-between bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-3 rounded-2xl shadow-sm">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDayIdx(prev => Math.max(0, prev - 1))}
+                            disabled={selectedDayIdx === 0}
+                            className="min-h-[38px] min-w-[38px] p-2 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center justify-center"
+                            title="Dia anterior"
+                            aria-label="Dia anterior"
+                          >
+                            <Icon name="chevron_left" className="text-base" />
+                          </button>
+                          <div className="px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-center">
+                            <span className="text-xs font-black uppercase text-zinc-800 dark:text-zinc-100 tabular-nums">
+                              Dia {String(selectedDayIdx + 1).padStart(2, '0')}/{String(currentMY.month + 1).padStart(2, '0')}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDayIdx(prev => Math.min(new Date(currentMY.year, currentMY.month + 1, 0).getDate() - 1, prev + 1))}
+                            disabled={selectedDayIdx >= new Date(currentMY.year, currentMY.month + 1, 0).getDate() - 1}
+                            className="min-h-[38px] min-w-[38px] p-2 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center justify-center"
+                            title="Próximo dia"
+                            aria-label="Próximo dia"
+                          >
+                            <Icon name="chevron_right" className="text-base" />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleShareWhatsApp(selectedDayIdx)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm active:scale-95"
+                            title="Compartilhar escala do dia via WhatsApp"
+                          >
+                            <Icon name="campaign" className="text-sm" />
+                            <span>WhatsApp do Dia</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCurrentView('grid')}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-bold text-zinc-700 dark:text-zinc-300 transition-all"
+                          >
+                            <Icon name="grid_view" className="text-sm text-orange-500" />
+                            <span>Voltar à Grade</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <DaySummaryCard
+                        selectedDayIdx={selectedDayIdx}
+                        employees={employees}
+                        currentMY={currentMY}
+                        customHolidays={customHolidays}
+                        jornadaSettings={jornadaSettings}
+                      />
+                    </div>
+                  </div>
+                );
+              }
               case 'analysis':
                if (isReadOnly) {
                  return (
@@ -899,11 +965,11 @@ const App: React.FC = () => {
                      <div className="w-16 h-16 bg-amber-100 dark:bg-amber-950/40 text-amber-600 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
                        <Icon name="lock" className="text-3xl" />
                      </div>
-                     <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 mb-1">Acesso Exclusivo da Gestão</h3>
-                     <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm mb-6">
+                     <h3 className="text-lg font-black text-zinc-800 dark:text-zinc-100 mb-1">Acesso Exclusivo da Gestão</h3>
+                     <p className="text-zinc-500 dark:text-zinc-400 text-xs max-w-sm mb-6">
                        O painel analítico de cobertura de equipe é reservado aos administradores da loja.
                      </p>
-                     <button onClick={() => setCurrentView('grid')} className="px-5 py-2.5 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-xl font-bold text-xs text-slate-700 dark:text-slate-200 transition-colors">
+                     <button onClick={() => setCurrentView('grid')} className="px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl font-bold text-xs text-zinc-700 dark:text-zinc-200 transition-colors">
                        Voltar para a Escala
                      </button>
                    </div>
@@ -1083,11 +1149,11 @@ const App: React.FC = () => {
                       <div className="w-16 h-16 bg-rose-100 dark:bg-rose-950/40 text-rose-600 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
                         <Icon name="lock" className="text-3xl" />
                       </div>
-                      <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 mb-1">Privacidade Protegida</h3>
-                      <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm mb-6">
+                      <h3 className="text-lg font-black text-zinc-800 dark:text-zinc-100 mb-1">Privacidade Protegida</h3>
+                      <p className="text-zinc-500 dark:text-zinc-400 text-xs max-w-sm mb-6">
                         O mural geral de solicitações é exclusivo para a gestão da loja. Para consultar e enviar seus próprios pedidos com privacidade, acesse seu Cartão Individual.
                       </p>
-                      <button onClick={() => setCurrentView('grid')} className="px-5 py-2.5 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-xl font-bold text-xs text-slate-700 dark:text-slate-200 transition-colors">
+                      <button onClick={() => setCurrentView('grid')} className="px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl font-bold text-xs text-zinc-700 dark:text-zinc-200 transition-colors">
                         Voltar para a Escala
                       </button>
                     </div>
@@ -1146,26 +1212,26 @@ const App: React.FC = () => {
 
        {/* Day Detail Modal */}
        {showDayDetail && (
-         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-zinc-950/60 backdrop-blur-sm animate-fade-in">
-           <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] w-full max-w-2xl shadow-2xl border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[90vh] overflow-hidden">
-             <div className="px-8 py-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between sticky top-0 bg-white dark:bg-zinc-900 z-10 no-print">
+         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-zinc-900/40 dark:bg-zinc-950/60 backdrop-blur-sm animate-fade-in">
+           <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] w-full max-w-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col max-h-[90vh] overflow-hidden">
+             <div className="px-8 py-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between sticky top-0 bg-white dark:bg-zinc-900 z-10 no-print">
                <div className="flex items-center gap-4">
                  <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center">
                    <Icon name="event_available" className="text-xl" />
                  </div>
                  <div>
-                   <h4 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Escala do Dia</h4>
+                   <h4 className="text-lg font-black text-zinc-800 dark:text-zinc-100 uppercase tracking-tight">Escala do Dia</h4>
                    <div className="flex items-center gap-2">
                      <button 
                        onClick={() => setSelectedDayIdx(prev => Math.max(0, prev - 1))}
-                       className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"
+                       className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400"
                      >
                        <Icon name="chevron_left" />
                      </button>
-                     <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{selectedDayIdx + 1}/{currentMY.month + 1}/{currentMY.year}</p>
+                     <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{selectedDayIdx + 1}/{currentMY.month + 1}/{currentMY.year}</p>
                      <button 
                        onClick={() => setSelectedDayIdx(prev => Math.min(30, prev + 1))}
-                       className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"
+                       className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400"
                      >
                        <Icon name="chevron_right" />
                      </button>
@@ -1175,18 +1241,18 @@ const App: React.FC = () => {
                <div className="flex items-center gap-2">
                  <button 
                    onClick={() => handleExportDayImage('day-detail-screenshot', selectedDayIdx)}
-                   className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md active:scale-95"
+                   className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md active:scale-95"
                    title="Baixar Imagem"
                  >
                    <Icon name="download" className="text-sm" /> Baixar Imagem
                  </button>
                  <button 
                    onClick={() => handleShareWhatsApp(selectedDayIdx)}
-                   className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md active:scale-95"
+                   className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md active:scale-95"
                  >
                    <Icon name="content_copy" className="text-sm" /> Copiar Texto
                  </button>
-                 <button onClick={() => setShowDayDetail(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400">
+                 <button onClick={() => setShowDayDetail(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-zinc-400">
                    <Icon name="close" />
                  </button>
                </div>
@@ -1224,16 +1290,16 @@ const App: React.FC = () => {
 
        {/* Floating Manager Toolbar for Mobile */}
        {!isReadOnly && currentView === 'grid' && (
-         <div className="hidden lg:flex fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] items-center gap-2 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-slate-200 dark:border-zinc-800 rounded-full p-2 shadow-2xl shadow-black/20">
+         <div className="hidden lg:flex fixed bottom-6 left-1/2 -tranzinc-x-1/2 z-[100] items-center gap-2 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-full p-2 shadow-2xl shadow-black/20">
             <button 
              onClick={() => setIsEditable(!isEditable)}
-             className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${isEditable ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300'}`}
+             className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-[11px] font-black uppercase transition-all ${isEditable ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'}`}
             >
               <Icon name={isEditable ? 'save' : 'edit'} className="text-base" />
               {isEditable ? 'Salvar' : 'Editar'}
             </button>
             
-            <div className="w-px h-8 bg-slate-200 dark:bg-zinc-800 mx-1" />
+            <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-800 mx-1" />
             
             <button 
              onClick={() => handleShareWhatsApp(selectedDayIdx)}
@@ -1245,7 +1311,7 @@ const App: React.FC = () => {
             
             <button 
              onClick={() => window.print()}
-             className="flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-900 dark:bg-slate-700 text-white shadow-lg shadow-slate-900/20 active:scale-90 transition-all"
+             className="flex items-center justify-center w-12 h-12 rounded-2xl bg-zinc-900 dark:bg-zinc-700 text-white shadow-lg shadow-zinc-900/20 active:scale-90 transition-all"
              title="Imprimir"
             >
               <Icon name="print" className="text-xl" />

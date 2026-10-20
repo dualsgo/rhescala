@@ -118,12 +118,12 @@ export function getTacticalCellCode(posCode: string, _mode?: TacticalDisplayMode
 export function getTacticalEmoji(posCode: string): string {
   const role = normalizeEmployeeRole(posCode);
   switch (role) {
-    case 'Caixa': return '🔴';
-    case 'Pacote': return '🟠';
-    case 'Vendas': return '🟢';
+    case 'Caixa': return '🟢';
+    case 'Pacote': return '🩵';
+    case 'Vendas': return '🟠';
     case 'Apoio': return '🔵';
-    case 'Fiscal': return '🟡';
-    case 'Estoque': return '📦';
+    case 'Fiscal': return '🟣';
+    case 'Estoque': return '🟡';
     default: return '💼';
   }
 }

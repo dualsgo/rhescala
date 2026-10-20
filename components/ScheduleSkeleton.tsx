@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface ScheduleSkeletonProps {
-  mode?: 'auto' | 'table' | 'mobile';
+  mode?: 'auto' | 'table' | 'mobile' | 'selector';
   rowsCount?: number;
 }
 
@@ -15,8 +15,61 @@ export const ScheduleSkeleton: React.FC<ScheduleSkeletonProps> = ({
       role="status"
       className="w-full h-full flex flex-col gap-3 animate-pulse p-2 sm:p-4 select-none"
     >
-      {/* 1. Modo Mobile (< lg) */}
-      <div className={`${mode === 'table' ? 'hidden' : mode === 'mobile' ? 'flex' : 'flex lg:hidden'} flex-col gap-3.5 max-w-lg mx-auto w-full`}>
+      {/* 1. Modo Selector Onboarding */}
+      {mode === 'selector' && (
+        <div className="max-w-md mx-auto w-full flex flex-col gap-4">
+          {/* Header da Loja Skeleton */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-2xl bg-zinc-200 dark:bg-zinc-800" />
+              <div className="space-y-1.5">
+                <div className="w-24 h-3 bg-zinc-200 dark:bg-zinc-800 rounded" />
+                <div className="w-16 h-2.5 bg-zinc-100 dark:bg-zinc-800/60 rounded" />
+              </div>
+            </div>
+            <div className="w-24 h-10 rounded-xl bg-zinc-200 dark:bg-zinc-800" />
+          </div>
+
+          {/* Título & Subtítulo Skeleton */}
+          <div className="space-y-2 mt-2">
+            <div className="w-52 h-7 bg-zinc-200 dark:bg-zinc-800 rounded-xl" />
+            <div className="w-64 h-3.5 bg-zinc-100 dark:bg-zinc-800/60 rounded-md" />
+          </div>
+
+          {/* Barra de Busca Skeleton */}
+          <div className="w-full h-12 rounded-2xl bg-zinc-200 dark:bg-zinc-800" />
+
+          {/* Chips de Função Skeleton */}
+          <div className="flex items-center gap-2 overflow-hidden">
+            <div className="w-18 h-10 rounded-xl bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+            <div className="w-20 h-10 rounded-xl bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+            <div className="w-20 h-10 rounded-xl bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+            <div className="w-20 h-10 rounded-xl bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+          </div>
+
+          {/* Cards de Colaboradores Skeleton */}
+          <div className="space-y-2.5 mt-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div 
+                key={i}
+                className="w-full min-h-[60px] p-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between shadow-xs"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+                  <div className="space-y-2">
+                    <div className="w-32 h-3.5 bg-zinc-200 dark:bg-zinc-800 rounded-md" />
+                    <div className="w-24 h-2.5 bg-zinc-100 dark:bg-zinc-800/60 rounded-md" />
+                  </div>
+                </div>
+                <div className="w-14 h-6 rounded-lg bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 2. Modo Mobile (< lg) */}
+      <div className={`${mode === 'table' || mode === 'selector' ? 'hidden' : mode === 'mobile' ? 'flex' : 'flex lg:hidden'} flex-col gap-3.5 max-w-lg mx-auto w-full`}>
         {/* Header Colaborador Skeleton */}
         <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-4 flex flex-col gap-3 shadow-sm">
           <div className="flex items-center justify-between">
@@ -70,8 +123,8 @@ export const ScheduleSkeleton: React.FC<ScheduleSkeletonProps> = ({
         </div>
       </div>
 
-      {/* 2. Modo Desktop Tabela (>= lg) */}
-      <div className={`${mode === 'mobile' ? 'hidden' : mode === 'table' ? 'flex' : 'hidden lg:flex'} flex-col gap-3 w-full h-full overflow-hidden bg-white dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-3 shadow-sm`}>
+      {/* 3. Modo Desktop Tabela (>= lg) */}
+      <div className={`${mode === 'mobile' || mode === 'selector' ? 'hidden' : mode === 'table' ? 'flex' : 'hidden lg:flex'} flex-col gap-3 w-full h-full overflow-hidden bg-white dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-3 shadow-sm`}>
         {/* Table Toolbar Skeleton */}
         <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-800">
           <div className="flex items-center gap-2">

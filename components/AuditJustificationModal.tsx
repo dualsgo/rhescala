@@ -109,7 +109,7 @@ export const AuditJustificationModal: React.FC<AuditJustificationModalProps> = (
                     <span className="text-xs font-black uppercase text-slate-900 dark:text-zinc-100 truncate">
                       {imp.empName}
                     </span>
-                    <span className="px-2 py-0.5 rounded-md bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 font-bold text-[10px] whitespace-nowrap">
+                    <span className="px-2 py-0.5 rounded-md bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 font-bold text-[11px] whitespace-nowrap">
                       Dia {imp.dateStr}
                     </span>
                   </div>
@@ -125,7 +125,7 @@ export const AuditJustificationModal: React.FC<AuditJustificationModalProps> = (
                     </span>
                   </div>
 
-                  <p className="text-[10px] text-slate-500 dark:text-zinc-400 font-medium italic">
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400 font-medium italic">
                     {imp.humanDescription}
                   </p>
                 </div>
@@ -180,7 +180,7 @@ export const AuditJustificationModal: React.FC<AuditJustificationModalProps> = (
                 {customError}
               </p>
             )}
-            <p className="text-[10px] text-slate-400 dark:text-zinc-500 px-1">
+            <p className="text-[11px] text-slate-400 dark:text-zinc-500 px-1">
               Esta justificativa ficará visível no histórico individual do colaborador afetado e na auditoria geral.
             </p>
           </div>

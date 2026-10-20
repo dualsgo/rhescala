@@ -73,7 +73,7 @@ export const CleaningSchedule: React.FC<CleaningScheduleProps> = ({ employees, c
             </div>
             <div>
               <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Escala de Limpeza da Copa</h2>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{MONTH_NAMES[currentMY.month]} {currentMY.year}</p>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{MONTH_NAMES[currentMY.month]} {currentMY.year}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -101,7 +101,7 @@ export const CleaningSchedule: React.FC<CleaningScheduleProps> = ({ employees, c
 
             <div className="grid grid-cols-7 gap-2 mb-2">
               {WEEKDAY_NAMES.map(wd => (
-                <div key={wd} className="text-center py-2 text-[10px] font-black uppercase tracking-widest border-b-2 border-black">
+                <div key={wd} className="text-center py-2 text-[11px] font-black uppercase tracking-widest border-b-2 border-black">
                   {wd}
                 </div>
               ))}
@@ -123,8 +123,8 @@ export const CleaningSchedule: React.FC<CleaningScheduleProps> = ({ employees, c
                         <span className="text-sm font-black">
                           {cell.day}
                         </span>
-                        {cell.isSunday && <span className="text-[9px] font-black uppercase">DOM</span>}
-                        {cell.isHoliday && <span className="text-[9px] font-black uppercase border border-black px-1">FER</span>}
+                        {cell.isSunday && <span className="text-[11px] font-black uppercase">DOM</span>}
+                        {cell.isHoliday && <span className="text-[11px] font-black uppercase border border-black px-1">FER</span>}
                       </div>
                       <div className="flex-1 flex flex-col justify-center items-center text-center">
                         <p className="text-[12px] font-black uppercase leading-tight">
@@ -193,7 +193,7 @@ export const CleaningSchedule: React.FC<CleaningScheduleProps> = ({ employees, c
            </div>
            <div className="flex gap-4">
               <div className="text-center">
-                 <p className="text-[10px] font-black text-white/50 uppercase">Média por Colab.</p>
+                 <p className="text-[11px] font-black text-white/50 uppercase">Média por Colab.</p>
                  <p className="text-2xl font-black">{(daysInMonth / Math.max(employees.filter(e => e.status === 'active' && !e.isHidden && !e.isYoungApprentice && e.cargo !== 'Estoque').length, 1)).toFixed(1)}</p>
               </div>
            </div>

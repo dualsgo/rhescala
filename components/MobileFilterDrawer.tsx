@@ -189,7 +189,7 @@ export const MobileFilterDrawer: React.FC<MobileFilterDrawerProps> = ({
                     }`}
                   >
                     <Icon name={b.icon} className="text-base shrink-0" />
-                    <span className="text-[10px] leading-tight">{b.label}</span>
+                    <span className="text-[11px] leading-tight">{b.label}</span>
                   </button>
                 ))}
               </div>

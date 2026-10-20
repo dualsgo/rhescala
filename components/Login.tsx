@@ -45,12 +45,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
              <Icon name="event_note" className="text-3xl text-white" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">RH Escala</h1>
-          <p className="text-slate-500 dark:text-zinc-400 font-bold text-[10px] uppercase tracking-widest mt-1">Sistema de Gestão de Escalas</p>
+          <p className="text-slate-500 dark:text-zinc-400 font-bold text-[11px] uppercase tracking-widest mt-1">Sistema de Gestão de Escalas</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-2 ml-1">Senha de Acesso</label>
+            <label className="block text-[11px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-2 ml-1">Senha de Acesso</label>
             <div className="relative">
               <input
                 type="password"
@@ -62,7 +62,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 autoFocus
               />
               {error && (
-                <p className="absolute -bottom-6 left-0 right-0 text-center text-[10px] font-black text-rose-500 uppercase tracking-widest animate-shake">{error}</p>
+                <p className="absolute -bottom-6 left-0 right-0 text-center text-[11px] font-black text-rose-500 uppercase tracking-widest animate-shake">{error}</p>
               )}
             </div>
           </div>
@@ -85,11 +85,11 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <div className="flex flex-col items-center gap-6">
             <div className="flex justify-center gap-8 w-full">
               <div className="flex flex-col items-center">
-                <span className="text-[9px] font-black text-slate-400 uppercase mb-1">Versão</span>
+                <span className="text-[11px] font-black text-slate-400 uppercase mb-1">Versão</span>
                 <span className="text-[11px] font-bold text-slate-900 dark:text-zinc-100">2.1.0</span>
               </div>
               <div className="flex flex-col items-center">
-                <span className="text-[9px] font-black text-slate-400 uppercase mb-1">Segurança</span>
+                <span className="text-[11px] font-black text-slate-400 uppercase mb-1">Segurança</span>
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
                   <span className="text-[11px] font-bold text-slate-900 dark:text-zinc-100">Nuvem</span>
@@ -111,7 +111,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   window.location.reload();
                 }
               }}
-              className="text-[10px] font-black text-slate-400 hover:text-orange-500 uppercase tracking-widest transition-colors flex items-center gap-2"
+              className="text-[11px] font-black text-slate-400 hover:text-orange-500 uppercase tracking-widest transition-colors flex items-center gap-2"
             >
               <Icon name="settings_backup_restore" className="text-sm" />
               Configurar outra loja / Trocar Link

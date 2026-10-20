@@ -217,10 +217,11 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
     }));
 
     const getPriority = (pos: string) => {
-      if (pos === 'Vendas' || pos === 'P3') return 1;
-      if (pos === 'Caixa' || pos === 'P1') return 2;
-      if (pos === 'Fiscal' || pos === 'P4') return 3;
-      return 4;
+      if (pos === 'Vendas') return 1;
+      if (pos === 'Caixa') return 2;
+      if (pos === 'Fiscal') return 3;
+      if (pos === 'Apoio') return 4;
+      return 5;
     };
 
     const pickDigital = (group: any[], excludeIds: string[] = [], seedOffset: number = 0) => {
@@ -429,7 +430,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
                 <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-zinc-100 tracking-tight uppercase">
                   Modulador da Escala Diária
                 </h3>
-                <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
                   WhatsApp
                 </span>
               </div>
@@ -445,7 +446,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
               <button
                 type="button"
                 onClick={() => setActiveMobileTab('modulator')}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ${
                   activeMobileTab === 'modulator'
                     ? 'bg-emerald-600 text-white shadow-sm'
                     : 'text-slate-600 dark:text-zinc-400'
@@ -456,7 +457,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
               <button
                 type="button"
                 onClick={() => setActiveMobileTab('preview')}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ${
                   activeMobileTab === 'preview'
                     ? 'bg-emerald-600 text-white shadow-sm'
                     : 'text-slate-600 dark:text-zinc-400'
@@ -496,7 +497,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
               <button
                 type="button"
                 onClick={computeInitialState}
-                className="px-2.5 py-1 rounded-lg bg-amber-200/60 hover:bg-amber-200 dark:bg-amber-900/50 dark:hover:bg-amber-900 text-[10px] font-black uppercase tracking-wider shrink-0 transition-colors"
+                className="px-2.5 py-1 rounded-lg bg-amber-200/60 hover:bg-amber-200 dark:bg-amber-900/50 dark:hover:bg-amber-900 text-[11px] font-black uppercase tracking-wider shrink-0 transition-colors"
                 title="Redefinir todas as alterações para a sugestão calculada automaticamente"
               >
                 Restaurar Padrão
@@ -555,11 +556,11 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
                             <span className="text-xs font-black text-slate-900 dark:text-zinc-100">
                               {item.firstName}
                             </span>
-                            <span className="text-[10px] text-slate-400 font-bold">
+                            <span className="text-[11px] text-slate-400 font-bold">
                               ({item.shiftName})
                             </span>
                           </div>
-                          <span className="text-[10px] text-slate-400 block">
+                          <span className="text-[11px] text-slate-400 block">
                             {item.hour}
                           </span>
                         </div>
@@ -593,7 +594,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
                           {showLunches && (
                             <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-xl border border-emerald-200 dark:border-emerald-900/50">
                               <Icon name="restaurant" className="text-xs text-emerald-600 dark:text-emerald-400" />
-                              <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
+                              <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
                                 Almoço:
                               </span>
                               <select
@@ -649,7 +650,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
                   {showDigital && (
                     <div className="space-y-1.5 pt-1">
                       <div>
-                        <span className="text-[9px] font-black uppercase text-slate-400 block mb-0.5">Turno 1 / Abertura:</span>
+                        <span className="text-[11px] font-black uppercase text-slate-400 block mb-0.5">Turno 1 / Abertura:</span>
                         <select
                           value={digital1Id}
                           onChange={(e) => setDigital1Id(e.target.value)}
@@ -663,7 +664,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
                       </div>
 
                       <div>
-                        <span className="text-[9px] font-black uppercase text-slate-400 block mb-0.5">Turno 2 / Fechamento:</span>
+                        <span className="text-[11px] font-black uppercase text-slate-400 block mb-0.5">Turno 2 / Fechamento:</span>
                         <select
                           value={digital2Id}
                           onChange={(e) => setDigital2Id(e.target.value)}
@@ -698,7 +699,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
                   {showRetiradas && (
                     <div className="space-y-1.5 pt-1">
                       <div>
-                        <span className="text-[9px] font-black uppercase text-slate-400 block mb-0.5">Turno 1 / Abertura:</span>
+                        <span className="text-[11px] font-black uppercase text-slate-400 block mb-0.5">Turno 1 / Abertura:</span>
                         <select
                           value={retirada1Id}
                           onChange={(e) => setRetirada1Id(e.target.value)}
@@ -712,7 +713,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
                       </div>
 
                       <div>
-                        <span className="text-[9px] font-black uppercase text-slate-400 block mb-0.5">Turno 2 / Fechamento:</span>
+                        <span className="text-[11px] font-black uppercase text-slate-400 block mb-0.5">Turno 2 / Fechamento:</span>
                         <select
                           value={retirada2Id}
                           onChange={(e) => setRetirada2Id(e.target.value)}
@@ -795,7 +796,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
 
               {/* Custom Note Field */}
               <div className="pt-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">
+                <label className="text-[11px] font-black uppercase text-slate-400 block mb-1">
                   Observação Adicional (Opcional):
                 </label>
                 <input
@@ -826,7 +827,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
                 <button
                   type="button"
                   onClick={handleToggleFreeText}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-wider transition-all ${
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-black uppercase tracking-wider transition-all ${
                     isFreeTextMode
                       ? 'bg-amber-500 text-white border-amber-500 shadow-xs'
                       : 'bg-white dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-50'
@@ -869,7 +870,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
               <button
                 type="button"
                 onClick={() => setIsFreeTextMode(false)}
-                className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 hover:underline"
+                className="text-[11px] font-black uppercase text-amber-600 dark:text-amber-400 hover:underline"
               >
                 Descartar edição
               </button>

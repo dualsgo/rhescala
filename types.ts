@@ -24,49 +24,49 @@ export const ROLE_METADATA_MAP: Record<EmployeeRole, RoleMetadata> = {
     role: 'Caixa',
     code: 'CX',
     label: 'Caixa',
-    badgeColor: 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30',
-    textColor: 'text-red-600 dark:text-red-400',
-    bgColor: 'bg-red-500'
-  },
-  Pacote: {
-    role: 'Pacote',
-    code: 'PC',
-    label: 'Pacote',
-    badgeColor: 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30',
-    textColor: 'text-orange-600 dark:text-orange-400',
-    bgColor: 'bg-orange-500'
+    badgeColor: 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30',
+    textColor: 'text-emerald-700 dark:text-emerald-400',
+    bgColor: 'bg-emerald-500'
   },
   Vendas: {
     role: 'Vendas',
     code: 'VEND',
     label: 'Vendas',
-    badgeColor: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30',
-    textColor: 'text-emerald-600 dark:text-emerald-400',
-    bgColor: 'bg-emerald-500'
+    badgeColor: 'bg-orange-500/15 text-orange-800 dark:text-orange-300 border border-orange-500/30',
+    textColor: 'text-orange-700 dark:text-orange-400',
+    bgColor: 'bg-orange-500'
+  },
+  Pacote: {
+    role: 'Pacote',
+    code: 'PC',
+    label: 'Pacote',
+    badgeColor: 'bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border border-cyan-500/30',
+    textColor: 'text-cyan-700 dark:text-cyan-400',
+    bgColor: 'bg-cyan-500'
   },
   Apoio: {
     role: 'Apoio',
     code: 'AP',
     label: 'Apoio',
-    badgeColor: 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30',
-    textColor: 'text-blue-600 dark:text-blue-400',
-    bgColor: 'bg-blue-500'
+    badgeColor: 'bg-indigo-500/15 text-indigo-800 dark:text-indigo-300 border border-indigo-500/30',
+    textColor: 'text-indigo-700 dark:text-indigo-400',
+    bgColor: 'bg-indigo-500'
   },
   Fiscal: {
     role: 'Fiscal',
     code: 'FISC',
     label: 'Fiscal',
-    badgeColor: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30',
-    textColor: 'text-amber-600 dark:text-amber-400',
-    bgColor: 'bg-amber-500'
+    badgeColor: 'bg-purple-500/15 text-purple-800 dark:text-purple-300 border border-purple-500/30',
+    textColor: 'text-purple-700 dark:text-purple-400',
+    bgColor: 'bg-purple-500'
   },
   Estoque: {
     role: 'Estoque',
     code: 'ESTQ',
     label: 'Estoque',
-    badgeColor: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-300 border-zinc-500/30',
-    textColor: 'text-zinc-600 dark:text-zinc-400',
-    bgColor: 'bg-zinc-600'
+    badgeColor: 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30',
+    textColor: 'text-amber-700 dark:text-amber-400',
+    bgColor: 'bg-amber-500'
   }
 };
 

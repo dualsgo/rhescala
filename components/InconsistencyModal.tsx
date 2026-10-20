@@ -228,7 +228,7 @@ export const InconsistencyModal: React.FC<InconsistencyModalProps> = ({
                           {displayName}
                         </span>
                         <span
-                          className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                          className={`text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
                             issue.type === 'consecutive_work'
                               ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
                               : issue.type === 'consecutive_sunday'

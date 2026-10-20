@@ -86,7 +86,7 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
                     <div className="space-y-6">
                         <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-[2rem] p-8 shadow-2xl">
                             <h2 className="text-white font-black text-xs uppercase tracking-widest mb-6 flex items-center gap-2">
-                                <span className="w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px]">1</span>
+                                <span className="w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[11px]">1</span>
                                 Preparar Planilha
                             </h2>
                             
@@ -97,7 +97,7 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
                                 
                                 <button 
                                     onClick={() => setShowCode(!showCode)}
-                                    className="w-full py-4 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500/20 transition-all flex items-center justify-center gap-2"
+                                    className="w-full py-4 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-500/20 transition-all flex items-center justify-center gap-2"
                                 >
                                     <Icon name={showCode ? 'visibility_off' : 'code'} />
                                     {showCode ? 'Ocultar Código' : 'Ver Código do Backend'}
@@ -109,13 +109,13 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
                                     <div className="absolute top-4 right-4 z-10">
                                         <button 
                                             onClick={handleCopy}
-                                            className={`p-3 rounded-xl transition-all shadow-lg flex items-center gap-2 text-[9px] font-black uppercase tracking-widest ${copied ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                                            className={`p-3 rounded-xl transition-all shadow-lg flex items-center gap-2 text-[11px] font-black uppercase tracking-widest ${copied ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
                                         >
                                             <Icon name={copied ? 'done' : 'content_copy'} className="text-sm" />
                                             {copied ? 'Copiado!' : 'Copiar'}
                                         </button>
                                     </div>
-                                    <pre className="w-full h-48 bg-slate-950/80 border border-white/10 rounded-2xl p-6 text-[10px] text-slate-400 overflow-y-auto custom-scrollbar font-mono leading-relaxed">
+                                    <pre className="w-full h-48 bg-slate-950/80 border border-white/10 rounded-2xl p-6 text-[11px] text-slate-400 overflow-y-auto custom-scrollbar font-mono leading-relaxed">
                                         {APPS_SCRIPT_CODE}
                                     </pre>
                                 </div>
@@ -124,7 +124,7 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
                             <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl">
                                 <div className="flex items-start gap-3">
                                     <Icon name="info" className="text-orange-500 mt-0.5" />
-                                    <p className="text-[10px] text-orange-200/70 leading-relaxed font-medium">
+                                    <p className="text-[11px] text-orange-200/70 leading-relaxed font-medium">
                                         <strong className="text-orange-400 uppercase">Dica:</strong> O nome do arquivo no Google (<code className="bg-orange-500/20 px-1 rounded text-orange-300">Código.gs</code> ou <code className="bg-orange-500/20 px-1 rounded text-orange-300">Code.gs</code>) não interfere no funcionamento.
                                     </p>
                                 </div>
@@ -138,13 +138,13 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
                              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -mr-16 -mt-16 blur-2xl" />
                              
                              <h2 className="text-slate-800 dark:text-white font-black text-xs uppercase tracking-widest mb-6 flex items-center gap-2">
-                                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">2</span>
+                                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[11px]">2</span>
                                 Conectar Unidade
                             </h2>
 
                             <div className="space-y-5">
                                 <div>
-                                    <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Link do Web App Gerado</label>
+                                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Link do Web App Gerado</label>
                                     <textarea
                                         className="w-full bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 text-xs text-slate-800 dark:text-white placeholder-slate-400 resize-none focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
                                         rows={2}
@@ -169,7 +169,7 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
                                     <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl animate-fade-in">
                                         <div className="flex items-center gap-3">
                                             <Icon name="check_circle" className="text-emerald-500" />
-                                            <p className="text-[10px] text-emerald-200/70 leading-relaxed font-medium">
+                                            <p className="text-[11px] text-emerald-200/70 leading-relaxed font-medium">
                                                 <strong className="text-emerald-400 uppercase">Unidade Identificada:</strong> Esta planilha já possui senhas configuradas. Clique em finalizar para conectar.
                                             </p>
                                         </div>
@@ -179,7 +179,7 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
                                 {isInitialized === false && (
                                     <>
                                         <div>
-                                            <label className="block text-[9px] font-black text-orange-500 uppercase tracking-widest mb-2 ml-1">Senha Gerente (Admin)</label>
+                                            <label className="block text-[11px] font-black text-orange-500 uppercase tracking-widest mb-2 ml-1">Senha Gerente (Admin)</label>
                                             <input
                                                 type="text"
                                                 className="w-full bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:border-orange-500 transition-all"
@@ -188,7 +188,7 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-2 ml-1">Senha Equipe (Viewer)</label>
+                                            <label className="block text-[11px] font-black text-emerald-500 uppercase tracking-widest mb-2 ml-1">Senha Equipe (Viewer)</label>
                                             <input
                                                 type="text"
                                                 className="w-full bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500 transition-all"
@@ -201,14 +201,14 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
 
                                 {error && (
                                     <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl animate-shake">
-                                        <p className="text-rose-500 text-[10px] font-bold text-center uppercase tracking-wider">{error}</p>
+                                        <p className="text-rose-500 text-[11px] font-bold text-center uppercase tracking-wider">{error}</p>
                                     </div>
                                 )}
 
                                 <button
                                     onClick={handleConnect}
                                     disabled={testing || !url.trim()}
-                                    className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black py-5 rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-[0.15em] text-[10px] flex items-center justify-center gap-3 disabled:opacity-50"
+                                    className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black py-5 rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-[0.15em] text-[11px] flex items-center justify-center gap-3 disabled:opacity-50"
                                 >
                                     {testing ? (
                                         <>

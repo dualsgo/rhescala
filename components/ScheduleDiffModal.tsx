@@ -148,13 +148,13 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
   };
 
   const getShiftBadge = (val: string) => {
-    if (val === 'F') return <span className="px-2 py-0.5 bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 rounded font-black text-[10px]">Folga (F)</span>;
-    if (val === 'FF') return <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 rounded font-black text-[10px]">Folga Feriado (FF)</span>;
-    if (val === 'FE') return <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 rounded font-black text-[10px]">Férias (FE)</span>;
-    if (val === 'AT') return <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 rounded font-black text-[10px]">Atestado (AT)</span>;
-    if (val === 'DO') return <span className="px-2 py-0.5 bg-pink-100 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 rounded font-black text-[10px]">Aniversário (DO)</span>;
-    if (val === 'T') return <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded font-black text-[10px]">Trabalho (T)</span>;
-    return <span className="px-2 py-0.5 bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 rounded font-bold text-[10px]">{val}</span>;
+    if (val === 'F') return <span className="px-2 py-0.5 bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 rounded font-black text-[11px]">Folga (F)</span>;
+    if (val === 'FF') return <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 rounded font-black text-[11px]">Folga Feriado (FF)</span>;
+    if (val === 'FE') return <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 rounded font-black text-[11px]">Férias (FE)</span>;
+    if (val === 'AT') return <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 rounded font-black text-[11px]">Atestado (AT)</span>;
+    if (val === 'DO') return <span className="px-2 py-0.5 bg-pink-100 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 rounded font-black text-[11px]">Aniversário (DO)</span>;
+    if (val === 'T') return <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded font-black text-[11px]">Trabalho (T)</span>;
+    return <span className="px-2 py-0.5 bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 rounded font-bold text-[11px]">{val}</span>;
   };
 
   return (
@@ -171,7 +171,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
                 <h3 className="text-base font-black text-slate-900 dark:text-zinc-100 uppercase tracking-tight">
                   Auditoria de Alterações
                 </h3>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase">
+                <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 text-[11px] font-black uppercase">
                   Escala Oficial
                 </span>
               </div>
@@ -201,7 +201,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
             <Icon name="history_edu" className="text-sm" />
             <span>Histórico com Justificativas</span>
             {monthAuditLogs.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-orange-500 text-white text-[9px] font-black">
+              <span className="px-1.5 py-0.2 rounded-full bg-orange-500 text-white text-[11px] font-black">
                 {monthAuditLogs.length}
               </span>
             )}
@@ -218,7 +218,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
             <Icon name="difference" className="text-sm" />
             <span>Divergências do Snapshot</span>
             {diffs.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-indigo-600 text-white text-[9px] font-black">
+              <span className="px-1.5 py-0.2 rounded-full bg-indigo-600 text-white text-[11px] font-black">
                 {diffs.length}
               </span>
             )}
@@ -232,7 +232,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
               {activeTab === 'logs' ? stats.logsTotal : stats.total}
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase text-slate-400">
+              <p className="text-[11px] font-black uppercase text-slate-400">
                 {activeTab === 'logs' ? 'Logs de Alteração' : 'Total Divergências'}
               </p>
               <p className="text-xs font-black text-slate-800 dark:text-zinc-200">
@@ -248,7 +248,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
               {stats.shiftCount}
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase text-slate-400">Folgas / Turnos</p>
+              <p className="text-[11px] font-black uppercase text-slate-400">Folgas / Turnos</p>
               <p className="text-xs font-black text-slate-800 dark:text-zinc-200">{stats.shiftCount} trocas</p>
             </div>
           </div>
@@ -258,7 +258,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
               {stats.hourCount}
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase text-slate-400">Horários</p>
+              <p className="text-[11px] font-black uppercase text-slate-400">Horários</p>
               <p className="text-xs font-black text-slate-800 dark:text-zinc-200">{stats.hourCount} alterações</p>
             </div>
           </div>
@@ -268,7 +268,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
               {stats.posCount}
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase text-slate-400">Funções</p>
+              <p className="text-[11px] font-black uppercase text-slate-400">Funções</p>
               <p className="text-xs font-black text-slate-800 dark:text-zinc-200">{stats.posCount} ajustes</p>
             </div>
           </div>
@@ -389,14 +389,14 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
                       {/* Antes e Depois + Justificativa */}
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-2 text-xs font-semibold flex-wrap">
-                          <span className="text-[10px] font-black uppercase text-slate-400">Antes:</span>
+                          <span className="text-[11px] font-black uppercase text-slate-400">Antes:</span>
                           <span className="px-2.5 py-1 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-black border border-rose-200 dark:border-rose-900/50 line-through opacity-85">
                             {log.beforeVal}
                           </span>
 
                           <Icon name="arrow_forward" className="text-xs text-slate-400 shrink-0" />
 
-                          <span className="text-[10px] font-black uppercase text-slate-400">Depois:</span>
+                          <span className="text-[11px] font-black uppercase text-slate-400">Depois:</span>
                           <span className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-black border border-emerald-200 dark:border-emerald-900/50 shadow-xs">
                             {log.afterVal}
                           </span>
@@ -405,7 +405,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
                         <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-100 dark:border-zinc-800 flex items-start gap-2 max-w-md">
                           <Icon name="comment" className="text-xs text-orange-500 shrink-0 mt-0.5" />
                           <div className="text-xs">
-                            <span className="font-black text-slate-400 uppercase text-[9px] mr-1">
+                            <span className="font-black text-slate-400 uppercase text-[11px] mr-1">
                               Motivo:
                             </span>
                             <span className="font-semibold text-slate-800 dark:text-zinc-200">
@@ -456,13 +456,13 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
                         title="Ir para este dia na grade"
                       >
                         <span className="block text-xs font-black text-slate-800 dark:text-zinc-100 group-hover:text-indigo-600">{diff.dateStr}</span>
-                        <span className="block text-[9px] font-bold text-slate-400 uppercase">Dia {diff.dayIdx + 1}</span>
+                        <span className="block text-[11px] font-bold text-slate-400 uppercase">Dia {diff.dayIdx + 1}</span>
                       </button>
 
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-black text-slate-900 dark:text-zinc-100">{diff.empName}</span>
-                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${
+                          <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded-md ${
                             diff.type === 'shift' ? 'bg-rose-100 dark:bg-rose-950/50 text-rose-600' :
                             diff.type === 'hour' ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-600' :
                             'bg-blue-100 dark:bg-blue-950/50 text-blue-600'
@@ -481,7 +481,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
                     {/* Comparativo: Oficial vs Atual */}
                     <div className="flex items-center gap-2 bg-slate-50 dark:bg-zinc-900/60 p-2 rounded-xl border border-slate-100 dark:border-zinc-800 self-stretch sm:self-auto justify-between sm:justify-end">
                       <div className="text-right">
-                        <span className="block text-[9px] font-black text-slate-400 uppercase">Oficial</span>
+                        <span className="block text-[11px] font-black text-slate-400 uppercase">Oficial</span>
                         {diff.type === 'shift' ? getShiftBadge(diff.officialVal) : (
                           <span className="text-xs font-bold text-slate-500 dark:text-zinc-400 line-through">{diff.officialVal}</span>
                         )}
@@ -490,7 +490,7 @@ export const ScheduleDiffModal: React.FC<ScheduleDiffModalProps> = ({
                       <Icon name="arrow_forward" className="text-slate-400 text-sm mx-1" />
 
                       <div>
-                        <span className="block text-[9px] font-black text-indigo-500 uppercase">Atual</span>
+                        <span className="block text-[11px] font-black text-indigo-500 uppercase">Atual</span>
                         {diff.type === 'shift' ? getShiftBadge(diff.currentVal) : (
                           <span className="text-xs font-black text-indigo-600 dark:text-indigo-400">{diff.currentVal}</span>
                         )}

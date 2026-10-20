@@ -154,7 +154,7 @@ export const SectionManager: React.FC<SectionManagerProps> = ({
             </div>
             <div>
               <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Donos de Seção</h2>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{MONTH_NAMES[currentMY.month]} {currentMY.year}</p>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{MONTH_NAMES[currentMY.month]} {currentMY.year}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -224,11 +224,11 @@ export const SectionManager: React.FC<SectionManagerProps> = ({
                          return (
                           <div key={empId} className="flex items-center justify-between bg-white border border-black p-2 group">
                               <div className="flex items-center gap-2 truncate">
-                                <span className="text-[9px] font-bold border border-black px-1 uppercase">{shiftLabel}</span>
+                                <span className="text-[11px] font-bold border border-black px-1 uppercase">{shiftLabel}</span>
                                 <span className="text-[11px] font-black uppercase truncate">{getEmpName(empId)}</span>
                               </div>
                               <button onClick={() => handleRemoveEmp(secName, empId)} className="opacity-0 group-hover:opacity-100 p-1 transition-all no-print text-black hover:bg-gray-200 rounded">
-                                <Icon name="close" className="text-[10px]" />
+                                <Icon name="close" className="text-[11px]" />
                               </button>
                           </div>
                          )
@@ -238,7 +238,7 @@ export const SectionManager: React.FC<SectionManagerProps> = ({
                           <select 
                               onChange={(e) => handleAddEmp(secName, e.target.value)}
                               value=""
-                              className="w-full bg-white border border-black rounded-sm p-1 text-[10px] font-bold focus:outline-none transition-all uppercase"
+                              className="w-full bg-white border border-black rounded-sm p-1 text-[11px] font-bold focus:outline-none transition-all uppercase"
                           >
                               <option value="" disabled>+ Adicionar</option>
                               {unassignedEmps.map(emp => (
