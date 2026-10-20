@@ -118,8 +118,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
-  const [showPublishMenu, setShowPublishMenu] = useState(false);
+  const [showPrepareMenu, setShowPrepareMenu] = useState(false);
   const [internalMobileMenu, setInternalMobileMenu] = useState(false);
   const showMobileMenu = isMobileMenuOpen !== undefined ? isMobileMenuOpen : internalMobileMenu;
   const setShowMobileMenu = onToggleMobileMenu || setInternalMobileMenu;
@@ -181,8 +180,7 @@ export const Header: React.FC<HeaderProps> = ({
             setShowConfigMenu(false);
             setShowShareMenu(false);
             setShowProfileMenu(false);
-            setShowActionsMenu(false);
-            setShowPublishMenu(false);
+            setShowPrepareMenu(false);
           }}
           className={embedded ? `flex items-center gap-1.5 px-2.5 min-h-[34px] rounded-md text-xs font-semibold uppercase tracking-wider transition-all ${
             activeFiltersCount > 0
@@ -380,7 +378,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-50 shadow-xs transition-colors h-16 px-2 sm:px-4 lg:px-6">
       {/* Backdrop overlay to prevent clicking behind open dropdowns */}
-      {(showConfigMenu || showShareMenu || showProfileMenu || showFilterMenu || showActionsMenu || showPublishMenu) && (
+      {(showConfigMenu || showShareMenu || showProfileMenu || showFilterMenu || showPrepareMenu) && (
         <div 
           className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[0.5px]" 
           onClick={(e) => {
@@ -389,8 +387,7 @@ export const Header: React.FC<HeaderProps> = ({
             setShowShareMenu(false);
             setShowProfileMenu(false);
             setShowFilterMenu(false);
-            setShowActionsMenu(false);
-            setShowPublishMenu(false);
+            setShowPrepareMenu(false);
           }}
         />
       )}
@@ -526,7 +523,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               ))}
 
-              {/* Operações & Loja Dropdown */}
+              {/* Operações & Loja Dropdown (Durante o Mês - Escala Atual) */}
               <div className="relative">
                 <button
                   type="button"
@@ -535,12 +532,12 @@ export const Header: React.FC<HeaderProps> = ({
                   aria-label="Menu Operações & Loja"
                   title="Menu Operações & Loja (Rotinas, Equipe, Jornada, Feriados e Dados)"
                   className={`px-2 xl:px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 xl:gap-1.5 whitespace-nowrap shrink-0 ${
-                    ['team','jornada','data','feriados','worked-holidays','cleaning','patrol','sections'].includes(currentView) 
+                    ['daily','cleaning','patrol','sections','team','jornada','data','feriados','worked-holidays'].includes(currentView) 
                       ? 'bg-white dark:bg-zinc-800 shadow-sm text-orange-600 dark:text-orange-400 font-black' 
                       : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
                   }`}
                 >
-                  <Icon name="tune" className="text-sm shrink-0" />
+                  <Icon name="storefront" className="text-sm shrink-0" />
                   <span className="hidden 2xl:inline">Operações & Loja</span>
                   <span className="inline 2xl:hidden">Operações</span>
                   <Icon name={showConfigMenu ? 'expand_less' : 'expand_more'} className="text-xs shrink-0" />
@@ -549,36 +546,152 @@ export const Header: React.FC<HeaderProps> = ({
                 {showConfigMenu && (
                   <div 
                     onClick={(e) => e.stopPropagation()}
-                    className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 animate-in fade-in slide-in-from-top-1 duration-150 space-y-2"
+                    className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2.5 animate-in fade-in slide-in-from-top-1 duration-150 space-y-2 text-zinc-800 dark:text-zinc-100"
                   >
-                    {operationsSections.map((section, sIdx) => (
-                      <div key={section.title} className={sIdx > 0 ? 'pt-1.5 border-t border-zinc-100 dark:border-zinc-800' : ''}>
-                        <div className="px-2.5 py-1 text-[11px] font-black uppercase text-zinc-400 dark:text-zinc-500 tracking-wider">
-                          {section.title}
-                        </div>
-                        <div className="space-y-0.5">
-                          {section.items.map(item => (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                onViewChange(item.id as any);
-                                setShowConfigMenu(false);
-                              }}
-                              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all text-left ${
-                                currentView === item.id 
-                                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 font-bold' 
-                                  : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-                              }`}
-                            >
-                              <Icon name={item.icon} className="text-base text-zinc-400 shrink-0" />
-                              <span className="truncate">{item.label}</span>
-                            </button>
-                          ))}
-                        </div>
+                    {/* Header */}
+                    <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800">
+                      <span className="text-[11px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400 block">
+                        Durante o Mês (Operação)
+                      </span>
+                      <span className="text-[10px] font-medium text-zinc-400">
+                        Compartilhamento e rotinas da escala em vigor
+                      </span>
+                    </div>
+
+                    {/* Grupo 1: Comunicação & Compartilhar */}
+                    <div className="space-y-1">
+                      <div className="px-2 text-[10px] font-black uppercase text-zinc-400 tracking-wider">
+                        Comunicação & Compartilhar
                       </div>
-                    ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onShareWhatsApp();
+                          setShowConfigMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-left transition-all"
+                      >
+                        <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 shrink-0">
+                          <Icon name="chat" className="text-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-black uppercase text-[11px]">WhatsApp: Escala do Dia</span>
+                          <span className="text-[10px] text-zinc-400">Turnos, posições e horários de almoço</span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onShareApoioWhatsApp();
+                          setShowConfigMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold hover:bg-blue-50 dark:hover:bg-blue-950/40 text-left transition-all"
+                      >
+                        <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/50 text-blue-600 shrink-0">
+                          <Icon name="assignment" className="text-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-black uppercase text-[11px]">WhatsApp: Apoio / Funções</span>
+                          <span className="text-[10px] text-zinc-400">Postos de caixa, reposição e salão</span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onPrint();
+                          setShowConfigMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left transition-all"
+                      >
+                        <div className="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-900/50 text-rose-600 shrink-0">
+                          <Icon name="print" className="text-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-black uppercase text-[11px]">Imprimir / Salvar PDF</span>
+                          <span className="text-[10px] text-zinc-400">Layout oficial A4 paisagem</span>
+                        </div>
+                      </button>
+
+                      {onExportCsv && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onExportCsv();
+                            setShowConfigMenu(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left transition-all"
+                        >
+                          <div className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 shrink-0">
+                            <Icon name="table_view" className="text-sm" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-black uppercase text-[11px]">Exportar Escala (CSV)</span>
+                            <span className="text-[10px] text-zinc-400">Planilha compatível com Excel</span>
+                          </div>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="h-px bg-zinc-100 dark:bg-zinc-800" />
+
+                    {/* Grupo 2: Rotinas Diárias da Loja */}
+                    <div className="space-y-1">
+                      <div className="px-2 text-[10px] font-black uppercase text-zinc-400 tracking-wider">
+                        Rotinas Diárias da Loja
+                      </div>
+
+                      {[
+                        { id: 'daily', label: 'Resumo Diário & Almoços', desc: 'Presentes e intervalos do dia', icon: 'today' },
+                        { id: 'cleaning', label: 'Limpeza da Copa', desc: '1 responsável escalado por dia', icon: 'cleaning_services' },
+                        { id: 'patrol', label: 'Ronda da Loja', desc: 'Patrulha por abertura e fechamento', icon: 'local_police' },
+                        { id: 'sections', label: 'Donos de Seção', desc: 'Setores de brinquedos da quinzena', icon: 'category' },
+                      ].map(item => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            onViewChange(item.id as any);
+                            setShowConfigMenu(false);
+                          }}
+                          className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold transition-all text-left ${
+                            currentView === item.id 
+                              ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 font-bold' 
+                              : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                          }`}
+                        >
+                          <Icon name={item.icon} className="text-base text-zinc-400 shrink-0" />
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-black uppercase text-[11px] truncate">{item.label}</span>
+                            <span className="text-[10px] text-zinc-400 truncate">{item.desc}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="h-px bg-zinc-100 dark:bg-zinc-800" />
+
+                    {/* Grupo 3: Recados */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onToggleNotes();
+                        setShowConfigMenu(false);
+                      }}
+                      className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold transition-all text-left ${
+                        showNotes ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600' : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                      }`}
+                    >
+                      <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 shrink-0">
+                        <Icon name="edit_note" className="text-sm" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-black uppercase text-[11px]">{showNotes ? 'Ocultar Recados' : 'Mural de Recados'}</span>
+                        <span className="text-[10px] text-zinc-400">Anotações no rodapé da impressão</span>
+                      </div>
+                    </button>
                   </div>
                 )}
               </div>
@@ -699,369 +812,237 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* 4. GRUPO AÇÕES DA ESCALA & PUBLICAÇÃO (Automação + Publicar Agrupados) */}
-            <div className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-0.5 shadow-xs shrink-0">
-              {/* Automação & Ferramentas de Escala */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowActionsMenu(!showActionsMenu);
-                    setShowPublishMenu(false);
-                    setShowConfigMenu(false);
-                    setShowFilterMenu(false);
-                    setShowProfileMenu(false);
-                  }}
-                  aria-label="Menu de Ações, Ferramentas e Exportação da Escala"
-                  className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 min-h-[34px] rounded-md text-xs font-semibold uppercase tracking-wider transition-all ${
-                    showActionsMenu
-                      ? 'bg-zinc-800 text-white shadow-xs'
-                      : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                  }`}
-                  title="Automação & Escala (Gerar Escala, Sorteio de Domingos, Dias Protegidos, Configurações da Loja)"
-                >
-                  <Icon name="tune" className="text-sm text-zinc-500 dark:text-zinc-400 shrink-0" />
-                  <span className="hidden 2xl:inline">Automação</span>
-                  <Icon name={showActionsMenu ? 'expand_less' : 'expand_more'} className="text-xs opacity-70 shrink-0" />
-                </button>
-
-                {showActionsMenu && (
-                  <div 
-                    onClick={(e) => e.stopPropagation()}
-                    className="absolute top-full right-0 mt-2 w-80 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2.5 flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-150 text-zinc-800 dark:text-zinc-100"
-                  >
-                    {/* Seção 1: Automação & Escala */}
-                    <div>
-                      <div className="px-2 py-1 text-[11px] font-black uppercase text-orange-600 dark:text-orange-400 tracking-wider flex items-center gap-1.5">
-                        <Icon name="auto_fix_high" className="text-xs" />
-                        <span>Automação & Escala</span>
-                      </div>
-
-                      <div className="space-y-1 mt-1">
-                        {/* Gerar Nova Escala */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onCreateMonth();
-                            setShowActionsMenu(false);
-                          }}
-                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-orange-50 dark:hover:bg-orange-950/40 transition-all text-left"
-                        >
-                          <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-900/50 text-orange-600 shrink-0">
-                            <Icon name="add_circle" className="text-sm" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-black uppercase text-[11px]">Gerar Escala do Mês</span>
-                            <span className="text-[11px] text-zinc-400">Sugestão inteligente ou base trabalhada</span>
-                          </div>
-                        </button>
-
-                        {/* Sorteio de Domingos */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onSortearDomingo();
-                            setShowActionsMenu(false);
-                          }}
-                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
-                        >
-                          <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600 shrink-0">
-                            <Icon name="casino" className="text-sm" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-black uppercase text-[11px]">Sorteio de Domingos</span>
-                            <span className="text-[11px] text-zinc-400">Revezamento conforme teto CLT</span>
-                          </div>
-                        </button>
-
-                        {/* Aplicar Folgas Inteligentes */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onApplyFolgas();
-                            setShowActionsMenu(false);
-                          }}
-                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
-                        >
-                          <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 shrink-0">
-                            <Icon name="event_available" className="text-sm" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-black uppercase text-[11px]">Aplicar Folgas 6x1</span>
-                            <span className="text-[11px] text-zinc-400">Distribuição com preferências de equipe</span>
-                          </div>
-                        </button>
-
-                        {/* Dias Protegidos & Presets */}
-                        {(onOpenPresetModal || showActionsModal) && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (onOpenPresetModal) onOpenPresetModal();
-                              else setShowActionsModal(true);
-                              setShowActionsMenu(false);
-                            }}
-                            className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
-                          >
-                            <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/50 text-purple-600 shrink-0">
-                              <Icon name="shield" className="text-sm" />
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="font-black uppercase text-[11px]">Dias Protegidos & Presets</span>
-                              <span className="text-[11px] text-zinc-400">Picos sazonais (Natal, Dia das Crianças)</span>
-                            </div>
-                          </button>
-                        )}
-
-                        {/* Configurações da Loja & Jornada */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onViewChange('jornada');
-                            setShowActionsMenu(false);
-                          }}
-                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
-                        >
-                          <div className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0">
-                            <Icon name="settings_suggest" className="text-sm" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-black uppercase text-[11px]">Configurações da Loja</span>
-                            <span className="text-[11px] text-zinc-400">Faixas de turno e limites de domingo</span>
-                          </div>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="h-px bg-zinc-100 dark:bg-zinc-800" />
-
-                    {/* Seção 2: Validação & Auditoria */}
-                    <div>
-                      <div className="px-2.5 py-1 text-[11px] font-black uppercase text-rose-600 dark:text-rose-400 tracking-wider flex items-center gap-1">
-                        <Icon name="verified_user" className="text-xs" />
-                        <span>Validação & Conformidade</span>
-                      </div>
-
-                      <div className="space-y-1 mt-1">
-                        {onOpenInconsistencyModal && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onOpenInconsistencyModal();
-                              setShowActionsMenu(false);
-                            }}
-                            className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all text-left"
-                          >
-                            <div className="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-900/50 text-rose-600">
-                              <Icon name="gavel" className="text-sm" />
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="font-black uppercase text-[11px]">Auditoria CLT Completa</span>
-                              <span className="text-[11px] text-zinc-400">6x1, domingos e desfalques de equipe</span>
-                            </div>
-                          </button>
-                        )}
-
-                        {isValidated && onOpenDiffModal && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onOpenDiffModal();
-                              setShowActionsMenu(false);
-                            }}
-                            className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-all text-left"
-                          >
-                            <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600">
-                              <Icon name="difference" className="text-sm" />
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="font-black uppercase text-[11px]">Divergências Pós-Oficial</span>
-                              <span className="text-[11px] text-zinc-400">Comparar com snapshot congelado</span>
-                            </div>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="h-px bg-zinc-100 dark:bg-zinc-800" />
-
-                    {/* Seção 3: Configurações & Mural */}
-                    <div>
-                      <div className="px-2.5 py-1 text-[11px] font-black uppercase text-zinc-400 dark:text-zinc-500 tracking-wider flex items-center gap-1">
-                        <Icon name="settings" className="text-xs" />
-                        <span>Configurações & Anotações</span>
-                      </div>
-
-                      <div className="space-y-1 mt-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onToggleNotes();
-                            setShowActionsMenu(false);
-                          }}
-                          className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold transition-all text-left ${
-                            showNotes ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600' : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-                          }`}
-                        >
-                          <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600">
-                            <Icon name="edit_note" className="text-sm" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-black uppercase text-[11px]">{showNotes ? 'Ocultar Recados' : 'Mural de Recados'}</span>
-                            <span className="text-[11px] text-zinc-400">Anotações no rodapé da impressão</span>
-                          </div>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onViewChange('jornada');
-                            setShowActionsMenu(false);
-                          }}
-                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
-                        >
-                          <div className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600">
-                            <Icon name="schedule" className="text-sm" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-black uppercase text-[11px]">Parâmetros de Jornada</span>
-                            <span className="text-[11px] text-zinc-400">Faixas de turno e regras de almoço</span>
-                          </div>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+            {/* 4. PREPARAR ESCALA (PLANEJAMENTO & MONTAGEM DA NOVA ESCALA) */}
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPrepareMenu(!showPrepareMenu);
+                  setShowConfigMenu(false);
+                  setShowFilterMenu(false);
+                  setShowProfileMenu(false);
+                }}
+                aria-label="Menu Preparar Escala"
+                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 min-h-[34px] rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-xs ${
+                  !isValidated
+                    ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-orange-500/20'
+                    : showPrepareMenu
+                    ? 'bg-zinc-800 text-white'
+                    : 'bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-200/80 dark:border-zinc-700/80'
+                }`}
+                title="Preparar Escala (Gerar Mês, Sortear Domingos, Aplicar Folgas, Parâmetros e Oficializar)"
+              >
+                <Icon name="auto_fix_high" className="text-sm shrink-0" />
+                <span className="hidden xl:inline">Preparar Escala</span>
+                <span className="inline xl:hidden">Preparar</span>
+                {!isValidated && (
+                  <span className="w-2 h-2 rounded-full bg-white animate-pulse shrink-0" title="Escala em preparação" />
                 )}
-              </div>
+                <Icon name={showPrepareMenu ? 'expand_less' : 'expand_more'} className="text-xs opacity-70 shrink-0" />
+              </button>
 
-              <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-800 mx-0.5 shrink-0" />
-
-              {/* Publicar / Exportar Escala */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPublishMenu(!showPublishMenu);
-                    setShowActionsMenu(false);
-                    setShowConfigMenu(false);
-                    setShowFilterMenu(false);
-                    setShowProfileMenu(false);
-                  }}
-                  aria-label="Publicar ou Exportar Escala"
-                  className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 min-h-[34px] rounded-md bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs uppercase tracking-wider shadow-xs active:scale-95 transition-all"
-                  title="Publicar e Exportar Escala (Oficializar, WhatsApp, Imprimir)"
-                >
-                  <Icon name="rocket_launch" className="text-sm shrink-0" />
-                  <span className="hidden 2xl:inline">Publicar</span>
-                  <Icon name={showPublishMenu ? 'expand_less' : 'expand_more'} className="text-xs shrink-0" />
-                </button>
-
-                {showPublishMenu && (
+              {showPrepareMenu && (
                 <div 
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 flex flex-col gap-1 animate-in fade-in slide-in-from-top-1 duration-150 text-zinc-800 dark:text-zinc-100"
+                  className="absolute top-full right-0 mt-2 w-80 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2.5 flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-150 text-zinc-800 dark:text-zinc-100"
                 >
-                  {/* Oficializar Escala */}
+                  {/* Header */}
+                  <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400 block">
+                      Preparar Escala (Planejamento)
+                    </span>
+                    <span className="text-[10px] font-medium text-zinc-400">
+                      Criação, regras trabalhistas e parâmetros da nova escala
+                    </span>
+                  </div>
+
+                  {/* Seção 1: Montagem & Automação da Escala */}
+                  <div className="space-y-1">
+                    <div className="px-2 text-[10px] font-black uppercase text-zinc-400 tracking-wider">
+                      Montagem & Automação
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onCreateMonth();
+                        setShowPrepareMenu(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-orange-50 dark:hover:bg-orange-950/40 transition-all text-left"
+                    >
+                      <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-900/50 text-orange-600 shrink-0">
+                        <Icon name="add_circle" className="text-sm" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-black uppercase text-[11px]">Gerar Nova Escala</span>
+                        <span className="text-[10px] text-zinc-400">Sugestão inteligente CLT ou base trabalhada</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onSortearDomingo();
+                        setShowPrepareMenu(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
+                    >
+                      <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600 shrink-0">
+                        <Icon name="casino" className="text-sm" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-black uppercase text-[11px]">Sortear Domingos</span>
+                        <span className="text-[10px] text-zinc-400">Revezamento conforme teto CLT de 2 domingos</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onApplyFolgas();
+                        setShowPrepareMenu(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
+                    >
+                      <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 shrink-0">
+                        <Icon name="event_available" className="text-sm" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-black uppercase text-[11px]">Aplicar Folgas 6x1</span>
+                        <span className="text-[10px] text-zinc-400">Distribuição com preferências de equipe</span>
+                      </div>
+                    </button>
+
+                    {(onOpenPresetModal || showActionsModal) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onOpenPresetModal) onOpenPresetModal();
+                          else setShowActionsModal(true);
+                          setShowPrepareMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
+                      >
+                        <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/50 text-purple-600 shrink-0">
+                          <Icon name="shield" className="text-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-black uppercase text-[11px]">Dias Protegidos & Presets</span>
+                          <span className="text-[10px] text-zinc-400">Picos sazonais (Natal, Dia das Crianças)</span>
+                        </div>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="h-px bg-zinc-100 dark:bg-zinc-800" />
+
+                  {/* Seção 2: Configurações & Regras da Escala */}
+                  <div className="space-y-1">
+                    <div className="px-2 text-[10px] font-black uppercase text-zinc-400 tracking-wider">
+                      Configurações & Equipe
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onViewChange('jornada');
+                        setShowPrepareMenu(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
+                    >
+                      <div className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0">
+                        <Icon name="schedule" className="text-sm" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-black uppercase text-[11px]">Parâmetros de Jornada</span>
+                        <span className="text-[10px] text-zinc-400">Faixas de turno e limites de domingo</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onViewChange('team');
+                        setShowPrepareMenu(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
+                    >
+                      <div className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0">
+                        <Icon name="groups" className="text-sm" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-black uppercase text-[11px]">Equipe Operacional</span>
+                        <span className="text-[10px] text-zinc-400">Vigência, cargos e férias dos colaboradores</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onViewChange('feriados');
+                        setShowPrepareMenu(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
+                    >
+                      <div className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0">
+                        <Icon name="event_busy" className="text-sm" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-black uppercase text-[11px]">Feriados da Loja</span>
+                        <span className="text-[10px] text-zinc-400">Feriados municipais e compensações</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onViewChange('data');
+                        setShowPrepareMenu(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
+                    >
+                      <div className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0">
+                        <Icon name="storage" className="text-sm" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-black uppercase text-[11px]">Banco de Dados & Backup</span>
+                        <span className="text-[10px] text-zinc-400">Exportar backup, senhas e limpeza</span>
+                      </div>
+                    </button>
+                  </div>
+
+                  <div className="h-px bg-zinc-100 dark:bg-zinc-800" />
+
+                  {/* Seção 3: Conclusão / Oficialização */}
                   <button
                     type="button"
                     onClick={() => {
                       onToggleValidation();
-                      setShowPublishMenu(false);
+                      setShowPrepareMenu(false);
                     }}
-                    className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-left transition-all"
+                    className={`w-full flex items-center gap-2.5 p-2.5 rounded-xl text-xs font-bold text-left transition-all ${
+                      isValidated
+                        ? 'bg-zinc-100 dark:bg-zinc-800 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-700 dark:text-amber-300'
+                        : 'bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300'
+                    }`}
                   >
-                    <div className={`p-1.5 rounded-lg ${isValidated ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600'}`}>
-                      <Icon name="verified" className="text-sm" />
+                    <div className={`p-1.5 rounded-lg shrink-0 ${
+                      isValidated ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-600' : 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600'
+                    }`}>
+                      <Icon name={isValidated ? 'lock_reset' : 'verified'} className="text-sm" />
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-black uppercase text-[11px] text-zinc-900 dark:text-zinc-100">
+                      <span className="font-black uppercase text-[11px]">
                         {isValidated ? 'Voltar para Rascunho' : 'Oficializar Escala'}
                       </span>
-                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Congela a versão oficial para auditoria</span>
+                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                        {isValidated ? 'Destrava edição para ajustes' : 'Congela a versão oficial para a loja'}
+                      </span>
                     </div>
                   </button>
-
-                  <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1" />
-
-                  {/* WhatsApp Escala do Dia */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onShareWhatsApp();
-                      setShowPublishMenu(false);
-                    }}
-                    className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-left transition-all"
-                  >
-                    <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600">
-                      <Icon name="chat" className="text-sm" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="font-black uppercase text-[11px] text-zinc-900 dark:text-zinc-100">WhatsApp: Escala do Dia</span>
-                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Resumo de turnos e almoços</span>
-                    </div>
-                  </button>
-
-                  {/* Apoio Operacional */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onShareApoioWhatsApp();
-                      setShowPublishMenu(false);
-                    }}
-                    className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold hover:bg-blue-50 dark:hover:bg-blue-950/40 text-left transition-all"
-                  >
-                    <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/50 text-blue-600">
-                      <Icon name="assignment" className="text-sm" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="font-black uppercase text-[11px] text-zinc-900 dark:text-zinc-100">WhatsApp: Apoio / Funções</span>
-                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Postos de caixa, reposição e salão</span>
-                    </div>
-                  </button>
-
-                  <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1" />
-
-                  {/* Imprimir / PDF */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onPrint();
-                      setShowPublishMenu(false);
-                    }}
-                    className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left transition-all"
-                  >
-                    <div className="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-900/50 text-rose-600">
-                      <Icon name="print" className="text-sm" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="font-black uppercase text-[11px] text-zinc-900 dark:text-zinc-100">Imprimir / Salvar PDF</span>
-                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Layout oficial A4 paisagem</span>
-                    </div>
-                  </button>
-
-                  {/* Salvar Escala (CSV) */}
-                  {onExportCsv && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onExportCsv();
-                        setShowPublishMenu(false);
-                      }}
-                      className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-left transition-all"
-                    >
-                      <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600">
-                        <Icon name="table_view" className="text-sm" />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-black uppercase text-[11px] text-emerald-700 dark:text-emerald-300">Exportar Planilha (CSV)</span>
-                        <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Compatível com Excel e Sheets</span>
-                      </div>
-                    </button>
-                  )}
                 </div>
               )}
             </div>
-          </div>
 
             {/* 7. Menu do Usuário & Perfil */}
             <div className="relative shrink-0">
@@ -1300,67 +1281,236 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 </div>
 
-                {/* Ações da Escala */}
+                {/* Durante o Mês (Operação da Escala Atual) */}
                 <div className="space-y-2">
-                  <span className="text-[11px] font-black uppercase text-zinc-400 tracking-wider block px-1">
-                    Ações da Escala
+                  <span className="text-[11px] font-black uppercase text-orange-600 dark:text-orange-400 tracking-wider block px-1">
+                    Durante o Mês (Operação)
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        onShareWhatsApp();
+                        setShowMobileMenu(false);
+                      }}
+                      className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 flex items-center gap-2 text-xs font-bold text-left shadow-xs"
+                    >
+                      <Icon name="chat" className="text-sm text-emerald-600 shrink-0" />
+                      <span className="truncate">WhatsApp Dia</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        onShareApoioWhatsApp();
+                        setShowMobileMenu(false);
+                      }}
+                      className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 flex items-center gap-2 text-xs font-bold text-left shadow-xs"
+                    >
+                      <Icon name="assignment" className="text-sm text-blue-600 shrink-0" />
+                      <span className="truncate">WhatsApp Apoio</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        onPrint();
+                        setShowMobileMenu(false);
+                      }}
+                      className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/80 text-zinc-700 dark:text-zinc-200 flex items-center gap-2 text-xs font-bold text-left"
+                    >
+                      <Icon name="print" className="text-sm text-rose-500 shrink-0" />
+                      <span className="truncate">Imprimir PDF</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        onViewChange('daily');
+                        setShowMobileMenu(false);
+                      }}
+                      className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold text-left ${
+                        currentView === 'daily'
+                          ? 'bg-orange-500 text-white border-orange-600'
+                          : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-zinc-700/80'
+                      }`}
+                    >
+                      <Icon name="today" className="text-sm shrink-0" />
+                      <span className="truncate">Resumo do Dia</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        onViewChange('cleaning');
+                        setShowMobileMenu(false);
+                      }}
+                      className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold text-left ${
+                        currentView === 'cleaning'
+                          ? 'bg-orange-500 text-white border-orange-600'
+                          : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-zinc-700/80'
+                      }`}
+                    >
+                      <Icon name="cleaning_services" className="text-sm shrink-0" />
+                      <span className="truncate">Limpeza Copa</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        onViewChange('patrol');
+                        setShowMobileMenu(false);
+                      }}
+                      className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold text-left ${
+                        currentView === 'patrol'
+                          ? 'bg-orange-500 text-white border-orange-600'
+                          : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-zinc-700/80'
+                      }`}
+                    >
+                      <Icon name="local_police" className="text-sm shrink-0" />
+                      <span className="truncate">Ronda da Loja</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        onViewChange('sections');
+                        setShowMobileMenu(false);
+                      }}
+                      className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold text-left ${
+                        currentView === 'sections'
+                          ? 'bg-orange-500 text-white border-orange-600'
+                          : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-zinc-700/80'
+                      }`}
+                    >
+                      <Icon name="category" className="text-sm shrink-0" />
+                      <span className="truncate">Donos de Seção</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        onToggleNotes();
+                        setShowMobileMenu(false);
+                      }}
+                      className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold text-left ${
+                        showNotes
+                          ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 border-indigo-200'
+                          : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-zinc-700/80'
+                      }`}
+                    >
+                      <Icon name="edit_note" className="text-sm text-indigo-500 shrink-0" />
+                      <span className="truncate">{showNotes ? 'Ocultar Recados' : 'Mural Recados'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Preparar Escala (Planejamento da Nova Escala) */}
+                <div className="space-y-2">
+                  <span className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider block px-1">
+                    Preparar Escala (Planejamento)
                   </span>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => {
                         setShowMobileMenu(false);
-                        setShowActionsModal(true);
+                        onCreateMonth();
                       }}
-                      className="p-3 rounded-xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 flex items-center gap-2 text-xs font-black uppercase shadow-xs text-left"
+                      className="p-2.5 rounded-xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 flex items-center gap-2 text-xs font-black uppercase text-left shadow-xs"
                     >
-                      <Icon name="auto_fix_high" className="text-base text-orange-500 shrink-0" />
-                      <span>Ações & Opções</span>
+                      <Icon name="add_circle" className="text-sm text-orange-500 shrink-0" />
+                      <span className="truncate">Gerar Mês</span>
                     </button>
 
                     <button
                       onClick={() => {
-                        onToggleEdit?.();
+                        setShowMobileMenu(false);
+                        onSortearDomingo();
+                      }}
+                      className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/80 text-zinc-700 dark:text-zinc-200 flex items-center gap-2 text-xs font-bold text-left"
+                    >
+                      <Icon name="casino" className="text-sm text-amber-500 shrink-0" />
+                      <span className="truncate">Sortear Domingos</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setShowMobileMenu(false);
+                        onApplyFolgas();
+                      }}
+                      className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/80 text-zinc-700 dark:text-zinc-200 flex items-center gap-2 text-xs font-bold text-left"
+                    >
+                      <Icon name="event_available" className="text-sm text-emerald-500 shrink-0" />
+                      <span className="truncate">Folgas 6x1</span>
+                    </button>
+
+                    {(onOpenPresetModal || showActionsModal) && (
+                      <button
+                        onClick={() => {
+                          setShowMobileMenu(false);
+                          if (onOpenPresetModal) onOpenPresetModal();
+                          else setShowActionsModal(true);
+                        }}
+                        className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/80 text-zinc-700 dark:text-zinc-200 flex items-center gap-2 text-xs font-bold text-left"
+                      >
+                        <Icon name="shield" className="text-sm text-purple-500 shrink-0" />
+                        <span className="truncate">Presets & Picos</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        onViewChange('jornada');
                         setShowMobileMenu(false);
                       }}
-                      className={`p-3 rounded-xl border flex items-center gap-2 text-xs font-bold uppercase transition-all ${
-                        isEditable 
-                          ? 'bg-indigo-600 text-white border-indigo-700' 
-                          : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700'
+                      className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold text-left ${
+                        currentView === 'jornada'
+                          ? 'bg-orange-500 text-white border-orange-600'
+                          : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-zinc-700/80'
                       }`}
                     >
-                      <Icon name={isEditable ? 'lock_open' : 'edit'} className="text-base shrink-0" />
-                      <span>{isEditable ? 'Edição Ativa' : 'Modo Edição'}</span>
+                      <Icon name="schedule" className="text-sm shrink-0" />
+                      <span className="truncate">Parâm. Jornada</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        onViewChange('team');
+                        setShowMobileMenu(false);
+                      }}
+                      className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold text-left ${
+                        currentView === 'team'
+                          ? 'bg-orange-500 text-white border-orange-600'
+                          : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-zinc-700/80'
+                      }`}
+                    >
+                      <Icon name="groups" className="text-sm shrink-0" />
+                      <span className="truncate">Equipe</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        onViewChange('feriados');
+                        setShowMobileMenu(false);
+                      }}
+                      className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold text-left ${
+                        currentView === 'feriados'
+                          ? 'bg-orange-500 text-white border-orange-600'
+                          : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-zinc-700/80'
+                      }`}
+                    >
+                      <Icon name="event_busy" className="text-sm shrink-0" />
+                      <span className="truncate">Feriados</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        onViewChange('data');
+                        setShowMobileMenu(false);
+                      }}
+                      className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold text-left ${
+                        currentView === 'data'
+                          ? 'bg-orange-500 text-white border-orange-600'
+                          : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-zinc-700/80'
+                      }`}
+                    >
+                      <Icon name="storage" className="text-sm shrink-0" />
+                      <span className="truncate">Backup & Dados</span>
                     </button>
                   </div>
                 </div>
-
-                {/* Rotinas da Loja */}
-                {operationsSections.map(sec => (
-                  <div key={sec.title} className="space-y-1.5">
-                    <span className="text-[11px] font-black uppercase text-zinc-400 tracking-wider block px-1">
-                      {sec.title}
-                    </span>
-                    <div className="grid grid-cols-2 gap-2">
-                      {sec.items.map(item => (
-                        <button
-                          key={item.id}
-                          onClick={() => {
-                            onViewChange(item.id as any);
-                            setShowMobileMenu(false);
-                          }}
-                          className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold text-left transition-all ${
-                            currentView === item.id
-                              ? 'bg-orange-500 text-white border-orange-600 shadow-sm'
-                              : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200/80 dark:border-zinc-700/80'
-                          }`}
-                        >
-                          <Icon name={item.icon} className={`text-sm shrink-0 ${currentView === item.id ? 'text-white' : 'text-zinc-400'}`} />
-                          <span className="truncate">{item.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
 
                 {/* Sessão */}
                 <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 space-y-2">
