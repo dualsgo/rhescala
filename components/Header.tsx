@@ -338,6 +338,39 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
             )}
+
+            {/* 6. Densidade / Modo de Visão */}
+            {onToggleDensityMode && (
+              <div className="space-y-1 pt-1 border-t border-zinc-100 dark:border-zinc-800">
+                <label className="text-[11px] font-black uppercase tracking-wider text-zinc-400">Modo de Exibição da Grade</label>
+                <div className="grid grid-cols-2 gap-1 bg-zinc-100 dark:bg-zinc-800/70 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => { if (densityMode !== 'clean') onToggleDensityMode(); }}
+                    className={`py-1 text-[11px] font-black uppercase rounded-lg transition-all text-center flex items-center justify-center gap-1 ${
+                      densityMode === 'clean'
+                        ? 'bg-orange-500 text-white shadow-sm'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
+                    }`}
+                  >
+                    <Icon name="visibility" className="text-xs" />
+                    <span>Visão Limpa</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { if (densityMode !== 'audit') onToggleDensityMode(); }}
+                    className={`py-1 text-[11px] font-black uppercase rounded-lg transition-all text-center flex items-center justify-center gap-1 ${
+                      densityMode === 'audit'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
+                    }`}
+                  >
+                    <Icon name="troubleshoot" className="text-xs" />
+                    <span>Auditoria</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -438,7 +471,7 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={isReadOnly ? undefined : onToggleValidation}
             aria-label={`Status da Escala: ${isValidated ? 'Oficializada' : 'Modo Rascunho'}`}
-            className={`hidden md:flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border font-bold text-[11px] tabular-nums uppercase tracking-wider transition-all shadow-sm shrink-0 min-h-[38px] ${
+            className={`hidden md:flex items-center gap-1 sm:gap-1.5 px-2 py-1 rounded-xl border font-bold text-[11px] tabular-nums uppercase tracking-wider transition-all shadow-xs shrink-0 min-h-[34px] ${
               isValidated
                 ? 'bg-emerald-500 text-white border-emerald-600 shadow-emerald-500/20'
                 : 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border-amber-300 dark:border-amber-800'
@@ -446,7 +479,7 @@ export const Header: React.FC<HeaderProps> = ({
             title={isReadOnly ? 'Status da Escala' : (isValidated ? 'Oficializada! Clique para alternar para Rascunho' : 'Rascunho. Clique para oficializar escala')}
           >
             <Icon name={isValidated ? 'verified' : 'pending_actions'} className="text-xs sm:text-sm shrink-0" />
-            <span className="hidden xl:inline">{isValidated ? 'Oficial' : 'Rascunho'}</span>
+            <span className="hidden 2xl:inline">{isValidated ? 'Oficial' : 'Rascunho'}</span>
           </button>
         </div>
 
@@ -632,29 +665,9 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
 
-            {/* 2. GRUPO VISUALIZAÇÃO & FILTROS (Filtros da Grade + Visão Limpa/Auditoria) */}
+            {/* 2. GRUPO VISUALIZAÇÃO & FILTROS (Filtros da Grade) */}
             <div className="hidden lg:inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-0.5 shadow-xs shrink-0">
               {renderFilterDropdown(true)}
-
-              {onToggleDensityMode && (
-                <>
-                  <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-800 mx-0.5 shrink-0" />
-                  <button
-                    type="button"
-                    onClick={onToggleDensityMode}
-                    aria-label={densityMode === 'audit' ? 'Alternar para Visão Limpa' : 'Alternar para Visão de Auditoria'}
-                    className={`flex items-center gap-1 px-2.5 min-h-[34px] rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${
-                      densityMode === 'audit'
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                    }`}
-                    title={densityMode === 'audit' ? 'Alternar para Visão Limpa (ocultar contadores secundários)' : 'Alternar para Visão de Auditoria (exibir todos os badges e horários)'}
-                  >
-                    <Icon name={densityMode === 'audit' ? 'troubleshoot' : 'visibility'} className="text-xs shrink-0" />
-                    <span className="hidden 2xl:inline">{densityMode === 'audit' ? 'Auditoria' : 'Limpa'}</span>
-                  </button>
-                </>
-              )}
             </div>
 
             {/* 3. SALVAR MANUAL COM ATALHO CTRL+S */}
@@ -664,7 +677,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={onManualSave}
                 disabled={isSaving}
                 aria-label={isSaving ? 'Salvando escala...' : isJustSaved ? 'Escala salva com sucesso' : 'Salvar escala agora (Atalho Ctrl+S)'}
-                className={`hidden sm:flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 min-h-[38px] rounded-lg border font-bold text-[11px] sm:text-xs tabular-nums uppercase tracking-wider transition-all shadow-sm ${
+                className={`hidden sm:flex items-center gap-1 px-2.5 min-h-[34px] rounded-lg border font-bold text-[11px] sm:text-xs tabular-nums uppercase tracking-wider transition-all shadow-xs shrink-0 ${
                   isJustSaved
                     ? 'bg-emerald-600 border-emerald-700 text-white shadow-emerald-500/30 scale-[1.02]'
                     : isSaving
@@ -677,7 +690,7 @@ export const Header: React.FC<HeaderProps> = ({
                   name={isJustSaved ? 'check_circle' : isSaving ? 'sync' : 'save'} 
                   className={`text-xs sm:text-sm shrink-0 ${isSaving ? 'animate-spin' : ''}`} 
                 />
-                <span className="inline">
+                <span className="hidden xl:inline">
                   {isJustSaved ? 'Salvo!' : isSaving ? 'Salvando...' : 'Salvar'}
                 </span>
                 <span className="hidden min-[1440px]:inline text-[11px] sm:text-[11px] opacity-80 bg-black/25 px-1 py-0.5 rounded font-mono">
@@ -708,9 +721,7 @@ export const Header: React.FC<HeaderProps> = ({
                   title="Automação & Escala (Gerar Escala, Sorteio de Domingos, Dias Protegidos, Configurações da Loja)"
                 >
                   <Icon name="tune" className="text-sm text-zinc-500 dark:text-zinc-400 shrink-0" />
-                  <span className="hidden 2xl:inline">Automação & Escala</span>
-                  <span className="hidden sm:inline 2xl:hidden">Automação</span>
-                  <span className="inline sm:hidden">Escala</span>
+                  <span className="hidden 2xl:inline">Automação</span>
                   <Icon name={showActionsMenu ? 'expand_less' : 'expand_more'} className="text-xs opacity-70 shrink-0" />
                 </button>
 
@@ -941,8 +952,7 @@ export const Header: React.FC<HeaderProps> = ({
                   title="Publicar e Exportar Escala (Oficializar, WhatsApp, Imprimir)"
                 >
                   <Icon name="rocket_launch" className="text-sm shrink-0" />
-                  <span className="hidden 2xl:inline">Publicar / Exportar</span>
-                  <span className="inline 2xl:hidden">Publicar</span>
+                  <span className="hidden 2xl:inline">Publicar</span>
                   <Icon name={showPublishMenu ? 'expand_less' : 'expand_more'} className="text-xs shrink-0" />
                 </button>
 
