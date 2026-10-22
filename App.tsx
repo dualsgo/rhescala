@@ -1074,6 +1074,7 @@ const App: React.FC = () => {
                      onEdit={onEditHoliday}
                      trackingStartDate={trackingStartDate}
                      onUpdateTrackingStartDate={setTrackingStartDate}
+                     onViewWorkedHolidays={() => setCurrentView('worked-holidays')}
                      onClose={() => setCurrentView('grid')} 
                    />
                  </div>

@@ -13,6 +13,7 @@ interface HolidayManagerProps {
   onEdit?: (id: string, h: Omit<Holiday, 'id'>) => void;
   trackingStartDate?: string;
   onUpdateTrackingStartDate?: (date: string) => void;
+  onViewWorkedHolidays?: () => void;
   onClose: () => void;
 }
 
@@ -20,7 +21,7 @@ const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 export const HolidayManager: React.FC<HolidayManagerProps> = ({
-  year, customHolidays, deletedNationalHolidays, isReadOnly, onAdd, onRemove, onEdit, trackingStartDate, onUpdateTrackingStartDate, onClose,
+  year, customHolidays, deletedNationalHolidays, isReadOnly, onAdd, onRemove, onEdit, trackingStartDate, onUpdateTrackingStartDate, onViewWorkedHolidays, onClose,
 }) => {
   const [newDate, setNewDate] = useState('');
   const [newName, setNewName] = useState('');
@@ -96,9 +97,25 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Gestão de Datas Não-Ativas</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-full transition-all text-slate-400">
-            <Icon name="close" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onViewWorkedHolidays && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onViewWorkedHolidays();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-[11px] font-black uppercase tracking-wider transition-all"
+                title="Acessar Controle de Folgas e Créditos de Feriados Trabalhados"
+              >
+                <Icon name="list_alt" className="text-sm" />
+                <span className="hidden sm:inline">Folgas de Feriados</span>
+              </button>
+            )}
+            <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-full transition-all text-slate-400">
+              <Icon name="close" />
+            </button>
+          </div>
         </div>
 
         {/* Add/Edit Form */}

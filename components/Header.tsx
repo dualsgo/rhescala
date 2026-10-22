@@ -647,6 +647,7 @@ export const Header: React.FC<HeaderProps> = ({
                         { id: 'cleaning', label: 'Limpeza da Copa', desc: '1 responsável escalado por dia', icon: 'cleaning_services' },
                         { id: 'patrol', label: 'Ronda da Loja', desc: 'Patrulha por abertura e fechamento', icon: 'local_police' },
                         { id: 'sections', label: 'Donos de Seção', desc: 'Setores de brinquedos da quinzena', icon: 'category' },
+                        { id: 'worked-holidays', label: 'Folgas de Feriados', desc: 'Créditos pendentes, agendados e concedidos', icon: 'list_alt' },
                       ].map(item => (
                         <button
                           key={item.id}
@@ -990,6 +991,23 @@ export const Header: React.FC<HeaderProps> = ({
                       <div className="flex flex-col">
                         <span className="font-black uppercase text-[11px]">Feriados da Loja</span>
                         <span className="text-[10px] text-zinc-400">Feriados municipais e compensações</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onViewChange('worked-holidays');
+                        setShowPrepareMenu(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
+                    >
+                      <div className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0">
+                        <Icon name="list_alt" className="text-sm" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-black uppercase text-[11px]">Folgas de Feriados</span>
+                        <span className="text-[10px] text-zinc-400">Créditos de feriados trabalhados (pendentes e agendados)</span>
                       </div>
                     </button>
 
@@ -1493,6 +1511,21 @@ export const Header: React.FC<HeaderProps> = ({
                     >
                       <Icon name="event_busy" className="text-sm shrink-0" />
                       <span className="truncate">Feriados</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        onViewChange('worked-holidays');
+                        setShowMobileMenu(false);
+                      }}
+                      className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold text-left ${
+                        currentView === 'worked-holidays'
+                          ? 'bg-orange-500 text-white border-orange-600'
+                          : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-zinc-700/80'
+                      }`}
+                    >
+                      <Icon name="list_alt" className="text-sm shrink-0" />
+                      <span className="truncate">Folgas Feriado</span>
                     </button>
 
                     <button
