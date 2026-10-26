@@ -181,7 +181,7 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
                                         <div>
                                             <label className="block text-[11px] font-black text-orange-500 uppercase tracking-widest mb-2 ml-1">Senha Gerente (Admin)</label>
                                             <input
-                                                type="text"
+                                                type="password"
                                                 className="w-full bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:border-orange-500 transition-all"
                                                 value={adminPass}
                                                 onChange={(e) => setAdminPass(e.target.value)}
@@ -190,7 +190,7 @@ export function SetupScreen({ onComplete }: SetupScreenProps) {
                                         <div>
                                             <label className="block text-[11px] font-black text-emerald-500 uppercase tracking-widest mb-2 ml-1">Senha Equipe (Viewer)</label>
                                             <input
-                                                type="text"
+                                                type="password"
                                                 className="w-full bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500 transition-all"
                                                 value={viewerPass}
                                                 onChange={(e) => setViewerPass(e.target.value)}

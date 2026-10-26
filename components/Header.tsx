@@ -40,6 +40,7 @@ interface HeaderProps {
   diffCount?: number;
   onOpenDiffModal?: () => void;
   onOpenPresetModal?: () => void;
+  onOpenProtectedDaysModal?: () => void;
   tacticalDisplayMode?: TacticalDisplayMode;
   onToggleTacticalDisplayMode?: (mode?: TacticalDisplayMode) => void;
   isSaving?: boolean;
@@ -95,6 +96,7 @@ export const Header: React.FC<HeaderProps> = ({
   diffCount = 0,
   onOpenDiffModal,
   onOpenPresetModal,
+  onOpenProtectedDaysModal,
   tacticalDisplayMode = 'off',
   onToggleTacticalDisplayMode,
   onManualSave,
@@ -916,6 +918,25 @@ export const Header: React.FC<HeaderProps> = ({
                       </div>
                     </button>
 
+                    {onOpenProtectedDaysModal && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onOpenProtectedDaysModal();
+                          setShowPrepareMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
+                      >
+                        <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600 shrink-0">
+                          <Icon name="shield" className="text-sm" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-black uppercase text-[11px]">Dias Protegidos</span>
+                          <span className="text-[10px] text-zinc-400">Bloquear folgas em picos sazonais</span>
+                        </div>
+                      </button>
+                    )}
+
                     {(onOpenPresetModal || showActionsModal) && (
                       <button
                         type="button"
@@ -927,11 +948,11 @@ export const Header: React.FC<HeaderProps> = ({
                         className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-left"
                       >
                         <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/50 text-purple-600 shrink-0">
-                          <Icon name="shield" className="text-sm" />
+                          <Icon name="tune" className="text-sm" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-black uppercase text-[11px]">Dias Protegidos & Presets</span>
-                          <span className="text-[10px] text-zinc-400">Picos sazonais (Natal, Dia das Crianças)</span>
+                          <span className="font-black uppercase text-[11px]">Aplicar Presets</span>
+                          <span className="text-[10px] text-zinc-400">Redefinir horários, folgas ou escala completa</span>
                         </div>
                       </button>
                     )}
@@ -1456,6 +1477,19 @@ export const Header: React.FC<HeaderProps> = ({
                       <span className="truncate">Folgas 6x1</span>
                     </button>
 
+                    {onOpenProtectedDaysModal && (
+                      <button
+                        onClick={() => {
+                          setShowMobileMenu(false);
+                          onOpenProtectedDaysModal();
+                        }}
+                        className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/80 text-zinc-700 dark:text-zinc-200 flex items-center gap-2 text-xs font-bold text-left"
+                      >
+                        <Icon name="shield" className="text-sm text-amber-500 shrink-0" />
+                        <span className="truncate">Dias Protegidos</span>
+                      </button>
+                    )}
+
                     {(onOpenPresetModal || showActionsModal) && (
                       <button
                         onClick={() => {
@@ -1465,7 +1499,7 @@ export const Header: React.FC<HeaderProps> = ({
                         }}
                         className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/80 text-zinc-700 dark:text-zinc-200 flex items-center gap-2 text-xs font-bold text-left"
                       >
-                        <Icon name="shield" className="text-sm text-purple-500 shrink-0" />
+                        <Icon name="tune" className="text-sm text-purple-500 shrink-0" />
                         <span className="truncate">Presets & Picos</span>
                       </button>
                     )}

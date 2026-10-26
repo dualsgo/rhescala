@@ -158,7 +158,7 @@ export function resolveTacticalDay(
       // 2ª prioridade: secundária
       const secondaryMatches = remaining.filter(predicateSecondary);
 
-      let poolToUse = primaryMatches.length > 0 ? primaryMatches : (secondaryMatches.length > 0 ? secondaryMatches : remaining);
+      const poolToUse = primaryMatches.length > 0 ? primaryMatches : (secondaryMatches.length > 0 ? secondaryMatches : remaining);
 
       // Desempate por menor acúmulo na função no mês
       if (metricKey) {

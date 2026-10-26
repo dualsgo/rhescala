@@ -349,7 +349,7 @@ export const MobileEmployerViewer: React.FC<MobileEmployerViewerProps> = ({
     if (!currentEmp) return [];
     const center = currentDayIdx;
     let start = Math.max(0, center - 3);
-    let end = Math.min(daysInMonth, start + 7);
+    const end = Math.min(daysInMonth, start + 7);
     if (end - start < 7 && start > 0) {
       start = Math.max(0, end - 7);
     }

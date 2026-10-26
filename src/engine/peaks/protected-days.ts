@@ -371,7 +371,6 @@ export function optimizeProtectedDays(
                                 if (!protectedIndicesSet.has(f) && !getLegalOverride(emp, f) && shifts[f] === 'T') {
                                     if (isValidSwap(shifts, emp.id, i, f, maxStreak, prevStreak, protectedIndicesSet, details)) {
                                         shifts[f] = 'F';
-                                        swapped = true;
                                         break;
                                     }
                                 }

@@ -4,17 +4,14 @@ import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
 import { useScheduleFilters } from './hooks/useScheduleFilters';
 import { 
-  generateYearSchedule, 
   applyMonthUpdate, 
   applyHoursOnly,
   applyFolgasOnly,
   generateCleanMonthSchedule,
   detectScheduleDiffs,
   resolveTacticalDay, 
-  calculateLunches, 
-  getShiftClassification, 
   findSundayViolations, 
-  isWorkingShift, 
+  optimizeProtectedDays,
 } from './hooks/useScheduleEngine';
 
 import { Header } from './components/Header';
@@ -29,15 +26,12 @@ import { WorkedHolidaysList } from './components/WorkedHolidaysList';
 import { CleaningSchedule } from './components/CleaningSchedule';
 import { PatrolSchedule } from './components/PatrolSchedule';
 import { SectionManager } from './components/SectionManager';
-import { EssentialActivities } from './components/EssentialActivities';
-import { DailyRoutine } from './components/DailyRoutine';
-import { OperationalNotices } from './components/OperationalNotices';
 import { Icon } from './components/Icon';
 import { Login } from './components/Login';
 import { PrintableSchedule } from './components/PrintableSchedule';
 import { useHolidayCredits } from './hooks/useHolidayCredits';
-import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, SHIFT_HOURS, buildHolidaySet, getDefaultHourForDay, getNationalHolidays, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth, getTacticalEmoji, getTacticalLabel } from './constants';
-import { Employee, MonthYear, Holiday, JornadaSettings, OfficialScheduleSnapshot, ScheduleDiffItem, TacticalDisplayMode, ProtectedDaysMap, AuditLogEntry, AuditChangeType, ShiftType } from './types';
+import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, buildHolidaySet, DEFAULT_JORNADA_SETTINGS, getDefaultProtectedDays } from './constants';
+import { Employee, MonthYear, Holiday, JornadaSettings, OfficialScheduleSnapshot, TacticalDisplayMode, ProtectedDaysConfig, ProtectedDaysMap, AuditLogEntry } from './types';
 import { HelpCenter } from './components/HelpCenter';
 import { JornadaManager } from './components/JornadaManager';
 import { EmployeeScheduleCard } from './components/EmployeeScheduleCard';
@@ -48,6 +42,7 @@ import { SyncBlockingOverlay } from './components/SyncBlockingOverlay';
 import { PresetOptionsModal } from './components/PresetOptionsModal';
 import { ScheduleDiffModal } from './components/ScheduleDiffModal';
 import { MobileEmployerViewer } from './components/MobileEmployerViewer';
+import { ProtectedDaysModal } from './components/ProtectedDaysModal';
 import { CreateMonthModal } from './components/CreateMonthModal';
 import { DailyScheduleModulatorModal } from './components/DailyScheduleModulatorModal';
 import { AuditJustificationModal, AuditImpactPreview } from './components/AuditJustificationModal';
@@ -86,9 +81,9 @@ const App: React.FC = () => {
   const [trackingStartDate, setTrackingStartDate] = useLocalStorage<string>(STORAGE_KEYS.trackingStart, `${new Date().getFullYear()}-01-01`);
   const [officialSnapshots, setOfficialSnapshots] = useLocalStorage<Record<string, OfficialScheduleSnapshot>>(STORAGE_KEYS.officialSnapshots, {});
   const [protectedDaysMap, setProtectedDaysMap] = useLocalStorage<ProtectedDaysMap>(STORAGE_KEYS.protectedDays, {});
+  const [showProtectedModal, setShowProtectedModal] = useState(false);
   
   const syncStatus = useSyncStatus();
-  const [showHolidayManager, setShowHolidayManager] = useState(false);
   const [showDayDetail, setShowDayDetail] = useState(false);
   const [showPresetModal, setShowPresetModal] = useState(false);
   const [presetInitialEmpId, setPresetInitialEmpId] = useState<string | null>(null);
@@ -136,7 +131,6 @@ const App: React.FC = () => {
     setFilter,
     setContractFilter,
     setOnlyWorkingToday,
-    toggleOnlyWorkingToday,
     setSelectedGroup,
     clearFilters: handleClearFilters,
   } = useScheduleFilters();
@@ -161,10 +155,45 @@ const App: React.FC = () => {
     }
   }, [isReadOnly, currentView]);
 
-  
+  const activeProtectedDays = useMemo<ProtectedDaysConfig>(() => {
+    return protectedDaysMap[monthKey] ?? getDefaultProtectedDays(currentMY.month);
+  }, [protectedDaysMap, monthKey, currentMY.month]);
 
-  
-  
+  const handleSaveProtectedConfig = useCallback((newConfig: ProtectedDaysConfig) => {
+    if (auth.role === 'viewer') return;
+    setProtectedDaysMap(prev => ({
+      ...prev,
+      [monthKey]: newConfig
+    }));
+  }, [auth.role, monthKey, setProtectedDaysMap]);
+
+  const handleOptimizeScheduleWithProtectedDays = useCallback((configToUse?: ProtectedDaysConfig) => {
+    const config = configToUse ?? activeProtectedDays;
+    const optimized = optimizeProtectedDays(
+      employees,
+      monthKey,
+      config,
+      customHolidays,
+      deletedNationalHolidays,
+      activeJornadaSettings
+    );
+
+    setEmployees(prev => prev.map(emp => {
+      if (optimized[emp.id]) {
+        return {
+          ...emp,
+          shifts: { ...emp.shifts, [monthKey]: optimized[emp.id].shifts }
+        };
+      }
+      return emp;
+    }));
+
+    showDialog({
+      title: 'Otimização Concluída',
+      message: 'Escala sazonal e dias protegidos otimizados com sucesso com 0 infrações CLT!'
+    });
+  }, [activeProtectedDays, employees, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, setEmployees, showDialog]);
+
   const scheduleDiffs = useMemo(
     () => detectScheduleDiffs(officialSnapshots[monthKey], employees, currentMY),
     [officialSnapshots, employees, currentMY, monthKey]
@@ -513,7 +542,7 @@ const App: React.FC = () => {
       }));
       showDialog({ title: 'Sucesso', message: 'Horários padrão recalculados com sucesso! Todas as folgas e turnos foram preservados.' });
     } else if (applyMode === 'folgas_only') {
-      const updatedShifts = applyFolgasOnly(employees, currentMY.year, currentMY.month, empId, customHolidays, deletedNationalHolidays, activeJornadaSettings, {});
+      const updatedShifts = applyFolgasOnly(employees, currentMY.year, currentMY.month, empId, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap[monthKey]);
       setEmployees(prev => prev.map(emp => {
         if (updatedShifts[emp.id]) {
           return { ...emp, shifts: { ...emp.shifts, [monthKey]: updatedShifts[emp.id] } };
@@ -523,7 +552,7 @@ const App: React.FC = () => {
       showDialog({ title: 'Sucesso', message: 'Folgas e rotação de domingos recalculadas com sucesso respeitando os dias protegidos/sazonais!' });
 
     } else if (applyMode === 'full') {
-      const updatedData = applyMonthUpdate(employees, currentMY.year, currentMY.month, customHolidays, deletedNationalHolidays, activeJornadaSettings, {}, 'suggested_retro', empId);
+      const updatedData = applyMonthUpdate(employees, currentMY.year, currentMY.month, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap[monthKey], 'suggested_retro', empId);
       setEmployees(prev => prev.map(emp => {
         if (empId && emp.id !== empId) return emp;
         if (updatedData[emp.id]) {
@@ -545,10 +574,10 @@ const App: React.FC = () => {
       }));
       showDialog({ title: 'Sucesso', message: 'Redefinição geral completa aplicada com sucesso respeitando regras sazonais!' });
     }
-  }, [employees, currentMY, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, {}, setEmployees, showDialog]);
+  }, [employees, currentMY, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap, setEmployees, showDialog]);
 
   const handleApplyFolgas = (targetMY = currentMY, targetKey = monthKey) => {
-    const updatedData = applyMonthUpdate(employees, targetMY.year, targetMY.month, customHolidays, deletedNationalHolidays, jornadaSettings, {});
+    const updatedData = applyMonthUpdate(employees, targetMY.year, targetMY.month, customHolidays, deletedNationalHolidays, jornadaSettings, protectedDaysMap[monthKey]);
     setEmployees(prev => prev.map(emp => {
       if (updatedData[emp.id]) {
         return {
@@ -571,7 +600,7 @@ const App: React.FC = () => {
 
   const handleSortearDomingo = (targetMY = currentMY, targetKey = monthKey, skipConfirm = false) => {
     const perform = () => {
-      const updatedData = applyMonthUpdate(employees, targetMY.year, targetMY.month, customHolidays, deletedNationalHolidays, jornadaSettings, {});
+      const updatedData = applyMonthUpdate(employees, targetMY.year, targetMY.month, customHolidays, deletedNationalHolidays, jornadaSettings, protectedDaysMap[monthKey]);
       setEmployees(prev => prev.map(emp => {
         if (updatedData[emp.id]) {
           return {
@@ -640,6 +669,7 @@ const App: React.FC = () => {
     if (!createMonthTargetMY) return;
     const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
     const targetMonthName = monthNames[createMonthTargetMY.month];
+    const targetKey = `${createMonthTargetMY.year}-${String(createMonthTargetMY.month + 1).padStart(2, '0')}`;
 
     const updatedEmployees = generateCleanMonthSchedule(
       employees,
@@ -648,7 +678,7 @@ const App: React.FC = () => {
       customHolidays,
       deletedNationalHolidays,
       activeJornadaSettings,
-      {},
+      protectedDaysMap[targetKey],
       mode
     );
     setEmployees(updatedEmployees);
@@ -760,6 +790,7 @@ const App: React.FC = () => {
                 setPresetInitialEmpId(null);
                 setShowPresetModal(true);
               }}
+              onOpenProtectedDaysModal={() => setShowProtectedModal(true)}
               tacticalDisplayMode={tacticalDisplayMode}
               onToggleTacticalDisplayMode={(mode) => { if (mode) setTacticalDisplayMode(mode); else setTacticalDisplayMode(prev => prev === "off" ? "positions" : prev === "positions" ? "roles" : "off"); }}
               onManualSave={handleManualSave}
@@ -1005,30 +1036,8 @@ const App: React.FC = () => {
                    holidayCredits={holidayCredits}
                    onOpenWorkedHolidays={() => setCurrentView('worked-holidays')}
                    onClose={() => setCurrentView('grid')} 
-                   onUpdateShift={(empId, dayIdx, shift) => {
-                     if (isReadOnly) return;
-                     const totalDays = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
-                     setEmployees(prev => prev.map(emp => {
-                       if (emp.id !== empId) return emp;
-                       const baseShifts = emp.shifts[monthKey] && emp.shifts[monthKey].length > 0
-                         ? [...emp.shifts[monthKey]]
-                         : Array(totalDays).fill('T');
-                       baseShifts[dayIdx] = shift;
-                       return { ...emp, shifts: { ...emp.shifts, [monthKey]: baseShifts } };
-                     }));
-                   }}
-                   onUpdateHour={(empId, dayIdx, hour) => {
-                     if (isReadOnly) return;
-                     const totalDays = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
-                     setEmployees(prev => prev.map(emp => {
-                       if (emp.id !== empId) return emp;
-                       const baseHours = emp.dailyHours?.[monthKey] && emp.dailyHours[monthKey].length > 0
-                         ? [...emp.dailyHours[monthKey]]
-                         : Array(totalDays).fill(emp.workPeriod || '');
-                       baseHours[dayIdx] = hour;
-                       return { ...emp, dailyHours: { ...emp.dailyHours, [monthKey]: baseHours } };
-                     }));
-                   }}
+                   onUpdateShift={(empId, dayIdx, shift) => handleUpdateShifts([{ empId, dayIdx, newShift: shift }])}
+                   onUpdateHour={onUpdateEmployeeDailyHour}
                  />
                );
              case 'team':
@@ -1139,30 +1148,6 @@ const App: React.FC = () => {
                    onClose={() => setCurrentView('grid')}
                  />
                );
-             /*
-             case 'activities':
-               return (
-                 <EssentialActivities
-                   currentMY={currentMY}
-                   customHolidays={customHolidays}
-                   onClose={() => setCurrentView('grid')}
-                 />
-               );
-             case 'routine':
-               return (
-                 <DailyRoutine
-                   currentMY={currentMY}
-                   customHolidays={customHolidays}
-                   onClose={() => setCurrentView('grid')}
-                 />
-               );
-             case 'notices':
-               return (
-                 <OperationalNotices
-                   onClose={() => setCurrentView('grid')}
-                 />
-               );
-             */
              case 'jornada':
                return (
                  <div className="max-w-4xl mx-auto mt-6">
@@ -1207,10 +1192,20 @@ const App: React.FC = () => {
        </main>
 
 
-       {/* Feriados Modal removed in favor of view */}
-
        {showHelp && <HelpCenter onClose={() => setShowHelp(false)} />}
-       
+
+       {showProtectedModal && (
+         <ProtectedDaysModal
+           isOpen={showProtectedModal}
+           onClose={() => setShowProtectedModal(false)}
+           currentMY={currentMY}
+           protectedConfig={activeProtectedDays}
+           employees={employees}
+           onSaveConfig={handleSaveProtectedConfig}
+           onOptimizeSchedule={handleOptimizeScheduleWithProtectedDays}
+           isReadOnly={isReadOnly}
+         />
+       )}
 
        {showCreateMonthModal && createMonthTargetMY && (
          <CreateMonthModal
@@ -1267,7 +1262,7 @@ const App: React.FC = () => {
                      </button>
                      <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{selectedDayIdx + 1}/{currentMY.month + 1}/{currentMY.year}</p>
                      <button 
-                       onClick={() => setSelectedDayIdx(prev => Math.min(30, prev + 1))}
+                       onClick={() => setSelectedDayIdx(prev => Math.min(new Date(currentMY.year, currentMY.month + 1, 0).getDate() - 1, prev + 1))}
                        className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400"
                      >
                        <Icon name="chevron_right" />
@@ -1327,7 +1322,7 @@ const App: React.FC = () => {
 
        {/* Floating Manager Toolbar for Mobile */}
        {!isReadOnly && currentView === 'grid' && (
-         <div className="hidden lg:flex fixed bottom-6 left-1/2 -tranzinc-x-1/2 z-[100] items-center gap-2 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-full p-2 shadow-2xl shadow-black/20">
+         <div className="hidden lg:flex fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] items-center gap-2 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-full p-2 shadow-2xl shadow-black/20">
             <button 
              onClick={() => setIsEditable(!isEditable)}
              className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-[11px] font-black uppercase transition-all ${isEditable ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'}`}

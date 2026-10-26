@@ -315,7 +315,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                 
                 <div className="relative">
                   <input 
-                    type="text" 
+                    type="password" 
                     placeholder="Nova Senha"
                     value={passForm.password}
                     onChange={(e) => setPassForm({...passForm, password: e.target.value})}
