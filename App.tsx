@@ -1409,6 +1409,7 @@ const App: React.FC = () => {
           currentMY={currentMY} 
           customHolidays={customHolidays} 
           monthNotes={monthNotes[monthKey] || ''}
+          jornadaSettings={jornadaSettings}
         />
 
         {/* Barra de Navegação Inferior Mobile (< lg) */}

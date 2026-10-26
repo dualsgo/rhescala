@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Employee, MonthYear, Holiday, ROLE_METADATA_MAP, normalizeEmployeeRole } from '../types';
+import { Employee, MonthYear, Holiday, JornadaSettings } from '../types';
 import { 
   buildHolidaySet, 
   getNationalHolidays, 
@@ -7,13 +7,14 @@ import {
   isEmployeeActiveInMonth, 
   isEmployeeActiveOnDay 
 } from '../constants';
-import { isWorkingShift } from '../hooks/useScheduleEngine';
+import { getShiftClassification, isWorkingShift } from '../hooks/useScheduleEngine';
 
 interface PrintableScheduleProps {
   employees: Employee[];
   currentMY: MonthYear;
   customHolidays: Holiday[];
   monthNotes?: string;
+  jornadaSettings?: JornadaSettings;
 }
 
 const WEEKDAY_INITIALS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'] as const;
@@ -22,7 +23,8 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({
   employees, 
   currentMY, 
   customHolidays, 
-  monthNotes 
+  monthNotes,
+  jornadaSettings
 }) => {
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
@@ -48,6 +50,50 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({
       .filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month))
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }, [employees, currentMY]);
+
+  const dailyStats = useMemo(() => {
+    return days.map(d => {
+      const dayIdx = d.num - 1;
+      let abertura = 0;
+      let intermediario = 0;
+      let fechamento = 0;
+      let folgas = 0;
+      let disponivel = 0;
+
+      for (const emp of activeEmployees) {
+        const isOut = !isEmployeeActiveOnDay(emp, d.dateStr, monthKey, dayIdx);
+        if (isOut) continue;
+
+        const shift = emp.shifts[monthKey]?.[dayIdx] || 'T';
+        if (shift === 'N/A') continue;
+
+        if (isWorkingShift(shift)) {
+          disponivel++;
+          const hourStr = emp.dailyHours?.[monthKey]?.[dayIdx] || emp.workPeriod || '';
+          const classification = getShiftClassification(hourStr, d.isSunday, jornadaSettings);
+          if (classification === 'Fechamento') {
+            fechamento++;
+          } else if (classification === 'Intermediário') {
+            intermediario++;
+          } else {
+            abertura++;
+          }
+        } else {
+          folgas++;
+        }
+      }
+
+      return {
+        num: d.num,
+        isSunday: d.isSunday,
+        abertura,
+        intermediario,
+        fechamento,
+        folgas,
+        disponivel,
+      };
+    });
+  }, [days, activeEmployees, monthKey, jornadaSettings]);
 
   const mStartStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-01`;
   const mEndStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
@@ -251,6 +297,81 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({
                 );
               })}
             </tbody>
+            <tfoot className="border-t-2 border-black">
+              <tr className="bg-gray-50">
+                <td className="border border-black px-1.5 py-0.5 font-black uppercase text-[7.5px] align-middle">
+                  Turno Abertura
+                </td>
+                {dailyStats.map(stat => (
+                  <td
+                    key={stat.num}
+                    className={`border border-black p-0 text-center align-middle font-bold tabular-nums text-[8px] ${
+                      stat.isSunday ? 'bg-gray-100' : ''
+                    }`}
+                  >
+                    {stat.abertura}
+                  </td>
+                ))}
+              </tr>
+              <tr className="bg-gray-50">
+                <td className="border border-black px-1.5 py-0.5 font-black uppercase text-[7.5px] align-middle">
+                  Turno Intermediário
+                </td>
+                {dailyStats.map(stat => (
+                  <td
+                    key={stat.num}
+                    className={`border border-black p-0 text-center align-middle font-bold tabular-nums text-[8px] ${
+                      stat.isSunday ? 'bg-gray-100' : ''
+                    }`}
+                  >
+                    {stat.intermediario}
+                  </td>
+                ))}
+              </tr>
+              <tr className="bg-gray-50">
+                <td className="border border-black px-1.5 py-0.5 font-black uppercase text-[7.5px] align-middle">
+                  Turno Fechamento
+                </td>
+                {dailyStats.map(stat => (
+                  <td
+                    key={stat.num}
+                    className={`border border-black p-0 text-center align-middle font-bold tabular-nums text-[8px] ${
+                      stat.isSunday ? 'bg-gray-100' : ''
+                    }`}
+                  >
+                    {stat.fechamento}
+                  </td>
+                ))}
+              </tr>
+              <tr className="bg-gray-100">
+                <td className="border border-black px-1.5 py-0.5 font-black uppercase text-[7.5px] align-middle">
+                  Folgas / Ausências
+                </td>
+                {dailyStats.map(stat => (
+                  <td
+                    key={stat.num}
+                    className={`border border-black p-0 text-center align-middle font-bold tabular-nums text-[8px] ${
+                      stat.isSunday ? 'bg-gray-200' : ''
+                    }`}
+                  >
+                    {stat.folgas}
+                  </td>
+                ))}
+              </tr>
+              <tr className="bg-gray-200">
+                <td className="border border-black px-1.5 py-0.5 font-black uppercase text-[8px] align-middle">
+                  Equipe Disponível
+                </td>
+                {dailyStats.map(stat => (
+                  <td
+                    key={stat.num}
+                    className="border border-black p-0 text-center align-middle font-black tabular-nums text-[8.5px]"
+                  >
+                    {stat.disponivel}
+                  </td>
+                ))}
+              </tr>
+            </tfoot>
           </table>
         </div>
 
@@ -412,34 +533,63 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({
             <div className="grid grid-cols-2 gap-2 flex-1">
               <div className="border border-black p-2 flex flex-col justify-between">
                 <h4 className="font-black text-[9.5px] bg-gray-200 text-center py-0.5 mb-1.5 uppercase">
-                  Dias de Semana e Sábados
+                  Janelas por Turno (1h Intervalo)
                 </h4>
-                <div className="text-[9.5px] font-bold space-y-1">
-                  <div className="flex justify-between border-b border-gray-300 pb-0.5"><span>12h00</span> <span>Máx. 1 Colaborador</span></div>
-                  <div className="flex justify-between border-b border-gray-300 pb-0.5"><span>13h00</span> <span>Máx. 1 Colaborador</span></div>
-                  <div className="flex justify-between border-b border-gray-300 pb-0.5"><span>14h00</span> <span>Máx. 1 Colaborador</span></div>
-                  <div className="flex justify-between border-b border-gray-300 pb-0.5"><span>15h00</span> <span>Máx. 1 Colaborador</span></div>
-                  <div className="flex justify-between"><span>16h00</span> <span>Máx. 1 Colaborador</span></div>
+                <div className="text-[9px] font-bold space-y-1">
+                  <div className="flex justify-between border-b border-gray-300 pb-0.5">
+                    <span>Aprendiz (Fixo)</span>
+                    <span className="font-black">12h45 (15 min)</span>
+                  </div>
+                  <div className="flex justify-between border-b border-gray-300 pb-0.5">
+                    <span>Semana • Abertura</span>
+                    <span className="font-black">13h00–15h00 (13h30)</span>
+                  </div>
+                  <div className="flex justify-between border-b border-gray-300 pb-0.5">
+                    <span>Semana • Intermed.</span>
+                    <span className="font-black">14h30–15h45 (15h00)</span>
+                  </div>
+                  <div className="flex justify-between border-b border-gray-300 pb-0.5">
+                    <span>Semana • Fechamento</span>
+                    <span className="font-black">15h00–17h00 (16h00)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Domingo • Ab. / Fech.</span>
+                    <span className="font-black">14h00–15h30 / 15h30–17h30</span>
+                  </div>
                 </div>
-                <p className="text-[8px] text-gray-600 font-semibold mt-2 pt-1 border-t border-gray-200">
-                  * 1 hora obrigatória de intervalo para jornadas de 7h20.
+                <p className="text-[8px] text-gray-600 font-semibold mt-1.5 pt-1 border-t border-gray-200 leading-tight">
+                  * Horário entre parênteses indica o centro preferencial do turno.
                 </p>
               </div>
 
               <div className="border border-black p-2 flex flex-col justify-between">
                 <h4 className="font-black text-[9.5px] bg-gray-200 text-center py-0.5 mb-1.5 uppercase">
-                  Domingos Operacionais
+                  Capacidade Simultânea (Meta 70% Loja)
                 </h4>
-                <div className="text-[9.5px] font-bold space-y-1">
-                  <div className="flex justify-between border-b border-gray-300 pb-0.5"><span>14h30</span> <span>Máx. 1 Colaborador</span></div>
-                  <div className="flex justify-between border-b border-gray-300 pb-0.5"><span>15h00</span> <span>Máx. 1 Colaborador</span></div>
-                  <div className="flex justify-between border-b border-gray-300 pb-0.5"><span>15h30</span> <span>Máx. 1 Colaborador</span></div>
-                  <div className="flex justify-between border-b border-gray-300 pb-0.5"><span>16h00</span> <span>Máx. 1 Colaborador</span></div>
-                  <div className="flex justify-between border-b border-gray-300 pb-0.5"><span>16h30</span> <span>Máx. 1 Colaborador</span></div>
-                  <div className="flex justify-between"><span>17h00</span> <span>Máx. 1 Colaborador</span></div>
+                <div className="text-[9px] font-bold space-y-1">
+                  <div className="flex justify-between border-b border-gray-300 pb-0.5">
+                    <span>Até 5 presentes</span>
+                    <span className="font-black">Máx. 1 por vez</span>
+                  </div>
+                  <div className="flex justify-between border-b border-gray-300 pb-0.5">
+                    <span>6 a 8 presentes</span>
+                    <span className="font-black">Máx. 2 simultâneos</span>
+                  </div>
+                  <div className="flex justify-between border-b border-gray-300 pb-0.5">
+                    <span>9+ presentes</span>
+                    <span className="font-black">Máx. 30% (mín. 70% loja)</span>
+                  </div>
+                  <div className="flex justify-between border-b border-gray-300 pb-0.5">
+                    <span>Limite por Turno</span>
+                    <span className="font-black">Mín. 70% do turno ativo</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Cobertura de Caixa</span>
+                    <span className="font-black">Revezamento + Cobridor</span>
+                  </div>
                 </div>
-                <p className="text-[8px] text-gray-600 font-semibold mt-2 pt-1 border-t border-gray-200">
-                  * Escalonamento estrito para manter piso e caixa cobertos.
+                <p className="text-[8px] text-gray-600 font-semibold mt-1.5 pt-1 border-t border-gray-200 leading-tight">
+                  * Caixas nunca saem juntos; cobertura automática quando houver 1 CX.
                 </p>
               </div>
             </div>
@@ -584,11 +734,8 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({
           <table className="w-full border-collapse border-2 border-black" style={{ fontSize: '9px' }}>
             <thead>
               <tr className="bg-gray-200">
-                <th className="border border-black p-1.5 text-left w-48 uppercase font-black">
+                <th className="border border-black p-1.5 text-left w-56 uppercase font-black">
                   Colaborador
-                </th>
-                <th className="border border-black p-1 text-center w-24 uppercase font-black">
-                  Função
                 </th>
                 {sundays.map(d => (
                   <th key={d.num} className="border border-black p-1.5 text-center bg-gray-100">
@@ -609,9 +756,6 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({
             </thead>
             <tbody>
               {activeEmployees.map(emp => {
-                const role = normalizeEmployeeRole(emp.cargo || emp.role);
-                const roleMeta = ROLE_METADATA_MAP[role];
-
                 // Counts for Sundays
                 let workedSundaysCount = 0;
                 let offSundaysCount = 0;
@@ -647,15 +791,8 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({
                 return (
                   <tr key={emp.id} className="hover:bg-gray-50">
                     {/* Nome do Colaborador */}
-                    <td className="border border-black px-2 py-1 font-black uppercase truncate max-w-[180px]">
+                    <td className="border border-black px-2 py-1 font-black uppercase truncate max-w-[200px]">
                       {getShortName(emp.name, activeEmployees)}
-                    </td>
-
-                    {/* Cargo / Função Oficial */}
-                    <td className="border border-black px-1 py-1 text-center font-bold text-[8.5px] uppercase">
-                      <span className="px-1.5 py-0.5 border border-black font-black">
-                        {roleMeta.code}
-                      </span>
                     </td>
 
                     {/* Colunas dos Domingos: FOCO EM TRABALHA OU FOLGA */}
@@ -735,7 +872,7 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({
             {/* Linha de Totalização por Domingo */}
             <tfoot>
               <tr className="bg-gray-200 font-black">
-                <td colSpan={2} className="border border-black px-2 py-1 uppercase text-right">
+                <td className="border border-black px-2 py-1 uppercase text-right">
                   TOTAL PRESENTES NO DOMINGO:
                 </td>
                 {sundays.map(d => {
