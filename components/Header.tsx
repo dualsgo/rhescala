@@ -135,6 +135,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const navItems = [
     { id: 'grid', label: 'Grade', fullLabel: 'Grade Mensal', icon: 'grid_view' },
+    { id: 'team', label: 'Equipe', fullLabel: 'Equipe Operacional', icon: 'groups' },
     { id: 'analysis', label: 'Análise', fullLabel: 'Relatórios/Análise', icon: 'insights' },
     { id: 'requests', label: 'Solicitações', fullLabel: 'Solicitações', icon: 'assignment' },
   ];
@@ -643,6 +644,7 @@ export const Header: React.FC<HeaderProps> = ({
                       </div>
 
                       {[
+                        { id: 'team', label: 'Equipe & Colaboradores', desc: 'Cadastro, cargos, horários, férias e atestados', icon: 'groups' },
                         { id: 'daily', label: 'Resumo Diário & Almoços', desc: 'Presentes e intervalos do dia', icon: 'today' },
                         { id: 'cleaning', label: 'Limpeza da Copa', desc: '1 responsável escalado por dia', icon: 'cleaning_services' },
                         { id: 'patrol', label: 'Ronda da Loja', desc: 'Patrulha por abertura e fechamento', icon: 'local_police' },

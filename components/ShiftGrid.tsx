@@ -60,6 +60,7 @@ interface ShiftGridProps {
   densityMode?: 'clean' | 'audit';
   onToggleDensityMode?: () => void;
   protectedDaysConfig?: ProtectedDaysConfig;
+  onEditEmployee?: (empId: string) => void;
 }
 
 export const ShiftGrid: React.FC<ShiftGridProps> = ({
@@ -105,6 +106,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   densityMode: propDensityMode,
   onToggleDensityMode,
   protectedDaysConfig,
+  onEditEmployee,
 }) => {
   const [isSectorCoverageExpanded, setIsSectorCoverageExpanded] = useState(true);
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
@@ -944,9 +946,32 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                      const role = normalizeEmployeeRole(emp.cargo || emp.role);
                                      const meta = ROLE_VISUAL_MAP[role];
                                      return (
-                                       <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md border shrink-0 ${meta.badgeClass}`} title={meta.label}>
-                                         {meta.code}
-                                       </span>
+                                       <div className="flex items-center gap-1 shrink-0">
+                                         <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md border shrink-0 ${meta.badgeClass}`} title={meta.label}>
+                                           {meta.code}
+                                         </span>
+                                         {!isReadOnly && onEditEmployee && (
+                                           <span
+                                             role="button"
+                                             tabIndex={0}
+                                             onClick={(e) => {
+                                               e.stopPropagation();
+                                               onEditEmployee(emp.id);
+                                             }}
+                                             onKeyDown={(e) => {
+                                               if (e.key === 'Enter' || e.key === ' ') {
+                                                 e.stopPropagation();
+                                                 onEditEmployee(emp.id);
+                                               }
+                                             }}
+                                             title={`Editar cadastro de ${emp.name}`}
+                                             aria-label={`Editar cadastro de ${emp.name}`}
+                                             className="w-5 h-5 rounded-md flex items-center justify-center text-zinc-400 hover:text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-950/50 transition-colors"
+                                           >
+                                             <Icon name="edit_square" className="text-xs" />
+                                           </span>
+                                         )}
+                                       </div>
                                      );
                                    })()}
                                  </div>

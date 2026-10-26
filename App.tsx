@@ -92,6 +92,7 @@ const App: React.FC = () => {
   const [showDayDetail, setShowDayDetail] = useState(false);
   const [showPresetModal, setShowPresetModal] = useState(false);
   const [presetInitialEmpId, setPresetInitialEmpId] = useState<string | null>(null);
+  const [editingTeamEmpId, setEditingTeamEmpId] = useState<string | null>(null);
   const [showDiffModal, setShowDiffModal] = useState(false);
   const [currentView, setCurrentView] = useState<string>('grid');
   const [currentMY, setCurrentMY] = useState<MonthYear>({ month: new Date().getMonth(), year: new Date().getFullYear() });
@@ -876,6 +877,10 @@ const App: React.FC = () => {
                     densityMode={densityMode}
                     onToggleDensityMode={() => setDensityMode(prev => prev === 'clean' ? 'audit' : 'clean')}
                     protectedDaysConfig={protectedDaysMap[monthKey]}
+                    onEditEmployee={(empId) => {
+                      setEditingTeamEmpId(empId);
+                      setCurrentView('team');
+                    }}
                   />
                 );
 
@@ -1027,6 +1032,8 @@ const App: React.FC = () => {
                    onDeleteEmployee={onDeleteEmployee}
                    onAddEmployee={onAddEmployee}
                    onClose={() => setCurrentView('grid')}
+                   initialEditingEmpId={editingTeamEmpId}
+                   onClearInitialEditingEmp={() => setEditingTeamEmpId(null)}
                  />
                );
              case 'data':
@@ -1222,6 +1229,11 @@ const App: React.FC = () => {
            onLockSession={() => {
              setAuthenticatedEmployeeId(null);
              setSelectedEmployeeForCard(null);
+           }}
+           onEditEmployeeData={(empId) => {
+             setSelectedEmployeeForCard(null);
+             setEditingTeamEmpId(empId);
+             setCurrentView('team');
            }}
            onClose={() => setSelectedEmployeeForCard(null)}
          />

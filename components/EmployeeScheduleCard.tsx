@@ -22,6 +22,7 @@ interface EmployeeScheduleCardProps {
   initialTab?: 'mes' | 'atual' | 'pedidos' | 'atestado' | 'historico';
   initialDate?: string;
   auditLogs?: AuditLogEntry[];
+  onEditEmployeeData?: (empId: string) => void;
 }
 
 export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
@@ -38,6 +39,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   initialTab = 'mes',
   initialDate,
   auditLogs = [],
+  onEditEmployeeData,
 }) => {
   const { showDialog } = useDialog();
   const [newRequest, setNewRequest] = React.useState('');
@@ -175,6 +177,17 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {isAdmin && onEditEmployeeData && (
+              <button
+                type="button"
+                onClick={() => onEditEmployeeData(employee.id)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-black uppercase tracking-wider transition-all shadow-sm active:scale-95"
+                title="Editar dados cadastrais do colaborador (função, horário, contrato, férias, senha)"
+              >
+                <Icon name="edit_square" className="text-sm" />
+                <span className="hidden sm:inline">Editar Dados</span>
+              </button>
+            )}
             {!isAdmin && onLockSession && (
               <button 
                 type="button"
@@ -406,6 +419,19 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                     <p className="text-sm font-black uppercase text-orange-400">{employee.preferredDayOff || 'Variável'}</p>
                   </div>
                 </div>
+                {isAdmin && onEditEmployeeData && (
+                  <>
+                    <div className="h-px bg-white/10" />
+                    <button
+                      type="button"
+                      onClick={() => onEditEmployeeData(employee.id)}
+                      className="w-full py-2.5 px-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95"
+                    >
+                      <Icon name="manage_accounts" className="text-base" />
+                      <span>Editar Cadastro Completo</span>
+                    </button>
+                  </>
+                )}
               </div>
 
             </div>
