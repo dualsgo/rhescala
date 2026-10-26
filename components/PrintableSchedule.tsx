@@ -16,6 +16,8 @@ interface PrintableScheduleProps {
   monthNotes?: string;
 }
 
+const WEEKDAY_INITIALS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'] as const;
+
 export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({ 
   employees, 
   currentMY, 
@@ -166,26 +168,28 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({
 
         {/* Tabela Principal da Grade */}
         <div className="flex-1 flex flex-col justify-start overflow-hidden">
-          <table className="w-full border-collapse border-2 border-black" style={{ fontSize: '8.5px' }}>
+          <table className="w-full table-fixed border-collapse border-2 border-black" style={{ fontSize: '8.5px' }}>
             <thead>
               <tr className="bg-gray-100">
-                <th className="border border-black p-1 text-left w-36 uppercase font-black">
+                <th
+                  className="border border-black px-1.5 py-1 text-left align-middle uppercase font-black"
+                  style={{ width: '18%' }}
+                >
                   Colaborador
-                </th>
-                <th className="border border-black p-1 text-center w-20 uppercase font-black">
-                  Horário
                 </th>
                 {days.map(d => (
                   <th 
                     key={d.num} 
-                    className={`border border-black p-0.5 text-center ${
+                    className={`border border-black px-0 py-0.5 text-center align-middle ${
                       d.isSunday ? 'bg-gray-200' : d.isHoliday ? 'bg-gray-150' : ''
                     }`}
-                    style={{ width: `${66 / daysInMonth}%` }}
+                    style={{ width: `${82 / daysInMonth}%` }}
                   >
-                    <div className="font-black text-[9px] leading-tight">{d.num}</div>
-                    <div className={`text-[7.5px] font-black ${d.isSunday ? 'text-black' : 'text-gray-700'}`}>
-                      {'D S T Q Q S S'[d.dow]}
+                    <div className="font-black text-[9px] leading-none tabular-nums">
+                      {String(d.num).padStart(2, '0')}
+                    </div>
+                    <div className={`text-[7.5px] font-black leading-none mt-0.5 ${d.isSunday ? 'text-black' : 'text-gray-700'}`}>
+                      {WEEKDAY_INITIALS[d.dow]}
                     </div>
                   </th>
                 ))}
@@ -193,20 +197,10 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({
             </thead>
             <tbody>
               {activeEmployees.map(emp => {
-                const role = normalizeEmployeeRole(emp.cargo || emp.role);
-                const roleMeta = ROLE_METADATA_MAP[role];
                 return (
                   <tr key={emp.id} className="hover:bg-gray-50">
-                    <td className="border border-black px-1.5 py-0.5 font-black uppercase truncate max-w-[140px]">
-                      <div className="flex items-center justify-between gap-1 leading-tight">
-                        <span className="truncate">{getShortName(emp.name, activeEmployees)}</span>
-                        <span className="text-[7.5px] px-1 border border-black font-black shrink-0">
-                          {roleMeta.code}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="border border-black px-1 py-0.5 text-center font-bold text-[8px] whitespace-nowrap">
-                      {emp.workPeriod ? emp.workPeriod.split(' ')[0] : '—'}
+                    <td className="border border-black px-1.5 py-0.5 font-black uppercase truncate align-middle">
+                      <span className="truncate block leading-tight">{getShortName(emp.name, activeEmployees)}</span>
                     </td>
                     {days.map(d => {
                       const isOut = !isEmployeeActiveOnDay(emp, d.dateStr, monthKey, d.num - 1);
@@ -238,14 +232,14 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({
                         display = 'C';
                         cellClass = 'font-black bg-gray-100';
                       } else if (isWorking) {
-                        display = 'T';
+                        display = '';
                         cellClass = '';
                       }
 
                       return (
                         <td 
                           key={d.num} 
-                          className={`border border-black p-0 text-center font-bold leading-tight ${cellClass} ${
+                          className={`border border-black p-0 text-center align-middle font-bold leading-tight ${cellClass} ${
                             d.isSunday && !display ? 'bg-gray-50' : ''
                           }`}
                         >
@@ -264,7 +258,7 @@ export const PrintableSchedule: React.FC<PrintableScheduleProps> = ({
         <div className="border-t border-black pt-1.5 mt-2 flex items-center justify-between text-[9px] font-bold shrink-0">
           <div className="flex items-center gap-3">
             <span className="font-black uppercase tracking-wider">Legenda:</span>
-            <span><strong>T</strong> Trabalho</span>
+            <span><strong>Em branco</strong> Trabalho</span>
             <span><strong>F</strong> Folga Semanal</span>
             <span><strong>FF</strong> Compensatória Feriado</span>
             <span><strong>FE</strong> Férias</span>
