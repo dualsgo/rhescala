@@ -714,7 +714,7 @@ const App: React.FC = () => {
 
   return (
     <>
-      <div className={`h-screen flex flex-col overflow-hidden ${isDarkMode ? 'dark bg-zinc-950 text-zinc-100' : 'bg-zinc-50 text-zinc-900'} transition-colors font-sans print:hidden`}>
+      <div className={`h-screen flex flex-col overflow-hidden ${isDarkMode ? 'dark bg-zinc-950 text-zinc-100' : 'bg-zinc-50 text-zinc-900'} transition-colors font-sans ${currentView === 'analysis' ? 'print:h-auto print:overflow-visible print:bg-white print:text-black' : 'print:hidden'}`}>
         <Header 
               currentView={currentView}
               currentMY={currentMY}
@@ -779,7 +779,7 @@ const App: React.FC = () => {
               onToggleDensityMode={() => setDensityMode(prev => prev === 'clean' ? 'audit' : 'clean')}
             />
 
-       <main className="flex-1 overflow-y-auto p-2 sm:p-4 pb-24 lg:pb-4">
+       <main className="flex-1 overflow-y-auto print:overflow-visible p-2 sm:p-4 pb-24 lg:pb-4 print:p-0">
          {(() => {
            const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
            const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(dateStr);
@@ -1404,13 +1404,15 @@ const App: React.FC = () => {
           />
         )}
 
-        <PrintableSchedule 
-          employees={employees} 
-          currentMY={currentMY} 
-          customHolidays={customHolidays} 
-          monthNotes={monthNotes[monthKey] || ''}
-          jornadaSettings={jornadaSettings}
-        />
+        {currentView !== 'analysis' && (
+          <PrintableSchedule 
+            employees={employees} 
+            currentMY={currentMY} 
+            customHolidays={customHolidays} 
+            monthNotes={monthNotes[monthKey] || ''}
+            jornadaSettings={jornadaSettings}
+          />
+        )}
 
         {/* Barra de Navegação Inferior Mobile (< lg) */}
         <MobileNavBar

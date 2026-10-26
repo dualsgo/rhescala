@@ -5,6 +5,7 @@ import { Icon } from './Icon';
 import { 
   buildHolidaySet, 
   DEFAULT_JORNADA_SETTINGS, 
+  getNationalHolidays,
   getShortName, 
   isEmployeeActiveInMonth 
 } from '../constants';
@@ -50,8 +51,8 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   customHolidays, 
   onClose, 
   onUpdateShift, 
-  onUpdateHour, 
-  jornadaSettings = DEFAULT_JORNADA_SETTINGS 
+  onUpdateHour: _onUpdateHour, 
+  jornadaSettings: _jornadaSettings = DEFAULT_JORNADA_SETTINGS 
 }) => {
   const [viewMode, setViewMode] = useState<'individual' | 'team'>('individual');
   const [searchTerm, setSearchTerm] = useState('');
@@ -171,6 +172,12 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
       const dataUrl = await toPng(el, {
         backgroundColor: '#ffffff',
         pixelRatio: 2,
+        filter: (node) => {
+          if (node instanceof HTMLElement && node.dataset?.exportHide === 'true') {
+            return false;
+          }
+          return true;
+        },
         style: {
           padding: '24px',
           borderRadius: '20px',
@@ -186,7 +193,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full animate-fade-in bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 overflow-hidden">
+    <div className="flex flex-col h-full print:h-auto print:overflow-visible animate-fade-in bg-zinc-50 dark:bg-zinc-950 print:bg-white text-zinc-900 dark:text-zinc-100 print:text-black overflow-hidden">
       
       {/* ── Top Bar ── */}
       <header className="px-4 sm:px-6 py-3.5 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3 shrink-0 no-print">
@@ -388,36 +395,36 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
             </aside>
 
             {/* ── Main Hero Area: Dom-Sáb Calendar ── */}
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-zinc-100/60 dark:bg-zinc-950 custom-scrollbar">
+            <main className="flex-1 overflow-y-auto print:overflow-visible p-4 sm:p-6 lg:p-8 print:p-0 bg-zinc-100/60 dark:bg-zinc-950 print:bg-white custom-scrollbar">
               {selectedSummary ? (
                 <div 
                   id="individual-calendar-capture" 
-                  className="max-w-5xl mx-auto bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 sm:p-7 shadow-xs space-y-6"
+                  className="max-w-5xl mx-auto bg-white dark:bg-zinc-900 print:bg-white rounded-2xl border border-zinc-200 dark:border-zinc-800 print:border-zinc-300 p-4 sm:p-7 print:p-4 shadow-xs print:shadow-none space-y-5"
                 >
                   
                   {/* Employee Hero Card & Metrics */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-200 dark:border-zinc-800">
-                    <div className="flex items-center gap-3.5">
+                  <div className="flex flex-col gap-4 pb-5 border-b border-zinc-200 dark:border-zinc-800">
+                    <div className="flex items-center gap-3.5 min-w-0">
                       <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center font-black text-lg uppercase shadow-sm shrink-0">
                         {selectedSummary.emp.name.substring(0, 2)}
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight uppercase">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight uppercase truncate">
                             {selectedSummary.emp.name}
                           </h3>
                           {(() => {
                             const role = normalizeEmployeeRole(selectedSummary.emp.cargo || selectedSummary.emp.role || 'Vendas');
                             const meta = ROLE_VISUAL_MAP[role];
                             return (
-                              <span className={`px-2 py-0.5 rounded-md text-[11px] font-black uppercase ${meta.badgeClass}`}>
+                              <span className={`px-2 py-0.5 rounded-md text-[11px] font-black uppercase shrink-0 ${meta.badgeClass}`}>
                                 {meta.label}
                               </span>
                             );
                           })()}
                         </div>
                         <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mt-0.5">
-                          {selectedSummary.emp.shiftName || 'Turno Regular'} • Horário Base: {selectedSummary.emp.workPeriod || '09:40 - 18:00'}
+                          Escala Mensal • {MONTH_NAMES[currentMY.month]} de {currentMY.year}
                           {selectedSummary.emp.preferredDayOff && (
                             <span className="ml-2 text-rose-600 dark:text-rose-400 font-bold">
                               • Folga Preferencial: {selectedSummary.emp.preferredDayOff}
@@ -427,32 +434,37 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                       </div>
                     </div>
 
-                    {/* Operational Summary Pill Bar */}
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-zinc-50 dark:bg-zinc-800/60 p-2.5 rounded-xl border border-zinc-200/70 dark:border-zinc-800 text-xs">
-                      <div className="px-2 py-1 text-center">
-                        <span className="block text-[10px] font-black uppercase text-zinc-400">Trabalhados</span>
-                        <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm tabular-nums">
+                    {/* Operational Summary Containers (Responsive 2 cols on mobile, 4 equal cols on sm+/print) */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 print:grid-cols-4 gap-2.5 sm:gap-3 w-full">
+                      <div className="bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl px-3 py-2.5 flex flex-col items-center justify-center text-center min-w-0">
+                        <span className="block text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400 truncate w-full">
+                          Trabalhados
+                        </span>
+                        <span className="block font-black text-emerald-600 dark:text-emerald-400 text-sm sm:text-base tabular-nums whitespace-nowrap mt-0.5">
                           {selectedSummary.worked} dias
                         </span>
                       </div>
-                      <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700"></div>
-                      <div className="px-2 py-1 text-center">
-                        <span className="block text-[10px] font-black uppercase text-zinc-400">Folgas</span>
-                        <span className="font-black text-rose-600 dark:text-rose-400 text-sm tabular-nums">
+                      <div className="bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-800/60 rounded-xl px-3 py-2.5 flex flex-col items-center justify-center text-center min-w-0">
+                        <span className="block text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400 truncate w-full">
+                          Folgas
+                        </span>
+                        <span className="block font-black text-rose-600 dark:text-rose-400 text-sm sm:text-base tabular-nums whitespace-nowrap mt-0.5">
                           {selectedSummary.folgas} ({selectedSummary.sundaysOff}D)
                         </span>
                       </div>
-                      <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700"></div>
-                      <div className="px-2 py-1 text-center">
-                        <span className="block text-[10px] font-black uppercase text-zinc-400">Domingos Trab.</span>
-                        <span className="font-black text-amber-600 dark:text-amber-400 text-sm tabular-nums">
+                      <div className="bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 rounded-xl px-3 py-2.5 flex flex-col items-center justify-center text-center min-w-0">
+                        <span className="block text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400 truncate w-full">
+                          Domingos Trab.
+                        </span>
+                        <span className="block font-black text-amber-600 dark:text-amber-400 text-sm sm:text-base tabular-nums whitespace-nowrap mt-0.5">
                           {selectedSummary.sundaysWorked}D
                         </span>
                       </div>
-                      <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700"></div>
-                      <div className="px-2 py-1 text-center">
-                        <span className="block text-[10px] font-black uppercase text-zinc-400">Horas CLT</span>
-                        <span className="font-black text-indigo-600 dark:text-indigo-400 text-sm tabular-nums">
+                      <div className="bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-800/60 rounded-xl px-3 py-2.5 flex flex-col items-center justify-center text-center min-w-0">
+                        <span className="block text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400 truncate w-full">
+                          Horas CLT
+                        </span>
+                        <span className="block font-black text-indigo-600 dark:text-indigo-400 text-sm sm:text-base tabular-nums whitespace-nowrap mt-0.5">
                           {selectedSummary.totalHours}h
                         </span>
                       </div>
@@ -466,8 +478,6 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                     customHolidays={customHolidays}
                     getEffectiveShift={getEffectiveShift}
                     onUpdateShift={onUpdateShift}
-                    onUpdateHour={onUpdateHour}
-                    jornadaSettings={jornadaSettings}
                   />
 
                   {/* Legend Bar */}
@@ -484,7 +494,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                       </span>
                       <span className="inline-flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-xs bg-fuchsia-500"></span> 
-                        <strong className="text-zinc-700 dark:text-zinc-300">FF</strong> Compensatória
+                        <strong className="text-zinc-700 dark:text-zinc-300">Ref. DD/MM</strong> Folga Compensatória (Feriado)
                       </span>
                       <span className="inline-flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-xs bg-sky-500"></span> 
@@ -501,7 +511,10 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                     </div>
 
                     {onUpdateShift && (
-                      <span className="text-zinc-400 flex items-center gap-1">
+                      <span
+                        data-export-hide="true"
+                        className="text-zinc-400 flex items-center gap-1 no-print print:hidden"
+                      >
                         <Icon name="touch_app" className="text-xs text-orange-500" />
                         Clique em qualquer dia para alterar o turno
                       </span>
@@ -560,9 +573,23 @@ interface IndividualWeeklyCalendarViewProps {
   customHolidays: Holiday[];
   getEffectiveShift: (emp: Employee, dayIdx: number) => ShiftType;
   onUpdateShift?: (empId: string, dayIdx: number, newShift: ShiftType) => void;
-  onUpdateHour?: (empId: string, dayIdx: number, newHour: string) => void;
-  jornadaSettings?: JornadaSettings;
 }
+
+const formatHolidayDDMM = (dateOrRef: string): string => {
+  const clean = dateOrRef.replace('-extra', '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+    const [, m, d] = clean.split('-');
+    return `${d}/${m}`;
+  }
+  if (/^\d{2}\/\d{2}$/.test(clean)) {
+    return clean;
+  }
+  if (/^\d{2}-\d{2}$/.test(clean)) {
+    const [m, d] = clean.split('-');
+    return `${d}/${m}`;
+  }
+  return clean;
+};
 
 const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> = ({
   employee,
@@ -570,8 +597,6 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
   customHolidays,
   getEffectiveShift,
   onUpdateShift,
-  onUpdateHour,
-  jornadaSettings = DEFAULT_JORNADA_SETTINGS,
 }) => {
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMY.year, currentMY.month, 1).getDay(); // 0 is Sunday
@@ -579,24 +604,125 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
   const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
   const canEdit = !!onUpdateShift;
 
-  const getAvailHours = (dayIdx: number): string[] => {
-    const date = new Date(currentMY.year, currentMY.month, dayIdx + 1);
-    const ds = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
-    if (holidaySet.has(ds)) return jornadaSettings.shiftHours.holiday;
-    if (date.getDay() === 0) return jornadaSettings.shiftHours.sunday;
-    return jornadaSettings.shiftHours.weekday;
-  };
+  const yearHolidays = useMemo(() => {
+    const all = [...getNationalHolidays(currentMY.year), ...customHolidays]
+      .filter(h => h.date.startsWith(String(currentMY.year)));
+    const unique = all.filter((h, i, self) => i === self.findIndex(t => t.date === h.date));
+    return unique.sort((a, b) => a.date.localeCompare(b.date));
+  }, [currentMY.year, customHolidays]);
+
+  // Mapeia cada dia de folga compensatória (FF) para a data do feriado a que se refere
+  const holidayCompMap = useMemo(() => {
+    const map: Record<string, { dateLabel: string; holidayName?: string }> = {};
+    const workedHolidays: { id: string; date: string; name: string }[] = [];
+    const ffOffDays: { offDate: string; explicitRef?: string }[] = [];
+
+    const sortedMonthKeys = Object.keys(employee.shifts || {})
+      .filter(mk => mk.startsWith(String(currentMY.year)))
+      .sort();
+
+    for (const mk of sortedMonthKeys) {
+      const mShifts = employee.shifts[mk] || [];
+      mShifts.forEach((rawShift, idx) => {
+        const dStr = `${mk}-${String(idx + 1).padStart(2, '0')}`;
+        let effShift = rawShift;
+        if (employee.vacationStart && employee.vacationEnd && dStr >= employee.vacationStart && dStr <= employee.vacationEnd) {
+          effShift = 'FE';
+        } else if (employee.atestadoStart && employee.atestadoEnd && dStr >= employee.atestadoStart && dStr <= employee.atestadoEnd) {
+          effShift = 'AT';
+        }
+
+        const hol = yearHolidays.find(h => h.date === dStr);
+        if (hol && isWorkingShift(effShift)) {
+          workedHolidays.push({ id: dStr, date: dStr, name: hol.name });
+          if (dStr.endsWith('-05-01')) {
+            workedHolidays.push({ id: `${dStr}-extra`, date: dStr, name: hol.name });
+          }
+        }
+
+        if (typeof effShift === 'string' && effShift.startsWith('FF')) {
+          const explicit = effShift.length > 2 ? effShift.slice(2).trim() : undefined;
+          ffOffDays.push({ offDate: dStr, explicitRef: explicit || undefined });
+        }
+      });
+    }
+
+    const usedWorkedIndices = new Set<number>();
+    const resolvedOffDates = new Set<string>();
+
+    // 1. Casamento explícito (ex.: "FF 2026-04-21" ou "FF 21/04")
+    for (const off of ffOffDays) {
+      const explicitRef = off.explicitRef;
+      if (!explicitRef) continue;
+      const cleanRef = explicitRef.replace('-extra', '').replace('/', '-');
+      const whIdx = workedHolidays.findIndex((wh, idx) => {
+        if (usedWorkedIndices.has(idx)) return false;
+        return wh.id === explicitRef || wh.date === explicitRef || wh.date.endsWith(cleanRef);
+      });
+
+      if (whIdx !== -1) {
+        usedWorkedIndices.add(whIdx);
+        resolvedOffDates.add(off.offDate);
+        map[off.offDate] = {
+          dateLabel: formatHolidayDDMM(workedHolidays[whIdx].date),
+          holidayName: workedHolidays[whIdx].name,
+        };
+      } else {
+        const directHoliday = yearHolidays.find(h => h.date === explicitRef.replace('-extra', '') || h.date.endsWith(cleanRef));
+        resolvedOffDates.add(off.offDate);
+        map[off.offDate] = {
+          dateLabel: formatHolidayDDMM(directHoliday ? directHoliday.date : explicitRef),
+          holidayName: directHoliday?.name,
+        };
+      }
+    }
+
+    // 2. Casamento FIFO para "FF" genérico com feriados trabalhados no ano/mês
+    const monthHolidays = yearHolidays.filter(h => h.date.startsWith(monthKey));
+    for (const off of ffOffDays) {
+      if (resolvedOffDates.has(off.offDate)) continue;
+      const whIdx = workedHolidays.findIndex((_, idx) => !usedWorkedIndices.has(idx));
+      if (whIdx !== -1) {
+        usedWorkedIndices.add(whIdx);
+        resolvedOffDates.add(off.offDate);
+        map[off.offDate] = {
+          dateLabel: formatHolidayDDMM(workedHolidays[whIdx].date),
+          holidayName: workedHolidays[whIdx].name,
+        };
+      } else if (monthHolidays.length > 0) {
+        // Fallback: feriado do próprio mês
+        const fallbackHol = monthHolidays[0];
+        resolvedOffDates.add(off.offDate);
+        map[off.offDate] = {
+          dateLabel: formatHolidayDDMM(fallbackHol.date),
+          holidayName: fallbackHol.name,
+        };
+      } else {
+        // Fallback: último feriado anterior ou igual à data da folga no ano
+        const priorHol = [...yearHolidays].reverse().find(h => h.date <= off.offDate) || yearHolidays[0];
+        if (priorHol) {
+          resolvedOffDates.add(off.offDate);
+          map[off.offDate] = {
+            dateLabel: formatHolidayDDMM(priorHol.date),
+            holidayName: priorHol.name,
+          };
+        }
+      }
+    }
+
+    return map;
+  }, [employee, currentMY.year, monthKey, yearHolidays]);
 
   // Build calendar matrix (leading empty cells for first week)
   const calendarCells: ({ type: 'empty' } | {
     type: 'day';
     day: number;
     dayIdx: number;
+    dateStr: string;
     shift: ShiftType;
     isSunday: boolean;
     isSaturday: boolean;
     isHoliday: boolean;
-    hours: string;
   })[] = [];
 
   for (let i = 0; i < firstDayOfMonth; i++) {
@@ -608,17 +734,16 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
     const shift = getEffectiveShift(employee, dayIdx);
     const date = new Date(currentMY.year, currentMY.month, i);
     const ds = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-    const hours = (employee.dailyHours?.[monthKey] || [])[dayIdx] || employee.workPeriod || '';
 
     calendarCells.push({
       type: 'day',
       day: i,
       dayIdx,
+      dateStr: ds,
       shift,
       isSunday: date.getDay() === 0,
       isSaturday: date.getDay() === 6,
       isHoliday: holidaySet.has(ds),
-      hours,
     });
   }
 
@@ -656,10 +781,31 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
             );
           }
 
-          const { day, dayIdx, shift, isSunday, isHoliday, hours } = cell;
+          const { day, dayIdx, dateStr, shift, isSunday, isHoliday } = cell;
           const isWorking = isWorkingShift(shift);
+          const isFF = typeof shift === 'string' && shift.startsWith('FF');
+          const ffInfo = isFF ? holidayCompMap[dateStr] : undefined;
           const cellStyle = getShiftCellStyle(shift);
-          const availHours = getAvailHours(dayIdx);
+
+          const mainBadgeLabel = isFF
+            ? (ffInfo?.dateLabel ? `Ref. ${ffInfo.dateLabel}` : 'Folga Fer.')
+            : shift;
+
+          const subLabel = isWorking
+            ? 'Trabalho'
+            : shift === 'F'
+              ? 'Folga'
+              : isFF
+                ? (ffInfo?.holidayName ? `Feriado • ${ffInfo.holidayName}` : 'Folga Feriado')
+                : shift === 'FE'
+                  ? 'Férias'
+                  : shift === 'AT'
+                    ? 'Atestado'
+                    : shift === 'DO'
+                      ? 'Day Off'
+                      : shift === 'C'
+                        ? 'Curso'
+                        : 'Folga';
 
           return (
             <div
@@ -691,57 +837,34 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
                 )}
               </div>
 
-              {/* Central Badge: Shift Status */}
-              <div className="flex flex-col items-center justify-center my-auto">
-                <span className={`text-base sm:text-lg font-black tracking-tight ${cellStyle.text}`}>
-                  {shift}
+              {/* Central Badge: Shift Status (Sem horário; exibe data de referência para FF) */}
+              <div className="flex flex-col items-center justify-center my-auto px-0.5 text-center">
+                <span className={`${isFF ? 'text-xs sm:text-sm' : 'text-base sm:text-lg'} font-black tracking-tight leading-tight ${cellStyle.text}`}>
+                  {mainBadgeLabel}
                 </span>
-                <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight line-clamp-1 text-center">
-                  {isWorking ? 'Trabalho' : shift === 'F' ? 'Folga' : shift?.startsWith('FF') ? 'Compensatória' : shift === 'FE' ? 'Férias' : shift === 'AT' ? 'Atestado' : shift === 'DO' ? 'Day Off' : shift === 'C' ? 'Curso' : 'Folga'}
+                <span className="text-[9.5px] sm:text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight line-clamp-1 text-center mt-0.5">
+                  {subLabel}
                 </span>
               </div>
 
-              {/* Bottom: Hours or Shift Detail */}
-              <div className="w-full text-center">
-                {isWorking ? (
-                  canEdit && onUpdateHour ? (
-                    <select
-                      value={hours}
-                      onChange={(e) => onUpdateHour(employee.id, dayIdx, e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-full text-[10px] font-bold text-zinc-600 dark:text-zinc-300 bg-white/70 dark:bg-zinc-800/70 rounded border border-zinc-200/50 dark:border-zinc-700 py-0.5 px-0.5 text-center cursor-pointer outline-none truncate"
-                      title="Clique para alterar o horário"
-                    >
-                      {availHours.map(h => (
-                        <option key={h} value={h}>{h}</option>
-                      ))}
-                      {hours && !availHours.includes(hours) && (
-                        <option value={hours}>{hours}</option>
-                      )}
-                    </select>
-                  ) : (
-                    <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 truncate block">
-                      {hours ? hours.split(' ')[0] : '—'}
-                    </span>
-                  )
-                ) : (
-                  <span className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500 truncate block">
-                    —
-                  </span>
-                )}
-              </div>
+              <div className="h-1" />
 
               {/* Direct Shift Selector overlay if editable */}
               {canEdit && (
                 <select
                   value={shift}
                   onChange={(e) => onUpdateShift(employee.id, dayIdx, e.target.value as ShiftType)}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 no-print print:hidden"
                   title={`Clique para alterar o status do dia ${day}`}
                 >
                   {SHIFT_OPTIONS.map(opt => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label} — {opt.desc}
+                    </option>
+                  ))}
+                  {yearHolidays.map(h => (
+                    <option key={`FF-${h.date}`} value={`FF ${h.date}`}>
+                      Ref. {formatHolidayDDMM(h.date)} — Folga Feriado ({h.name})
                     </option>
                   ))}
                 </select>
