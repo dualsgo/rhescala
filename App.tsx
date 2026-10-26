@@ -1002,23 +1002,31 @@ const App: React.FC = () => {
                    currentMY={currentMY} 
                    customHolidays={customHolidays} 
                    jornadaSettings={jornadaSettings}
+                   holidayCredits={holidayCredits}
+                   onOpenWorkedHolidays={() => setCurrentView('worked-holidays')}
                    onClose={() => setCurrentView('grid')} 
                    onUpdateShift={(empId, dayIdx, shift) => {
                      if (isReadOnly) return;
+                     const totalDays = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
                      setEmployees(prev => prev.map(emp => {
                        if (emp.id !== empId) return emp;
-                       const sfs = [...(emp.shifts[monthKey] || [])];
-                       sfs[dayIdx] = shift;
-                       return { ...emp, shifts: { ...emp.shifts, [monthKey]: sfs } };
+                       const baseShifts = emp.shifts[monthKey] && emp.shifts[monthKey].length > 0
+                         ? [...emp.shifts[monthKey]]
+                         : Array(totalDays).fill('T');
+                       baseShifts[dayIdx] = shift;
+                       return { ...emp, shifts: { ...emp.shifts, [monthKey]: baseShifts } };
                      }));
                    }}
                    onUpdateHour={(empId, dayIdx, hour) => {
                      if (isReadOnly) return;
+                     const totalDays = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
                      setEmployees(prev => prev.map(emp => {
                        if (emp.id !== empId) return emp;
-                       const hrs = [...(emp.dailyHours[monthKey] || [])];
-                       hrs[dayIdx] = hour;
-                       return { ...emp, dailyHours: { ...emp.dailyHours, [monthKey]: hrs } };
+                       const baseHours = emp.dailyHours?.[monthKey] && emp.dailyHours[monthKey].length > 0
+                         ? [...emp.dailyHours[monthKey]]
+                         : Array(totalDays).fill(emp.workPeriod || '');
+                       baseHours[dayIdx] = hour;
+                       return { ...emp, dailyHours: { ...emp.dailyHours, [monthKey]: baseHours } };
                      }));
                    }}
                  />

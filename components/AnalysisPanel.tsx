@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Employee, MonthYear, Holiday, ShiftType, JornadaSettings } from '../types';
 import { isWorkingShift } from '../hooks/useScheduleEngine';
+import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { Icon } from './Icon';
 import { 
   buildHolidaySet, 
@@ -21,6 +22,8 @@ interface AnalysisPanelProps {
   onUpdateShift?: (empId: string, dayIdx: number, newShift: ShiftType) => void;
   onUpdateHour?: (empId: string, dayIdx: number, newHour: string) => void;
   jornadaSettings?: JornadaSettings;
+  holidayCredits?: Record<string, HolidayCredit[]>;
+  onOpenWorkedHolidays?: () => void;
 }
 
 const WEEKDAY_NAMES = [
@@ -35,10 +38,9 @@ const MONTH_NAMES = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
-const SHIFT_OPTIONS: { value: ShiftType; label: string; desc: string }[] = [
+const BASE_SHIFT_OPTIONS: { value: ShiftType; label: string; desc: string }[] = [
   { value: 'T', label: 'T', desc: 'Trabalho Regular' },
   { value: 'F', label: 'F', desc: 'Folga Semanal' },
-  { value: 'FF', label: 'FF', desc: 'Folga Compensatória (Feriado)' },
   { value: 'FE', label: 'FE', desc: 'Férias' },
   { value: 'AT', label: 'AT', desc: 'Atestado Médico' },
   { value: 'DO', label: 'DO', desc: 'Folga Aniversário (Day Off)' },
@@ -51,10 +53,13 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   customHolidays, 
   onClose, 
   onUpdateShift, 
-  onUpdateHour: _onUpdateHour, 
-  jornadaSettings: _jornadaSettings = DEFAULT_JORNADA_SETTINGS 
+  onUpdateHour, 
+  jornadaSettings = DEFAULT_JORNADA_SETTINGS,
+  holidayCredits = {},
+  onOpenWorkedHolidays,
 }) => {
   const [viewMode, setViewMode] = useState<'individual' | 'team'>('individual');
+  const [calendarMode, setCalendarMode] = useState<'edit' | 'preview'>(onUpdateShift ? 'edit' : 'preview');
   const [searchTerm, setSearchTerm] = useState('');
   
   const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
@@ -233,7 +238,39 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
         {/* Right: Controls & Actions */}
         <div className="flex items-center gap-2 shrink-0">
           
-          {/* Mode Switcher */}
+          {/* Edit / Preview Mode Switcher (Individual mode) */}
+          {viewMode === 'individual' && onUpdateShift && (
+            <div className="bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl flex gap-1 border border-zinc-200/70 dark:border-zinc-700/70">
+              <button
+                type="button"
+                onClick={() => setCalendarMode('edit')}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  calendarMode === 'edit'
+                    ? 'bg-orange-500 text-white shadow-xs'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                }`}
+                title="Modo Edição: alterar folgas, feriados pendentes e horários de turno"
+              >
+                <Icon name="edit_calendar" className="text-sm" />
+                <span className="hidden lg:inline">Modo Edição</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCalendarMode('preview')}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  calendarMode === 'preview'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                }`}
+                title="Modo Visualizar: versão limpa (sem horários) pronta para baixar ou imprimir para o colaborador"
+              >
+                <Icon name="visibility" className="text-sm" />
+                <span className="hidden lg:inline">Modo Visualizar</span>
+              </button>
+            </div>
+          )}
+
+          {/* Mode Switcher (Colaborador vs Equipe) */}
           <div className="bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl flex gap-1">
             <button
               onClick={() => setViewMode('individual')}
@@ -361,13 +398,21 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                           )}
                         </div>
 
-                        <div className="flex items-center gap-2 text-[11px]">
+                        <div className="flex items-center gap-2 text-[11px] flex-wrap">
                           <span className={`px-1.5 py-0.5 rounded text-[10px] font-black uppercase ${roleConfig.badgeClass}`}>
                             {roleConfig.code}
                           </span>
                           <span className="text-zinc-400 truncate">
                             {s.emp.shiftName || 'Turno Padrão'}
                           </span>
+                          {(holidayCredits[s.emp.id] || []).some(c => c.status === 'pending') && (
+                            <span
+                              className="px-1.5 py-0.5 rounded text-[9.5px] font-black uppercase bg-fuchsia-100 dark:bg-fuchsia-950/60 text-fuchsia-700 dark:text-fuchsia-300 border border-fuchsia-200 dark:border-fuchsia-800"
+                              title="Possui folga(s) de feriado pendente(s)"
+                            >
+                              {(holidayCredits[s.emp.id] || []).filter(c => c.status === 'pending').length} FF Pend.
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -404,35 +449,124 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                   
                   {/* Employee Hero Card & Metrics */}
                   <div className="flex flex-col gap-4 pb-5 border-b border-zinc-200 dark:border-zinc-800">
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center font-black text-lg uppercase shadow-sm shrink-0">
-                        {selectedSummary.emp.name.substring(0, 2)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight uppercase truncate">
-                            {selectedSummary.emp.name}
-                          </h3>
-                          {(() => {
-                            const role = normalizeEmployeeRole(selectedSummary.emp.cargo || selectedSummary.emp.role || 'Vendas');
-                            const meta = ROLE_VISUAL_MAP[role];
-                            return (
-                              <span className={`px-2 py-0.5 rounded-md text-[11px] font-black uppercase shrink-0 ${meta.badgeClass}`}>
-                                {meta.label}
-                              </span>
-                            );
-                          })()}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center font-black text-lg uppercase shadow-sm shrink-0">
+                          {selectedSummary.emp.name.substring(0, 2)}
                         </div>
-                        <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mt-0.5">
-                          Escala Mensal • {MONTH_NAMES[currentMY.month]} de {currentMY.year}
-                          {selectedSummary.emp.preferredDayOff && (
-                            <span className="ml-2 text-rose-600 dark:text-rose-400 font-bold">
-                              • Folga Preferencial: {selectedSummary.emp.preferredDayOff}
-                            </span>
-                          )}
-                        </p>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight uppercase truncate">
+                              {selectedSummary.emp.name}
+                            </h3>
+                            {(() => {
+                              const role = normalizeEmployeeRole(selectedSummary.emp.cargo || selectedSummary.emp.role || 'Vendas');
+                              const meta = ROLE_VISUAL_MAP[role];
+                              return (
+                                <span className={`px-2 py-0.5 rounded-md text-[11px] font-black uppercase shrink-0 ${meta.badgeClass}`}>
+                                  {meta.label}
+                                </span>
+                              );
+                            })()}
+                          </div>
+                          <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mt-0.5">
+                            Escala Mensal • {MONTH_NAMES[currentMY.month]} de {currentMY.year}
+                            {calendarMode === 'edit' && (
+                              <span
+                                data-export-hide="true"
+                                className="ml-2 text-zinc-600 dark:text-zinc-300 font-bold no-print print:hidden"
+                              >
+                                • Horário Base: {selectedSummary.emp.workPeriod || '09:40 - 18:00'}
+                              </span>
+                            )}
+                            {selectedSummary.emp.preferredDayOff && (
+                              <span className="ml-2 text-rose-600 dark:text-rose-400 font-bold">
+                                • Folga Preferencial: {selectedSummary.emp.preferredDayOff}
+                              </span>
+                            )}
+                          </p>
+                        </div>
                       </div>
+
+                      {/* Inline Mode Selector Banner (Hidden on PNG Download & Print) */}
+                      {onUpdateShift && (
+                        <div
+                          data-export-hide="true"
+                          className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-xl border border-zinc-200 dark:border-zinc-700 self-start sm:self-center shrink-0 no-print print:hidden"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setCalendarMode('edit')}
+                            className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                              calendarMode === 'edit'
+                                ? 'bg-orange-500 text-white shadow-xs'
+                                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
+                            }`}
+                          >
+                            <Icon name="edit_calendar" className="text-xs" />
+                            <span>Modo Edição</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCalendarMode('preview')}
+                            className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                              calendarMode === 'preview'
+                                ? 'bg-emerald-600 text-white shadow-xs'
+                                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
+                            }`}
+                          >
+                            <Icon name="visibility" className="text-xs" />
+                            <span>Visualizar (Colaborador)</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
+
+                    {/* Pending Holiday Credits Connection Bar (Modo Edição only, hidden on export/print) */}
+                    {calendarMode === 'edit' && onUpdateShift && (() => {
+                      const empCredits = holidayCredits[selectedSummary.emp.id] || [];
+                      const pending = empCredits.filter(c => c.status === 'pending');
+                      const scheduled = empCredits.filter(c => c.status === 'scheduled' || c.status === 'granted');
+                      return (
+                        <div
+                          data-export-hide="true"
+                          className={`flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl border text-xs no-print print:hidden ${
+                            pending.length > 0
+                              ? 'bg-fuchsia-50/80 dark:bg-fuchsia-950/30 border-fuchsia-200 dark:border-fuchsia-800/70 text-fuchsia-900 dark:text-fuchsia-200'
+                              : 'bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200/80 dark:border-zinc-700/70 text-zinc-600 dark:text-zinc-300'
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center gap-2 min-w-0">
+                            <Icon
+                              name={pending.length > 0 ? 'event_available' : 'info'}
+                              className={`text-sm shrink-0 ${pending.length > 0 ? 'text-fuchsia-600 dark:text-fuchsia-400' : 'text-zinc-400'}`}
+                            />
+                            {pending.length > 0 ? (
+                              <span className="font-bold">
+                                <strong className="font-black uppercase">{pending.length} folga(s) de feriado disponível(is) para agendar:</strong>{' '}
+                                {pending.map(c => `${formatHolidayDDMM(c.holidayDate)} (${c.holidayName})`).join(' • ')}
+                              </span>
+                            ) : (
+                              <span className="font-semibold text-zinc-500 dark:text-zinc-400">
+                                Nenhuma folga de feriado pendente no momento
+                                {scheduled.length > 0 ? ` (${scheduled.length} já agendada(s)/concedida(s))` : ' — a opção FF só é liberada quando o colaborador trabalha em feriado.'}
+                              </span>
+                            )}
+                          </div>
+                          {onOpenWorkedHolidays && (
+                            <button
+                              type="button"
+                              onClick={onOpenWorkedHolidays}
+                              className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-fuchsia-300 dark:border-fuchsia-700 text-fuchsia-700 dark:text-fuchsia-300 hover:bg-fuchsia-100 dark:hover:bg-fuchsia-900/40 font-black text-[10px] uppercase tracking-wider flex items-center gap-1 transition-colors shrink-0"
+                              title="Abrir menu de Controle de Créditos e Folgas de Feriados Pendentes"
+                            >
+                              <Icon name="list_alt" className="text-xs" />
+                              <span>Folgas de Feriado Pendentes</span>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {/* Operational Summary Containers (Responsive 2 cols on mobile, 4 equal cols on sm+/print) */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 print:grid-cols-4 gap-2.5 sm:gap-3 w-full">
@@ -477,7 +611,11 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                     currentMY={currentMY}
                     customHolidays={customHolidays}
                     getEffectiveShift={getEffectiveShift}
+                    calendarMode={calendarMode}
                     onUpdateShift={onUpdateShift}
+                    onUpdateHour={onUpdateHour}
+                    jornadaSettings={jornadaSettings}
+                    employeeHolidayCredits={holidayCredits[selectedSummary.emp.id] || []}
                   />
 
                   {/* Legend Bar */}
@@ -515,8 +653,10 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                         data-export-hide="true"
                         className="text-zinc-400 flex items-center gap-1 no-print print:hidden"
                       >
-                        <Icon name="touch_app" className="text-xs text-orange-500" />
-                        Clique em qualquer dia para alterar o turno
+                        <Icon name={calendarMode === 'edit' ? 'touch_app' : 'visibility'} className="text-xs text-orange-500" />
+                        {calendarMode === 'edit'
+                          ? 'Clique no dia para alterar turno/folga ou no horário inferior para mudar o turno'
+                          : 'Modo Visualizar ativo — horários ocultos para download/impressão do colaborador'}
                       </span>
                     )}
                   </div>
@@ -572,7 +712,11 @@ interface IndividualWeeklyCalendarViewProps {
   currentMY: MonthYear;
   customHolidays: Holiday[];
   getEffectiveShift: (emp: Employee, dayIdx: number) => ShiftType;
+  calendarMode: 'edit' | 'preview';
   onUpdateShift?: (empId: string, dayIdx: number, newShift: ShiftType) => void;
+  onUpdateHour?: (empId: string, dayIdx: number, newHour: string) => void;
+  jornadaSettings?: JornadaSettings;
+  employeeHolidayCredits?: HolidayCredit[];
 }
 
 const formatHolidayDDMM = (dateOrRef: string): string => {
@@ -596,13 +740,25 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
   currentMY,
   customHolidays,
   getEffectiveShift,
+  calendarMode,
   onUpdateShift,
+  onUpdateHour,
+  jornadaSettings = DEFAULT_JORNADA_SETTINGS,
+  employeeHolidayCredits = [],
 }) => {
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMY.year, currentMY.month, 1).getDay(); // 0 is Sunday
   const monthKey = `${currentMY.year}-${(currentMY.month + 1).toString().padStart(2, '0')}`;
   const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
-  const canEdit = !!onUpdateShift;
+  const canEdit = calendarMode === 'edit' && !!onUpdateShift;
+
+  const getAvailHours = (dayIdx: number): string[] => {
+    const date = new Date(currentMY.year, currentMY.month, dayIdx + 1);
+    const ds = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+    if (holidaySet.has(ds)) return jornadaSettings.shiftHours.holiday;
+    if (date.getDay() === 0) return jornadaSettings.shiftHours.sunday;
+    return jornadaSettings.shiftHours.weekday;
+  };
 
   const yearHolidays = useMemo(() => {
     const all = [...getNationalHolidays(currentMY.year), ...customHolidays]
@@ -612,8 +768,20 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
   }, [currentMY.year, customHolidays]);
 
   // Mapeia cada dia de folga compensatória (FF) para a data do feriado a que se refere
-  const holidayCompMap = useMemo(() => {
+  // e calcula quais créditos de feriado o colaborador tem direito a agendar
+  const { holidayCompMap, eligiblePendingCredits } = useMemo(() => {
     const map: Record<string, { dateLabel: string; holidayName?: string }> = {};
+
+    // Primeiro preenche com os créditos já casados pelo useHolidayCredits
+    for (const credit of employeeHolidayCredits) {
+      if (credit.offDate) {
+        map[credit.offDate] = {
+          dateLabel: formatHolidayDDMM(credit.holidayDate),
+          holidayName: credit.holidayName,
+        };
+      }
+    }
+
     const workedHolidays: { id: string; date: string; name: string }[] = [];
     const ffOffDays: { offDate: string; explicitRef?: string }[] = [];
 
@@ -633,10 +801,12 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
         }
 
         const hol = yearHolidays.find(h => h.date === dStr);
-        if (hol && isWorkingShift(effShift)) {
-          workedHolidays.push({ id: dStr, date: dStr, name: hol.name });
+        if (!employee.isYoungApprentice && hol && isWorkingShift(effShift)) {
           if (dStr.endsWith('-05-01')) {
-            workedHolidays.push({ id: `${dStr}-extra`, date: dStr, name: hol.name });
+            workedHolidays.push({ id: dStr, date: dStr, name: `${hol.name} (Folga 1)` });
+            workedHolidays.push({ id: `${dStr}-extra`, date: dStr, name: `${hol.name} (Folga 2)` });
+          } else {
+            workedHolidays.push({ id: dStr, date: dStr, name: hol.name });
           }
         }
 
@@ -690,7 +860,6 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
           holidayName: workedHolidays[whIdx].name,
         };
       } else if (monthHolidays.length > 0) {
-        // Fallback: feriado do próprio mês
         const fallbackHol = monthHolidays[0];
         resolvedOffDates.add(off.offDate);
         map[off.offDate] = {
@@ -698,7 +867,6 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
           holidayName: fallbackHol.name,
         };
       } else {
-        // Fallback: último feriado anterior ou igual à data da folga no ano
         const priorHol = [...yearHolidays].reverse().find(h => h.date <= off.offDate) || yearHolidays[0];
         if (priorHol) {
           resolvedOffDates.add(off.offDate);
@@ -710,8 +878,36 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
       }
     }
 
-    return map;
-  }, [employee, currentMY.year, monthKey, yearHolidays]);
+    // 3. Créditos pendentes aos quais o colaborador tem direito (do menu de créditos pendentes + feriados trabalhados ainda não compensados)
+    const pendingList: { id: string; holidayDate: string; holidayName: string }[] = [];
+    const seenIds = new Set<string>();
+
+    for (const c of employeeHolidayCredits) {
+      if (c.status === 'pending') {
+        const cid = c.id || c.holidayDate;
+        seenIds.add(cid);
+        pendingList.push({
+          id: cid,
+          holidayDate: c.holidayDate,
+          holidayName: c.holidayName,
+        });
+      }
+    }
+
+    // Também inclui feriados trabalhados no mês em construção que ainda não foram compensados
+    workedHolidays.forEach((wh, idx) => {
+      if (!usedWorkedIndices.has(idx) && !seenIds.has(wh.id)) {
+        seenIds.add(wh.id);
+        pendingList.push({
+          id: wh.id,
+          holidayDate: wh.date,
+          holidayName: wh.name,
+        });
+      }
+    });
+
+    return { holidayCompMap: map, eligiblePendingCredits: pendingList };
+  }, [employee, currentMY.year, monthKey, yearHolidays, employeeHolidayCredits]);
 
   // Build calendar matrix (leading empty cells for first week)
   const calendarCells: ({ type: 'empty' } | {
@@ -723,6 +919,7 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
     isSunday: boolean;
     isSaturday: boolean;
     isHoliday: boolean;
+    hours: string;
   })[] = [];
 
   for (let i = 0; i < firstDayOfMonth; i++) {
@@ -734,6 +931,7 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
     const shift = getEffectiveShift(employee, dayIdx);
     const date = new Date(currentMY.year, currentMY.month, i);
     const ds = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+    const hours = (employee.dailyHours?.[monthKey] || [])[dayIdx] || employee.workPeriod || '';
 
     calendarCells.push({
       type: 'day',
@@ -744,6 +942,7 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
       isSunday: date.getDay() === 0,
       isSaturday: date.getDay() === 6,
       isHoliday: holidaySet.has(ds),
+      hours,
     });
   }
 
@@ -781,11 +980,12 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
             );
           }
 
-          const { day, dayIdx, dateStr, shift, isSunday, isHoliday } = cell;
+          const { day, dayIdx, dateStr, shift, isSunday, isHoliday, hours } = cell;
           const isWorking = isWorkingShift(shift);
           const isFF = typeof shift === 'string' && shift.startsWith('FF');
           const ffInfo = isFF ? holidayCompMap[dateStr] : undefined;
           const cellStyle = getShiftCellStyle(shift);
+          const availHours = getAvailHours(dayIdx);
 
           const mainBadgeLabel = isFF
             ? (ffInfo?.dateLabel ? `Ref. ${ffInfo.dateLabel}` : 'Folga Fer.')
@@ -837,7 +1037,7 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
                 )}
               </div>
 
-              {/* Central Badge: Shift Status (Sem horário; exibe data de referência para FF) */}
+              {/* Central Badge: Shift Status (Exibe data de referência para FF) */}
               <div className="flex flex-col items-center justify-center my-auto px-0.5 text-center">
                 <span className={`${isFF ? 'text-xs sm:text-sm' : 'text-base sm:text-lg'} font-black tracking-tight leading-tight ${cellStyle.text}`}>
                   {mainBadgeLabel}
@@ -847,9 +1047,38 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
                 </span>
               </div>
 
-              <div className="h-1" />
+              {/* Bottom: Turno/Horário editável apenas no Modo Edição (oculto no Modo Visualizar e na exportação/impressão) */}
+              {calendarMode === 'edit' ? (
+                <div
+                  data-export-hide="true"
+                  className="w-full text-center relative z-20 no-print print:hidden"
+                >
+                  {isWorking && onUpdateHour ? (
+                    <select
+                      value={hours}
+                      onChange={(e) => onUpdateHour(employee.id, dayIdx, e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full text-[10px] font-bold text-zinc-700 dark:text-zinc-200 bg-white/85 dark:bg-zinc-800/85 hover:bg-white dark:hover:bg-zinc-800 rounded-md border border-zinc-300/70 dark:border-zinc-700 py-0.5 px-1 text-center cursor-pointer outline-none truncate shadow-2xs"
+                      title="Clique para alterar o turno / horário deste dia"
+                    >
+                      {availHours.map(h => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                      {hours && !availHours.includes(hours) && (
+                        <option value={hours}>{hours}</option>
+                      )}
+                    </select>
+                  ) : (
+                    <span className="text-[9.5px] font-medium text-zinc-400 dark:text-zinc-500 truncate block">
+                      {isFF && ffInfo?.dateLabel ? `Ref. ${ffInfo.dateLabel}` : '—'}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className="h-1" />
+              )}
 
-              {/* Direct Shift Selector overlay if editable */}
+              {/* Direct Shift Selector overlay if in Edit Mode */}
               {canEdit && (
                 <select
                   value={shift}
@@ -857,16 +1086,35 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 no-print print:hidden"
                   title={`Clique para alterar o status do dia ${day}`}
                 >
-                  {SHIFT_OPTIONS.map(opt => (
+                  {BASE_SHIFT_OPTIONS.map(opt => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label} — {opt.desc}
                     </option>
                   ))}
-                  {yearHolidays.map(h => (
-                    <option key={`FF-${h.date}`} value={`FF ${h.date}`}>
-                      Ref. {formatHolidayDDMM(h.date)} — Folga Feriado ({h.name})
+
+                  {/* Mantém a opção atual selecionada caso o dia já esteja com FF */}
+                  {isFF && !eligiblePendingCredits.some(c => `FF ${c.id}` === shift) && (
+                    <option value={shift}>
+                      {ffInfo?.dateLabel
+                        ? `Ref. ${ffInfo.dateLabel} — Folga Feriado${ffInfo.holidayName ? ` (${ffInfo.holidayName})` : ''}`
+                        : `FF — Folga Compensatória`}
                     </option>
-                  ))}
+                  )}
+
+                  {/* Sugere apenas as folgas de feriado às quais o colaborador tem direito pendente */}
+                  {eligiblePendingCredits.length > 0 ? (
+                    <optgroup label="Folgas de Feriado Pendentes (Direito Adquirido)">
+                      {eligiblePendingCredits.map(c => (
+                        <option key={c.id} value={`FF ${c.id}`}>
+                          Ref. {formatHolidayDDMM(c.holidayDate)} — Folga Feriado ({c.holidayName})
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : !isFF ? (
+                    <option value="" disabled>
+                      ── Sem folga de feriado pendente para este colaborador ──
+                    </option>
+                  ) : null}
                 </select>
               )}
             </div>
