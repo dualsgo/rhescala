@@ -42,6 +42,7 @@ import {
   buildHolidaySet,
   DEFAULT_JORNADA_SETTINGS,
   getDefaultProtectedDays,
+  isEmployeeHiddenInMonth,
 } from '../../constants';
 import {
   Employee,
@@ -372,6 +373,32 @@ export const AppDriveLite: React.FC = () => {
     handleApplyGranularPresets({ scope: 'all', applyMode: 'full' });
   }, [showDialog, handleApplyGranularPresets]);
 
+  const handleToggleEmployeeVisibilityInMonth = useCallback((empId: string) => {
+    setEmployees((prev) =>
+      prev.map((emp) => {
+        if (emp.id !== empId) return emp;
+        const currentlyHidden = isEmployeeHiddenInMonth(emp, monthKey);
+        if (currentlyHidden) {
+          const nextHiddenMonths = { ...(emp.hiddenMonths || {}) };
+          delete nextHiddenMonths[monthKey];
+          return {
+            ...emp,
+            isHidden: false,
+            hiddenMonths: nextHiddenMonths,
+          };
+        } else {
+          return {
+            ...emp,
+            hiddenMonths: {
+              ...(emp.hiddenMonths || {}),
+              [monthKey]: true,
+            },
+          };
+        }
+      })
+    );
+  }, [monthKey, setEmployees]);
+
   const handleToggleValidation = useCallback(async () => {
     const nextVal = !isValidated;
     setValidatedMonths((prev) => ({ ...prev, [monthKey]: nextVal }));
@@ -412,7 +439,7 @@ export const AppDriveLite: React.FC = () => {
   const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(dateStr);
   const isSunday = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1).getDay() === 0;
   const resolvedPositions = resolveTacticalDay(
-    employees.filter((e) => !e.isHidden && e.status === 'active'),
+    employees.filter((e) => !isEmployeeHiddenInMonth(e, monthKey) && e.status === 'active'),
     monthKey,
     selectedDayIdx,
     isHoliday,
@@ -687,6 +714,7 @@ export const AppDriveLite: React.FC = () => {
                 setEditingTeamEmpId(empId);
                 setCurrentView('team');
               }}
+              onToggleHideEmployee={isReadOnly ? undefined : handleToggleEmployeeVisibilityInMonth}
             />
           )
         )}

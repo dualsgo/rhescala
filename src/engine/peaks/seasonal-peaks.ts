@@ -1,4 +1,4 @@
-import { DEFAULT_JORNADA_SETTINGS } from '../config/schedule-constants';
+import { DEFAULT_JORNADA_SETTINGS, isEmployeeHiddenInMonth } from '../config/schedule-constants';
 import { getPrevMonthWorkStreak } from '../clt/clt-rules';
 import { isProtectedShift } from '../clt/legal-overrides';
 import { Employee, Holiday, JornadaSettings, ShiftType } from '../../../types';
@@ -35,7 +35,7 @@ export function optimizeOctoberPeak(
     const month = parseInt(monthStr) - 1;
     const daysInMonth = new Date(year, month + 1, 0).getDate(); // 31
 
-    const activeRegular = employees.filter(e => e.status === 'active' && !e.isHidden && !e.isYoungApprentice);
+    const activeRegular = employees.filter(e => e.status === 'active' && !isEmployeeHiddenInMonth(e, monthKey) && !e.isYoungApprentice);
     const prevStreaks = getPrevMonthWorkStreak(activeRegular, year, month);
 
     // Dias Críticos de Pico do Dia das Crianças: 8, 9, 10, 11, 12
@@ -178,7 +178,7 @@ export function optimizeDecemberPeak(
     const month = parseInt(monthStr) - 1;
     const daysInMonth = new Date(year, month + 1, 0).getDate(); // 31
 
-    const activeRegular = employees.filter(e => e.status === 'active' && !e.isHidden && !e.isYoungApprentice);
+    const activeRegular = employees.filter(e => e.status === 'active' && !isEmployeeHiddenInMonth(e, monthKey) && !e.isYoungApprentice);
     const prevStreaks = getPrevMonthWorkStreak(activeRegular, year, month);
 
     // Dias Críticos de Pico do Natal: 20, 21, 22, 23, 24
@@ -299,7 +299,7 @@ export function optimizePeakWeek(
     criticalDays: number[] = [22, 23, 24]
 ): Record<string, { shifts: ShiftType[] }> {
     const result: Record<string, { shifts: ShiftType[] }> = {};
-    const activeEmps = employees.filter(e => e.status === 'active' && !e.isHidden && !e.isYoungApprentice);
+    const activeEmps = employees.filter(e => e.status === 'active' && !isEmployeeHiddenInMonth(e, monthKey) && !e.isYoungApprentice);
 
     // Janela pré-pico para distribuição de folgas (ex: 18, 19, 20, 21)
     const prePeakDays: number[] = [];

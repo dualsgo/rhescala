@@ -30,7 +30,7 @@ import { Icon } from './components/Icon';
 import { Login } from './components/Login';
 import { PrintableSchedule } from './components/PrintableSchedule';
 import { useHolidayCredits } from './hooks/useHolidayCredits';
-import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, buildHolidaySet, DEFAULT_JORNADA_SETTINGS, getDefaultProtectedDays } from './constants';
+import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, buildHolidaySet, DEFAULT_JORNADA_SETTINGS, getDefaultProtectedDays, isEmployeeHiddenInMonth } from './constants';
 import { Employee, MonthYear, Holiday, JornadaSettings, OfficialScheduleSnapshot, TacticalDisplayMode, ProtectedDaysConfig, ProtectedDaysMap, AuditLogEntry } from './types';
 import { HelpCenter } from './components/HelpCenter';
 import { JornadaManager } from './components/JornadaManager';
@@ -639,6 +639,30 @@ const App: React.FC = () => {
 
   
 
+  const handleToggleEmployeeVisibilityInMonth = useCallback((empId: string) => {
+    setEmployees(prev => prev.map(emp => {
+      if (emp.id !== empId) return emp;
+      const currentlyHidden = isEmployeeHiddenInMonth(emp, monthKey);
+      if (currentlyHidden) {
+        const nextHiddenMonths = { ...(emp.hiddenMonths || {}) };
+        delete nextHiddenMonths[monthKey];
+        return {
+          ...emp,
+          isHidden: false,
+          hiddenMonths: nextHiddenMonths,
+        };
+      } else {
+        return {
+          ...emp,
+          hiddenMonths: {
+            ...(emp.hiddenMonths || {}),
+            [monthKey]: true,
+          },
+        };
+      }
+    }));
+  }, [monthKey, setEmployees]);
+
   const handleSaveDayPositions = useCallback((dayIdx: number, posMap: Record<string, string>) => {
     setEmployees(prev => prev.map(emp => {
       if (posMap[emp.id] !== undefined) {
@@ -821,7 +845,7 @@ const App: React.FC = () => {
            const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(dateStr);
            const isSunday = new Date(currentMY.year, currentMY.month, selectedDayIdx + 1).getDay() === 0;
              const selectedDayResolvedPositions = resolveTacticalDay(
-               employees.filter(e => !e.isHidden && e.status === 'active'),
+               employees.filter(e => !isEmployeeHiddenInMonth(e, monthKey) && e.status === 'active'),
                monthKey,
                selectedDayIdx,
                isHoliday,
@@ -917,6 +941,7 @@ const App: React.FC = () => {
                       setEditingTeamEmpId(empId);
                       setCurrentView('team');
                     }}
+                    onToggleHideEmployee={isReadOnly ? undefined : handleToggleEmployeeVisibilityInMonth}
                   />
                 );
 

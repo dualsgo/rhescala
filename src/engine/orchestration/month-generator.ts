@@ -12,7 +12,8 @@ import {
     buildHolidaySet,
     DEFAULT_JORNADA_SETTINGS,
     normalizeProtectedDaysDetails,
-    normalizeProtectedDaysConfig
+    normalizeProtectedDaysConfig,
+    isEmployeeHiddenInMonth
 } from '../config/schedule-constants';
 import {
     WEEKDAY_NAMES,
@@ -50,12 +51,12 @@ export function applyMonthUpdate(
 ): Record<string, { shifts: ShiftType[]; hours: string[]; decisionReasons?: Record<number, DecisionReason>; dailyAssignedRoles?: Record<number, EmployeeRole> }> {
     const result: Record<string, { shifts: ShiftType[]; hours: string[]; decisionReasons?: Record<number, DecisionReason>; dailyAssignedRoles?: Record<number, EmployeeRole> }> = {};
 
-    const activeRegular = employees.filter(e => e.status === 'active' && !e.isYoungApprentice);
-    const activeApprentices = employees.filter(e => e.status === 'active' && e.isYoungApprentice);
+    const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const activeRegular = employees.filter(e => e.status === 'active' && !isEmployeeHiddenInMonth(e, monthKey) && !e.isYoungApprentice);
+    const activeApprentices = employees.filter(e => e.status === 'active' && !isEmployeeHiddenInMonth(e, monthKey) && e.isYoungApprentice);
 
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const holidaySet = buildHolidaySet(year, customHolidays, deletedNationalHolidays);
-    const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
 
     // Helper para verificar status legal/especial
     const getLegalOverride = (emp: Employee, dayIdx: number): ShiftType | null =>
@@ -423,17 +424,19 @@ export function applyMonthUpdate(
     }
 
     // 3.10 Computa as funções atribuídas diariamente por turno e dupla preferência
-    const simulatedEmployees: Employee[] = employees.map(emp => ({
-        ...emp,
-        shifts: {
-            ...emp.shifts,
-            [monthKey]: result[emp.id]?.shifts || emp.shifts[monthKey] || []
-        },
-        dailyHours: {
-            ...emp.dailyHours,
-            [monthKey]: result[emp.id]?.hours || emp.dailyHours[monthKey] || []
-        }
-    }));
+    const simulatedEmployees: Employee[] = employees
+        .filter(emp => emp.status === 'active' && !isEmployeeHiddenInMonth(emp, monthKey))
+        .map(emp => ({
+            ...emp,
+            shifts: {
+                ...emp.shifts,
+                [monthKey]: result[emp.id]?.shifts || emp.shifts[monthKey] || []
+            },
+            dailyHours: {
+                ...emp.dailyHours,
+                [monthKey]: result[emp.id]?.hours || emp.dailyHours[monthKey] || []
+            }
+        }));
 
     const dailyAssignedMatrix = assignDailyRolesForMonth(
         simulatedEmployees,
@@ -483,6 +486,9 @@ export function generateYearSchedule(
             const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
             const daysInMonth = new Date(year, month + 1, 0).getDate();
 
+            const monthRegular = activeRegular.filter(e => !isEmployeeHiddenInMonth(e, monthKey));
+            const monthApprentices = activeApprentices.filter(e => !isEmployeeHiddenInMonth(e, monthKey));
+
             // Find all Sundays in this month
             const sundaysInMonth: number[] = [];
             for (let d = 0; d < daysInMonth; d++) {
@@ -491,12 +497,12 @@ export function generateYearSchedule(
 
             // Build Sunday assignments — with cross-month carry
             const { assignments, nextConsecutive } = buildSundayAssignments(
-                activeRegular, year, month, sundaysInMonth, rollingConsecutive, settings
+                monthRegular, year, month, sundaysInMonth, rollingConsecutive, settings
             );
             rollingConsecutive = nextConsecutive;
 
             // Generate each regular employee
-            activeRegular.forEach(emp => {
+            monthRegular.forEach(emp => {
                 if (!result[emp.id]) result[emp.id] = {};
                 result[emp.id][monthKey] = generateMonthForEmployee(
                     emp, year, month,
@@ -507,7 +513,7 @@ export function generateYearSchedule(
             });
 
             // Generate each apprentice
-            activeApprentices.forEach(emp => {
+            monthApprentices.forEach(emp => {
                 if (!result[emp.id]) result[emp.id] = {};
                 result[emp.id][monthKey] = generateMonthForEmployee(
                     emp, year, month,
@@ -539,9 +545,10 @@ export function applyHoursOnly(
     const result: Record<string, string[]> = {};
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const holidaySet = buildHolidaySet(year, customHolidays, deletedNationalHolidays);
+    const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
     const targetEmps = targetEmpId 
         ? employees.filter(e => e.id === targetEmpId)
-        : employees.filter(e => e.status === 'active' && !e.isHidden);
+        : employees.filter(e => e.status === 'active' && !isEmployeeHiddenInMonth(e, monthKey));
 
     targetEmps.forEach(emp => {
         const hours: string[] = [];
@@ -614,12 +621,28 @@ export function generateCleanMonthSchedule(
     mode: 'suggested_retro' | 'all_working' = 'suggested_retro'
 ): Employee[] {
     const targetKey = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
+    const prevDate = new Date(targetYear, targetMonth - 1, 1);
+    const prevKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+
+    // Preserva a ocultação de colaboradores vindos do mês anterior no novo rascunho
+    const preparedEmployees = employees.map(emp => {
+        if (emp.hiddenMonths?.[prevKey] && emp.hiddenMonths?.[targetKey] === undefined) {
+            return {
+                ...emp,
+                hiddenMonths: {
+                    ...(emp.hiddenMonths || {}),
+                    [targetKey]: true
+                }
+            };
+        }
+        return emp;
+    });
     
     // 1. Gera folgas e horários validados (com suporte a modo retroativo ou 100% trabalhado)
-    const monthData = applyMonthUpdate(employees, targetYear, targetMonth, customHolidays, deletedNationalHolidays, settings, protectedDays, mode);
+    const monthData = applyMonthUpdate(preparedEmployees, targetYear, targetMonth, customHolidays, deletedNationalHolidays, settings, protectedDays, mode);
     
     // 2. Aplica nos colaboradores
-    return employees.map(emp => {
+    return preparedEmployees.map(emp => {
         const d = monthData[emp.id];
         if (d) {
             return {

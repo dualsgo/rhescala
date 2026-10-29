@@ -23,6 +23,7 @@ interface MobileDayScheduleViewProps {
   onUpdateTacticalPosition: (empId: string, dayIdx: number, position: string) => void;
   onOpenEmployeeCard: (employee: Employee, tab?: 'mes' | 'atual' | 'pedidos' | 'atestado', initialDate?: string) => void;
   onOpenDayDetail: (dayIdx: number) => void;
+  onToggleHideEmployee?: (empId: string) => void;
   diffs?: any[];
 }
 
@@ -45,6 +46,7 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
   onUpdateTacticalPosition,
   onOpenEmployeeCard,
   onOpenDayDetail,
+  onToggleHideEmployee,
   diffs = [],
 }) => {
   const [showFolgas, setShowFolgas] = useState(false);
@@ -287,6 +289,21 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
 
               {/* Botão Ver Cartão Completo */}
               <div className="pt-2 border-t border-slate-100 dark:border-zinc-800">
+                {!isReadOnly && onToggleHideEmployee && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const emp = quickEditEmp;
+                      setQuickEditEmp(null);
+                      onToggleHideEmployee(emp.id);
+                    }}
+                    className="w-full py-2.5 px-4 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold text-xs uppercase flex items-center justify-center gap-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition-colors"
+                  >
+                    <Icon name="visibility_off" className="text-base text-zinc-400" />
+                    <span>Ocultar da Grade neste Mês</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => {

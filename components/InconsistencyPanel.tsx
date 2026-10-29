@@ -178,7 +178,7 @@ export function detectInconsistencies(
   const MIN_WORKERS = 6;
   for (const sunIdx of sundaysThisMonth) {
     const workers = employees.filter(emp => {
-      if (emp.isYoungApprentice || emp.status !== 'active') return false;
+      if (!isEmployeeActiveInMonth(emp, year, month) || emp.isYoungApprentice || emp.status !== 'active') return false;
       const s = getEffectiveShift(emp, year, month, sunIdx);
       return isStorePresence(s);
     });
@@ -264,7 +264,7 @@ export const InconsistencyPanel: React.FC<InconsistencyPanelProps> = ({
       const dayIdx = issue.fix.dayIdx;
       // Count CLTs working TODAY (using the static employees prop as baseline)
       const currentWorkers = employees.filter(e => {
-        if (e.isYoungApprentice || e.status !== 'active') return false;
+        if (!isEmployeeActiveInMonth(e, currentMY.year, currentMY.month) || e.isYoungApprentice || e.status !== 'active') return false;
         return isWorkingShift(e.shifts[mKey]?.[dayIdx]);
       }).length;
 

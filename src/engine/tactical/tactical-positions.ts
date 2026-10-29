@@ -7,7 +7,7 @@ import {
   MonthYear,
   normalizeEmployeeRole
 } from '../../../types';
-import { DEFAULT_JORNADA_SETTINGS } from '../config/schedule-constants';
+import { DEFAULT_JORNADA_SETTINGS, isEmployeeHiddenInMonth } from '../config/schedule-constants';
 import { getShiftClassification, isWorkingShift } from '../shifts/shift-predicates';
 export { getShiftClassification };
 
@@ -77,6 +77,7 @@ export function resolveTacticalDay(
   // 1. Filtrar presentes em trabalho
   const workingEmps: Employee[] = [];
   for (const emp of activeEmps) {
+    if (!emp || emp.status === 'inactive' || isEmployeeHiddenInMonth(emp, monthKey)) continue;
     if (monthKey !== undefined && dayIdx !== undefined) {
       const shift = emp.shifts?.[monthKey]?.[dayIdx];
       if (!shift || !isWorkingShift(shift)) continue;
@@ -262,6 +263,8 @@ export function assignDailyRolesForMonth(
     assignedRolesByEmp[emp.id] = {};
   }
 
+  const visibleEmployees = employees.filter(e => e.status === 'active' && !isEmployeeHiddenInMonth(e, monthKey));
+
   const cumulativeCounts: CumulativeRoleCounts = {
     caixa: {},
     pacote: {}
@@ -276,7 +279,7 @@ export function assignDailyRolesForMonth(
     const isProtected = Boolean(protectedDays && protectedDays[dayNum] !== undefined);
 
     const dayRoles = resolveTacticalDay(
-      employees,
+      visibleEmployees,
       monthKey,
       d,
       isHoliday,

@@ -1,5 +1,5 @@
 import { Employee, MonthYear, Holiday, JornadaSettings, TacticalDisplayMode } from '../../types';
-import { buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS } from '../engine/config/schedule-constants';
+import { buildHolidaySet, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, isEmployeeHiddenInMonth } from '../engine/config/schedule-constants';
 import { isWorkingShift, getShiftClassification } from '../engine/shifts/shift-predicates';
 import { resolveTacticalDay } from '../engine/tactical/tactical-positions';
 import { getShortName } from '../../constants';
@@ -66,7 +66,7 @@ export function generateOperationalNotice(params: GenerateOperationalNoticeParam
     ? `• Ida p/ Caixa: Fiscal > Vendas / Atendimento > Reposição (emergência extrema).\n• Retorno: Reposição > Vendas / Atendimento > Fiscal.\n\n`
     : `• Ida p/ Caixa: Vai o Fiscal > Vendas (P3) > Reposição (P2) (emergência extrema).\n• Retorno: P2 > P3 > Fiscal.\n\n`;
 
-  const activeEmps = (employees || []).filter(e => e && !e.isHidden && e.status === 'active');
+  const activeEmps = (employees || []).filter(e => e && !isEmployeeHiddenInMonth(e, monthKey) && e.status === 'active');
   const resolvedPositions = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, jornadaSettings);
 
   interface WorkingEmpInfo extends Employee {

@@ -161,6 +161,8 @@ import {
   getDefaultHourForDay,
   isEmployeeActiveInMonth,
   isEmployeeActiveOnDay,
+  isEmployeeHiddenInMonth,
+  isEmployeeEligibleForMonth,
   getNationalHolidays,
   buildHolidaySet,
 } from './src/engine/config/schedule-constants';
@@ -176,6 +178,8 @@ export {
   getDefaultHourForDay,
   isEmployeeActiveInMonth,
   isEmployeeActiveOnDay,
+  isEmployeeHiddenInMonth,
+  isEmployeeEligibleForMonth,
   getNationalHolidays,
   buildHolidaySet,
 };

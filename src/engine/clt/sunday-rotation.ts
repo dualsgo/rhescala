@@ -1,5 +1,5 @@
 import { Employee, JornadaSettings, ProtectedDayDetail } from '../../../types';
-import { DEFAULT_JORNADA_SETTINGS, normalizeProtectedDaysDetails } from '../config/schedule-constants';
+import { DEFAULT_JORNADA_SETTINGS, normalizeProtectedDaysDetails, isEmployeeHiddenInMonth } from '../config/schedule-constants';
 import { isWorkingShift, isBirthday, isEmployeePreferredDayOff } from './clt-rules';
 import { getShiftClassification } from '../shifts/shift-predicates';
 
@@ -292,10 +292,16 @@ export function findSundayViolations(
   });
 
   employees.forEach(emp => {
+    if (emp.status !== 'active') return;
     let streak = 0;
     let lastSunDate: Date | null = null;
 
     allSundays.forEach(sun => {
+      if (isEmployeeHiddenInMonth(emp, sun.monthKey)) {
+        streak = 0;
+        lastSunDate = null;
+        return;
+      }
       const shift = emp.shifts[sun.monthKey]?.[sun.dayIdx];
       const currentSunDate = new Date(sun.dateStr + 'T12:00:00');
 

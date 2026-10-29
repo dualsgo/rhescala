@@ -128,13 +128,21 @@ export function getDefaultHourForDay(emp: Employee, isHoliday: boolean, isSunday
 }
 
 /**
- * Verifica se o colaborador está ativo e já iniciou no mês de referência.
- * Oculta automaticamente colaboradores cuja data de início (hiredAt) seja posterior ao mês,
- * ou cuja data de desligamento (firedAt) seja anterior ao mês,
- * ou que tenham todos os turnos do mês como '-' / 'N/A'.
+ * Verifica se o colaborador está oculto globalmente ou especificamente no mês de referência.
  */
-export function isEmployeeActiveInMonth(emp: Employee | undefined | null, year: number, month: number): boolean {
-  if (!emp || emp.isHidden || emp.status !== 'active') return false;
+export function isEmployeeHiddenInMonth(emp: Employee | undefined | null, monthKey?: string): boolean {
+  if (!emp) return true;
+  if (emp.isHidden) return true;
+  if (monthKey && emp.hiddenMonths?.[monthKey]) return true;
+  return false;
+}
+
+/**
+ * Verifica se o colaborador está contratualmente elegível para o mês (ativo, período de admissão/demissão válido e com turnos válidos).
+ * Não considera o status de ocultação (para permitir listar em controles de reexibição).
+ */
+export function isEmployeeEligibleForMonth(emp: Employee | undefined | null, year: number, month: number): boolean {
+  if (!emp || emp.status !== 'active') return false;
 
   const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
   const firstDayStr = `${monthKey}-01`;
@@ -162,14 +170,28 @@ export function isEmployeeActiveInMonth(emp: Employee | undefined | null, year: 
 }
 
 /**
- * Verifica se o colaborador está ativo e já iniciou em um dia específico.
+ * Verifica se o colaborador está ativo e já iniciou no mês de referência e não está oculto.
+ * Oculta automaticamente colaboradores cuja data de início (hiredAt) seja posterior ao mês,
+ * ou cuja data de desligamento (firedAt) seja anterior ao mês,
+ * ou que tenham todos os turnos do mês como '-' / 'N/A',
+ * ou que estejam ocultos globalmente ou especificamente neste mês.
+ */
+export function isEmployeeActiveInMonth(emp: Employee | undefined | null, year: number, month: number): boolean {
+  const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+  if (isEmployeeHiddenInMonth(emp, monthKey)) return false;
+  return isEmployeeEligibleForMonth(emp, year, month);
+}
+
+/**
+ * Verifica se o colaborador está ativo e já iniciou em um dia específico e não está oculto.
  */
 export function isEmployeeActiveOnDay(emp: Employee | undefined | null, dateStr: string, monthKey?: string, dayIdx?: number): boolean {
-  if (!emp || emp.isHidden || emp.status !== 'active') return false;
+  const effectiveMonthKey = monthKey || (dateStr ? dateStr.slice(0, 7) : undefined);
+  if (!emp || isEmployeeHiddenInMonth(emp, effectiveMonthKey) || emp.status !== 'active') return false;
   if (emp.hiredAt && dateStr < emp.hiredAt) return false;
   if (emp.firedAt && dateStr > emp.firedAt) return false;
-  if (monthKey !== undefined && dayIdx !== undefined) {
-    const shift = emp.shifts?.[monthKey]?.[dayIdx];
+  if (effectiveMonthKey !== undefined && dayIdx !== undefined) {
+    const shift = emp.shifts?.[effectiveMonthKey]?.[dayIdx];
     if (shift === 'N/A') return false;
   }
   return true;

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Employee, MonthYear, Holiday, JornadaSettings } from '../types';
 import { Icon } from './Icon';
+import { isEmployeeHiddenInMonth } from '../constants';
 
 interface PresetOptionsModalProps {
   isOpen: boolean;
@@ -29,7 +30,8 @@ export const PresetOptionsModal: React.FC<PresetOptionsModalProps> = ({
 
   if (!isOpen) return null;
 
-  const activeEmployees = employees.filter(e => e.status === 'active' && !e.isHidden);
+  const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+  const activeEmployees = employees.filter(e => e.status === 'active' && !isEmployeeHiddenInMonth(e, monthKey));
   const targetEmployee = employees.find(e => e.id === selectedEmpId);
 
   const handleConfirm = () => {

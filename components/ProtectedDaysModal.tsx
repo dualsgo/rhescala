@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MonthYear, Employee, ProtectedDayDetail, ProtectedDaysConfig } from '../types';
 import { Icon } from './Icon';
-import { normalizeProtectedDaysDetails, getSeasonalPresetProtectedDays, getShortName } from '../constants';
+import { normalizeProtectedDaysDetails, getSeasonalPresetProtectedDays, getShortName, isEmployeeHiddenInMonth } from '../constants';
 
 interface ProtectedDaysModalProps {
   isOpen: boolean;
@@ -31,7 +31,8 @@ export const ProtectedDaysModal: React.FC<ProtectedDaysModalProps> = ({
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
 
-  const activeEmployees = employees.filter(e => e.status === 'active' && !e.isHidden && !e.isYoungApprentice);
+  const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+  const activeEmployees = employees.filter(e => e.status === 'active' && !isEmployeeHiddenInMonth(e, monthKey) && !e.isYoungApprentice);
 
   useEffect(() => {
     if (isOpen) {

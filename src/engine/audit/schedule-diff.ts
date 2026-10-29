@@ -1,5 +1,6 @@
 import { OfficialScheduleSnapshot, Employee, MonthYear, ScheduleDiffItem } from '../../../types';
 import { isWorkingShift } from '../clt/clt-rules';
+import { isEmployeeHiddenInMonth } from '../config/schedule-constants';
 
 /**
  * Detecta diferenças entre o Snapshot Oficial congelado e a escala atual do mês.
@@ -18,7 +19,7 @@ export function detectScheduleDiffs(
     const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
 
     employees.forEach(emp => {
-        if (emp.isHidden) return;
+        if (isEmployeeHiddenInMonth(emp, monthKey)) return;
 
         const officialShifts = snapshot.shifts?.[emp.id] || [];
         const currentShifts = emp.shifts?.[monthKey] || [];

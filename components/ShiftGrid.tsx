@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings, ScheduleDiffItem, TacticalDisplayMode, ProtectedDaysConfig, DECISION_REASON_LABELS, EmployeeRole, EMPLOYEE_ROLES, ROLE_METADATA_MAP, normalizeEmployeeRole } from '../types';
 import { Icon } from './Icon';
-import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, isEmployeeActiveInMonth, normalizeProtectedDaysConfig, getTacticalLabel, getTacticalCellCode, getTacticalEmoji } from '../constants';
+import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, isEmployeeActiveInMonth, isEmployeeHiddenInMonth, isEmployeeEligibleForMonth, PLACEHOLDER_EMPLOYEE_ID, normalizeProtectedDaysConfig, getTacticalLabel, getTacticalCellCode, getTacticalEmoji } from '../constants';
 import { getShiftClassification, isWorkingShift, resolveEffectiveShift, getPrevMonthWorkStreak, getPrevMonthConsecutive, calculateLunches, calculateDetailedLunches, DetailedLunchAssignment } from '../hooks/useScheduleEngine';
 import { OperationalGuideModal } from './OperationalGuideModal';
 import { MobileDayScheduleView } from './MobileDayScheduleView';
@@ -61,6 +61,7 @@ interface ShiftGridProps {
   onToggleDensityMode?: () => void;
   protectedDaysConfig?: ProtectedDaysConfig;
   onEditEmployee?: (empId: string) => void;
+  onToggleHideEmployee?: (empId: string) => void;
 }
 
 export const ShiftGrid: React.FC<ShiftGridProps> = ({
@@ -107,9 +108,20 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onToggleDensityMode,
   protectedDaysConfig,
   onEditEmployee,
+  onToggleHideEmployee,
 }) => {
   const [isSectorCoverageExpanded, setIsSectorCoverageExpanded] = useState(true);
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
+  const [showVisibilityModal, setShowVisibilityModal] = useState(false);
+
+  const eligibleEmployeesInMonth = useMemo(() => {
+    return employees.filter(e => e.id !== PLACEHOLDER_EMPLOYEE_ID && isEmployeeEligibleForMonth(e, currentMY.year, currentMY.month));
+  }, [employees, currentMY.year, currentMY.month]);
+
+  const hiddenEmployeesInMonth = useMemo(() => {
+    return eligibleEmployeesInMonth.filter(e => isEmployeeHiddenInMonth(e, monthKey));
+  }, [eligibleEmployeesInMonth, monthKey]);
+
   const [hasScrolled, setHasScrolled] = useState(false);
   const [internalSelectedGroup, setInternalSelectedGroup] = useState<string | null>(null);
   const selectedGroup = propSelectedGroup !== undefined ? propSelectedGroup : internalSelectedGroup;
@@ -700,6 +712,28 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               <span>Legenda</span>
               <Icon name={showLegend ? 'expand_less' : 'expand_more'} className="text-xs" />
             </button>
+
+            {/* Equipe / Visibilidade */}
+            {!isReadOnly && onToggleHideEmployee && (
+              <button
+                type="button"
+                onClick={() => setShowVisibilityModal(true)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
+                  hiddenEmployeesInMonth.length > 0
+                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/25'
+                    : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                }`}
+                title="Gerenciar visibilidade de colaboradores na grade deste mês (ocultar/reexibir)"
+              >
+                <Icon name={hiddenEmployeesInMonth.length > 0 ? "visibility_off" : "group"} className="text-xs" />
+                <span>Equipe</span>
+                {hiddenEmployeesInMonth.length > 0 && (
+                  <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-amber-500 text-white">
+                    {hiddenEmployeesInMonth.length}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         </div>
 
@@ -836,6 +870,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             onUpdateTacticalPosition={(empId, dayIdx, pos) => onUpdateTacticalPosition(empId, dayIdx, pos)}
             onOpenEmployeeCard={onOpenEmployeeCard}
             onOpenDayDetail={onOpenDayDetail || (() => {})}
+            onToggleHideEmployee={onToggleHideEmployee}
             diffs={diffs}
           />
         )}
@@ -857,7 +892,33 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               <tr className="bg-zinc-50 dark:bg-zinc-900/50">
                 <th className="sticky left-0 z-[50] bg-zinc-50 dark:bg-zinc-900 border-b border-r border-zinc-200 dark:border-zinc-800 py-2.5 px-3 text-left w-[240px] min-w-[240px] max-w-[240px] shadow-[4px_0_12px_-2px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_12px_-2px_rgba(0,0,0,0.4)]">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Colaborador</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Colaborador</span>
+                      {!isReadOnly && onToggleHideEmployee && (
+                        <button
+                          type="button"
+                          onClick={() => setShowVisibilityModal(true)}
+                          className={`p-1 rounded-md transition-colors flex items-center gap-1 ${
+                            hiddenEmployeesInMonth.length > 0
+                              ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40'
+                              : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                          }`}
+                          title={
+                            hiddenEmployeesInMonth.length > 0
+                              ? `${hiddenEmployeesInMonth.length} colaborador(es) oculto(s) neste mês. Clique para gerenciar visibilidade.`
+                              : 'Gerenciar visibilidade de colaboradores neste mês'
+                          }
+                          aria-label="Gerenciar visibilidade de colaboradores na grade"
+                        >
+                          <Icon name={hiddenEmployeesInMonth.length > 0 ? "visibility_off" : "group"} className="text-xs" />
+                          {hiddenEmployeesInMonth.length > 0 && (
+                            <span className="text-[10px] font-black px-1 rounded-full bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300">
+                              {hiddenEmployeesInMonth.length}
+                            </span>
+                          )}
+                        </button>
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={() => setGroupBy(prev => prev === 'role' ? 'shift' : 'role')}
@@ -1061,7 +1122,28 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                          <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md border shrink-0 ${meta.badgeClass}`} title={meta.label}>
                                            {meta.code}
                                          </span>
-                                         {!isReadOnly && onEditEmployee && (
+                                          {!isReadOnly && onToggleHideEmployee && (
+                                            <span
+                                              role="button"
+                                              tabIndex={0}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                onToggleHideEmployee(emp.id);
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                  e.stopPropagation();
+                                                  onToggleHideEmployee(emp.id);
+                                                }
+                                              }}
+                                              title={`Ocultar ${emp.name} da grade neste mês`}
+                                              aria-label={`Ocultar ${emp.name} da grade neste mês`}
+                                              className="w-5 h-5 rounded-md flex items-center justify-center text-zinc-400 opacity-0 group-hover/row:opacity-100 focus:opacity-100 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                                            >
+                                              <Icon name="visibility_off" className="text-xs" />
+                                            </span>
+                                          )}
+                                          {!isReadOnly && onEditEmployee && (
                                            <span
                                              role="button"
                                              tabIndex={0}
@@ -1813,6 +1895,143 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
       {showGuideModal && (
         <OperationalGuideModal onClose={() => setShowGuideModal(false)} />
+      )}
+
+      {/* Modal / Painel Discreto de Visibilidade da Equipe */}
+      {showVisibilityModal && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 rounded-[2rem] max-w-lg w-full shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[85vh]">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/30">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center font-bold">
+                  <Icon name="visibility" className="text-xl" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black uppercase text-zinc-900 dark:text-zinc-100">Visibilidade da Equipe</h3>
+                  <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                    Oculte colaboradores para planejar rascunhos de escala com discrição ou reexiba quando desejar.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowVisibilityModal(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                title="Fechar"
+              >
+                <Icon name="close" className="text-base" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 overflow-y-auto space-y-5 custom-scrollbar flex-1">
+              {/* Seção 1: Ocultos neste mês */}
+              {hiddenEmployeesInMonth.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                      <Icon name="visibility_off" className="text-sm" />
+                      <span>Ocultos na Grade deste Mês ({hiddenEmployeesInMonth.length})</span>
+                    </span>
+                    {onToggleHideEmployee && hiddenEmployeesInMonth.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          hiddenEmployeesInMonth.forEach(emp => onToggleHideEmployee(emp.id));
+                        }}
+                        className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                      >
+                        Exibir Todos
+                      </button>
+                    )}
+                  </div>
+                  <div className="divide-y divide-zinc-100 dark:divide-zinc-800 border border-amber-200 dark:border-amber-900/40 rounded-2xl bg-amber-50/30 dark:bg-amber-950/20 overflow-hidden">
+                    {hiddenEmployeesInMonth.map(emp => (
+                      <div key={emp.id} className="p-3 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-xl bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 font-black text-xs flex items-center justify-center shrink-0">
+                            {emp.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate block">
+                              {emp.name}
+                            </span>
+                            <span className="text-[11px] text-zinc-400 font-medium">
+                              {emp.cargo || 'Colaborador'}
+                            </span>
+                          </div>
+                        </div>
+                        {onToggleHideEmployee && (
+                          <button
+                            type="button"
+                            onClick={() => onToggleHideEmployee(emp.id)}
+                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm transition-all active:scale-95 shrink-0"
+                          >
+                            <Icon name="visibility" className="text-xs" />
+                            <span>Exibir</span>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Seção 2: Visíveis na grade */}
+              <div className="space-y-2">
+                <span className="text-xs font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                  <Icon name="group" className="text-sm" />
+                  <span>Visíveis na Grade ({eligibleEmployeesInMonth.filter(e => !isEmployeeHiddenInMonth(e, monthKey)).length})</span>
+                </span>
+                <div className="divide-y divide-zinc-100 dark:divide-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900 overflow-hidden">
+                  {eligibleEmployeesInMonth
+                    .filter(e => !isEmployeeHiddenInMonth(e, monthKey))
+                    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+                    .map(emp => (
+                      <div key={emp.id} className="p-3 flex items-center justify-between gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 text-white font-black text-xs flex items-center justify-center shrink-0">
+                            {emp.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate block">
+                              {emp.name}
+                            </span>
+                            <span className="text-[11px] text-zinc-400 font-medium">
+                              {emp.cargo || 'Colaborador'}
+                            </span>
+                          </div>
+                        </div>
+                        {onToggleHideEmployee && (
+                          <button
+                            type="button"
+                            onClick={() => onToggleHideEmployee(emp.id)}
+                            className="px-2.5 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-rose-600 hover:border-rose-300 dark:hover:border-rose-800 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 shrink-0"
+                            title={`Ocultar ${emp.name} da grade neste mês`}
+                          >
+                            <Icon name="visibility_off" className="text-xs" />
+                            <span>Ocultar</span>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowVisibilityModal(false)}
+                className="px-5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-black text-xs uppercase tracking-wider transition-all"
+              >
+                Concluir
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Mobile Filter Bottom Sheet Drawer */}

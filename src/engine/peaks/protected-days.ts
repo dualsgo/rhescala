@@ -8,7 +8,8 @@ import {
 import {
     DEFAULT_JORNADA_SETTINGS,
     buildHolidaySet,
-    normalizeProtectedDaysDetails
+    normalizeProtectedDaysDetails,
+    isEmployeeHiddenInMonth
 } from '../config/schedule-constants';
 import {
     WEEKDAY_NAMES,
@@ -113,8 +114,8 @@ export function optimizeProtectedDays(
         .sort((a, b) => a - b);
 
     const result: Record<string, { shifts: ShiftType[] }> = {};
-    const activeRegular = employees.filter(e => e.status === 'active' && !e.isHidden && !e.isYoungApprentice);
-    const activeApprentices = employees.filter(e => e.status === 'active' && !e.isHidden && e.isYoungApprentice);
+    const activeRegular = employees.filter(e => e.status === 'active' && !isEmployeeHiddenInMonth(e, monthKey) && !e.isYoungApprentice);
+    const activeApprentices = employees.filter(e => e.status === 'active' && !isEmployeeHiddenInMonth(e, monthKey) && e.isYoungApprentice);
     const prevStreaks = getPrevMonthWorkStreak(activeRegular, year, month);
 
     // Identifica todos os domingos do mês

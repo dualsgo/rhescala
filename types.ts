@@ -180,6 +180,7 @@ export interface Employee {
   firedAt?: string;       // YYYY-MM-DD — used to stop generating after termination
   birthday?: string;       // YYYY-MM-DD or MM-DD
   isHidden?: boolean;      // To hide collaborator from the grid
+  hiddenMonths?: Record<string, boolean>; // Month-scoped grid visibility ("YYYY-MM" -> true)
   password?: string;       // Personal password for individual access
   requests?: EmployeeRequest[];
 }
