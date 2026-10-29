@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { isWorkingShift } from '../hooks/useScheduleEngine';
+import { isWorkingShift, resolveEffectiveShift } from '../hooks/useScheduleEngine';
 import { isShiftType, normalizeShiftCode } from '../types';
+import { createTestEmployee } from './fixtures';
 
 describe('ShiftType & Normalization Domain Rules', () => {
   it('identifies standard working shifts correctly', () => {
@@ -11,6 +12,11 @@ describe('ShiftType & Normalization Domain Rules', () => {
     expect(isWorkingShift('P3')).toBe(true);
     expect(isWorkingShift('P4')).toBe(true);
     expect(isWorkingShift('ESTQ')).toBe(true);
+    expect(isWorkingShift('CX')).toBe(true);
+    expect(isWorkingShift('REP')).toBe(true);
+    expect(isWorkingShift('VEND')).toBe(true);
+    expect(isWorkingShift('FISC')).toBe(true);
+    expect(isWorkingShift('AP')).toBe(true);
   });
 
   it('identifies non-working shifts (rest, vacation, medical, apprentice course)', () => {
@@ -68,5 +74,19 @@ describe('ShiftType & Normalization Domain Rules', () => {
         expect(isShiftType(input)).toBe(valid);
       });
     });
+  });
+
+  it('resolveEffectiveShift returns effective shift considering contract bounds and absence periods', () => {
+    const emp = createTestEmployee({
+      hiredAt: '2026-10-02',
+      vacationStart: '2026-10-10',
+      vacationEnd: '2026-10-12',
+      shifts: { '2026-10': ['T', 'F', 'T'] },
+    });
+
+    expect(resolveEffectiveShift(emp, '2026-10-01', '2026-10', 0)).toBe('N/A');
+    expect(resolveEffectiveShift(emp, '2026-10-02', '2026-10', 1)).toBe('F');
+    expect(resolveEffectiveShift(emp, '2026-10-11', '2026-10', 10)).toBe('FE');
+    expect(resolveEffectiveShift(emp, '2026-10-20', '2026-10', 19)).toBe('T');
   });
 });

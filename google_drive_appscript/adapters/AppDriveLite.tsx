@@ -147,6 +147,11 @@ export const AppDriveLite: React.FC = () => {
   }, [isReadOnly, currentView]);
 
   useEffect(() => {
+    const maxDayIdx = new Date(currentMY.year, currentMY.month + 1, 0).getDate() - 1;
+    setSelectedDayIdx((prev) => Math.min(Math.max(0, prev), Math.max(0, maxDayIdx)));
+  }, [currentMY.year, currentMY.month]);
+
+  useEffect(() => {
     const { employees: migrated, hasChanged } = migrateLegacyEmployeeData(employees);
     if (hasChanged) setEmployees(migrated);
   }, [employees, setEmployees]);

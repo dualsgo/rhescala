@@ -1,17 +1,47 @@
 import { DEFAULT_JORNADA_SETTINGS } from '../config/schedule-constants';
-import { JornadaSettings } from '../../../types';
+import { Employee, JornadaSettings } from '../../../types';
 
-export const WORKING_TACTICAL_CODES = ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ'] as const;
+export const WORKING_TACTICAL_CODES = [
+  'P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ',
+  'CX', 'REP', 'VEND', 'FISC', 'AP'
+] as const;
 
 /**
- * Predicado puro e leve que determina se um código de escala representa um dia trabalhado.
- * Retorna true para 'T' e posições táticas operacionais ('P1'..'P4', 'PC', 'ESTQ').
+ * Predicado puro e leve que determina se um código de escala representa um dia trabalhado em loja.
+ * Retorna true para 'T' e posições/funções correlatas ('P1'..'P4', 'PC', 'ESTQ', 'CX', 'REP', 'VEND', 'FISC', 'AP').
  * Retorna false para folgas ('F', 'DO'), feriados folga ('FF'), afastamentos ('FE', 'AT', 'N/A') ou curso ('C').
  */
 export function isWorkingShift(s: string | undefined | null): boolean {
   if (!s) return false;
   if (s === 'T') return true;
   return (WORKING_TACTICAL_CODES as readonly string[]).includes(s);
+}
+
+/**
+ * Resolve o código de turno efetivo do colaborador em uma data específica,
+ * aplicando a mesma precedência visual da grade mensal:
+ * 1. Fora da vigência contratual (hiredAt / firedAt) -> 'N/A'
+ * 2. Período de atestado médico (atestadoStart..atestadoEnd) -> 'AT'
+ * 3. Período de férias (vacationStart..vacationEnd) -> 'FE'
+ * 4. Turno gravado na matriz mensal (com fallback para 'T' se vazio)
+ */
+export function resolveEffectiveShift(
+  emp: Pick<Employee, 'shifts' | 'hiredAt' | 'firedAt' | 'atestadoStart' | 'atestadoEnd' | 'vacationStart' | 'vacationEnd'>,
+  dateStr: string,
+  monthKey: string,
+  dayIdx: number
+): string {
+  let rawShift: string = emp.shifts?.[monthKey]?.[dayIdx] || 'T';
+  if (emp.hiredAt && dateStr < emp.hiredAt) {
+    rawShift = 'N/A';
+  } else if (emp.firedAt && dateStr > emp.firedAt) {
+    rawShift = 'N/A';
+  } else if (emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd) {
+    rawShift = 'AT';
+  } else if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
+    rawShift = 'FE';
+  }
+  return rawShift;
 }
 
 /**

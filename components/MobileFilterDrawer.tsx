@@ -102,7 +102,7 @@ export const MobileFilterDrawer: React.FC<MobileFilterDrawerProps> = ({
                 }`}
               >
                 <Icon name="check_circle" className="text-base" />
-                <span>Apenas Escalados Hoje</span>
+                <span>Apenas Escalados no Dia</span>
               </button>
             </div>
           </div>
@@ -110,15 +110,15 @@ export const MobileFilterDrawer: React.FC<MobileFilterDrawerProps> = ({
           {/* Turno do Colaborador */}
           <div>
             <label className="text-xs font-black uppercase text-slate-400 tracking-wider block mb-2">
-              Turno Predominante
+              Turno no Dia Selecionado
             </label>
             <div className="grid grid-cols-2 gap-2">
               {[
                 { id: null, label: 'Todos os Turnos', icon: 'all_inclusive' },
-                { id: 'abertura', label: 'Abertura (A)', icon: 'wb_sunny' },
-                { id: 'intermediario', label: 'Intermediário (I)', icon: 'wb_twilight' },
-                { id: 'fechamento', label: 'Fechamento (F)', icon: 'nights_stay' },
-                { id: 'folgas', label: 'Folgas no Dia', icon: 'beach_access' },
+                { id: 'Abertura', label: 'Abertura (A)', icon: 'wb_sunny' },
+                { id: 'Intermediário', label: 'Intermediário (I)', icon: 'wb_twilight' },
+                { id: 'Fechamento', label: 'Fechamento (F)', icon: 'nights_stay' },
+                { id: 'Folgas/Outros', label: 'Folgas no Dia', icon: 'beach_access' },
               ].map(t => (
                 <button
                   key={t.id ?? 'all'}

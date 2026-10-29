@@ -260,7 +260,9 @@ export const Header: React.FC<HeaderProps> = ({
             {/* 3. Presença Diária */}
             {onToggleOnlyWorkingToday && (
               <div className="space-y-1">
-                <label className="text-[11px] font-black uppercase tracking-wider text-zinc-400">Presença no Dia</label>
+                <label className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
+                  Presença no Dia ({String(selectedDayIdx + 1).padStart(2, '0')}/{String(currentMY.month + 1).padStart(2, '0')})
+                </label>
                 <button
                   type="button"
                   onClick={onToggleOnlyWorkingToday}
@@ -272,7 +274,7 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     <Icon name={onlyWorkingToday ? 'check_circle' : 'group'} className="text-sm text-emerald-600 dark:text-emerald-400" />
-                    <span>Apenas quem trabalha no dia</span>
+                    <span>Apenas quem trabalha (ocultar folgas)</span>
                   </div>
                   <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded-full ${
                     onlyWorkingToday ? 'bg-emerald-600 text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'

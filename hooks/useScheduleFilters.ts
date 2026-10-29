@@ -24,18 +24,41 @@ export interface ScheduleFiltersState {
 export function useScheduleFilters(): ScheduleFiltersState {
   const [filter, setFilter] = useState<DayTypeFilter>('all');
   const [contractFilter, setContractFilter] = useState<ContractTypeFilter>('all');
-  const [onlyWorkingToday, setOnlyWorkingToday] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [onlyWorkingToday, setOnlyWorkingTodayState] = useState(false);
+  const [selectedGroup, setSelectedGroupState] = useState<string | null>(null);
+
+  const setOnlyWorkingToday = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    setOnlyWorkingTodayState(prev => {
+      const next = typeof value === 'function' ? value(prev) : value;
+      if (next) {
+        setSelectedGroupState(curr => (curr === 'Folgas/Outros' ? null : curr));
+      }
+      return next;
+    });
+  }, []);
 
   const toggleOnlyWorkingToday = useCallback(() => {
-    setOnlyWorkingToday(prev => !prev);
+    setOnlyWorkingTodayState(prev => {
+      const next = !prev;
+      if (next) {
+        setSelectedGroupState(curr => (curr === 'Folgas/Outros' ? null : curr));
+      }
+      return next;
+    });
+  }, []);
+
+  const setSelectedGroup = useCallback((group: string | null) => {
+    setSelectedGroupState(group);
+    if (group === 'Folgas/Outros') {
+      setOnlyWorkingTodayState(false);
+    }
   }, []);
 
   const clearFilters = useCallback(() => {
     setFilter('all');
     setContractFilter('all');
-    setOnlyWorkingToday(false);
-    setSelectedGroup(null);
+    setOnlyWorkingTodayState(false);
+    setSelectedGroupState(null);
   }, []);
 
   const hasActiveFilters = filter !== 'all' || contractFilter !== 'all' || onlyWorkingToday || selectedGroup !== null;

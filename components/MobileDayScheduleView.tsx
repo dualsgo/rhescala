@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Employee, MonthYear, ShiftType, JornadaSettings, normalizeEmployeeRole, ROLE_METADATA_MAP } from '../types';
 import { Icon } from './Icon';
 import { getShortName, isEmployeeActiveOnDay, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS } from '../constants';
-import { getShiftClassification, isWorkingShift } from '../src/engine/shifts/shift-predicates';
+import { getShiftClassification, isWorkingShift, resolveEffectiveShift } from '../src/engine/shifts/shift-predicates';
 
 interface MobileDayScheduleViewProps {
   employees: Employee[];
@@ -66,7 +66,8 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
       if (emp.status === 'inactive' || emp.isHidden) return;
       if (!isEmployeeActiveOnDay(emp, dateStr, monthKey, selectedDayIdx)) return;
 
-      const shift = emp.shifts?.[monthKey]?.[selectedDayIdx] || 'T';
+      const rawShift = resolveEffectiveShift(emp, dateStr, monthKey, selectedDayIdx);
+      const shift = isWorkingShift(rawShift) ? 'T' : rawShift.startsWith('FF') ? 'FF' : rawShift;
       const hour = emp.dailyHours?.[monthKey]?.[selectedDayIdx] || emp.workPeriod || getDefaultHourForDay(emp, isHoliday, isSunday);
       const pos = resolvedPositions[emp.id] || emp.tacticalPositions?.[monthKey]?.[selectedDayIdx] || '';
 
@@ -308,7 +309,7 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
 
   function renderEmployeeCard(item: { emp: Employee; shift: string; hour: string; pos: string }, isFolga = false) {
     const isHighlighted = false;
-    const shortName = getShortName(item.emp.name);
+    const shortName = getShortName(item.emp.name, allEmployees || employees);
     const hasDiff = diffs.some(d => d.empId === item.emp.id && d.dayIdx === selectedDayIdx);
 
     return (

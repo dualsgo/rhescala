@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings, ScheduleDiffItem, TacticalDisplayMode, ProtectedDaysConfig, DECISION_REASON_LABELS, EmployeeRole, EMPLOYEE_ROLES, ROLE_METADATA_MAP, normalizeEmployeeRole } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, isEmployeeActiveInMonth, normalizeProtectedDaysConfig, getTacticalLabel, getTacticalCellCode, getTacticalEmoji } from '../constants';
-import { getShiftClassification, isWorkingShift, getPrevMonthWorkStreak, getPrevMonthConsecutive, calculateLunches, calculateDetailedLunches, DetailedLunchAssignment } from '../hooks/useScheduleEngine';
+import { getShiftClassification, isWorkingShift, resolveEffectiveShift, getPrevMonthWorkStreak, getPrevMonthConsecutive, calculateLunches, calculateDetailedLunches, DetailedLunchAssignment } from '../hooks/useScheduleEngine';
 import { OperationalGuideModal } from './OperationalGuideModal';
 import { MobileDayScheduleView } from './MobileDayScheduleView';
 import { MobileFilterDrawer } from './MobileFilterDrawer';
@@ -113,7 +113,6 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   const [hasScrolled, setHasScrolled] = useState(false);
   const [internalSelectedGroup, setInternalSelectedGroup] = useState<string | null>(null);
   const selectedGroup = propSelectedGroup !== undefined ? propSelectedGroup : internalSelectedGroup;
-  const setSelectedGroup = onSelectedGroupChange || setInternalSelectedGroup;
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLegend, setShowLegend] = useState(false);
@@ -127,9 +126,30 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
   const [internalOnlyWorkingToday, setInternalOnlyWorkingToday] = useState(false);
   const onlyWorkingToday = propOnlyWorkingToday !== undefined ? propOnlyWorkingToday : internalOnlyWorkingToday;
-  const setOnlyWorkingToday = onToggleOnlyWorkingToday ? (val: boolean) => {
-    if (val !== onlyWorkingToday) onToggleOnlyWorkingToday();
-  } : setInternalOnlyWorkingToday;
+
+  const setSelectedGroup = (group: string | null) => {
+    if (onSelectedGroupChange) {
+      onSelectedGroupChange(group);
+    } else {
+      setInternalSelectedGroup(group);
+    }
+    if (group === 'Folgas/Outros' && onlyWorkingToday) {
+      if (onToggleOnlyWorkingToday) onToggleOnlyWorkingToday();
+      else setInternalOnlyWorkingToday(false);
+    }
+  };
+
+  const setOnlyWorkingToday = (val: boolean) => {
+    if (val && selectedGroup === 'Folgas/Outros') {
+      if (onSelectedGroupChange) onSelectedGroupChange(null);
+      else setInternalSelectedGroup(null);
+    }
+    if (onToggleOnlyWorkingToday) {
+      if (val !== onlyWorkingToday) onToggleOnlyWorkingToday();
+    } else {
+      setInternalOnlyWorkingToday(val);
+    }
+  };
 
   const [isCompactMode, setIsCompactMode] = useState(false);
   const [focusSelectedDay, setFocusSelectedDay] = useState(false);
@@ -251,6 +271,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   }, [currentMY.year, customHolidays]);
 
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
+  const safeSelectedDayIdx = Math.min(Math.max(0, selectedDayIdx), Math.max(0, daysInMonth - 1));
   const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
 
   const days = useMemo(() => {
@@ -310,25 +331,28 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     return result;
   }, [days, filter, hidePastDays, isCurrentMonth, todayDayNum]);
 
+  const selectedDayDateStr = days[safeSelectedDayIdx]?.dateStr
+    || `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(safeSelectedDayIdx + 1).padStart(2, '0')}`;
+
   const displayedEmployees = useMemo(() => {
-    let list = [...employees].filter(e => !e.isHidden && e.status === 'active');
+    let list = employees.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
     if (contractFilter === 'clt') list = list.filter(e => e.contractType !== 'Sazonal');
     else if (contractFilter === 'sazonal') list = list.filter(e => e.contractType === 'Sazonal');
 
     if (onlyWorkingToday) {
       list = list.filter(emp => {
-        const currentShift = emp.shifts[monthKey]?.[selectedDayIdx];
-        return isWorkingShift(currentShift) || currentShift === 'C';
+        const effectiveShift = resolveEffectiveShift(emp, selectedDayDateStr, monthKey, safeSelectedDayIdx);
+        return isWorkingShift(effectiveShift);
       });
     }
 
     if (selectedGroup) {
       list = list.filter(emp => {
-        const isSun = days[selectedDayIdx]?.isSunday;
-        const isHol = days[selectedDayIdx]?.isHoliday;
-        const shift = (emp.shifts[monthKey] || [])[selectedDayIdx] || 'T';
-        const isOff = !isWorkingShift(shift);
-        const hour = (emp.dailyHours[monthKey] || [])[selectedDayIdx] || emp.workPeriod || getDefaultHourForDay(emp, isHol, isSun);
+        const isSun = Boolean(days[safeSelectedDayIdx]?.isSunday);
+        const isHol = Boolean(days[safeSelectedDayIdx]?.isHoliday);
+        const effectiveShift = resolveEffectiveShift(emp, selectedDayDateStr, monthKey, safeSelectedDayIdx);
+        const isOff = !isWorkingShift(effectiveShift);
+        const hour = (emp.dailyHours[monthKey] || [])[safeSelectedDayIdx] || emp.workPeriod || getDefaultHourForDay(emp, isHol, isSun);
         const classification = getShiftClassification(hour, isSun, jornadaSettings);
 
         if (selectedGroup === 'Folgas/Outros') return isOff;
@@ -338,7 +362,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     }
 
     return list.sort((a, b) => (a.workPeriod || '').localeCompare(b.workPeriod || '') || a.name.localeCompare(b.name));
-  }, [employees, contractFilter, onlyWorkingToday, selectedGroup, monthKey, selectedDayIdx]);
+  }, [employees, currentMY.year, currentMY.month, contractFilter, onlyWorkingToday, selectedGroup, monthKey, safeSelectedDayIdx, selectedDayDateStr, days, jornadaSettings]);
 
   return (
     <div className="flex flex-col gap-3 sm:gap-4 relative h-full">
@@ -392,7 +416,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             {!isReadOnly && onShareWhatsApp && (
               <button
                 type="button"
-                onClick={() => onShareWhatsApp(selectedDayIdx)}
+                onClick={() => onShareWhatsApp(safeSelectedDayIdx)}
                 className="p-2 rounded-xl bg-emerald-600 text-white shadow-sm active:scale-95 transition-all"
                 title="Compartilhar Escala do Dia no WhatsApp"
               >
@@ -426,7 +450,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           className="flex items-center gap-1.5 overflow-x-auto py-1 px-0.5 custom-scrollbar no-scrollbar scroll-smooth"
         >
           {days.map((d, idx) => {
-            const isSelected = selectedDayIdx === idx;
+            const isSelected = safeSelectedDayIdx === idx;
             const isToday = isCurrentMonth && (idx + 1) === todayDayNum;
             const isSun = d.isSunday;
             const isHol = d.isHoliday;
@@ -468,8 +492,56 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
         </div>
       </div>
 
-      {/* Top Controls: Desktop Semantic Segmented Groups (Apenas Gestão) */}
-      {!isReadOnly && (
+      {/* Top Controls: Barra Contextual do Dia Selecionado (Desktop >= lg) */}
+      {isReadOnly ? (
+        <div className="hidden lg:flex items-center justify-between gap-2 bg-white dark:bg-zinc-900 p-2 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm w-full">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/80 text-xs font-black uppercase tracking-wider text-zinc-700 dark:text-zinc-200">
+              <span className={`w-2 h-2 rounded-full ${isCurrentMonth && (safeSelectedDayIdx + 1) === todayDayNum ? 'bg-amber-500 animate-pulse' : 'bg-zinc-400'}`} />
+              <span>
+                {isCurrentMonth && (safeSelectedDayIdx + 1) === todayDayNum ? 'Hoje' : 'Dia'}: {String(safeSelectedDayIdx + 1).padStart(2, '0')}/{String(currentMY.month + 1).padStart(2, '0')} {days[safeSelectedDayIdx]?.weekday ? `(${days[safeSelectedDayIdx].weekday})` : ''}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setFocusSelectedDay(!focusSelectedDay)}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
+                focusSelectedDay
+                  ? 'bg-amber-500 border-amber-500 text-white shadow-amber-500/20'
+                  : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+              }`}
+              title={focusSelectedDay ? 'Desativar modo foco' : 'Destacar coluna do dia selecionado e suavizar as demais'}
+            >
+              <Icon name={focusSelectedDay ? 'filter_center_focus' : 'center_focus_weak'} className="text-xs" />
+              <span>{focusSelectedDay ? `Dia ${safeSelectedDayIdx + 1}` : 'Foco'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setOnlyWorkingToday(!onlyWorkingToday)}
+              aria-pressed={onlyWorkingToday}
+              aria-label="Filtrar somente quem está trabalhando no dia selecionado"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
+                onlyWorkingToday
+                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-emerald-500/20'
+                  : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+              }`}
+              title={
+                onlyWorkingToday
+                  ? `Exibindo somente quem trabalha no dia ${String(safeSelectedDayIdx + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}. Clique para mostrar toda a equipe.`
+                  : `Ocultar quem está de folga ou ausente no dia ${String(safeSelectedDayIdx + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}`
+              }
+            >
+              <Icon name={onlyWorkingToday ? 'check_circle' : 'group'} className="text-xs" />
+              <span>{onlyWorkingToday ? `Trabalhando (${displayedEmployees.length})` : 'Ocultar Folgas'}</span>
+            </button>
+          </div>
+          <span className="text-[11px] font-medium text-zinc-400 dark:text-zinc-500 pr-1">
+            Clique no número do dia na tabela para filtrar quem trabalha
+          </span>
+        </div>
+      ) : (
         <div className="hidden lg:flex flex-col gap-2.5">
         {/* Linha 1: Contexto Operacional do Dia & Ações Imediatas */}
         <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white dark:bg-zinc-900 p-2 sm:p-2.5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm w-full">
@@ -478,17 +550,17 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             {/* Âncora do Dia Selecionado */}
             <button
               type="button"
-              onClick={() => onOpenDayDetail(selectedDayIdx)}
+              onClick={() => onOpenDayDetail(safeSelectedDayIdx)}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-black uppercase tracking-wider transition-all shadow-sm ${
-                isCurrentMonth && (selectedDayIdx + 1) === todayDayNum
+                isCurrentMonth && (safeSelectedDayIdx + 1) === todayDayNum
                   ? 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20'
                   : 'bg-zinc-50 dark:bg-zinc-800/80 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }`}
               title="Clique para abrir o Resumo Operacional detalhado deste dia (escalas, almoços e postos)"
             >
-              <span className={`w-2 h-2 rounded-full ${isCurrentMonth && (selectedDayIdx + 1) === todayDayNum ? 'bg-amber-500 animate-pulse' : 'bg-zinc-400'}`} />
+              <span className={`w-2 h-2 rounded-full ${isCurrentMonth && (safeSelectedDayIdx + 1) === todayDayNum ? 'bg-amber-500 animate-pulse' : 'bg-zinc-400'}`} />
               <span>
-                {isCurrentMonth && (selectedDayIdx + 1) === todayDayNum ? 'Hoje' : 'Dia'}: {String(selectedDayIdx + 1).padStart(2, '0')}/{String(currentMY.month + 1).padStart(2, '0')} {days[selectedDayIdx]?.weekday ? `(${days[selectedDayIdx].weekday})` : ''}
+                {isCurrentMonth && (safeSelectedDayIdx + 1) === todayDayNum ? 'Hoje' : 'Dia'}: {String(safeSelectedDayIdx + 1).padStart(2, '0')}/{String(currentMY.month + 1).padStart(2, '0')} {days[safeSelectedDayIdx]?.weekday ? `(${days[safeSelectedDayIdx].weekday})` : ''}
               </span>
               <Icon name="visibility" className="text-xs text-zinc-400 dark:text-zinc-400" />
             </button>
@@ -498,7 +570,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             {!isReadOnly && onShareWhatsApp && (
               <button
                 type="button"
-                onClick={() => onShareWhatsApp(selectedDayIdx)}
+                onClick={() => onShareWhatsApp(safeSelectedDayIdx)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black uppercase tracking-wider transition-all shadow-sm shadow-emerald-600/20 active:scale-95 whitespace-nowrap"
                 title="Preparar e compartilhar a divulgação operacional do dia"
               >
@@ -532,7 +604,28 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               title={focusSelectedDay ? 'Desativar modo foco' : 'Destacar coluna do dia selecionado e suavizar as demais'}
             >
               <Icon name={focusSelectedDay ? 'filter_center_focus' : 'center_focus_weak'} className="text-xs" />
-              <span>{focusSelectedDay ? `Dia ${selectedDayIdx + 1}` : 'Foco'}</span>
+              <span>{focusSelectedDay ? `Dia ${safeSelectedDayIdx + 1}` : 'Foco'}</span>
+            </button>
+
+            {/* Filtro Rápido: Exibir somente quem trabalha no dia selecionado */}
+            <button
+              type="button"
+              onClick={() => setOnlyWorkingToday(!onlyWorkingToday)}
+              aria-pressed={onlyWorkingToday}
+              aria-label="Filtrar somente quem está trabalhando no dia selecionado"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
+                onlyWorkingToday
+                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-emerald-500/20'
+                  : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+              }`}
+              title={
+                onlyWorkingToday
+                  ? `Exibindo somente quem trabalha no dia ${String(safeSelectedDayIdx + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}. Clique para mostrar toda a equipe.`
+                  : `Ocultar quem está de folga ou ausente no dia ${String(safeSelectedDayIdx + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}`
+              }
+            >
+              <Icon name={onlyWorkingToday ? 'check_circle' : 'group'} className="text-xs" />
+              <span>{onlyWorkingToday ? `Trabalhando (${displayedEmployees.length})` : 'Ocultar Folgas'}</span>
             </button>
 
             {/* Restantes (se for mês corrente) */}
@@ -729,11 +822,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             allEmployees={employees}
             jornadaSettings={jornadaSettings}
             currentMY={currentMY}
-            selectedDayIdx={selectedDayIdx}
+            selectedDayIdx={safeSelectedDayIdx}
             monthKey={monthKey}
-            isHoliday={days[selectedDayIdx]?.isHoliday || false}
-            holidayName={days[selectedDayIdx]?.holidayName}
-            isSunday={days[selectedDayIdx]?.isSunday || false}
+            isHoliday={days[safeSelectedDayIdx]?.isHoliday || false}
+            holidayName={days[safeSelectedDayIdx]?.holidayName}
+            isSunday={days[safeSelectedDayIdx]?.isSunday || false}
             resolvedPositions={resolvedPositions}
             tacticalDisplayMode={tacticalDisplayMode}
             isReadOnly={Boolean(isReadOnly)}
@@ -779,27 +872,27 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   const dayIdx = d.num - 1;
                   const stats = employees.reduce((acc, emp) => {
                     if (!isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month)) return acc;
-                    const shift = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
-                    if (isWorkingShift(shift) || shift.startsWith('FF')) {
+                    const effShift = resolveEffectiveShift(emp, d.dateStr, monthKey, dayIdx);
+                    if (isWorkingShift(effShift)) {
                       acc.total++;
                     }
                     return acc;
                   }, { total: 0 });
 
-                  const isSelected = selectedDayIdx === dayIdx;
+                  const isSelected = safeSelectedDayIdx === dayIdx;
                   const todayStr = toLocalISODate();
                   const isToday = d.dateStr === todayStr;
                   const isWeekend = d.isSunday || d.weekday === 'SÁB' || d.weekday === 'DOM';
                   const isProtected = Boolean(protectedConfig && protectedConfig[d.num]);
                   const isPast = d.dateStr < todayStr;
-                  const pastDimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale pointer-events-none select-none' : '';
+                  const pastDimClass = isPast && !isSelected && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale select-none' : '';
                   const focusDimClass = focusSelectedDay && !isSelected ? 'opacity-40 hover:opacity-100 transition-opacity duration-150' : '';
                   const focusHighlight = isSelected && focusSelectedDay ? 'bg-orange-500/15 ring-2 ring-orange-500 shadow-sm z-20' : isSelected ? 'bg-orange-500/10 ring-2 ring-inset ring-orange-500/30' : '';
 
                   return (
                     <th 
                       key={d.num} 
-                      onClick={() => isSelected ? onOpenDayDetail(dayIdx) : onSelectDay(dayIdx)}
+                      onClick={() => isSelected && !isReadOnly ? onOpenDayDetail(dayIdx) : onSelectDay(dayIdx)}
                       className={`p-2 border-b border-zinc-200 dark:border-zinc-800 min-w-[46px] w-[48px] cursor-pointer transition-all ${
                         isToday ? 'border-t-4 border-t-orange-500 bg-orange-500/10 dark:bg-orange-950/20' : ''
                       } ${pastDimClass} ${focusDimClass} ${
@@ -834,6 +927,37 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {(() => {
+                if (displayedEmployees.length === 0) {
+                  return (
+                    <tr>
+                      <td
+                        colSpan={filteredDays.length + 1}
+                        className="py-10 px-4 text-center text-zinc-500 dark:text-zinc-400"
+                      >
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <Icon name="event_busy" className="text-2xl text-zinc-400" />
+                          <p className="text-xs font-bold">
+                            Nenhum colaborador encontrado para o dia {String(safeSelectedDayIdx + 1).padStart(2, '0')}/{String(currentMY.month + 1).padStart(2, '0')} com os filtros ativos.
+                          </p>
+                          {(onlyWorkingToday || selectedGroup || contractFilter !== 'all') && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOnlyWorkingToday(false);
+                                setSelectedGroup(null);
+                                setContractFilter('all');
+                              }}
+                              className="mt-1 px-3 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-black uppercase tracking-wider transition-all"
+                            >
+                              Mostrar Toda a Equipe
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
                 const groups: Record<string, Employee[]> = groupBy === 'role'
                   ? {
                       'Caixa': [],
@@ -850,27 +974,14 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                       'Folgas/Outros': []
                     };
 
-                employees.forEach(emp => {
-                  if (!isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month)) return;
-                  
-                  if (contractFilter === 'clt' && emp.contractType === 'Sazonal') return;
-                  if (contractFilter === 'sazonal' && emp.contractType !== 'Sazonal') return;
+                const isSunSelected = Boolean(days[safeSelectedDayIdx]?.isSunday);
+                const isHolSelected = Boolean(days[safeSelectedDayIdx]?.isHoliday);
 
-                  const hour = (emp.dailyHours[monthKey] || [])[selectedDayIdx] || emp.workPeriod;
-                  const isSun = days[selectedDayIdx]?.isSunday;
-                  const shift = (emp.shifts[monthKey] || [])[selectedDayIdx] || 'T';
-                  
-                  const classification = getShiftClassification(hour, isSun, jornadaSettings);
-                  const isOff = !isWorkingShift(shift);
-                  
-                  // Apply group filter (from top tags)
-                  if (selectedGroup) {
-                    if (selectedGroup === 'Folgas/Outros') {
-                      if (!isOff) return;
-                    } else {
-                      if (isOff || classification !== selectedGroup) return;
-                    }
-                  }
+                displayedEmployees.forEach(emp => {
+                  const hour = (emp.dailyHours[monthKey] || [])[safeSelectedDayIdx] || emp.workPeriod || getDefaultHourForDay(emp, isHolSelected, isSunSelected);
+                  const effectiveShift = resolveEffectiveShift(emp, selectedDayDateStr, monthKey, safeSelectedDayIdx);
+                  const classification = getShiftClassification(hour, isSunSelected, jornadaSettings);
+                  const isOff = !isWorkingShift(effectiveShift);
 
                   if (groupBy === 'role') {
                     const empRole = normalizeEmployeeRole(emp.cargo || emp.role);
@@ -995,17 +1106,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                             {/* Shift Cells */}
                             {filteredDays.map(d => {
                               const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d.num).padStart(2, '0')}`;
-                              let rawShift = emp.shifts[monthKey]?.[d.num - 1] || 'T';
-                              if (emp.hiredAt && fullDate < emp.hiredAt) {
-                                rawShift = 'N/A';
-                              } else if (emp.firedAt && fullDate > emp.firedAt) {
-                                rawShift = 'N/A';
-                              } else if (emp.atestadoStart && emp.atestadoEnd && fullDate >= emp.atestadoStart && fullDate <= emp.atestadoEnd) {
-                                rawShift = 'AT';
-                              } else if (emp.vacationStart && emp.vacationEnd && fullDate >= emp.vacationStart && fullDate <= emp.vacationEnd) {
-                                rawShift = 'FE';
-                              }
-                              const shift = ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ', 'CX', 'REP', 'VEND', 'FISC'].includes(rawShift) ? 'T' : rawShift;
+                              const rawShift = resolveEffectiveShift(emp, fullDate, monthKey, d.num - 1);
+                              const shift = isWorkingShift(rawShift) ? 'T' : rawShift;
                               
                               const prevStreak = prevWorkStreaks.get(emp.id) || 0;
                               let streak = 0;
@@ -1193,10 +1295,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const hasCellViolation = hasAlert || isSundayViolation;
                               const todayStr = toLocalISODate();
                                const isPast = d.dateStr < todayStr;
-                               const pastDimClass = isPast && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
+                               const isSelectedCol = safeSelectedDayIdx === d.num - 1;
+                               const pastDimClass = isPast && !isSelectedCol && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
                                const dayRequest = !isReadOnly ? (emp.requests || []).find(r => r.date === fullDate) : undefined;
                                const cellDiff = diffs?.find(diff => diff.empId === emp.id && diff.dayIdx === d.num - 1);
-                               const isSelectedCol = selectedDayIdx === d.num - 1;
                                const focusDimColClass = focusSelectedDay && !isSelectedCol ? 'opacity-40 hover:opacity-100 transition-opacity duration-150' : '';
                                const focusHighlight = isSelectedCol && focusSelectedDay ? 'ring-2 ring-inset ring-orange-500 bg-orange-500/10 dark:bg-orange-950/30' : isSelectedCol ? 'ring-2 ring-inset ring-orange-400/40' : '';
 
@@ -1564,9 +1666,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 {filteredDays.map(d => {
                   const dayIdx = d.num - 1;
                   const count = displayedEmployees.filter(emp => {
-                    if (!isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month)) return false;
-                    const s = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
-                    return isWorkingShift(s) || s === 'C';
+                    const s = resolveEffectiveShift(emp, d.dateStr, monthKey, dayIdx);
+                    return isWorkingShift(s);
                   }).length;
                   const isWeekend = d.isSunday || d.weekday === 'SÁB' || d.weekday === 'DOM';
                   return (
@@ -1593,11 +1694,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     {filteredDays.map(d => {
                       const dayIdx = d.num - 1;
                       const count = displayedEmployees.filter(emp => {
-                        if (!isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month)) return false;
                         const assignedRole = emp.dailyAssignedRoles?.[monthKey]?.[dayIdx] || normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
                         if (assignedRole !== role) return false;
-                        const s = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
-                        return isWorkingShift(s) || s === 'C';
+                        const s = resolveEffectiveShift(emp, d.dateStr, monthKey, dayIdx);
+                        return isWorkingShift(s);
                       }).length;
 
                       const isCriticalMissing = (role === 'Caixa' || role === 'Fiscal') && count === 0;
@@ -1637,8 +1737,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     const isSun = d.isSunday;
 
                     const activeEmps = displayedEmployees.filter(emp => {
-                      if (!isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month)) return false;
-                      const s = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
+                      const s = resolveEffectiveShift(emp, d.dateStr, monthKey, dayIdx);
                       return isWorkingShift(s);
                     });
 

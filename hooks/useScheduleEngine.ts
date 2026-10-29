@@ -74,12 +74,14 @@ import {
 } from '../src/engine/clt/legal-overrides';
 
 import {
-    WORKING_TACTICAL_CODES
+    WORKING_TACTICAL_CODES,
+    resolveEffectiveShift
 } from '../src/engine/shifts/shift-predicates';
 
 export {
     WEEKDAY_NAMES,
     isWorkingShift,
+    resolveEffectiveShift,
     isBirthday,
     getTargetHours,
     getPrevMonthWorkStreak,

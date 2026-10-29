@@ -55,4 +55,42 @@ describe('useScheduleFilters', () => {
 
     root.unmount();
   });
+
+  it('deve garantir exclusão mútua entre onlyWorkingToday e o grupo Folgas/Outros', async () => {
+    let hookState!: ScheduleFiltersState;
+
+    function TestComponent() {
+      hookState = useScheduleFilters();
+      return null;
+    }
+
+    const container = document.createElement('div');
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(React.createElement(TestComponent));
+    });
+
+    await act(async () => {
+      hookState.setSelectedGroup('Folgas/Outros');
+    });
+    expect(hookState.selectedGroup).toBe('Folgas/Outros');
+    expect(hookState.onlyWorkingToday).toBe(false);
+
+    // Ativar onlyWorkingToday limpa Folgas/Outros para não produzir grade vazia contraditória
+    await act(async () => {
+      hookState.setOnlyWorkingToday(true);
+    });
+    expect(hookState.onlyWorkingToday).toBe(true);
+    expect(hookState.selectedGroup).toBeNull();
+
+    // Selecionar Folgas/Outros desativa onlyWorkingToday
+    await act(async () => {
+      hookState.setSelectedGroup('Folgas/Outros');
+    });
+    expect(hookState.selectedGroup).toBe('Folgas/Outros');
+    expect(hookState.onlyWorkingToday).toBe(false);
+
+    root.unmount();
+  });
 });
