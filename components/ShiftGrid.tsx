@@ -918,50 +918,58 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           <table className="w-full border-separate border-spacing-0">
             <thead className="sticky top-0 z-40 bg-zinc-50 dark:bg-zinc-900 shadow-xs">
               <tr className="bg-zinc-50 dark:bg-zinc-900/50">
-                <th className="sticky top-0 left-0 z-[60] bg-zinc-50 dark:bg-zinc-900 border-b border-r border-zinc-200 dark:border-zinc-800 py-2.5 px-3 text-left w-[240px] min-w-[240px] max-w-[240px] shadow-[4px_0_12px_-2px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_12px_-2px_rgba(0,0,0,0.4)]">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Colaborador</span>
-                      {!isReadOnly && onToggleHideEmployee && (
+                <th className="sticky top-0 left-0 z-[60] bg-zinc-50 dark:bg-zinc-900 border-b border-r border-zinc-200 dark:border-zinc-800 py-1.5 px-3 text-left w-[240px] min-w-[240px] max-w-[240px] shadow-[4px_0_12px_-2px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_12px_-2px_rgba(0,0,0,0.4)]">
+                  <div className="flex flex-col justify-center gap-1 min-h-[44px]">
+                    {/* Linha 1: Título e Visibilidade de Ocultos */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-[11px] font-black text-zinc-400 uppercase tracking-wider truncate">Colaborador</span>
+                        {!isReadOnly && onToggleHideEmployee && hiddenEmployeesInMonth.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setShowVisibilityModal(true)}
+                            className="p-0.5 px-1 rounded-md transition-colors flex items-center gap-1 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50"
+                            title={`${hiddenEmployeesInMonth.length} colaborador(es) oculto(s) neste mês. Clique para gerenciar visibilidade.`}
+                            aria-label="Gerenciar visibilidade de colaboradores na grade"
+                          >
+                            <Icon name="visibility_off" className="text-[11px]" />
+                            <span className="text-[10px] font-black">
+                              {hiddenEmployeesInMonth.length}
+                            </span>
+                          </button>
+                        )}
+                      </div>
+
+                      {!isReadOnly && onToggleHideEmployee && hiddenEmployeesInMonth.length === 0 && (
                         <button
                           type="button"
                           onClick={() => setShowVisibilityModal(true)}
-                          className={`p-1 rounded-md transition-colors flex items-center gap-1 ${
-                            hiddenEmployeesInMonth.length > 0
-                              ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40'
-                              : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                          }`}
-                          title={
-                            hiddenEmployeesInMonth.length > 0
-                              ? `${hiddenEmployeesInMonth.length} colaborador(es) oculto(s) neste mês. Clique para gerenciar visibilidade.`
-                              : 'Gerenciar visibilidade de colaboradores neste mês'
-                          }
+                          className="p-1 rounded-md transition-colors text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                          title="Gerenciar visibilidade de colaboradores neste mês"
                           aria-label="Gerenciar visibilidade de colaboradores na grade"
                         >
-                          <Icon name={hiddenEmployeesInMonth.length > 0 ? "visibility_off" : "group"} className="text-xs" />
-                          {hiddenEmployeesInMonth.length > 0 && (
-                            <span className="text-[10px] font-black px-1 rounded-full bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300">
-                              {hiddenEmployeesInMonth.length}
-                            </span>
-                          )}
+                          <Icon name="visibility" className="text-xs" />
                         </button>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    {/* Linha 2: Controles da Grade (Recolher + Agrupamento) */}
+                    <div className="flex items-center justify-between gap-1 pt-0.5 border-t border-zinc-200/60 dark:border-zinc-800/60">
                       <button
                         type="button"
                         onClick={toggleCollapseAllGroups}
-                        className="text-[10px] font-bold text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 flex items-center gap-0.5 cursor-pointer transition-colors"
+                        className="text-[10px] font-bold text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 flex items-center gap-1 cursor-pointer transition-colors"
                         title={areAllGroupsCollapsed ? "Expandir todos os grupos" : "Recolher todos os grupos"}
                         aria-label={areAllGroupsCollapsed ? "Expandir todos os grupos" : "Recolher todos os grupos"}
                       >
-                        <Icon name={areAllGroupsCollapsed ? "unfold_more" : "unfold_less"} className="text-xs" />
-                        <span className="hidden sm:inline">{areAllGroupsCollapsed ? "Expandir" : "Recolher"}</span>
+                        <Icon name={areAllGroupsCollapsed ? "unfold_more" : "unfold_less"} className="text-xs shrink-0" />
+                        <span>{areAllGroupsCollapsed ? "Expandir" : "Recolher"}</span>
                       </button>
+
                       <button
                         type="button"
                         onClick={() => setGroupBy(prev => prev === 'role' ? 'shift' : 'role')}
-                        className="text-[11px] font-bold text-orange-600 dark:text-orange-400 hover:underline cursor-pointer"
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-50 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/60 transition-colors cursor-pointer shrink-0"
                         title="Alternar agrupamento entre Função e Turno"
                       >
                         {groupBy === 'role' ? 'Por Função' : 'Por Turno'}
