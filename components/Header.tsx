@@ -220,7 +220,7 @@ export const Header: React.FC<HeaderProps> = ({
           title="Filtros da Escala (Turnos, Presença, Contrato e Período)"
         >
           <Icon name="tune" className={`text-sm shrink-0 ${activeFiltersCount > 0 ? 'text-orange-500' : 'text-zinc-500 dark:text-zinc-400'}`} />
-          <span className="hidden xl:inline">Filtros</span>
+          <span className="hidden 2xl:inline">Filtros</span>
           {activeFiltersCount > 0 && (
             <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[11px] font-black flex items-center justify-center shrink-0">
               {activeFiltersCount}
@@ -587,7 +587,7 @@ export const Header: React.FC<HeaderProps> = ({
 
               <div className="w-[1px] h-5 bg-zinc-200 dark:bg-zinc-800 mx-0.5 hidden xl:block shrink-0" />
 
-              {/* 3. ROTINAS DE LOJA (OPERAÇÃO DO DIA A DIA) */}
+              {/* 3. MENU UNIFICADO (HAMBÚRGUER): ROTINAS + COMPARTILHAR + GESTÃO */}
               <div className="relative">
                 <button
                   type="button"
@@ -597,289 +597,157 @@ export const Header: React.FC<HeaderProps> = ({
                     setShowRoutinesMenu(next);
                   }}
                   aria-label="Menu Operações & Loja"
-                  title="Menu Operações & Loja (Rotinas Diárias, Almoços, Limpeza, Ronda e Setores)"
+                  aria-expanded={showRoutinesMenu}
+                  title="Menu Operações & Loja (Rotinas, Compartilhar/Exportar, Equipe, Jornada, Feriados e Dados)"
                   className={`px-2 xl:px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 xl:gap-1.5 whitespace-nowrap shrink-0 border ${
-                    ['daily','cleaning','patrol','sections'].includes(currentView) 
-                      ? 'bg-white dark:bg-zinc-800 shadow-xs border-orange-200 dark:border-orange-900/50 text-orange-600 dark:text-orange-400 font-black' 
+                    ['daily','cleaning','patrol','sections','team','jornada','feriados','worked-holidays','data'].includes(currentView)
+                      ? 'bg-white dark:bg-zinc-800 shadow-xs border-orange-200 dark:border-orange-900/50 text-orange-600 dark:text-orange-400 font-black'
                       : showRoutinesMenu
                       ? 'bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-100'
                       : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-200/60 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100'
                   }`}
                 >
-                  <Icon name="storefront" className="text-sm shrink-0" />
-                  <span className="hidden 2xl:inline">Operações & Loja</span>
-                  <span className="inline 2xl:hidden">Operações</span>
+                  <Icon name={showRoutinesMenu ? 'close' : 'menu'} className="text-sm shrink-0" />
+                  <span>Operações</span>
                   <Icon name={showRoutinesMenu ? 'expand_less' : 'expand_more'} className="text-xs shrink-0 opacity-70" />
                 </button>
 
                 {showRoutinesMenu && (
-                  <div 
+                  <div
                     onClick={(e) => e.stopPropagation()}
-                    className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2.5 animate-in fade-in slide-in-from-top-1 duration-150 space-y-2 text-zinc-800 dark:text-zinc-100"
+                    className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[min(760px,92vw)] max-h-[80vh] overflow-y-auto custom-scrollbar bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-3 animate-in fade-in slide-in-from-top-1 duration-150 text-zinc-800 dark:text-zinc-100"
                   >
-                    <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800">
-                      <span className="text-[11px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400 block">
-                        Rotinas de Loja (Operação)
-                      </span>
-                      <span className="text-[10px] font-medium text-zinc-400">
-                        Acompanhamento diário da equipe e loja
-                      </span>
-                    </div>
-
-                    <div className="space-y-1">
-                      {[
-                        { id: 'daily', label: 'Resumo Diário & Almoços', desc: 'Presentes, posições e intervalos do dia', icon: 'today' },
-                        { id: 'cleaning', label: 'Limpeza da Copa', desc: '1 responsável escalado por dia', icon: 'cleaning_services' },
-                        { id: 'patrol', label: 'Ronda da Loja', desc: 'Patrulha por abertura e fechamento', icon: 'local_police' },
-                        { id: 'sections', label: 'Donos de Seção', desc: 'Setores de brinquedos da quinzena', icon: 'category' },
-                      ].map(item => (
+                    <div className="grid grid-cols-3 gap-3">
+                      {/* Coluna 1: Rotinas de Loja */}
+                      <div className="space-y-1">
+                        <div className="px-2 pb-1 mb-1 border-b border-zinc-100 dark:border-zinc-800">
+                          <span className="text-[11px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400 block">Rotinas de Loja</span>
+                          <span className="text-[10px] font-medium text-zinc-400">Operação do dia a dia</span>
+                        </div>
+                        {[
+                          { id: 'daily', label: 'Resumo Diário & Almoços', desc: 'Presentes e intervalos', icon: 'today' },
+                          { id: 'cleaning', label: 'Limpeza da Copa', desc: '1 responsável por dia', icon: 'cleaning_services' },
+                          { id: 'patrol', label: 'Ronda da Loja', desc: 'Abertura e fechamento', icon: 'local_police' },
+                          { id: 'sections', label: 'Donos de Seção', desc: 'Setores da quinzena', icon: 'category' },
+                        ].map(item => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => { onViewChange(item.id as any); closeAllMenus(); }}
+                            className={`w-full flex items-center gap-2 p-2 rounded-xl text-xs font-bold transition-all text-left ${
+                              currentView === item.id
+                                ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400'
+                                : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                            }`}
+                          >
+                            <Icon name={item.icon} className="text-base text-zinc-400 shrink-0" />
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-black uppercase text-[11px] truncate">{item.label}</span>
+                              <span className="text-[10px] text-zinc-400 truncate">{item.desc}</span>
+                            </div>
+                          </button>
+                        ))}
                         <button
-                          key={item.id}
                           type="button"
-                          onClick={() => {
-                            onViewChange(item.id as any);
-                            closeAllMenus();
-                          }}
-                          className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold transition-all text-left ${
-                            currentView === item.id 
-                              ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 font-bold' 
-                              : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                          onClick={() => { onToggleNotes(); closeAllMenus(); }}
+                          className={`w-full flex items-center gap-2 p-2 rounded-xl text-xs font-bold transition-all text-left ${
+                            showNotes ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600' : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
                           }`}
                         >
-                          <Icon name={item.icon} className="text-base text-zinc-400 shrink-0" />
+                          <Icon name="edit_note" className="text-base text-indigo-500 shrink-0" />
                           <div className="flex flex-col min-w-0">
-                            <span className="font-black uppercase text-[11px] truncate">{item.label}</span>
-                            <span className="text-[10px] text-zinc-400 truncate">{item.desc}</span>
+                            <span className="font-black uppercase text-[11px] truncate">{showNotes ? 'Ocultar Recados' : 'Mural de Recados'}</span>
+                            <span className="text-[10px] text-zinc-400 truncate">Rodapé da impressão</span>
                           </div>
                         </button>
-                      ))}
-                    </div>
-
-                    <div className="h-px bg-zinc-100 dark:bg-zinc-800" />
-
-                    {/* Mural de Recados */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onToggleNotes();
-                        closeAllMenus();
-                      }}
-                      className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold transition-all text-left ${
-                        showNotes ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600' : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-                      }`}
-                    >
-                      <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 shrink-0">
-                        <Icon name="edit_note" className="text-sm" />
                       </div>
-                      <div className="flex flex-col">
-                        <span className="font-black uppercase text-[11px]">{showNotes ? 'Ocultar Recados' : 'Mural de Recados'}</span>
-                        <span className="text-[10px] text-zinc-400">Anotações no rodapé da impressão</span>
-                      </div>
-                    </button>
-                  </div>
-                )}
-              </div>
 
-              {/* 4. COMPARTILHAR & EXPORTAR */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = !showShareMenu;
-                    closeAllMenus();
-                    setShowShareMenu(next);
-                  }}
-                  aria-label="Menu Compartilhar e Exportar"
-                  title="Compartilhar Escala: WhatsApp, Impressão PDF e Planilha CSV"
-                  className={`px-2.5 xl:px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 xl:gap-1.5 whitespace-nowrap shrink-0 border ${
-                    showShareMenu
-                      ? 'bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-100'
-                      : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-200/60 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100'
-                  }`}
-                >
-                  <Icon name="share" className="text-sm shrink-0" />
-                  <span className="hidden 2xl:inline">Compartilhar</span>
-                  <Icon name={showShareMenu ? 'expand_less' : 'expand_more'} className="text-xs shrink-0 opacity-70" />
-                </button>
-
-                {showShareMenu && (
-                  <div 
-                    onClick={(e) => e.stopPropagation()}
-                    className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2.5 animate-in fade-in slide-in-from-top-1 duration-150 space-y-2 text-zinc-800 dark:text-zinc-100"
-                  >
-                    <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800">
-                      <span className="text-[11px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
-                        Compartilhar & Exportar
-                      </span>
-                      <span className="text-[10px] font-medium text-zinc-400">
-                        Envio para equipe, impressão e relatórios
-                      </span>
-                    </div>
-
-                    <div className="space-y-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onShareWhatsApp();
-                          closeAllMenus();
-                        }}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-left transition-all"
-                      >
-                        <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 shrink-0">
-                          <Icon name="chat" className="text-sm" />
+                      {/* Coluna 2: Compartilhar & Exportar */}
+                      <div className="space-y-1">
+                        <div className="px-2 pb-1 mb-1 border-b border-zinc-100 dark:border-zinc-800">
+                          <span className="text-[11px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Compartilhar</span>
+                          <span className="text-[10px] font-medium text-zinc-400">WhatsApp, PDF e planilha</span>
                         </div>
-                        <div className="flex flex-col">
-                          <span className="font-black uppercase text-[11px]">WhatsApp: Escala do Dia</span>
-                          <span className="text-[10px] text-zinc-400">Turnos, posições e horários de almoço</span>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onShareApoioWhatsApp();
-                          closeAllMenus();
-                        }}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold hover:bg-blue-50 dark:hover:bg-blue-950/40 text-left transition-all"
-                      >
-                        <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/50 text-blue-600 shrink-0">
-                          <Icon name="assignment" className="text-sm" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-black uppercase text-[11px]">WhatsApp: Apoio / Funções</span>
-                          <span className="text-[10px] text-zinc-400">Postos de caixa, reposição e salão</span>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onPrint();
-                          closeAllMenus();
-                        }}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left transition-all"
-                      >
-                        <div className="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-900/50 text-rose-600 shrink-0">
-                          <Icon name="print" className="text-sm" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-black uppercase text-[11px]">Imprimir / Salvar PDF</span>
-                          <span className="text-[10px] text-zinc-400">Layout oficial A4 paisagem</span>
-                        </div>
-                      </button>
-
-                      {onExportCsv && (
                         <button
                           type="button"
-                          onClick={() => {
-                            onExportCsv();
-                            closeAllMenus();
-                          }}
-                          className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left transition-all"
+                          onClick={() => { onShareWhatsApp(); closeAllMenus(); }}
+                          className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-bold hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-left transition-all"
                         >
-                          <div className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 shrink-0">
-                            <Icon name="table_view" className="text-sm" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-black uppercase text-[11px]">Exportar Escala (CSV)</span>
-                            <span className="text-[10px] text-zinc-400">Planilha compatível com Excel</span>
-                          </div>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* 5. GESTÃO & CADASTROS */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = !showManagementMenu;
-                    closeAllMenus();
-                    setShowManagementMenu(next);
-                  }}
-                  aria-label="Menu Gestão e Cadastros"
-                  title="Gestão da Loja: Equipe, Parâmetros de Jornada, Feriados, Folgas FF e Dados"
-                  className={`px-2.5 xl:px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 xl:gap-1.5 whitespace-nowrap shrink-0 border ${
-                    ['team','jornada','feriados','worked-holidays','data'].includes(currentView) 
-                      ? 'bg-white dark:bg-zinc-800 shadow-xs border-orange-200 dark:border-orange-900/50 text-orange-600 dark:text-orange-400 font-black' 
-                      : showManagementMenu
-                      ? 'bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-100'
-                      : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-200/60 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100'
-                  }`}
-                >
-                  <Icon name="tune" className="text-sm shrink-0" />
-                  <span className="hidden 2xl:inline">Gestão & Cadastros</span>
-                  <span className="inline 2xl:hidden">Gestão</span>
-                  <Icon name={showManagementMenu ? 'expand_less' : 'expand_more'} className="text-xs shrink-0 opacity-70" />
-                </button>
-
-                {showManagementMenu && (
-                  <div 
-                    onClick={(e) => e.stopPropagation()}
-                    className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 p-2.5 animate-in fade-in slide-in-from-top-1 duration-150 space-y-2 text-zinc-800 dark:text-zinc-100"
-                  >
-                    <div className="px-2 py-1.5 border-b border-zinc-100 dark:border-zinc-800">
-                      <span className="text-[11px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400 block">
-                        Gestão & Cadastros
-                      </span>
-                      <span className="text-[10px] font-medium text-zinc-400">
-                        Configurações fundamentais da loja
-                      </span>
-                    </div>
-
-                    <div className="space-y-1">
-                      {[
-                        { id: 'team', label: 'Equipe & Colaboradores', desc: 'Cadastro, cargos, horários padrão e férias', icon: 'groups' },
-                        { id: 'jornada', label: 'Parâmetros de Jornada', desc: 'Faixas de turno e limites de domingo', icon: 'schedule' },
-                        { id: 'feriados', label: 'Feriados da Loja', desc: 'Feriados municipais e compensações', icon: 'event_busy' },
-                        { id: 'worked-holidays', label: 'Folgas Compensatórias (FF)', desc: 'Créditos de feriados trabalhados', icon: 'list_alt' },
-                      ].map(item => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => {
-                            onViewChange(item.id as any);
-                            closeAllMenus();
-                          }}
-                          className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold transition-all text-left ${
-                            currentView === item.id 
-                              ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 font-bold' 
-                              : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-                          }`}
-                        >
-                          <Icon name={item.icon} className="text-base text-zinc-400 shrink-0" />
+                          <Icon name="chat" className="text-base text-emerald-600 shrink-0" />
                           <div className="flex flex-col min-w-0">
-                            <span className="font-black uppercase text-[11px] truncate">{item.label}</span>
-                            <span className="text-[10px] text-zinc-400 truncate">{item.desc}</span>
+                            <span className="font-black uppercase text-[11px] truncate">WhatsApp: Dia</span>
+                            <span className="text-[10px] text-zinc-400 truncate">Turnos, posições e almoços</span>
                           </div>
                         </button>
-                      ))}
+                        <button
+                          type="button"
+                          onClick={() => { onShareApoioWhatsApp(); closeAllMenus(); }}
+                          className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-bold hover:bg-blue-50 dark:hover:bg-blue-950/40 text-left transition-all"
+                        >
+                          <Icon name="assignment" className="text-base text-blue-600 shrink-0" />
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-black uppercase text-[11px] truncate">WhatsApp: Apoio</span>
+                            <span className="text-[10px] text-zinc-400 truncate">Caixa, reposição e salão</span>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { onPrint(); closeAllMenus(); }}
+                          className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left transition-all"
+                        >
+                          <Icon name="print" className="text-base text-rose-600 shrink-0" />
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-black uppercase text-[11px] truncate">Imprimir / PDF</span>
+                            <span className="text-[10px] text-zinc-400 truncate">A4 paisagem oficial</span>
+                          </div>
+                        </button>
+                        {onExportCsv && (
+                          <button
+                            type="button"
+                            onClick={() => { onExportCsv(); closeAllMenus(); }}
+                            className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left transition-all"
+                          >
+                            <Icon name="table_view" className="text-base text-zinc-500 shrink-0" />
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-black uppercase text-[11px] truncate">Exportar CSV</span>
+                              <span className="text-[10px] text-zinc-400 truncate">Compatível com Excel</span>
+                            </div>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Coluna 3: Gestão & Cadastros */}
+                      <div className="space-y-1">
+                        <div className="px-2 pb-1 mb-1 border-b border-zinc-100 dark:border-zinc-800">
+                          <span className="text-[11px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400 block">Gestão & Cadastros</span>
+                          <span className="text-[10px] font-medium text-zinc-400">Configurações da loja</span>
+                        </div>
+                        {[
+                          { id: 'team', label: 'Equipe', desc: 'Cadastro, cargos e férias', icon: 'groups' },
+                          { id: 'jornada', label: 'Parâmetros de Jornada', desc: 'Turnos e domingos', icon: 'schedule' },
+                          { id: 'feriados', label: 'Feriados da Loja', desc: 'Municipais e estaduais', icon: 'event_busy' },
+                          { id: 'worked-holidays', label: 'Folgas FF', desc: 'Créditos de feriados', icon: 'list_alt' },
+                          { id: 'data', label: 'Dados & Backup', desc: 'Backup, senhas e limpeza', icon: 'storage' },
+                        ].map(item => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => { onViewChange(item.id as any); closeAllMenus(); }}
+                            className={`w-full flex items-center gap-2 p-2 rounded-xl text-xs font-bold transition-all text-left ${
+                              currentView === item.id
+                                ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400'
+                                : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                            }`}
+                          >
+                            <Icon name={item.icon} className="text-base text-zinc-400 shrink-0" />
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-black uppercase text-[11px] truncate">{item.label}</span>
+                              <span className="text-[10px] text-zinc-400 truncate">{item.desc}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
                     </div>
-
-                    <div className="h-px bg-zinc-100 dark:bg-zinc-800" />
-
-                    {/* Banco de Dados & Backup */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onViewChange('data');
-                        closeAllMenus();
-                      }}
-                      className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-bold transition-all text-left ${
-                        currentView === 'data' ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 font-bold' : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-                      }`}
-                    >
-                      <div className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0">
-                        <Icon name="storage" className="text-sm" />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-black uppercase text-[11px]">Banco de Dados & Backup</span>
-                        <span className="text-[10px] text-zinc-400">Exportar backup, senhas e limpeza</span>
-                      </div>
-                    </button>
                   </div>
                 )}
               </div>
@@ -991,7 +859,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }`}
                 >
                   <Icon name="undo" className="text-sm shrink-0" />
-                  <span className="hidden min-[1380px]:inline text-[11px] uppercase tracking-wider">Desfazer</span>
+                  <span className="sr-only">Desfazer</span>
                 </button>
                 <div className="w-[1px] h-4 bg-zinc-200 dark:border-zinc-800 mx-0.5" />
                 <button
@@ -1007,7 +875,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }`}
                 >
                   <Icon name="redo" className="text-sm shrink-0" />
-                  <span className="hidden min-[1380px]:inline text-[11px] uppercase tracking-wider">Refazer</span>
+                  <span className="sr-only">Refazer</span>
                 </button>
               </div>
             )}
@@ -1061,8 +929,8 @@ export const Header: React.FC<HeaderProps> = ({
                 title="Preparar Escala: Gerar Mês, Sortear Domingos, Folgas 6x1, Presets e Oficializar"
               >
                 <Icon name="auto_fix_high" className="text-sm shrink-0" />
-                <span className="hidden xl:inline">Preparar Escala</span>
-                <span className="inline xl:hidden">Preparar</span>
+                <span className="hidden 2xl:inline">Preparar Escala</span>
+                <span className="hidden xl:inline 2xl:hidden">Preparar</span>
                 {!isValidated && (
                   <span className="w-2 h-2 rounded-full bg-white animate-pulse shrink-0" title="Escala em preparação" />
                 )}
