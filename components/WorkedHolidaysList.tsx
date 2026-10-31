@@ -1,11 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Employee, MonthYear, Holiday } from '../types';
-import { buildHolidaySet, getNationalHolidays, isEmployeeActiveInMonth } from '../constants';
+import { getNationalHolidays, isEmployeeActiveInMonth } from '../constants';
 import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { Icon } from './Icon';
 import { useDialog } from '../contexts/DialogContext';
 import { isWorkingShift } from '../src/engine/shifts/shift-predicates';
 import { copyToClipboard } from '../src/utils/clipboard';
+import { HolidayCreditsTable } from './HolidayCreditsTable';
 
 interface WorkedHolidaysListProps {
   employees: Employee[];
@@ -32,6 +33,7 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
 }) => {
   const { showDialog } = useDialog();
   const todayStr = new Date().toLocaleDateString('en-CA');
+  const [activeTab, setActiveTab] = useState<'table' | 'cards'>('table');
 
   const relevantHolidays = useMemo(() => {
     const nationals = getNationalHolidays(currentMY.year).filter(h => !(deletedNationalHolidays || []).includes(h.id));
@@ -63,7 +65,6 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
       return hasWorked && isEmployeeActiveInMonth(emp, parseInt(year, 10), parseInt(month, 10) - 1);
     });
   };
-
 
   const handleCopyPending = async () => {
     let text = "*📋 COLABORADORES COM FOLGAS PENDENTES*\n\n";
@@ -130,38 +131,82 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-7xl mx-auto mt-6 animate-fade-in max-h-[85vh] overflow-y-auto custom-scrollbar">
-      <div className="flex justify-between items-center mb-8 pb-6 border-b border-slate-100 dark:border-slate-800">
+    <div className="bg-white dark:bg-slate-900 p-4 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-7xl mx-auto mt-6 animate-fade-in max-h-[85vh] overflow-y-auto custom-scrollbar">
+      {/* Header Principal */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center">
             <Icon name="list_alt" className="text-2xl" />
           </div>
           <div>
-            <h2 className="text-2xl font-black uppercase text-slate-800 dark:text-slate-100">Controle de Créditos</h2>
-            <p className="text-sm font-bold text-slate-400 mt-1">Gestão de feriados trabalhados e folgas compensatórias</p>
+            <h2 className="text-xl sm:text-2xl font-black uppercase text-slate-800 dark:text-slate-100">
+              Controle de Créditos de Feriados
+            </h2>
+            <p className="text-xs sm:text-sm font-bold text-slate-400 mt-0.5">
+              Gestão de feriados trabalhados, folgas compensatórias e auditoria CLT
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Seletor de Abas (Tabela Matriz vs Cards por Feriado) */}
+          <div className="inline-flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
+            <button
+              type="button"
+              onClick={() => setActiveTab('table')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+                activeTab === 'table'
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <Icon name="table_chart" className="text-sm" />
+              <span>Tabela Matriz</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('cards')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+                activeTab === 'cards'
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <Icon name="grid_view" className="text-sm" />
+              <span>Cards por Feriado</span>
+            </button>
+          </div>
+
           <button 
+            type="button"
             onClick={handleCopyPending}
-            className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white hover:bg-rose-700 rounded-xl font-black uppercase text-[11px] tracking-widest transition-all shadow-md active:scale-95"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 text-white hover:bg-rose-700 rounded-xl font-black uppercase text-[11px] tracking-wider transition-all shadow-md active:scale-95"
+            title="Copiar lista de colaboradores com folgas pendentes para WhatsApp"
           >
-            <Icon name="content_copy" className="text-sm" /> Pendentes
+            <Icon name="content_copy" className="text-sm" />
+            <span className="hidden sm:inline">Pendentes</span>
           </button>
           <button 
+            type="button"
             onClick={handleCopyScheduled}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white hover:bg-amber-700 rounded-xl font-black uppercase text-[11px] tracking-widest transition-all shadow-md active:scale-95"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 text-white hover:bg-amber-700 rounded-xl font-black uppercase text-[11px] tracking-wider transition-all shadow-md active:scale-95"
+            title="Copiar lista de folgas agendadas para WhatsApp"
           >
-            <Icon name="event_available" className="text-sm" /> Agendadas
+            <Icon name="event_available" className="text-sm" />
+            <span className="hidden sm:inline">Agendadas</span>
           </button>
-          <button onClick={onClose} className="px-6 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl font-bold uppercase text-xs tracking-widest transition-colors">
+          <button 
+            type="button"
+            onClick={onClose} 
+            className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl font-bold uppercase text-xs tracking-wider transition-colors"
+          >
             Voltar
           </button>
         </div>
       </div>
 
-      {/* Configuration Section */}
-      <div className="mb-8 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-2xl flex flex-wrap items-center justify-between gap-4">
+      {/* Configuration Section: Marco Zero */}
+      <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-2xl flex flex-wrap items-center justify-between gap-4">
          <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/30 text-amber-600 rounded-lg flex items-center justify-center">
                <Icon name="history" className="text-sm" />
@@ -182,7 +227,18 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
          </div>
       </div>
 
-      {relevantHolidays.length === 0 ? (
+      {/* Conteúdo Principal: Alternância entre Tabela Matriz Fixa (PNG) e Cards */}
+      {activeTab === 'table' ? (
+        <HolidayCreditsTable
+          employees={employees}
+          currentMY={currentMY}
+          customHolidays={customHolidays}
+          holidayCredits={holidayCredits}
+          deletedNationalHolidays={deletedNationalHolidays}
+          validatedMonths={validatedMonths}
+          trackingStartDate={trackingStartDate}
+        />
+      ) : relevantHolidays.length === 0 ? (
         <div className="text-center py-20 opacity-30">
           <Icon name="event_available" className="text-6xl text-slate-300 dark:text-slate-700 mb-4" />
           <p className="text-lg font-black uppercase tracking-widest text-slate-400">Nenhum feriado em escalas oficializadas</p>

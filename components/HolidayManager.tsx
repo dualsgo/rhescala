@@ -106,10 +106,10 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
                   onViewWorkedHolidays();
                 }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-[11px] font-black uppercase tracking-wider transition-all"
-                title="Acessar Controle de Folgas e Créditos de Feriados Trabalhados"
+                title="Acessar Tabela de Folgas e Créditos de Feriados Trabalhados"
               >
-                <Icon name="list_alt" className="text-sm" />
-                <span className="hidden sm:inline">Folgas de Feriados</span>
+                <Icon name="table_chart" className="text-sm" />
+                <span className="hidden sm:inline">Tabela de Folgas</span>
               </button>
             )}
             <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-full transition-all text-slate-400">

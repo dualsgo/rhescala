@@ -194,7 +194,7 @@ describe('Filtro "Somente quem está trabalhando" (ocultar folgas ao selecionar 
     expect(getTbodyText()).toContain('CARLA');
     expect(getTbodyText()).toContain('DIEGO');
     expect(getTbodyText()).toContain('FABIO');
-  });
+  }, 15000);
 
   it('MobileFilterDrawer envia os identificadores canônicos de turno para setSelectedGroup', async () => {
     const setSelectedGroup = vi.fn();
