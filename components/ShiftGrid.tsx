@@ -37,7 +37,9 @@ interface ShiftGridProps {
   onUpdateMonthNotes?: (text: string) => void;
   isReadOnly?: boolean;
   isEditable: boolean;
+  onToggleEdit?: () => void;
   allowRetroactive?: boolean;
+  onToggleRetroactive?: () => void;
   showNotes?: boolean;
   onCloseNotes?: () => void;
   onFilterChange: (f: 'all' | 'sunday' | 'holiday' | 'week') => void;
@@ -83,7 +85,9 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   onUpdateMonthNotes = () => {},
   isReadOnly = false,
   isEditable,
+  onToggleEdit,
   allowRetroactive = false,
+  onToggleRetroactive,
   showNotes = false,
   onCloseNotes = () => {},
   onFilterChange,
@@ -605,6 +609,53 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               <Icon name="visibility" className="text-xs text-zinc-400 dark:text-zinc-400" />
             </button>
 
+            {/* Modo de Edição Direta da Grade (Apenas Gestão) */}
+            {!isReadOnly && onToggleEdit && (
+              <button
+                type="button"
+                onClick={onToggleEdit}
+                aria-pressed={isEditable}
+                aria-label={isEditable ? 'Modo de Edição Ativo. Clique para bloquear.' : 'Habilitar Modo de Edição da Grade.'}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-95 whitespace-nowrap ${
+                  isEditable
+                    ? 'bg-amber-500 hover:bg-amber-600 border-amber-600 text-white shadow-amber-500/20 ring-2 ring-amber-500/30'
+                    : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                }`}
+                title={
+                  isEditable
+                    ? 'Modo Edição ATIVO: Clique para travar a escala e evitar alterações acidentais'
+                    : 'Modo Edição TRAVADO: Clique para habilitar alteração de turnos, folgas e horários na grade'
+                }
+              >
+                <Icon name={isEditable ? 'edit' : 'edit_off'} className="text-xs" />
+                <span>{isEditable ? 'Edição Ativa' : 'Editar'}</span>
+                {isEditable && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                )}
+              </button>
+            )}
+
+            {/* Edição Retroativa (dias passados) - visível quando Edição está ativa */}
+            {!isReadOnly && isEditable && onToggleRetroactive && (
+              <button
+                type="button"
+                onClick={onToggleRetroactive}
+                aria-pressed={allowRetroactive}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-95 whitespace-nowrap ${
+                  allowRetroactive
+                    ? 'bg-rose-500 hover:bg-rose-600 border-rose-600 text-white shadow-rose-500/20'
+                    : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                }`}
+                title={
+                  allowRetroactive
+                    ? 'Edição Retroativa ATIVA: Permite alterar dias anteriores a hoje'
+                    : 'Edição Retroativa DESATIVADA: Clique para destravar alteração em dias passados'
+                }
+              >
+                <Icon name={allowRetroactive ? 'history' : 'history_toggle_off'} className="text-xs" />
+                <span>{allowRetroactive ? 'Retroativo' : 'Passado'}</span>
+              </button>
+            )}
 
             {/* Divulgação Operacional / WhatsApp do Dia (Apenas Gestão) */}
             {!isReadOnly && onShareWhatsApp && (

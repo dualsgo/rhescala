@@ -1016,7 +1016,9 @@ const App: React.FC = () => {
                     onSelectedGroupChange={setSelectedGroup}
                     isReadOnly={isReadOnly}
                     isEditable={isEditable}
+                    onToggleEdit={() => setIsEditable(prev => !prev)}
                     allowRetroactive={allowRetroactive}
+                    onToggleRetroactive={() => setAllowRetroactive(prev => !prev)}
                     showNotes={showNotes}
                     onCloseNotes={() => setShowNotes(false)}
                     resolvedPositions={selectedDayResolvedPositions}

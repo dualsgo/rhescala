@@ -725,6 +725,7 @@ export const AppDriveLite: React.FC = () => {
               onSelectedGroupChange={setSelectedGroup}
               isReadOnly={isReadOnly}
               isEditable={isEditable}
+              onToggleEdit={() => setIsEditable((p) => !p)}
               allowRetroactive={true}
               showNotes={showNotes}
               onCloseNotes={() => setShowNotes(false)}
