@@ -43,6 +43,12 @@ interface HeaderProps {
   onOpenProtectedDaysModal?: () => void;
   tacticalDisplayMode?: TacticalDisplayMode;
   onToggleTacticalDisplayMode?: (mode?: TacticalDisplayMode) => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  lastUndoDescription?: string | null;
+  lastRedoDescription?: string | null;
   isSaving?: boolean;
   isJustSaved?: boolean;
   isMobileMenuOpen?: boolean;
@@ -99,6 +105,12 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenProtectedDaysModal,
   tacticalDisplayMode = 'off',
   onToggleTacticalDisplayMode,
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo,
+  lastUndoDescription = null,
+  lastRedoDescription = null,
   onManualSave,
   isSaving = false,
   isJustSaved = false,
@@ -790,6 +802,47 @@ export const Header: React.FC<HeaderProps> = ({
               {renderFilterDropdown(true)}
             </div>
 
+            {/* GRUPO DESFAZER / REFAZER (HISTÓRICO DA ESCALA) */}
+            {!isReadOnly && (onUndo || onRedo) && (
+              <div 
+                className="hidden sm:inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-0.5 shadow-xs shrink-0"
+                role="group"
+                aria-label="Histórico de alterações da escala"
+              >
+                <button
+                  type="button"
+                  onClick={onUndo}
+                  disabled={!canUndo}
+                  aria-label={canUndo ? `Desfazer: ${lastUndoDescription || 'última alteração'} (Ctrl+Z)` : 'Nada para desfazer (Ctrl+Z)'}
+                  title={canUndo ? `Desfazer: ${lastUndoDescription || 'última alteração'} (Atalho: Ctrl+Z)` : 'Nada para desfazer (Atalho: Ctrl+Z)'}
+                  className={`flex items-center gap-1 px-2 min-h-[30px] rounded-md text-xs font-bold transition-all ${
+                    canUndo 
+                      ? 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-amber-600 dark:hover:text-amber-400 active:scale-95' 
+                      : 'text-zinc-300 dark:text-zinc-700 cursor-not-allowed opacity-50'
+                  }`}
+                >
+                  <Icon name="undo" className="text-sm shrink-0" />
+                  <span className="hidden min-[1380px]:inline text-[11px] uppercase tracking-wider">Desfazer</span>
+                </button>
+                <div className="w-[1px] h-4 bg-zinc-200 dark:border-zinc-800 mx-0.5" />
+                <button
+                  type="button"
+                  onClick={onRedo}
+                  disabled={!canRedo}
+                  aria-label={canRedo ? `Refazer: ${lastRedoDescription || 'alteração'} (Ctrl+Y)` : 'Nada para refazer (Ctrl+Y)'}
+                  title={canRedo ? `Refazer: ${lastRedoDescription || 'alteração'} (Atalho: Ctrl+Y)` : 'Nada para refazer (Atalho: Ctrl+Y)'}
+                  className={`flex items-center gap-1 px-2 min-h-[30px] rounded-md text-xs font-bold transition-all ${
+                    canRedo 
+                      ? 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-blue-600 dark:hover:text-blue-400 active:scale-95' 
+                      : 'text-zinc-300 dark:text-zinc-700 cursor-not-allowed opacity-50'
+                  }`}
+                >
+                  <Icon name="redo" className="text-sm shrink-0" />
+                  <span className="hidden min-[1380px]:inline text-[11px] uppercase tracking-wider">Refazer</span>
+                </button>
+              </div>
+            )}
+
             {/* 3. SALVAR MANUAL COM ATALHO CTRL+S */}
             {onManualSave && (
               <button
@@ -1305,6 +1358,46 @@ export const Header: React.FC<HeaderProps> = ({
                       <Icon name={isJustSaved ? 'check_circle' : isSaving ? 'sync' : 'save'} className={`text-base ${isSaving ? 'animate-spin' : ''}`} />
                       <span>{isJustSaved ? 'Escala Salva com Sucesso!' : isSaving ? 'Salvando...' : 'Salvar Escala Agora'}</span>
                     </button>
+                  )}
+
+                  {/* Ações Rápidas: Desfazer e Refazer */}
+                  {(onUndo || onRedo) && (
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onUndo) onUndo();
+                          setShowMobileMenu(false);
+                        }}
+                        disabled={!canUndo}
+                        className={`p-2.5 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold transition-all ${
+                          canUndo
+                            ? 'bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700 active:scale-95 shadow-xs'
+                            : 'opacity-40 cursor-not-allowed border-dashed border-zinc-300 dark:border-zinc-700 text-zinc-400'
+                        }`}
+                        title={canUndo ? `Desfazer: ${lastUndoDescription || 'última alteração'}` : 'Nada para desfazer'}
+                      >
+                        <Icon name="undo" className="text-base text-amber-500" />
+                        <span>Desfazer</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onRedo) onRedo();
+                          setShowMobileMenu(false);
+                        }}
+                        disabled={!canRedo}
+                        className={`p-2.5 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold transition-all ${
+                          canRedo
+                            ? 'bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700 active:scale-95 shadow-xs'
+                            : 'opacity-40 cursor-not-allowed border-dashed border-zinc-300 dark:border-zinc-700 text-zinc-400'
+                        }`}
+                        title={canRedo ? `Refazer: ${lastRedoDescription || 'alteração'}` : 'Nada para refazer'}
+                      >
+                        <Icon name="redo" className="text-base text-blue-500" />
+                        <span>Refazer</span>
+                      </button>
+                    </div>
                   )}
 
                   <div className="flex items-center justify-between pt-1">

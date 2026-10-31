@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
 import { useScheduleFilters } from './hooks/useScheduleFilters';
@@ -52,12 +52,69 @@ import { migrateLegacyEmployeeData } from './src/services/scheduleMigrationServi
 import { useScheduleExport } from './hooks/useScheduleExport';
 import { useHolidayHandlers } from './hooks/useHolidayHandlers';
 import { useScheduleCommands } from './hooks/useScheduleCommands';
+import { useScheduleHistory } from './hooks/useScheduleHistory';
 import { STORAGE_KEYS } from './src/infrastructure/storage/storageKeys';
 import { getAuthSession, setAuthSession, AuthSession } from './src/infrastructure/storage/sessionAuthAdapter';
 import { executeManualSave, determineSaveFeedback } from './src/infrastructure/storage/persistenceCoordinator';
 
 const App: React.FC = () => {
-  const [employees, setEmployees] = useLocalStorage<Employee[]>(STORAGE_KEYS.employees, [PLACEHOLDER_EMPLOYEE]);
+  const [employeesRaw, setEmployeesRaw] = useLocalStorage<Employee[]>(STORAGE_KEYS.employees, [PLACEHOLDER_EMPLOYEE]);
+  const {
+    employees,
+    setEmployees,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    lastUndoDescription,
+    lastRedoDescription,
+  } = useScheduleHistory(employeesRaw, setEmployeesRaw);
+
+  const [historyToast, setHistoryToast] = useState<{
+    message: string;
+    actionLabel?: string;
+    onAction?: () => void;
+    type?: 'info' | 'success' | 'undo';
+  } | null>(null);
+
+  const handleUndoRef = useRef<() => void>(() => {});
+  const handleRedoRef = useRef<() => void>(() => {});
+
+  const handleUndo = useCallback(() => {
+    const undone = undo();
+    if (undone) {
+      setHistoryToast({
+        message: `Desfeito: ${undone.description}`,
+        actionLabel: 'Refazer (Ctrl+Y)',
+        onAction: () => handleRedoRef.current(),
+        type: 'undo',
+      });
+    }
+  }, [undo]);
+
+  const handleRedo = useCallback(() => {
+    const redone = redo();
+    if (redone) {
+      setHistoryToast({
+        message: `Refeito: ${redone.description}`,
+        actionLabel: 'Desfazer (Ctrl+Z)',
+        onAction: () => handleUndoRef.current(),
+        type: 'success',
+      });
+    }
+  }, [redo]);
+
+  handleUndoRef.current = handleUndo;
+  handleRedoRef.current = handleRedo;
+
+  useEffect(() => {
+    if (!historyToast) return;
+    const timer = setTimeout(() => {
+      setHistoryToast(null);
+    }, 7000);
+    return () => clearTimeout(timer);
+  }, [historyToast]);
+
   const [jornadaSettings, setJornadaSettings] = useLocalStorage<JornadaSettings>(STORAGE_KEYS.jornadaSettings, DEFAULT_JORNADA_SETTINGS);
   const [showCreateMonthModal, setShowCreateMonthModal] = useState(false);
   const [createMonthTargetMY, setCreateMonthTargetMY] = useState<MonthYear | null>(null);
@@ -269,19 +326,39 @@ const App: React.FC = () => {
     showDialog
   ]);
 
-  // Atalho de teclado global Ctrl+S / Cmd+S
+  // Atalhos de teclado globais: Ctrl+S (Salvar), Ctrl+Z (Desfazer), Ctrl+Y / Ctrl+Shift+Z (Refazer)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+
+      const modifier = e.ctrlKey || e.metaKey;
+      if (!modifier) return;
+
+      const key = e.key.toLowerCase();
+
+      if (key === 's') {
         e.preventDefault();
         if (auth.role === 'admin') {
           handleManualSave();
+        }
+      } else if (!e.shiftKey && key === 'z') {
+        e.preventDefault();
+        if (auth.role === 'admin' && canUndo) {
+          handleUndo();
+        }
+      } else if (key === 'y' || (e.shiftKey && key === 'z')) {
+        e.preventDefault();
+        if (auth.role === 'admin' && canRedo) {
+          handleRedo();
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleManualSave, auth.role]);
+  }, [handleManualSave, auth.role, canUndo, canRedo, handleUndo, handleRedo]);
 
   // Listeners globais para eventos de conflito e falha persistente de sincronização
   useEffect(() => {
@@ -544,8 +621,17 @@ const App: React.FC = () => {
           return { ...emp, dailyHours: { ...emp.dailyHours, [monthKey]: updatedHours[emp.id] } };
         }
         return emp;
-      }));
-      showDialog({ title: 'Sucesso', message: 'Horários padrão recalculados com sucesso! Todas as folgas e turnos foram preservados.' });
+      }), 'Aplicação de horários padrão');
+      setHistoryToast({
+        message: 'Horários padrão recalculados preservando folgas.',
+        actionLabel: 'Desfazer (Ctrl+Z)',
+        onAction: () => handleUndo(),
+        type: 'info',
+      });
+      showDialog({
+        title: 'Sucesso',
+        message: 'Horários padrão recalculados com sucesso! Todas as folgas e turnos foram preservados.\n\n💡 Dica: Se aplicou por engano, você pode clicar em "Desfazer" na barra superior ou pressionar Ctrl+Z para reverter.'
+      });
     } else if (applyMode === 'folgas_only') {
       const updatedShifts = applyFolgasOnly(employees, currentMY.year, currentMY.month, empId, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap[monthKey]);
       setEmployees(prev => prev.map(emp => {
@@ -553,8 +639,17 @@ const App: React.FC = () => {
           return { ...emp, shifts: { ...emp.shifts, [monthKey]: updatedShifts[emp.id] } };
         }
         return emp;
-      }));
-      showDialog({ title: 'Sucesso', message: 'Folgas e rotação de domingos recalculadas com sucesso respeitando os dias protegidos/sazonais!' });
+      }), 'Aplicação de folgas');
+      setHistoryToast({
+        message: 'Folgas e domingos recalculados.',
+        actionLabel: 'Desfazer (Ctrl+Z)',
+        onAction: () => handleUndo(),
+        type: 'info',
+      });
+      showDialog({
+        title: 'Sucesso',
+        message: 'Folgas e rotação de domingos recalculadas com sucesso respeitando os dias protegidos/sazonais!\n\n💡 Dica: Se aplicou por engano, você pode clicar em "Desfazer" na barra superior ou pressionar Ctrl+Z para reverter.'
+      });
 
     } else if (applyMode === 'full') {
       const updatedData = applyMonthUpdate(employees, currentMY.year, currentMY.month, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap[monthKey], 'suggested_retro', empId);
@@ -576,10 +671,19 @@ const App: React.FC = () => {
           };
         }
         return emp;
-      }));
-      showDialog({ title: 'Sucesso', message: 'Redefinição geral completa aplicada com sucesso respeitando regras sazonais!' });
+      }), 'Redefinição geral completa');
+      setHistoryToast({
+        message: 'Redefinição geral completa aplicada na escala.',
+        actionLabel: 'Desfazer (Ctrl+Z)',
+        onAction: () => handleUndo(),
+        type: 'info',
+      });
+      showDialog({
+        title: 'Sucesso',
+        message: 'Redefinição geral completa aplicada com sucesso respeitando regras sazonais!\n\n💡 Dica: Se aplicou por engano, você pode clicar em "Desfazer" na barra superior ou pressionar Ctrl+Z para reverter.'
+      });
     }
-  }, [employees, currentMY, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap, setEmployees, showDialog]);
+  }, [employees, currentMY, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap, setEmployees, showDialog, handleUndo]);
 
   const handleApplyFolgas = (targetMY = currentMY, targetKey = monthKey) => {
     const updatedData = applyMonthUpdate(employees, targetMY.year, targetMY.month, customHolidays, deletedNationalHolidays, jornadaSettings, protectedDaysMap[monthKey]);
@@ -600,7 +704,13 @@ const App: React.FC = () => {
         };
       }
       return emp;
-    }));
+    }), 'Aplicação de folgas');
+    setHistoryToast({
+      message: 'Folgas do mês aplicadas na escala.',
+      actionLabel: 'Desfazer (Ctrl+Z)',
+      onAction: () => handleUndo(),
+      type: 'info',
+    });
   };
 
   const handleSortearDomingo = (targetMY = currentMY, targetKey = monthKey, skipConfirm = false) => {
@@ -623,7 +733,13 @@ const App: React.FC = () => {
           };
         }
         return emp;
-      }));
+      }), 'Sorteio de domingos');
+      setHistoryToast({
+        message: 'Sorteio de domingos aplicado.',
+        actionLabel: 'Desfazer (Ctrl+Z)',
+        onAction: () => handleUndo(),
+        type: 'info',
+      });
     };
 
     if (skipConfirm) {
@@ -822,6 +938,12 @@ const App: React.FC = () => {
               onOpenProtectedDaysModal={() => setShowProtectedModal(true)}
               tacticalDisplayMode={tacticalDisplayMode}
               onToggleTacticalDisplayMode={(mode) => { if (mode) setTacticalDisplayMode(mode); else setTacticalDisplayMode(prev => prev === "off" ? "positions" : prev === "positions" ? "roles" : "off"); }}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+              lastUndoDescription={lastUndoDescription}
+              lastRedoDescription={lastRedoDescription}
               onManualSave={handleManualSave}
               isSaving={isSaving}
               isJustSaved={isJustSaved}
@@ -1470,6 +1592,44 @@ const App: React.FC = () => {
           viewerModeType={viewerModeType}
           onToggleViewerMode={() => setViewerModeType(prev => prev === 'personal' ? 'grid' : 'personal')}
         />
+
+        {/* Feedback Flutuante de Desfazer / Refazer */}
+        {historyToast && (
+          <aside 
+            role="status"
+            aria-live="polite"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[130] flex items-center gap-3 px-4 py-3 rounded-2xl bg-zinc-900/95 dark:bg-zinc-800/95 text-white shadow-2xl border border-zinc-700/60 backdrop-blur-md animate-in fade-in slide-in-from-bottom-3 duration-200 text-xs sm:text-sm font-medium"
+          >
+            <div className="flex items-center gap-2">
+              <Icon 
+                name={historyToast.type === 'undo' ? 'undo' : historyToast.type === 'success' ? 'check_circle' : 'info'} 
+                className={`text-base ${historyToast.type === 'undo' ? 'text-amber-400' : 'text-emerald-400'}`} 
+              />
+              <span>{historyToast.message}</span>
+            </div>
+
+            {historyToast.actionLabel && historyToast.onAction && (
+              <button
+                type="button"
+                onClick={() => {
+                  historyToast.onAction?.();
+                }}
+                className="ml-1 px-2.5 py-1 rounded-lg bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xs flex items-center gap-1"
+              >
+                <span>{historyToast.actionLabel}</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setHistoryToast(null)}
+              aria-label="Fechar notificação"
+              className="p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+            >
+              <Icon name="close" className="text-sm" />
+            </button>
+          </aside>
+        )}
 
         <SyncBlockingOverlay syncStatus={syncStatus} />
       </>

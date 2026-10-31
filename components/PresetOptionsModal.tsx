@@ -223,6 +223,12 @@ export const PresetOptionsModal: React.FC<PresetOptionsModalProps> = ({
           </div>
         </div>
 
+        {/* Undo Hint */}
+        <div className="px-6 py-2.5 bg-indigo-50/50 dark:bg-indigo-950/20 border-t border-slate-100 dark:border-zinc-800/80 flex items-center gap-2 text-indigo-700 dark:text-indigo-300 text-[11px] font-medium">
+          <Icon name="history" className="text-sm shrink-0" />
+          <span>Qualquer alteração poderá ser revertida a qualquer momento clicando em <strong>Desfazer</strong> ou usando o atalho <kbd className="px-1 py-0.5 rounded bg-white/80 dark:bg-zinc-800 border border-indigo-200 dark:border-indigo-800 text-[10px] font-mono font-bold">Ctrl+Z</kbd>.</span>
+        </div>
+
         {/* Footer */}
         <div className="p-6 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/30 flex items-center gap-3">
           <button

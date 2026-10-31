@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useDialog } from '../../contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from '../../hooks/useLocalStorage';
+import { useScheduleHistory } from '../../hooks/useScheduleHistory';
 import { useScheduleFilters } from '../../hooks/useScheduleFilters';
 import {
   applyMonthUpdate,
@@ -66,7 +67,17 @@ export const AppDriveLite: React.FC = () => {
   const syncStatus = useSyncStatus();
 
   // Estados persistidos no Google Drive
-  const [employees, setEmployees] = useLocalStorage<Employee[]>(STORAGE_KEYS.employees, [PLACEHOLDER_EMPLOYEE]);
+  const [employeesRaw, setEmployeesRaw] = useLocalStorage<Employee[]>(STORAGE_KEYS.employees, [PLACEHOLDER_EMPLOYEE]);
+  const {
+    employees,
+    setEmployees,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    lastUndoDescription,
+    lastRedoDescription,
+  } = useScheduleHistory(employeesRaw, setEmployeesRaw);
   const [jornadaSettings, setJornadaSettings] = useLocalStorage<JornadaSettings>(STORAGE_KEYS.jornadaSettings, DEFAULT_JORNADA_SETTINGS);
   const [customHolidays, setCustomHolidays] = useLocalStorage<Holiday[]>(STORAGE_KEYS.customHolidays, []);
   const [deletedNationalHolidays, setDeletedNationalHolidays] = useLocalStorage<string[]>(STORAGE_KEYS.deletedNationalHolidays, []);
@@ -243,14 +254,32 @@ export const AppDriveLite: React.FC = () => {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      const modifier = e.ctrlKey || e.metaKey;
+      if (!modifier) return;
+      const key = e.key.toLowerCase();
+
+      if (key === 's') {
         e.preventDefault();
         handleManualSave();
+      } else if (!e.shiftKey && key === 'z') {
+        e.preventDefault();
+        if (!isReadOnly && canUndo) {
+          undo();
+        }
+      } else if (key === 'y' || (e.shiftKey && key === 'z')) {
+        e.preventDefault();
+        if (!isReadOnly && canRedo) {
+          redo();
+        }
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handleManualSave]);
+  }, [handleManualSave, isReadOnly, canUndo, canRedo, undo, redo]);
 
   // Operações de Equipe
   const onUpdateEmployee = useCallback((empId: string, data: Partial<Employee>) => {
@@ -340,12 +369,12 @@ export const AppDriveLite: React.FC = () => {
 
     if (options.applyMode === 'hours_only') {
       const updatedHours = applyHoursOnly(employees, currentMY.year, currentMY.month, empId, customHolidays, deletedNationalHolidays, activeJornadaSettings);
-      setEmployees((prev) => prev.map((emp) => (updatedHours[emp.id] ? { ...emp, dailyHours: { ...emp.dailyHours, [monthKey]: updatedHours[emp.id] } } : emp)));
-      showDialog({ title: 'Horários Aplicados', message: 'Horários padrão recalculados preservando folgas.' });
+      setEmployees((prev) => prev.map((emp) => (updatedHours[emp.id] ? { ...emp, dailyHours: { ...emp.dailyHours, [monthKey]: updatedHours[emp.id] } } : emp)), 'Aplicação de horários padrão');
+      showDialog({ title: 'Horários Aplicados', message: 'Horários padrão recalculados preservando folgas.\n\n💡 Dica: Se aplicou por engano, você pode clicar em "Desfazer" ou usar Ctrl+Z para reverter.' });
     } else if (options.applyMode === 'folgas_only') {
       const updatedShifts = applyFolgasOnly(employees, currentMY.year, currentMY.month, empId, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap[monthKey]);
-      setEmployees((prev) => prev.map((emp) => (updatedShifts[emp.id] ? { ...emp, shifts: { ...emp.shifts, [monthKey]: updatedShifts[emp.id] } } : emp)));
-      showDialog({ title: 'Folgas Recalculadas', message: 'Folgas e rotação de domingos recalculadas conforme CLT e dias protegidos.' });
+      setEmployees((prev) => prev.map((emp) => (updatedShifts[emp.id] ? { ...emp, shifts: { ...emp.shifts, [monthKey]: updatedShifts[emp.id] } } : emp)), 'Aplicação de folgas');
+      showDialog({ title: 'Folgas Recalculadas', message: 'Folgas e rotação de domingos recalculadas conforme CLT e dias protegidos.\n\n💡 Dica: Se aplicou por engano, você pode clicar em "Desfazer" ou usar Ctrl+Z para reverter.' });
     } else {
       const updatedData = applyMonthUpdate(employees, currentMY.year, currentMY.month, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap[monthKey], 'suggested_retro', empId);
       setEmployees((prev) => prev.map((emp) => {
@@ -358,8 +387,8 @@ export const AppDriveLite: React.FC = () => {
           decisionReasons: { ...(emp.decisionReasons || {}), [monthKey]: updatedData[emp.id].decisionReasons || {} },
           dailyAssignedRoles: { ...(emp.dailyAssignedRoles || {}), [monthKey]: updatedData[emp.id].dailyAssignedRoles || {} },
         };
-      }));
-      showDialog({ title: 'Escala Recalculada', message: 'Turnos, folgas, horários e funções aplicados com sucesso!' });
+      }), 'Redefinição geral completa');
+      showDialog({ title: 'Escala Recalculada', message: 'Turnos, folgas, horários e funções aplicados com sucesso!\n\n💡 Dica: Se aplicou por engano, você pode clicar em "Desfazer" ou usar Ctrl+Z para reverter.' });
     }
   }, [employees, currentMY, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap, setEmployees, showDialog]);
 
@@ -594,6 +623,38 @@ export const AppDriveLite: React.FC = () => {
                   <span className="hidden md:inline">{isValidated ? 'Oficial' : 'Rascunho'}</span>
                 </button>
               </>
+            )}
+
+            {!isReadOnly && (
+              <div className="flex items-center gap-1 border border-zinc-200 dark:border-zinc-800 rounded-xl p-0.5 bg-zinc-50 dark:bg-zinc-800/50">
+                <button
+                  type="button"
+                  onClick={undo}
+                  disabled={!canUndo}
+                  className={`p-1.5 rounded-lg flex items-center gap-1 text-[11px] font-bold transition-all ${
+                    canUndo
+                      ? 'text-zinc-700 dark:text-zinc-200 hover:bg-white dark:hover:bg-zinc-700 active:scale-95'
+                      : 'text-zinc-300 dark:text-zinc-600 opacity-50 cursor-not-allowed'
+                  }`}
+                  title={canUndo ? `Desfazer: ${lastUndoDescription || 'última alteração'} (Ctrl+Z)` : 'Nada para desfazer (Ctrl+Z)'}
+                >
+                  <Icon name="undo" className="text-sm" />
+                </button>
+                <div className="w-[1px] h-3 bg-zinc-200 dark:bg-zinc-700" />
+                <button
+                  type="button"
+                  onClick={redo}
+                  disabled={!canRedo}
+                  className={`p-1.5 rounded-lg flex items-center gap-1 text-[11px] font-bold transition-all ${
+                    canRedo
+                      ? 'text-zinc-700 dark:text-zinc-200 hover:bg-white dark:hover:bg-zinc-700 active:scale-95'
+                      : 'text-zinc-300 dark:text-zinc-600 opacity-50 cursor-not-allowed'
+                  }`}
+                  title={canRedo ? `Refazer: ${lastRedoDescription || 'alteração'} (Ctrl+Y)` : 'Nada para refazer (Ctrl+Y)'}
+                >
+                  <Icon name="redo" className="text-sm" />
+                </button>
+              </div>
             )}
 
             {!isReadOnly && (

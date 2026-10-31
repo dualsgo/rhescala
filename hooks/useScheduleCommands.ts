@@ -28,7 +28,7 @@ export interface PendingAuditAction {
 
 export interface UseScheduleCommandsParams {
   employees: Employee[];
-  setEmployees: React.Dispatch<React.SetStateAction<Employee[]>>;
+  setEmployees: (action: React.SetStateAction<Employee[]>, description?: string) => void;
   currentMY: MonthYear;
   monthKey: string;
   isReadOnly: boolean;
@@ -143,7 +143,7 @@ export function useScheduleCommands(params: UseScheduleCommandsParams): Schedule
           }
           return emp;
         });
-      });
+      }, 'Alteração de turno');
 
       if (justification) {
         const c = classifyShiftChange(targetEmp.name, dateStr, oldShift, newShift, curHour);
@@ -239,7 +239,7 @@ export function useScheduleCommands(params: UseScheduleCommandsParams): Schedule
           }
           return emp;
         });
-      });
+      }, 'Alteração de múltiplos turnos');
 
       if (justification) {
         const newLogs: AuditLogEntry[] = effectiveUpdates.map(u => {
@@ -315,7 +315,7 @@ export function useScheduleCommands(params: UseScheduleCommandsParams): Schedule
         const hours = [...(emp.dailyHours[monthKey] || [])];
         hours[dayIdx] = newHour;
         return { ...emp, dailyHours: { ...emp.dailyHours, [monthKey]: hours } };
-      }));
+      }), 'Alteração de horário');
 
       if (justification) {
         const c = classifyHourChange(targetEmp.name, dateStr, oldHour, newHour);
@@ -403,7 +403,7 @@ export function useScheduleCommands(params: UseScheduleCommandsParams): Schedule
 
           return emp;
         });
-      });
+      }, 'Alteração de função (correlata)');
 
       if (justification) {
         const c = classifyTacticalChange(targetEmp.name, dateStr, oldPos, newPos);
