@@ -25,6 +25,7 @@ interface TeamViewProps {
   onClose?: () => void;
   initialEditingEmpId?: string | null;
   onClearInitialEditingEmp?: () => void;
+  onOpenPresetForEmployee?: (empId: string) => void;
 }
 
 const CARGO_OPTIONS: EmployeeCargo[] = EMPLOYEE_ROLES;
@@ -494,6 +495,7 @@ interface EditEmployeeModalProps {
   nextEmpId?: string | null;
   currentIndex?: number;
   totalCount?: number;
+  onOpenPresetForEmployee?: (empId: string) => void;
 }
 
 const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
@@ -507,6 +509,7 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   nextEmpId,
   currentIndex,
   totalCount,
+  onOpenPresetForEmployee,
 }) => {
   const { showDialog } = useDialog();
   const [activeSection, setActiveSection] = useState<EditModalSection>('all');
@@ -1010,6 +1013,33 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* Ação Rápida para Atualizar Pré-definições na Escala */}
+              {onOpenPresetForEmployee && !isReadOnly && (
+                <div className="p-3.5 bg-indigo-50/70 dark:bg-indigo-950/30 rounded-2xl border border-indigo-200/80 dark:border-indigo-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-300 flex items-center justify-center shrink-0">
+                      <Icon name="tune" className="text-base" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-black uppercase tracking-wide text-indigo-900 dark:text-indigo-200 block">
+                        Atualizar Pré-definições na Escala
+                      </span>
+                      <p className="text-[11px] text-indigo-700/80 dark:text-indigo-300/80 font-medium">
+                        Aplique o novo horário padrão ou recalcule as folgas deste colaborador mantendo os demais intactos.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onOpenPresetForEmployee(employee.id)}
+                    className="w-full sm:w-auto px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs uppercase shadow-sm transition-all flex items-center justify-center gap-1.5 shrink-0 active:scale-95"
+                  >
+                    <Icon name="auto_awesome" className="text-sm" />
+                    <span>Aplicar na Escala</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -1226,6 +1256,17 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
           )}
 
           <div className="flex items-center gap-2 ml-auto">
+            {onOpenPresetForEmployee && !isReadOnly && (
+              <button
+                type="button"
+                onClick={() => onOpenPresetForEmployee(employee.id)}
+                className="h-11 min-h-[44px] md:h-10 md:min-h-[38px] px-3.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 font-bold text-xs uppercase transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                title="Abrir pré-definições para aplicar novos horários ou folgas na escala deste colaborador"
+              >
+                <Icon name="tune" className="text-base text-indigo-600 dark:text-indigo-400" />
+                <span>Atualizar Pré-definições</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}
@@ -1250,6 +1291,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
   onClose,
   initialEditingEmpId = null,
   onClearInitialEditingEmp,
+  onOpenPresetForEmployee,
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingEmpId, setEditingEmpId] = useState<string | null>(initialEditingEmpId);
@@ -1553,6 +1595,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
           nextEmpId={nextEmpId}
           currentIndex={editingIndex}
           totalCount={filteredEmployees.length}
+          onOpenPresetForEmployee={onOpenPresetForEmployee}
         />
       )}
 
@@ -1707,6 +1750,16 @@ export const TeamView: React.FC<TeamViewProps> = ({
 
                     {!isReadOnly && (
                       <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        {onOpenPresetForEmployee && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenPresetForEmployee(emp.id)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-all"
+                            title={`Atualizar pré-definições de ${emp.name} na escala (horários, folgas ou completo)`}
+                          >
+                            <Icon name="tune" className="text-sm" />
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => onUpdateEmployee(emp.id, { isHidden: !emp.isHidden })}

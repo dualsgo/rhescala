@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Employee, MonthYear, Holiday, JornadaSettings } from '../types';
 import { Icon } from './Icon';
 import { isEmployeeHiddenInMonth } from '../constants';
@@ -27,6 +27,20 @@ export const PresetOptionsModal: React.FC<PresetOptionsModalProps> = ({
   const [scope, setScope] = useState<'all' | 'single'>(initialEmployeeId ? 'single' : 'all');
   const [selectedEmpId, setSelectedEmpId] = useState<string>(initialEmployeeId || (employees[0]?.id || ''));
   const [applyMode, setApplyMode] = useState<'hours_only' | 'folgas_only' | 'full'>('hours_only');
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialEmployeeId) {
+        setScope('single');
+        setSelectedEmpId(initialEmployeeId);
+      } else {
+        setScope('all');
+        if (employees.length > 0 && !selectedEmpId) {
+          setSelectedEmpId(employees[0].id);
+        }
+      }
+    }
+  }, [isOpen, initialEmployeeId, employees]);
 
   if (!isOpen) return null;
 

@@ -1081,6 +1081,10 @@ const App: React.FC = () => {
                    onClose={() => setCurrentView('grid')}
                    initialEditingEmpId={editingTeamEmpId}
                    onClearInitialEditingEmp={() => setEditingTeamEmpId(null)}
+                   onOpenPresetForEmployee={(empId) => {
+                     setPresetInitialEmpId(empId);
+                     setShowPresetModal(true);
+                   }}
                  />
                );
              case 'data':
@@ -1267,6 +1271,10 @@ const App: React.FC = () => {
              setSelectedEmployeeForCard(null);
              setEditingTeamEmpId(empId);
              setCurrentView('team');
+           }}
+           onOpenPresetForEmployee={(empId) => {
+             setPresetInitialEmpId(empId);
+             setShowPresetModal(true);
            }}
            onClose={() => setSelectedEmployeeForCard(null)}
          />

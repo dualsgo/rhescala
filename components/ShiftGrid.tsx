@@ -1122,6 +1122,27 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                          <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md border shrink-0 ${meta.badgeClass}`} title={meta.label}>
                                            {meta.code}
                                          </span>
+                                          {!isReadOnly && onOpenPresetForEmployee && (
+                                            <span
+                                              role="button"
+                                              tabIndex={0}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                onOpenPresetForEmployee(emp.id);
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                  e.stopPropagation();
+                                                  onOpenPresetForEmployee(emp.id);
+                                                }
+                                              }}
+                                              title={`Atualizar pré-definições de ${emp.name} (horários, folgas ou completo)`}
+                                              aria-label={`Atualizar pré-definições de ${emp.name}`}
+                                              className="w-5 h-5 rounded-md flex items-center justify-center text-zinc-400 opacity-0 group-hover/row:opacity-100 focus:opacity-100 hover:text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 transition-all cursor-pointer"
+                                            >
+                                              <Icon name="tune" className="text-xs" />
+                                            </span>
+                                          )}
                                           {!isReadOnly && onToggleHideEmployee && (
                                             <span
                                               role="button"

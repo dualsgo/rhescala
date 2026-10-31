@@ -729,6 +729,10 @@ export const AppDriveLite: React.FC = () => {
             onClose={() => setCurrentView('grid')}
             initialEditingEmpId={editingTeamEmpId}
             onClearInitialEditingEmp={() => setEditingTeamEmpId(null)}
+            onOpenPresetForEmployee={(empId) => {
+              setPresetInitialEmpId(empId);
+              setShowPresetModal(true);
+            }}
           />
         )}
 

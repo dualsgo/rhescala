@@ -23,6 +23,7 @@ interface EmployeeScheduleCardProps {
   initialDate?: string;
   auditLogs?: AuditLogEntry[];
   onEditEmployeeData?: (empId: string) => void;
+  onOpenPresetForEmployee?: (empId: string) => void;
 }
 
 export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
@@ -40,6 +41,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   initialDate,
   auditLogs = [],
   onEditEmployeeData,
+  onOpenPresetForEmployee,
 }) => {
   const { showDialog } = useDialog();
   const [newRequest, setNewRequest] = React.useState('');
@@ -177,6 +179,17 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {isAdmin && onOpenPresetForEmployee && (
+              <button
+                type="button"
+                onClick={() => onOpenPresetForEmployee(employee.id)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-sm active:scale-95"
+                title="Aplicar pré-definições na escala (apenas horários, folgas ou completo)"
+              >
+                <Icon name="tune" className="text-sm" />
+                <span className="hidden sm:inline">Pré-definições</span>
+              </button>
+            )}
             {isAdmin && onEditEmployeeData && (
               <button
                 type="button"
@@ -419,6 +432,16 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                     <p className="text-sm font-black uppercase text-orange-400">{employee.preferredDayOff || 'Variável'}</p>
                   </div>
                 </div>
+                {isAdmin && onOpenPresetForEmployee && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenPresetForEmployee(employee.id)}
+                    className="w-full py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm"
+                  >
+                    <Icon name="tune" className="text-base" />
+                    <span>Atualizar Pré-definições</span>
+                  </button>
+                )}
                 {isAdmin && onEditEmployeeData && (
                   <>
                     <div className="h-px bg-white/10" />
