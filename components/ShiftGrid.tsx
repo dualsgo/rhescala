@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings, ScheduleDiffItem, TacticalDisplayMode, ProtectedDaysConfig, DECISION_REASON_LABELS, EmployeeRole, EMPLOYEE_ROLES, ROLE_METADATA_MAP, normalizeEmployeeRole } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, isEmployeeActiveInMonth, isEmployeeHiddenInMonth, isEmployeeEligibleForMonth, PLACEHOLDER_EMPLOYEE_ID, normalizeProtectedDaysConfig, getTacticalLabel, getTacticalCellCode, getTacticalEmoji } from '../constants';
@@ -166,6 +166,34 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   const [isCompactMode, setIsCompactMode] = useState(false);
   const [focusSelectedDay, setFocusSelectedDay] = useState(false);
   const [groupBy, setGroupBy] = useState<'role' | 'shift'>('role');
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+
+  const toggleGroupCollapse = useCallback((groupName: string) => {
+    setCollapsedGroups(prev => ({
+      ...prev,
+      [groupName]: !prev[groupName]
+    }));
+  }, []);
+
+  const currentGroupOrder = useMemo(() => {
+    return groupBy === 'role'
+      ? ['Caixa', 'Pacote', 'Vendas', 'Apoio', 'Fiscal', 'Estoque']
+      : ['Abertura', 'Intermediário', 'Fechamento', 'Folgas/Outros'];
+  }, [groupBy]);
+
+  const areAllGroupsCollapsed = useMemo(() => {
+    return currentGroupOrder.length > 0 && currentGroupOrder.every(g => Boolean(collapsedGroups[g]));
+  }, [currentGroupOrder, collapsedGroups]);
+
+  const toggleCollapseAllGroups = useCallback(() => {
+    if (areAllGroupsCollapsed) {
+      setCollapsedGroups({});
+    } else {
+      const next: Record<string, boolean> = {};
+      currentGroupOrder.forEach(g => { next[g] = true; });
+      setCollapsedGroups(next);
+    }
+  }, [areAllGroupsCollapsed, currentGroupOrder]);
 
   // Modo de Densidade Visual (clean = Visão Limpa [Padrão], audit = Visão de Auditoria Completa)
   const [internalDensityMode, setInternalDensityMode] = useState<'clean' | 'audit'>(() => {
@@ -888,9 +916,9 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           }}
         >
           <table className="w-full border-separate border-spacing-0">
-            <thead className="sticky top-0 z-40 bg-zinc-50 dark:bg-zinc-900">
+            <thead className="sticky top-0 z-40 bg-zinc-50 dark:bg-zinc-900 shadow-xs">
               <tr className="bg-zinc-50 dark:bg-zinc-900/50">
-                <th className="sticky left-0 z-[50] bg-zinc-50 dark:bg-zinc-900 border-b border-r border-zinc-200 dark:border-zinc-800 py-2.5 px-3 text-left w-[240px] min-w-[240px] max-w-[240px] shadow-[4px_0_12px_-2px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_12px_-2px_rgba(0,0,0,0.4)]">
+                <th className="sticky top-0 left-0 z-[60] bg-zinc-50 dark:bg-zinc-900 border-b border-r border-zinc-200 dark:border-zinc-800 py-2.5 px-3 text-left w-[240px] min-w-[240px] max-w-[240px] shadow-[4px_0_12px_-2px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_12px_-2px_rgba(0,0,0,0.4)]">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <span className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Colaborador</span>
@@ -919,14 +947,26 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                         </button>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setGroupBy(prev => prev === 'role' ? 'shift' : 'role')}
-                      className="text-[11px] font-bold text-orange-600 dark:text-orange-400 hover:underline cursor-pointer"
-                      title="Alternar agrupamento entre Função e Turno"
-                    >
-                      {groupBy === 'role' ? 'Por Função' : 'Por Turno'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={toggleCollapseAllGroups}
+                        className="text-[10px] font-bold text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 flex items-center gap-0.5 cursor-pointer transition-colors"
+                        title={areAllGroupsCollapsed ? "Expandir todos os grupos" : "Recolher todos os grupos"}
+                        aria-label={areAllGroupsCollapsed ? "Expandir todos os grupos" : "Recolher todos os grupos"}
+                      >
+                        <Icon name={areAllGroupsCollapsed ? "unfold_more" : "unfold_less"} className="text-xs" />
+                        <span className="hidden sm:inline">{areAllGroupsCollapsed ? "Expandir" : "Recolher"}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setGroupBy(prev => prev === 'role' ? 'shift' : 'role')}
+                        className="text-[11px] font-bold text-orange-600 dark:text-orange-400 hover:underline cursor-pointer"
+                        title="Alternar agrupamento entre Função e Turno"
+                      >
+                        {groupBy === 'role' ? 'Por Função' : 'Por Turno'}
+                      </button>
+                    </div>
                   </div>
                 </th>
                 {filteredDays.map(d => {
@@ -954,10 +994,16 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     <th 
                       key={d.num} 
                       onClick={() => isSelected && !isReadOnly ? onOpenDayDetail(dayIdx) : onSelectDay(dayIdx)}
-                      className={`p-2 border-b border-zinc-200 dark:border-zinc-800 min-w-[46px] w-[48px] cursor-pointer transition-all ${
+                      className={`sticky top-0 z-30 p-2 border-b border-zinc-200 dark:border-zinc-800 min-w-[46px] w-[48px] cursor-pointer transition-all ${
                         isToday ? 'border-t-4 border-t-orange-500 bg-orange-500/10 dark:bg-orange-950/20' : ''
                       } ${pastDimClass} ${focusDimClass} ${
-                        focusHighlight ? focusHighlight : isWeekend ? 'bg-zinc-100/70 dark:bg-zinc-900/70' : d.isHoliday ? 'bg-amber-50 dark:bg-amber-950/40' : ''
+                        focusHighlight 
+                          ? focusHighlight 
+                          : isWeekend 
+                          ? 'bg-zinc-100 dark:bg-zinc-900' 
+                          : d.isHoliday 
+                          ? 'bg-amber-50 dark:bg-amber-950/60' 
+                          : 'bg-zinc-50 dark:bg-zinc-900'
                       }`}
                     >
                       <div className="flex flex-col items-center gap-0.5 relative">
@@ -1058,41 +1104,78 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   }
                 });
 
-                const groupOrder = groupBy === 'role'
-                  ? ['Caixa', 'Pacote', 'Vendas', 'Apoio', 'Fiscal', 'Estoque']
-                  : ['Abertura', 'Intermediário', 'Fechamento', 'Folgas/Outros'];
-
-                return groupOrder.map(groupName => {
+                return currentGroupOrder.map(groupName => {
                   const emps = groups[groupName] || [];
                   if (emps.length === 0) return null;
+                  const isCollapsed = Boolean(collapsedGroups[groupName]);
 
                   return (
                     <React.Fragment key={groupName}>
                       {/* Group Header Row */}
-                      <tr className="bg-zinc-100 dark:bg-zinc-900 border-y border-zinc-200 dark:border-zinc-800">
+                      <tr 
+                        onClick={() => toggleGroupCollapse(groupName)}
+                        tabIndex={0}
+                        role="button"
+                        aria-expanded={!isCollapsed}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            toggleGroupCollapse(groupName);
+                          }
+                        }}
+                        className="bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-850 border-y border-zinc-200 dark:border-zinc-800 cursor-pointer select-none transition-colors group/groupheader"
+                        title={isCollapsed ? `Clique para expandir ${groupName}` : `Clique para minimizar ${groupName}`}
+                      >
                         <td className="sticky left-0 z-20 py-1.5 px-3 font-bold text-[11px] uppercase text-zinc-700 dark:text-zinc-200 border-r border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 shadow-[4px_0_12px_-2px_rgba(0,0,0,0.08)] w-[240px] min-w-[240px] max-w-[240px]">
                           <div className="flex items-center justify-between">
-                            <span>{groupName}</span>
-                            <span className="text-[11px] font-black px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
-                              {emps.length}
-                            </span>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <Icon 
+                                name={isCollapsed ? "chevron_right" : "expand_more"} 
+                                className="text-sm text-zinc-400 group-hover/groupheader:text-zinc-700 dark:group-hover/groupheader:text-zinc-200 shrink-0 transition-transform" 
+                              />
+                              <span className="truncate">{groupName}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {isCollapsed && (
+                                <span className="text-[10px] text-zinc-400 font-normal lowercase">recolhido</span>
+                              )}
+                              <span className="text-[11px] font-black px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                                {emps.length}
+                              </span>
+                            </div>
                           </div>
                         </td>
                         {filteredDays.map(d => {
+                          const dayIdx = d.num - 1;
+                          const countWorking = emps.filter(emp => {
+                            const s = resolveEffectiveShift(emp, d.dateStr, monthKey, dayIdx);
+                            return isWorkingShift(s);
+                          }).length;
                           const isWeekend = d.isSunday || d.weekday === 'SÁB' || d.weekday === 'DOM';
+                          const isSelected = safeSelectedDayIdx === dayIdx;
                           return (
                             <td 
                               key={d.num} 
-                              className={`h-7 border-b border-zinc-200/80 dark:border-zinc-800 min-w-[46px] w-[48px] ${
-                                isWeekend ? 'bg-zinc-200/50 dark:bg-zinc-850' : 'bg-zinc-100/50 dark:bg-zinc-900'
+                              className={`h-7 border-b border-zinc-200/80 dark:border-zinc-800 min-w-[46px] w-[48px] text-center font-bold text-[11px] tabular-nums transition-colors ${
+                                isSelected 
+                                  ? 'bg-orange-500/10 dark:bg-orange-950/20' 
+                                  : isWeekend 
+                                  ? 'bg-zinc-200/50 dark:bg-zinc-850' 
+                                  : 'bg-zinc-100/50 dark:bg-zinc-900'
                               }`} 
-                            />
+                            >
+                              {countWorking > 0 ? (
+                                <span className="font-black text-zinc-800 dark:text-zinc-200">{countWorking}</span>
+                              ) : (
+                                <span className="text-zinc-300 dark:text-zinc-600 font-normal">-</span>
+                              )}
+                            </td>
                           );
                         })}
                       </tr>
 
                       {/* Employee Rows */}
-                      {emps.map(emp => {
+                      {!isCollapsed && emps.map(emp => {
                         return (
                           <tr 
                             key={emp.id} 
@@ -1748,7 +1831,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             <tfoot className="sticky bottom-0 z-20 bg-white dark:bg-zinc-900 border-t-2 border-zinc-200 dark:border-zinc-800 shadow-xl">
               {/* Linha Principal: Total em Turno (T) */}
               <tr className="bg-zinc-50 dark:bg-zinc-900 font-bold border-b border-zinc-200 dark:border-zinc-800">
-                <td className="sticky left-0 z-30 bg-zinc-50 dark:bg-zinc-900 py-2 px-3 text-xs font-black uppercase text-zinc-700 dark:text-zinc-200 border-r border-zinc-200 dark:border-zinc-800 w-[240px] min-w-[240px] max-w-[240px] shadow-[4px_0_12px_-2px_rgba(0,0,0,0.08)]">
+                <td className="sticky bottom-0 left-0 z-30 bg-zinc-50 dark:bg-zinc-900 py-2 px-3 text-xs font-black uppercase text-zinc-700 dark:text-zinc-200 border-r border-zinc-200 dark:border-zinc-800 w-[240px] min-w-[240px] max-w-[240px] shadow-[4px_0_12px_-2px_rgba(0,0,0,0.08)]">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <Icon name="groups" className="text-orange-500 text-sm" />
@@ -1774,8 +1857,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   }).length;
                   const isWeekend = d.isSunday || d.weekday === 'SÁB' || d.weekday === 'DOM';
                   return (
-                    <td key={d.num} className={`py-1.5 px-1 text-center font-bold text-xs tabular-nums border-b border-zinc-200 dark:border-zinc-800 ${
-                      isWeekend ? 'bg-zinc-100/70 dark:bg-zinc-900/70' : ''
+                    <td key={d.num} className={`sticky bottom-0 z-20 py-1.5 px-1 text-center font-bold text-xs tabular-nums border-b border-zinc-200 dark:border-zinc-800 ${
+                      isWeekend ? 'bg-zinc-100 dark:bg-zinc-900' : 'bg-zinc-50 dark:bg-zinc-900'
                     }`}>
                       <span className="text-zinc-900 dark:text-zinc-100 font-extrabold">{count}</span>
                     </td>

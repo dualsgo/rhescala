@@ -1479,37 +1479,6 @@ const App: React.FC = () => {
            onSaveDayPositions={handleSaveDayPositions}
          />
        )}
-
-       {/* Floating Manager Toolbar for Mobile */}
-       {!isReadOnly && currentView === 'grid' && (
-         <div className="hidden lg:flex fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] items-center gap-2 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-full p-2 shadow-2xl shadow-black/20">
-            <button 
-             onClick={() => setIsEditable(!isEditable)}
-             className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-[11px] font-black uppercase transition-all ${isEditable ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'}`}
-            >
-              <Icon name={isEditable ? 'save' : 'edit'} className="text-base" />
-              {isEditable ? 'Salvar' : 'Editar'}
-            </button>
-            
-            <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-800 mx-1" />
-            
-            <button 
-             onClick={() => handleShareWhatsApp(selectedDayIdx)}
-             className="flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 active:scale-90 transition-all"
-             title="Copiar WhatsApp"
-            >
-              <Icon name="content_copy" className="text-xl" />
-            </button>
-            
-            <button 
-             onClick={() => window.print()}
-             className="flex items-center justify-center w-12 h-12 rounded-2xl bg-zinc-900 dark:bg-zinc-700 text-white shadow-lg shadow-zinc-900/20 active:scale-90 transition-all"
-             title="Imprimir"
-            >
-              <Icon name="print" className="text-xl" />
-            </button>
-         </div>
-       )}
        </div>
 
         {showInconsistencyModal && (
