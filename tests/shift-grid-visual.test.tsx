@@ -219,4 +219,59 @@ describe('ShiftGrid Visual & Accessibility — Fase 7.6', () => {
     const dimmedCells = container.querySelectorAll('.opacity-40');
     expect(dimmedCells.length).toBeGreaterThan(0);
   });
+
+  it('exibe de 7 em 7 dias no modo Cubos (estilo Tabela Periódica) e permite alternar para a Visão Tradicional', async () => {
+    window.localStorage.removeItem('rhescala_grid_layout_mode');
+    const emp = createTestEmployee({
+      id: 'emp-cube',
+      name: 'Carlos Oliveira',
+      cargo: 'Caixa',
+      shifts: { [monthKey]: Array(30).fill('T') },
+      dailyHours: { [monthKey]: Array(30).fill('10h às 18h20') },
+    });
+
+    await act(async () => {
+      root.render(
+        <ShiftGrid
+          employees={[emp]}
+          currentMY={currentMY}
+          selectedDayIdx={0}
+          customHolidays={[]}
+          filter="all"
+          isEditable={true}
+          isReadOnly={false}
+          diffs={[]}
+          resolvedPositions={{}}
+          onUpdateEmployeeDailyHour={vi.fn()}
+          onUpdateTacticalPosition={vi.fn()}
+          onFilterChange={vi.fn()}
+          onOpenEmployeeCard={vi.fn()}
+          jornadaSettings={DEFAULT_JORNADA_SETTINGS}
+        />
+      );
+    });
+
+    // 1 coluna de Colaborador + 7 colunas para os próximos 7 dias = 8 cabeçalhos
+    const initialHeaders = container.querySelectorAll('thead th');
+    expect(initialHeaders.length).toBe(8);
+    expect(container.textContent).toContain('Dia 01 a Dia 07');
+
+    // Avançar 7 dias
+    const next7Btn = Array.from(container.querySelectorAll('button')).find(b => b.textContent?.includes('Próximos 7 Dias'));
+    expect(next7Btn).toBeDefined();
+    await act(async () => {
+      next7Btn?.click();
+    });
+    expect(container.textContent).toContain('Dia 08 a Dia 14');
+
+    // Alternar para a Visão Tradicional (mês completo: 1 coluna Colaborador + 30 dias = 31 cabeçalhos)
+    const traditionalBtn = Array.from(container.querySelectorAll('button')).find(b => b.textContent?.includes('Tradicional'));
+    expect(traditionalBtn).toBeDefined();
+    await act(async () => {
+      traditionalBtn?.click();
+    });
+
+    const fullMonthHeaders = container.querySelectorAll('thead th');
+    expect(fullMonthHeaders.length).toBe(31);
+  });
 });

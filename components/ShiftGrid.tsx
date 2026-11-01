@@ -168,6 +168,21 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   };
 
   const [isCompactMode, setIsCompactMode] = useState(false);
+  const [gridLayoutMode, setGridLayoutMode] = useState<'cubes' | 'traditional'>(() => {
+    try {
+      const saved = localStorage.getItem('rhescala_grid_layout_mode');
+      if (saved === 'traditional' || saved === 'cubes') return saved;
+    } catch {}
+    return 'cubes';
+  });
+
+  const handleSetGridLayoutMode = useCallback((mode: 'cubes' | 'traditional') => {
+    setGridLayoutMode(mode);
+    try {
+      localStorage.setItem('rhescala_grid_layout_mode', mode);
+    } catch {}
+  }, []);
+
   const [focusSelectedDay, setFocusSelectedDay] = useState(false);
   const [groupBy, setGroupBy] = useState<'role' | 'shift'>('role');
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
@@ -316,7 +331,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
   const daysInMonth = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
   const safeSelectedDayIdx = Math.min(Math.max(0, selectedDayIdx), Math.max(0, daysInMonth - 1));
-  const holidaySet = buildHolidaySet(currentMY.year, customHolidays);
+  const holidaySet = useMemo(() => buildHolidaySet(currentMY.year, customHolidays), [currentMY.year, customHolidays]);
 
   const days = useMemo(() => {
     return Array.from({ length: daysInMonth }, (_, i) => {
@@ -327,7 +342,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       const holidayObj = allHolidays.find(h => h.date === dateStr);
       return { num: i + 1, weekday: ['DOM','SEG','TER','QUA','QUI','SEX','SAB'][dow], isSunday: dow === 0, isHoliday, holidayName: holidayObj?.name, dateStr };
     });
-  }, [currentMY, daysInMonth, holidaySet]);
+  }, [currentMY.year, currentMY.month, daysInMonth, holidaySet, allHolidays]);
 
   const protectedConfig = useMemo(() => normalizeProtectedDaysConfig(protectedDaysConfig), [protectedDaysConfig]);
 
@@ -374,6 +389,82 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     }
     return result;
   }, [days, filter, hidePastDays, isCurrentMonth, todayDayNum]);
+
+  const [cubeStartIdx, setCubeStartIdx] = useState<number>(() => {
+    return Math.max(0, safeSelectedDayIdx);
+  });
+
+  const maxCubeStart = Math.max(0, filteredDays.length - 7);
+  const safeCubeStartIdx = Math.min(Math.max(0, cubeStartIdx), maxCubeStart);
+
+  const prevSelectedDayRef = useRef<{ dayIdx: number; month: number; year: number }>({
+    dayIdx: safeSelectedDayIdx,
+    month: currentMY.month,
+    year: currentMY.year,
+  });
+
+  useEffect(() => {
+    const prev = prevSelectedDayRef.current;
+    if (
+      prev.dayIdx === safeSelectedDayIdx &&
+      prev.month === currentMY.month &&
+      prev.year === currentMY.year
+    ) {
+      return;
+    }
+    prevSelectedDayRef.current = {
+      dayIdx: safeSelectedDayIdx,
+      month: currentMY.month,
+      year: currentMY.year,
+    };
+
+    const selectedNum = safeSelectedDayIdx + 1;
+    const idxInFiltered = filteredDays.findIndex(d => d.num === selectedNum);
+    if (idxInFiltered !== -1) {
+      setCubeStartIdx(prevIdx => {
+        const clampedPrev = Math.min(Math.max(0, prevIdx), Math.max(0, filteredDays.length - 7));
+        if (idxInFiltered < clampedPrev) {
+          return idxInFiltered;
+        }
+        if (idxInFiltered >= clampedPrev + 7) {
+          return Math.min(idxInFiltered, Math.max(0, filteredDays.length - 7));
+        }
+        return clampedPrev;
+      });
+    }
+  }, [safeSelectedDayIdx, currentMY.month, currentMY.year, filteredDays]);
+
+  const visibleDays = useMemo(() => {
+    if (gridLayoutMode === 'cubes') {
+      return filteredDays.slice(safeCubeStartIdx, safeCubeStartIdx + 7);
+    }
+    return filteredDays;
+  }, [gridLayoutMode, filteredDays, safeCubeStartIdx]);
+
+  const handleStepCubeDays = useCallback((delta: number) => {
+    setCubeStartIdx(prev => {
+      const base = Math.min(Math.max(0, prev), maxCubeStart);
+      return Math.min(maxCubeStart, Math.max(0, base + delta));
+    });
+  }, [maxCubeStart]);
+
+  const weekBlocks = useMemo(() => {
+    const blocks: { label: string; startIdx: number; endNum: number; startNum: number }[] = [];
+    for (let i = 0; i < filteredDays.length; i += 7) {
+      const slice = filteredDays.slice(i, i + 7);
+      if (slice.length > 0) {
+        const startNum = slice[0].num;
+        const endNum = slice[slice.length - 1].num;
+        blocks.push({
+          label: `${String(startNum).padStart(2, '0')}–${String(endNum).padStart(2, '0')}`,
+          startIdx: Math.min(i, maxCubeStart),
+          startNum,
+          endNum,
+        });
+      }
+    }
+    return blocks;
+  }, [filteredDays, maxCubeStart]);
 
   const selectedDayDateStr = days[safeSelectedDayIdx]?.dateStr
     || `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(safeSelectedDayIdx + 1).padStart(2, '0')}`;
@@ -538,52 +629,162 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
       {/* Top Controls: Barra Contextual do Dia Selecionado (Desktop >= lg) */}
       {isReadOnly ? (
-        <div className="hidden lg:flex items-center justify-between gap-2 bg-white dark:bg-zinc-900 p-2 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm w-full">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/80 text-xs font-black uppercase tracking-wider text-zinc-700 dark:text-zinc-200">
-              <span className={`w-2 h-2 rounded-full ${isCurrentMonth && (safeSelectedDayIdx + 1) === todayDayNum ? 'bg-amber-500 animate-pulse' : 'bg-zinc-400'}`} />
-              <span>
-                {isCurrentMonth && (safeSelectedDayIdx + 1) === todayDayNum ? 'Hoje' : 'Dia'}: {String(safeSelectedDayIdx + 1).padStart(2, '0')}/{String(currentMY.month + 1).padStart(2, '0')} {days[safeSelectedDayIdx]?.weekday ? `(${days[safeSelectedDayIdx].weekday})` : ''}
-              </span>
+        <div className="hidden lg:flex flex-col gap-2 w-full">
+          <div className="flex items-center justify-between gap-2 bg-white dark:bg-zinc-900 p-2 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm w-full">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/80 text-xs font-black uppercase tracking-wider text-zinc-700 dark:text-zinc-200">
+                <span className={`w-2 h-2 rounded-full ${isCurrentMonth && (safeSelectedDayIdx + 1) === todayDayNum ? 'bg-amber-500 animate-pulse' : 'bg-zinc-400'}`} />
+                <span>
+                  {isCurrentMonth && (safeSelectedDayIdx + 1) === todayDayNum ? 'Hoje' : 'Dia'}: {String(safeSelectedDayIdx + 1).padStart(2, '0')}/{String(currentMY.month + 1).padStart(2, '0')} {days[safeSelectedDayIdx]?.weekday ? `(${days[safeSelectedDayIdx].weekday})` : ''}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setFocusSelectedDay(!focusSelectedDay)}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
+                  focusSelectedDay
+                    ? 'bg-amber-500 border-amber-500 text-white shadow-amber-500/20'
+                    : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                }`}
+                title={focusSelectedDay ? 'Desativar modo foco' : 'Destacar coluna do dia selecionado e suavizar as demais'}
+              >
+                <Icon name={focusSelectedDay ? 'filter_center_focus' : 'center_focus_weak'} className="text-xs" />
+                <span>{focusSelectedDay ? `Dia ${safeSelectedDayIdx + 1}` : 'Foco'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setOnlyWorkingToday(!onlyWorkingToday)}
+                aria-pressed={onlyWorkingToday}
+                aria-label="Filtrar somente quem está trabalhando no dia selecionado"
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
+                  onlyWorkingToday
+                    ? 'bg-emerald-600 border-emerald-600 text-white shadow-emerald-500/20'
+                    : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                }`}
+                title={
+                  onlyWorkingToday
+                    ? `Exibindo somente quem trabalha no dia ${String(safeSelectedDayIdx + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}. Clique para mostrar toda a equipe.`
+                    : `Ocultar quem está de folga ou ausente no dia ${String(safeSelectedDayIdx + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}`
+                }
+              >
+                <Icon name={onlyWorkingToday ? 'check_circle' : 'group'} className="text-xs" />
+                <span>{onlyWorkingToday ? `Trabalhando (${displayedEmployees.length})` : 'Ocultar Folgas'}</span>
+              </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setFocusSelectedDay(!focusSelectedDay)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
-                focusSelectedDay
-                  ? 'bg-amber-500 border-amber-500 text-white shadow-amber-500/20'
-                  : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
-              }`}
-              title={focusSelectedDay ? 'Desativar modo foco' : 'Destacar coluna do dia selecionado e suavizar as demais'}
-            >
-              <Icon name={focusSelectedDay ? 'filter_center_focus' : 'center_focus_weak'} className="text-xs" />
-              <span>{focusSelectedDay ? `Dia ${safeSelectedDayIdx + 1}` : 'Foco'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setOnlyWorkingToday(!onlyWorkingToday)}
-              aria-pressed={onlyWorkingToday}
-              aria-label="Filtrar somente quem está trabalhando no dia selecionado"
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
-                onlyWorkingToday
-                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-emerald-500/20'
-                  : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
-              }`}
-              title={
-                onlyWorkingToday
-                  ? `Exibindo somente quem trabalha no dia ${String(safeSelectedDayIdx + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}. Clique para mostrar toda a equipe.`
-                  : `Ocultar quem está de folga ou ausente no dia ${String(safeSelectedDayIdx + 1).padStart(2, '0')}/${String(currentMY.month + 1).padStart(2, '0')}`
-              }
-            >
-              <Icon name={onlyWorkingToday ? 'check_circle' : 'group'} className="text-xs" />
-              <span>{onlyWorkingToday ? `Trabalhando (${displayedEmployees.length})` : 'Ocultar Folgas'}</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Alternador Cubos (7 Dias) vs Tradicional */}
+              <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                <button
+                  type="button"
+                  onClick={() => handleSetGridLayoutMode('cubes')}
+                  aria-pressed={gridLayoutMode === 'cubes'}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                    gridLayoutMode === 'cubes'
+                      ? 'bg-orange-500 text-white shadow-sm'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                  }`}
+                  title="Visão em Cubos (7 em 7 dias) estilo Tabela Periódica com todas as informações internas"
+                >
+                  <Icon name="view_module" className="text-xs" />
+                  <span>Cubos (7d)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetGridLayoutMode('traditional')}
+                  aria-pressed={gridLayoutMode === 'traditional'}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                    gridLayoutMode === 'traditional'
+                      ? 'bg-orange-500 text-white shadow-sm'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                  }`}
+                  title="Visão Tradicional com todos os dias do mês lado a lado"
+                >
+                  <Icon name="grid_on" className="text-xs" />
+                  <span>Tradicional</span>
+                </button>
+              </div>
+            </div>
           </div>
-          <span className="text-[11px] font-medium text-zinc-400 dark:text-zinc-500 pr-1">
-            Clique no número do dia na tabela para filtrar quem trabalha
-          </span>
+
+          {gridLayoutMode === 'cubes' && (
+            <div className="flex flex-wrap items-center justify-between gap-2 bg-white dark:bg-zinc-900 px-3 py-1.5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs w-full">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400 flex items-center gap-1">
+                  <Icon name="date_range" className="text-sm" />
+                  <span>Janela de 7 Dias:</span>
+                </span>
+                <span className="text-xs font-black text-zinc-800 dark:text-zinc-100 tabular-nums px-2 py-0.5 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                  Dia {String(visibleDays[0]?.num || 1).padStart(2, '0')} a Dia {String(visibleDays[visibleDays.length - 1]?.num || 7).padStart(2, '0')}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => handleStepCubeDays(-7)}
+                  disabled={safeCubeStartIdx === 0}
+                  className="px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-[11px] font-black text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center gap-0.5"
+                  title="Voltar 7 dias"
+                >
+                  <Icon name="keyboard_double_arrow_left" className="text-xs" />
+                  <span>-7d</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStepCubeDays(-1)}
+                  disabled={safeCubeStartIdx === 0}
+                  className="px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-[11px] font-black text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center"
+                  title="Voltar 1 dia"
+                >
+                  <Icon name="chevron_left" className="text-xs" />
+                </button>
+
+                <div className="flex items-center bg-zinc-100 dark:bg-zinc-800/80 p-0.5 rounded-xl border border-zinc-200/70 dark:border-zinc-700/70 mx-1">
+                  {weekBlocks.map((b, idx) => {
+                    const isBlockActive = safeCubeStartIdx === b.startIdx;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setCubeStartIdx(b.startIdx)}
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-black tabular-nums transition-all ${
+                          isBlockActive
+                            ? 'bg-orange-500 text-white shadow-2xs'
+                            : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                        }`}
+                        title={`Ir para os dias ${b.label}`}
+                      >
+                        {b.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleStepCubeDays(1)}
+                  disabled={safeCubeStartIdx >= maxCubeStart}
+                  className="px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-[11px] font-black text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center"
+                  title="Avançar 1 dia"
+                >
+                  <Icon name="chevron_right" className="text-xs" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStepCubeDays(7)}
+                  disabled={safeCubeStartIdx >= maxCubeStart}
+                  className="px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-[11px] font-black text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center gap-0.5"
+                  title="Avançar 7 dias"
+                >
+                  <span>+7d</span>
+                  <Icon name="keyboard_double_arrow_right" className="text-xs" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="hidden lg:flex flex-col gap-2.5">
@@ -735,12 +936,41 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                 <span>{hidePastDays ? `Restantes (${daysRemainingCount}d)` : 'Restantes'}</span>
               </button>
             )}
-
-            
           </div>
 
           {/* Lado Direito: Modos de Exibição & Controles */}
           <div className="flex flex-wrap items-center gap-2">
+            {/* Alternador Cubos (7 Dias) vs Tradicional */}
+            <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => handleSetGridLayoutMode('cubes')}
+                aria-pressed={gridLayoutMode === 'cubes'}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                  gridLayoutMode === 'cubes'
+                    ? 'bg-orange-500 text-white shadow-sm'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                }`}
+                title="Visão em Cubos (7 em 7 dias) estilo Tabela Periódica com badges e informações dentro do cubo"
+              >
+                <Icon name="view_module" className="text-xs" />
+                <span>Cubos (7d)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetGridLayoutMode('traditional')}
+                aria-pressed={gridLayoutMode === 'traditional'}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                  gridLayoutMode === 'traditional'
+                    ? 'bg-orange-500 text-white shadow-sm'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                }`}
+                title="Visão Tradicional completa com todos os dias do mês lado a lado"
+              >
+                <Icon name="grid_on" className="text-xs" />
+                <span>Tradicional</span>
+              </button>
+            </div>
 
             {/* Alternar Modo: Visão Limpa vs Auditoria */}
             <button
@@ -761,20 +991,22 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               <span>{densityMode === 'audit' ? 'Auditoria' : 'Visão Limpa'}</span>
             </button>
 
-            {/* Modo Denso */}
-            <button
-              type="button"
-              onClick={() => setIsCompactMode(!isCompactMode)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
-                isCompactMode 
-                  ? 'bg-purple-600 border-purple-600 text-white shadow-purple-500/20' 
-                  : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
-              }`}
-              title="Alternar entre espaçamento normal e denso para exibir mais colaboradores"
-            >
-              <Icon name={isCompactMode ? 'view_agenda' : 'view_headline'} className="text-xs" />
-              <span>{isCompactMode ? 'Denso' : 'Normal'}</span>
-            </button>
+            {/* Modo Denso (Apenas na Visão Tradicional) */}
+            {gridLayoutMode === 'traditional' && (
+              <button
+                type="button"
+                onClick={() => setIsCompactMode(!isCompactMode)}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap ${
+                  isCompactMode 
+                    ? 'bg-purple-600 border-purple-600 text-white shadow-purple-500/20' 
+                    : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                }`}
+                title="Alternar entre espaçamento normal e denso para exibir mais colaboradores"
+              >
+                <Icon name={isCompactMode ? 'view_agenda' : 'view_headline'} className="text-xs" />
+                <span>{isCompactMode ? 'Denso' : 'Normal'}</span>
+              </button>
+            )}
 
             {/* Legenda Toggle */}
             <button
@@ -815,6 +1047,100 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             )}
           </div>
         </div>
+
+        {/* Barra de Navegação de 7 em 7 Dias (Visível quando Modo Cubos está ativo) */}
+        {gridLayoutMode === 'cubes' && (
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-white dark:bg-zinc-900 px-3 py-2 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs w-full">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400">
+                <Icon name="view_week" className="text-sm" />
+                <span>Visão em Cubos (7 em 7 Dias):</span>
+              </div>
+              <span className="text-xs font-black text-zinc-900 dark:text-zinc-100 tabular-nums px-2.5 py-0.5 rounded-lg bg-orange-500/10 border border-orange-500/25">
+                Dia {String(visibleDays[0]?.num || 1).padStart(2, '0')} a Dia {String(visibleDays[visibleDays.length - 1]?.num || 7).padStart(2, '0')}
+              </span>
+              {isCurrentMonth && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const idx = filteredDays.findIndex(d => d.num >= todayDayNum);
+                    if (idx !== -1) {
+                      setCubeStartIdx(Math.min(idx, maxCubeStart));
+                      onSelectDay(todayDayNum - 1);
+                    }
+                  }}
+                  className="px-2 py-0.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-black uppercase tracking-wider transition-all"
+                  title="Ir para os próximos 7 dias a partir de Hoje"
+                >
+                  Hoje + 7d
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1">
+              <button
+                type="button"
+                onClick={() => handleStepCubeDays(-7)}
+                disabled={safeCubeStartIdx === 0}
+                className="px-2.5 py-1 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-[11px] font-black text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center gap-0.5 cursor-pointer"
+                title="Voltar 7 dias"
+              >
+                <Icon name="keyboard_double_arrow_left" className="text-xs" />
+                <span>7 Dias Anteriores</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStepCubeDays(-1)}
+                disabled={safeCubeStartIdx === 0}
+                className="px-2 py-1 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-[11px] font-black text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center cursor-pointer"
+                title="Voltar 1 dia"
+              >
+                <Icon name="chevron_left" className="text-xs" />
+              </button>
+
+              <div className="flex items-center bg-zinc-100 dark:bg-zinc-800/80 p-0.5 rounded-xl border border-zinc-200/70 dark:border-zinc-700/70 mx-1">
+                {weekBlocks.map((b, idx) => {
+                  const isBlockActive = safeCubeStartIdx === b.startIdx;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setCubeStartIdx(b.startIdx)}
+                      className={`px-2 py-1 rounded-lg text-[11px] font-black tabular-nums transition-all cursor-pointer ${
+                        isBlockActive
+                          ? 'bg-orange-500 text-white shadow-xs'
+                          : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                      }`}
+                      title={`Exibir dias ${b.label}`}
+                    >
+                      {b.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleStepCubeDays(1)}
+                disabled={safeCubeStartIdx >= maxCubeStart}
+                className="px-2 py-1 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-[11px] font-black text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center cursor-pointer"
+                title="Avançar 1 dia"
+              >
+                <Icon name="chevron_right" className="text-xs" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStepCubeDays(7)}
+                disabled={safeCubeStartIdx >= maxCubeStart}
+                className="px-2.5 py-1 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-[11px] font-black text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center gap-0.5 cursor-pointer"
+                title="Avançar 7 dias"
+              >
+                <span>Próximos 7 Dias</span>
+                <Icon name="keyboard_double_arrow_right" className="text-xs" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Linha 2: Barra de Filtros (Oculta no Desktop - agora unificada no menu superior) */}
         <div className="hidden">
@@ -1026,9 +1352,36 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                         {groupBy === 'role' ? 'Por Função' : 'Por Turno'}
                       </button>
                     </div>
+
+                    {/* Linha 3 (Modo Cubos): Navegação Rápida de 7 Dias no Cabeçalho */}
+                    {gridLayoutMode === 'cubes' && (
+                      <div className="flex items-center justify-between gap-1 pt-1 border-t border-zinc-200/60 dark:border-zinc-800/60">
+                        <button
+                          type="button"
+                          onClick={() => handleStepCubeDays(-7)}
+                          disabled={safeCubeStartIdx === 0}
+                          className="px-1.5 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-[10px] font-black text-zinc-700 dark:text-zinc-300 hover:bg-orange-500 hover:text-white disabled:opacity-35 disabled:pointer-events-none transition-colors cursor-pointer"
+                          title="Voltar 7 dias"
+                        >
+                          « 7d
+                        </button>
+                        <span className="text-[10px] font-black text-orange-600 dark:text-orange-400 tabular-nums">
+                          Dias {String(visibleDays[0]?.num || 1).padStart(2, '0')}–{String(visibleDays[visibleDays.length - 1]?.num || 7).padStart(2, '0')}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleStepCubeDays(7)}
+                          disabled={safeCubeStartIdx >= maxCubeStart}
+                          className="px-1.5 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-[10px] font-black text-zinc-700 dark:text-zinc-300 hover:bg-orange-500 hover:text-white disabled:opacity-35 disabled:pointer-events-none transition-colors cursor-pointer"
+                          title="Avançar 7 dias"
+                        >
+                          7d »
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </th>
-                {filteredDays.map(d => {
+                {visibleDays.map(d => {
                   const dayIdx = d.num - 1;
                   const stats = employees.reduce((acc, emp) => {
                     if (!isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month)) return acc;
@@ -1053,7 +1406,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     <th 
                       key={d.num} 
                       onClick={() => isSelected && !isReadOnly ? onOpenDayDetail(dayIdx) : onSelectDay(dayIdx)}
-                      className={`sticky top-0 z-30 p-2 border-b border-zinc-200 dark:border-zinc-800 min-w-[46px] w-[48px] cursor-pointer transition-all ${
+                      className={`sticky top-0 z-30 border-b border-zinc-200 dark:border-zinc-800 cursor-pointer transition-all ${
+                        gridLayoutMode === 'cubes'
+                          ? 'p-2.5 min-w-[116px] w-[calc((100%-240px)/7)]'
+                          : 'p-2 min-w-[46px] w-[48px]'
+                      } ${
                         isToday ? 'border-t-4 border-t-orange-500 bg-orange-500/10 dark:bg-orange-950/20' : ''
                       } ${pastDimClass} ${focusDimClass} ${
                         focusHighlight 
@@ -1066,23 +1423,23 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                       }`}
                     >
                       <div className="flex flex-col items-center gap-0.5 relative">
-                        <div className="flex items-center gap-0.5">
+                        <div className="flex items-center gap-1">
                           <span className={`text-[11px] font-bold uppercase ${d.isSunday ? 'text-rose-500' : 'text-zinc-400'}`}>{d.weekday}</span>
                           {d.isHoliday && (
-                            <span className="text-[11px] font-black px-1 rounded bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" title={`Feriado: ${d.holidayName || 'Feriado'}`}>
+                            <span className="text-[10px] font-black px-1 rounded bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" title={`Feriado: ${d.holidayName || 'Feriado'}`}>
                               FER
                             </span>
                           )}
                           {isProtected && !d.isHoliday && (
-                            <span className="text-[11px] font-black px-1 rounded bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300" title="Dia Protegido (Pico Sazonal)">
+                            <span className="text-[10px] font-black px-1 rounded bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300" title="Dia Protegido (Pico Sazonal)">
                               🛡️
                             </span>
                           )}
                         </div>
-                        <span className={`text-sm font-bold tabular-nums ${d.isSunday ? 'text-rose-600' : isToday ? 'text-orange-600 dark:text-orange-400 font-black' : 'text-zinc-900 dark:text-zinc-100'}`}>
+                        <span className={`${gridLayoutMode === 'cubes' ? 'text-base font-black' : 'text-sm font-bold'} tabular-nums ${d.isSunday ? 'text-rose-600' : isToday ? 'text-orange-600 dark:text-orange-400 font-black' : 'text-zinc-900 dark:text-zinc-100'}`}>
                           {d.num}
                         </span>
-                        <span className="text-[11px] font-bold text-zinc-400 tabular-nums">
+                        <span className={`text-[11px] font-bold tabular-nums ${gridLayoutMode === 'cubes' ? 'px-2 py-0.5 rounded-full bg-zinc-200/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 mt-0.5' : 'text-zinc-400'}`}>
                           T:{stats.total}
                         </span>
                       </div>
@@ -1097,7 +1454,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                   return (
                     <tr>
                       <td
-                        colSpan={filteredDays.length + 1}
+                        colSpan={visibleDays.length + 1}
                         className="py-10 px-4 text-center text-zinc-500 dark:text-zinc-400"
                       >
                         <div className="flex flex-col items-center justify-center gap-2">
@@ -1204,7 +1561,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                             </div>
                           </div>
                         </td>
-                        {filteredDays.map(d => {
+                        {visibleDays.map(d => {
                           const dayIdx = d.num - 1;
                           const countWorking = emps.filter(emp => {
                             const s = resolveEffectiveShift(emp, d.dateStr, monthKey, dayIdx);
@@ -1215,7 +1572,9 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                           return (
                             <td 
                               key={d.num} 
-                              className={`h-7 border-b border-zinc-200/80 dark:border-zinc-800 min-w-[46px] w-[48px] text-center font-bold text-[11px] tabular-nums transition-colors ${
+                              className={`h-7 border-b border-zinc-200/80 dark:border-zinc-800 ${
+                                gridLayoutMode === 'cubes' ? 'min-w-[116px] w-[calc((100%-240px)/7)]' : 'min-w-[46px] w-[48px]'
+                              } text-center font-bold text-[11px] tabular-nums transition-colors ${
                                 isSelected 
                                   ? 'bg-orange-500/10 dark:bg-orange-950/20' 
                                   : isWeekend 
@@ -1349,7 +1708,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                              </td>
 
                             {/* Shift Cells */}
-                            {filteredDays.map(d => {
+                            {visibleDays.map(d => {
                               const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d.num).padStart(2, '0')}`;
                               const rawShift = resolveEffectiveShift(emp, fullDate, monthKey, d.num - 1);
                               const shift = isWorkingShift(rawShift) ? 'T' : rawShift;
@@ -1550,333 +1909,593 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
                                 const isWeekend = d.isSunday || d.weekday === 'SÁB' || d.weekday === 'DOM';
                                 const cellStyle = getShiftCellStyle(shift);
+                                const assignedRole = emp.dailyAssignedRoles?.[monthKey]?.[d.num - 1] || normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
+                                const roleMeta = ROLE_VISUAL_MAP[assignedRole];
+                                const dayHour = (emp.dailyHours[monthKey] || [])[d.num - 1] || emp.workPeriod || getDefaultHourForDay(emp, d.isHoliday, d.isSunday);
+                                const dayLunch = dailyLunchesMap.get(`${emp.id}_${d.num - 1}`);
+                                const buttonTitle = (() => {
+                                  const decisionReason = emp.decisionReasons?.[monthKey]?.[d.num - 1];
+                                  const reasonLabel = decisionReason ? DECISION_REASON_LABELS[decisionReason] : undefined;
+                                  let baseTitle: string | undefined = undefined;
+
+                                  if (shift === 'N/A') {
+                                    baseTitle = emp.hiredAt && fullDate < emp.hiredAt 
+                                      ? `Não admitido nesta data (Início: ${emp.hiredAt.split('-').reverse().join('/')})` 
+                                      : emp.firedAt && fullDate > emp.firedAt 
+                                      ? `Contrato encerrado nesta data (Término: ${emp.firedAt.split('-').reverse().join('/')})`
+                                      : 'Desconsiderado (N/A)';
+                                  } else if (shift?.startsWith('FF')) {
+                                    const explicit = shift.split(' ')[1];
+                                    const matched = (holidayCredits[emp.id] || []).find(c => c.id === explicit || c.holidayDate === explicit);
+                                    baseTitle = matched ? `Folga Feriado: ${matched.holidayName}` : 'Folga Feriado (FF)';
+                                  } else if (shift === 'FE') {
+                                    baseTitle = 'Férias (FE)';
+                                  } else if (shift === 'AT') {
+                                    baseTitle = 'Atestado Médico (AT)';
+                                  } else if (shift === 'DO') {
+                                    baseTitle = 'Day Off / Aniversário (DO)';
+                                  } else if (shift === 'C') {
+                                    baseTitle = 'Curso Jovem Aprendiz (C)';
+                                  } else if (shift === 'F') {
+                                    baseTitle = d.isSunday ? 'Folga de Domingo (F)' : 'Folga Semanal (F)';
+                                  } else if (isWorkingShift(shift)) {
+                                    const hour = (emp.dailyHours[monthKey] || [])[d.num - 1] || emp.workPeriod;
+                                    baseTitle = `Trabalho (${shift}): ${hour}`;
+                                  }
+
+                                  if (reasonLabel) {
+                                    return baseTitle ? `${baseTitle} • Motivo: ${reasonLabel}` : `Motivo: ${reasonLabel}`;
+                                  }
+                                  return baseTitle;
+                                })();
+
                                 return (
-                                  <td key={d.num} className={`py-1 px-1 border-b border-zinc-100 dark:border-zinc-800 text-center transition-all relative min-w-[46px] h-[48px] ${isWeekend ? 'bg-zinc-100/60 dark:bg-zinc-900/60' : ''} ${pastDimClass} ${focusDimColClass} ${focusHighlight} ${(!isReadOnly && hasCellViolation) ? 'ring-2 ring-inset ring-red-500 bg-red-500/10' : (!isReadOnly && isSundayWarning) ? 'ring-2 ring-inset ring-amber-500/50 bg-amber-50/20' : ''}`}>
-                                   <div className="relative group flex flex-col items-center justify-center">
-                                     {/* Indicador 4: Diferença pós-oficialização (Canto Inferior Esquerdo) */}
-                                     {!isReadOnly && cellDiff && (
-                                       <span 
-                                         className="absolute -bottom-0.5 -left-0.5 w-2 h-2 rounded-full bg-amber-500 ring-1.5 ring-white dark:ring-zinc-900 shadow-sm z-30 cursor-help"
-                                         title={`Alteração pós-oficialização (${cellDiff.type}): Oficial [${cellDiff.officialVal}] ➔ Atual [${cellDiff.currentVal}]`}
-                                         aria-label={`Alteração pós-oficialização (${cellDiff.type}): Oficial [${cellDiff.officialVal}] para Atual [${cellDiff.currentVal}]`}
-                                         role="status"
-                                       />
-                                     )}
-
-                                     {/* Indicador 3: Ciclo 6x1 / 5x2 (Canto Superior Esquerdo) */}
-                                     {sixByOneBadge && (
-                                       <span
-                                         onClick={(e) => { e.stopPropagation(); onSelectDay(d.num - 1); }}
-                                         className={`absolute -top-1 -left-1 px-1 py-0 text-[11px] leading-none font-black rounded-full z-30 transition-all cursor-help tracking-tighter ring-1 ring-white dark:ring-zinc-900 ${sixByOneBadge.className} ${sixByOneBadge.isHoverOnly ? 'opacity-0 group-hover:opacity-100' : ''}`}
-                                         title={sixByOneBadge.title}
-                                         aria-label={sixByOneBadge.title}
-                                         role="status"
-                                       >
-                                         {sixByOneBadge.text}
-                                       </span>
-                                     )}
-
-                                     {/* Indicador 3: Domingos Consecutivos (Canto Superior Direito) */}
-                                     {sundayBadge && (
-                                       <span
-                                         onClick={(e) => { e.stopPropagation(); onSelectDay(d.num - 1); }}
-                                         className={`absolute -top-1 -right-1 px-1 py-0 text-[11px] leading-none font-black rounded-full z-30 transition-all cursor-help tracking-tighter ring-1 ring-white dark:ring-zinc-900 ${sundayBadge.className} ${sundayBadge.isHoverOnly ? 'opacity-0 group-hover:opacity-100' : ''}`}
-                                         title={sundayBadge.title}
-                                         aria-label={sundayBadge.title}
-                                         role="status"
-                                       >
-                                         {sundayBadge.text}
-                                       </span>
-                                     )}
-
-                                     {/* Indicador 4: Pedido de Colaborador (Canto Inferior Direito) */}
-                                     {dayRequest && (
-                                       <div 
-                                         className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full z-30 ring-1.5 ring-white dark:ring-zinc-900 cursor-help flex items-center justify-center group/balloon"
-                                         role="status"
-                                         aria-label={`Pedido do colaborador: ${dayRequest.text} (${dayRequest.status})`}
-                                       >
-                                         <div className={`w-full h-full rounded-full ${
-                                           dayRequest.status === 'granted' ? 'bg-emerald-500' : 
-                                           dayRequest.status === 'refused' ? 'bg-red-500' :
-                                           dayRequest.status === 'seen' ? 'bg-blue-500' : 
-                                           'bg-orange-500 animate-pulse'
-                                         }`} />
-                                         
-                                         <div className="absolute bottom-full right-0 mb-2 w-48 bg-zinc-900 dark:bg-zinc-800 text-white p-3 rounded-2xl shadow-xl opacity-0 invisible group-hover/balloon:opacity-100 group-hover/balloon:visible transition-all z-[100] pointer-events-none scale-95 group-hover/balloon:scale-100 origin-bottom-right">
-                                           <div className="absolute top-full right-2 -mt-1 border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-800" />
-                                           <p className="text-[11px] font-black uppercase text-zinc-400 mb-1 border-b border-zinc-700 pb-1">Pedido do Colaborador</p>
-                                           <p className="text-xs font-bold leading-snug">{dayRequest.text}</p>
-                                           {dayRequest.feedback && (
-                                             <div className="mt-2 pt-2 border-t border-zinc-700">
-                                               <p className="text-[11px] font-black uppercase text-orange-400 mb-0.5">Resposta do Gerente</p>
-                                               <p className="text-[11px] font-bold text-zinc-300 italic">{dayRequest.feedback}</p>
-                                             </div>
-                                           )}
-                                         </div>
-                                       </div>
-                                     )}
-
-                                     {/* Botão Principal de Turno com Explicabilidade Algorítmica */}
-                                     <button
-                                       type="button"
-                                       onClick={() => onSelectDay(d.num - 1)}
-                                       aria-label={`${emp.name}: Dia ${d.num}, ${d.weekday}. Turno: ${shift === 'N/A' ? 'Fora de vigência' : shift}${emp.decisionReasons?.[monthKey]?.[d.num - 1] ? ' • Motivo: ' + DECISION_REASON_LABELS[emp.decisionReasons[monthKey][d.num - 1]] : ''}`}
-                                       title={
-                                         (() => {
-                                           const decisionReason = emp.decisionReasons?.[monthKey]?.[d.num - 1];
-                                           const reasonLabel = decisionReason ? DECISION_REASON_LABELS[decisionReason] : undefined;
-                                           let baseTitle: string | undefined = undefined;
-
-                                           if (shift === 'N/A') {
-                                             baseTitle = emp.hiredAt && fullDate < emp.hiredAt 
-                                               ? `Não admitido nesta data (Início: ${emp.hiredAt.split('-').reverse().join('/')})` 
-                                               : emp.firedAt && fullDate > emp.firedAt 
-                                               ? `Contrato encerrado nesta data (Término: ${emp.firedAt.split('-').reverse().join('/')})`
-                                               : 'Desconsiderado (N/A)';
-                                           } else if (shift?.startsWith('FF')) {
-                                             const explicit = shift.split(' ')[1];
-                                             const matched = (holidayCredits[emp.id] || []).find(c => c.id === explicit || c.holidayDate === explicit);
-                                             baseTitle = matched ? `Folga Feriado: ${matched.holidayName}` : 'Folga Feriado (FF)';
-                                           } else if (shift === 'FE') {
-                                             baseTitle = 'Férias (FE)';
-                                           } else if (shift === 'AT') {
-                                             baseTitle = 'Atestado Médico (AT)';
-                                           } else if (shift === 'DO') {
-                                             baseTitle = 'Day Off / Aniversário (DO)';
-                                           } else if (shift === 'C') {
-                                             baseTitle = 'Curso Jovem Aprendiz (C)';
-                                           } else if (shift === 'F') {
-                                             baseTitle = d.isSunday ? 'Folga de Domingo (F)' : 'Folga Semanal (F)';
-                                           } else if (isWorkingShift(shift)) {
-                                             const hour = (emp.dailyHours[monthKey] || [])[d.num - 1] || emp.workPeriod;
-                                             baseTitle = `Trabalho (${shift}): ${hour}`;
-                                           }
-
-                                           if (reasonLabel) {
-                                             return baseTitle ? `${baseTitle} • Motivo: ${reasonLabel}` : `Motivo: ${reasonLabel}`;
-                                           }
-                                           return baseTitle;
-                                         })()
-                                       }
-                                        className={`${isCompactMode ? 'w-8 h-8 rounded-lg' : 'w-10 h-10 rounded-xl'} flex items-center justify-center font-bold transition-all shadow-xs relative border ${cellStyle.bg} ${cellStyle.text} ${cellStyle.border} ${
-                                          dayRequest ? (
-                                            dayRequest.status === 'granted' ? 'ring-1.5 ring-emerald-500/80' :
-                                            dayRequest.status === 'refused' ? 'ring-1.5 ring-red-500/80' :
-                                            dayRequest.status === 'seen' ? 'ring-1.5 ring-blue-500/80' :
-                                            'ring-2 ring-orange-500 animate-pulse'
-                                          ) : ''
-                                        }`}>
-                                      {shift === 'AT' ? (
-                                        <div className="flex flex-col items-center justify-center text-rose-500 font-black leading-none">
-                                          <Icon name="add" className="text-sm" />
-                                          {(() => {
-                                            if (emp.atestadoStart && emp.atestadoEnd && fullDate >= emp.atestadoStart && fullDate <= emp.atestadoEnd) {
-                                              const s = new Date(emp.atestadoStart + 'T00:00:00').getTime();
-                                              const e = new Date(emp.atestadoEnd + 'T00:00:00').getTime();
-                                              const c = new Date(fullDate + 'T00:00:00').getTime();
-                                              const total = Math.round((e - s) / 86400000) + 1;
-                                              const cur = Math.round((c - s) / 86400000) + 1;
-                                              return <span className="text-[11px] opacity-80 mt-0.5">{cur}/{total}</span>;
-                                            }
-                                            return <span className="text-[11px] font-black uppercase mt-0.5">AT</span>;
-                                          })()}
-                                        </div>
-                                      ) : shift === 'FE' ? (
-                                        <div className="flex flex-col items-center justify-center leading-none">
-                                          <span>FE</span>
-                                          {(() => {
-                                            if (emp.vacationStart && emp.vacationEnd && fullDate >= emp.vacationStart && fullDate <= emp.vacationEnd) {
-                                              const s = new Date(emp.vacationStart + 'T00:00:00').getTime();
-                                              const e = new Date(emp.vacationEnd + 'T00:00:00').getTime();
-                                              const c = new Date(fullDate + 'T00:00:00').getTime();
-                                              const total = Math.round((e - s) / 86400000) + 1;
-                                              const cur = Math.round((c - s) / 86400000) + 1;
-                                              return <span className="text-[11px] opacity-80 mt-0.5">{cur}/{total}</span>;
-                                            }
-                                            return null;
-                                          })()}
-                                        </div>
-                                      ) : shift === 'C' ? (
-                                        <span className="text-[13px] font-bold">C</span>
-                                      ) : shift === 'N/A' ? (
-                                         <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-mono">-</span>
-                                        ) : isWorkingShift(shift) ? (
-                                          <span className="text-[13px] font-bold">
-                                            {tacticalDisplayMode === 'roles' ? (
-                                              (() => {
-                                                const assignedRole = emp.dailyAssignedRoles?.[monthKey]?.[d.num - 1] || normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
-                                                const codeMap: Record<string, string> = {
-                                                  'Caixa': 'CX',
-                                                  'Pacote': 'PC',
-                                                  'Vendas': 'VEND',
-                                                  'Apoio': 'AP',
-                                                  'Fiscal': 'FISC',
-                                                  'Estoque': 'ESTQ'
-                                                };
-                                                return codeMap[assignedRole] || 'T';
-                                              })()
-                                            ) : tacticalDisplayMode === 'positions' ? (
-                                              getTacticalCellCode(emp.tacticalPositions?.[monthKey]?.[d.num - 1] || resolvedPositions[emp.id]) || 'T'
-                                            ) : (
-                                              'T'
+                                  <td
+                                    key={d.num}
+                                    className={`${
+                                      gridLayoutMode === 'cubes'
+                                        ? 'p-1.5 min-w-[116px] w-[calc((100%-240px)/7)] align-middle'
+                                        : 'py-1 px-1 min-w-[46px] h-[48px]'
+                                    } border-b border-zinc-100 dark:border-zinc-800 text-center transition-all relative ${
+                                      isWeekend ? 'bg-zinc-100/60 dark:bg-zinc-900/60' : ''
+                                    } ${pastDimClass} ${focusDimColClass} ${focusHighlight} ${
+                                      !isReadOnly && hasCellViolation
+                                        ? 'ring-2 ring-inset ring-red-500 bg-red-500/10'
+                                        : !isReadOnly && isSundayWarning
+                                        ? 'ring-2 ring-inset ring-amber-500/50 bg-amber-50/20'
+                                        : ''
+                                    }`}
+                                  >
+                                    {gridLayoutMode === 'cubes' ? (
+                                      /* ============================================================ */
+                                      /* MODO CUBOS (7 EM 7 DIAS) — ESTILO TABELA PERIÓDICA           */
+                                      /* ============================================================ */
+                                      <div
+                                        onClick={() => onSelectDay(d.num - 1)}
+                                        className={`relative group flex flex-col justify-between w-full min-h-[100px] p-2 rounded-2xl border-2 transition-all shadow-xs hover:shadow-md cursor-pointer select-none ${cellStyle.bg} ${cellStyle.border} ${
+                                          dayRequest
+                                            ? dayRequest.status === 'granted'
+                                              ? 'ring-2 ring-emerald-500/80'
+                                              : dayRequest.status === 'refused'
+                                              ? 'ring-2 ring-red-500/80'
+                                              : dayRequest.status === 'seen'
+                                              ? 'ring-2 ring-blue-500/80'
+                                              : 'ring-2 ring-orange-500'
+                                            : ''
+                                        }`}
+                                      >
+                                        {/* Topo do Cubo: Ciclo (Esq) + Domingo / Função (Dir) DENTRO do Cubo */}
+                                        <div className="flex items-center justify-between gap-1 w-full min-h-[18px] z-20">
+                                          <div className="flex items-center gap-1 min-w-0">
+                                            {sixByOneBadge && (
+                                              <span
+                                                onClick={(e) => { e.stopPropagation(); onSelectDay(d.num - 1); }}
+                                                className={`px-1.5 py-0.5 text-[10px] leading-none font-black rounded-md transition-all cursor-help tracking-tighter ${sixByOneBadge.className}`}
+                                                title={sixByOneBadge.title}
+                                                aria-label={sixByOneBadge.title}
+                                                role="status"
+                                              >
+                                                {sixByOneBadge.text}
+                                              </span>
                                             )}
-                                          </span>
-                                        ) : (
-                                          <span className="text-[13px] font-bold">{shift.startsWith('FF') ? 'FF' : shift}</span>
-                                        )}
-                                    </button>
+                                            {!isReadOnly && cellDiff && (
+                                              <span
+                                                className="px-1 py-0.5 rounded bg-amber-500 text-white text-[9px] leading-none font-black shadow-2xs cursor-help"
+                                                title={`Alteração pós-oficialização (${cellDiff.type}): Oficial [${cellDiff.officialVal}] ➔ Atual [${cellDiff.currentVal}]`}
+                                                aria-label={`Alteração pós-oficialização (${cellDiff.type}): Oficial [${cellDiff.officialVal}] para Atual [${cellDiff.currentVal}]`}
+                                                role="status"
+                                              >
+                                                DIFF
+                                              </span>
+                                            )}
+                                          </div>
 
-                                    
-                                    {isEditable && !isReadOnly && (() => {
-                                      const pendingCount = (holidayCredits[emp.id] || []).filter(c => c.status === 'pending').length;
-                                      return (
-                                        <select
-                                          value={isWorkingShift(shift) ? 'T' : shift}
-                                          onChange={(e) => {
-                                            const val = e.target.value;
-                                            if (val === 'AT_PERIOD') {
-                                              onOpenEmployeeCard(emp, 'atestado', fullDate);
-                                              return;
-                                            }
-                                            onUpdateShift(emp.id, d.num - 1, val as ShiftType);
-                                          }}
-                                          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-50"
-                                        >
-                                          {shift === 'N/A' && <option value="N/A">Fora do Contrato (N/A)</option>}
-                                          <option value="T">Trabalha (T)</option>
-                                          <option value="F">Folga (F)</option>
-                                          <option value="AT">Atestado Médico (Apenas este dia) 🩺</option>
-                                          <option value="AT_PERIOD">🩺 Lançar Atestado por Período / Intervalo...</option>
-                                          
-                                          {/* Specific Pending Holidays */}
-                                          {(holidayCredits[emp.id] || [])
-                                            .filter(c => c.status === 'pending')
-                                            .map(c => (
-                                              <option key={c.id || c.holidayDate} value={`FF ${c.id || c.holidayDate}`}>
-                                                FF — {c.holidayName}
-                                              </option>
-                                            ))
-                                          }
-                                          
-                                          {/* Fallback generic option if no specific pending ones */}
-                                          {pendingCount === 0 && !shift?.startsWith('FF') && (
-                                            <option value="FF">Folga Feriado (FF)</option>
-                                          )}
-
-                                          {/* Current value if it's already an FF */}
-                                          {shift?.startsWith('FF') && !(holidayCredits[emp.id] || []).some(c => c.status === 'pending' && `FF ${c.id || c.holidayDate}` === shift) && (
-                                            <option value={shift}>
-                                              {(() => {
-                                                if (shift === 'FF') return 'FF — Folga Feriado';
-                                                const explicitKey = shift.split(' ')[1];
-                                                const matched = (holidayCredits[emp.id] || []).find(c => c.id === explicitKey || c.holidayDate === explicitKey);
-                                                return matched ? `FF — ${matched.holidayName}` : shift.replace('FF ', 'FF — ');
-                                              })()}
-                                            </option>
-                                          )}
-                                          <option value="FE">Férias (FE)</option>
-                                          <option value="C">Curso (C)</option>
-                                          <option value="DO">Aniversário / Day Off (DO)</option>
-                                        </select>
-                                      );
-                                    })()}
-
-                                    {/* Tooltip Rico de Detalhes ao Hover */}
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-zinc-900/95 dark:bg-zinc-800/95 backdrop-blur-md text-white p-3 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none scale-95 group-hover:scale-100 origin-bottom border border-zinc-700/60 text-left">
-                                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-zinc-900/95 dark:border-t-zinc-800/95" />
-                                      <div className="flex items-center justify-between border-b border-zinc-700/80 pb-1.5 mb-2">
-                                        <div className="flex items-center gap-1.5">
-                                          <span className="text-xs font-black text-orange-400 tabular-nums">
-                                            {String(d.num).padStart(2, '0')}/{String(currentMY.month + 1).padStart(2, '0')}
-                                          </span>
-                                          <span className="text-[11px] font-bold uppercase text-zinc-300">({d.weekday})</span>
+                                          <div className="flex items-center gap-1 shrink-0 ml-auto">
+                                            {sundayBadge && (
+                                              <span
+                                                onClick={(e) => { e.stopPropagation(); onSelectDay(d.num - 1); }}
+                                                className={`px-1.5 py-0.5 text-[10px] leading-none font-black rounded-md transition-all cursor-help tracking-tighter ${sundayBadge.className}`}
+                                                title={sundayBadge.title}
+                                                aria-label={sundayBadge.title}
+                                                role="status"
+                                              >
+                                                {sundayBadge.text}
+                                              </span>
+                                            )}
+                                            {isWorkingDay && roleMeta && (
+                                              <span
+                                                className={`px-1.5 py-0.5 text-[9px] leading-none font-black rounded-md border ${roleMeta.badgeClass}`}
+                                                title={`Função Alocada: ${roleMeta.label}`}
+                                              >
+                                                {roleMeta.code}
+                                              </span>
+                                            )}
+                                          </div>
                                         </div>
-                                        <span className={`text-[11px] font-black uppercase px-1.5 py-0.5 rounded ${
-                                          isWorkingDay ? 'bg-orange-500/20 text-orange-300' : 'bg-emerald-500/20 text-emerald-300'
-                                        }`}>
-                                          {shift === 'T' ? 'Trabalho (T)' : shift === 'F' ? 'Folga (F)' : shift}
-                                        </span>
-                                      </div>
 
-                                      <div className="space-y-1.5 text-[11px]">
-                                        {isWorkingDay && (() => {
-                                          const assignedRole = emp.dailyAssignedRoles?.[monthKey]?.[d.num - 1] || normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
-                                          const primaryRoleNorm = normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
-                                          const isDiff = assignedRole !== primaryRoleNorm;
-                                          const dl = dailyDetailedLunchesMap.get(`${emp.id}_${d.num - 1}`);
-
-                                          return (
-                                            <>
-                                              <div className="flex items-start justify-between gap-2">
-                                                <span className="text-zinc-400 font-medium">Função Alocada:</span>
-                                                <span className={`font-semibold text-right ${isDiff ? 'text-amber-300 font-bold' : 'text-zinc-100'}`}>
-                                                  {assignedRole} {isDiff ? `(1ª: ${primaryRoleNorm})` : ''}
-                                                </span>
+                                        {/* Centro do Cubo: Símbolo Principal do Elemento (Turno) */}
+                                        <div className="flex flex-col items-center justify-center my-0.5 z-20">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); onSelectDay(d.num - 1); }}
+                                            aria-label={`${emp.name}: Dia ${d.num}, ${d.weekday}. Turno: ${shift === 'N/A' ? 'Fora de vigência' : shift}${emp.decisionReasons?.[monthKey]?.[d.num - 1] ? ' • Motivo: ' + DECISION_REASON_LABELS[emp.decisionReasons[monthKey][d.num - 1]] : ''}`}
+                                            title={buttonTitle}
+                                            className={`flex items-center justify-center font-black transition-all leading-none ${cellStyle.text}`}
+                                          >
+                                            {shift === 'AT' ? (
+                                              <div className="flex items-center gap-0.5 text-rose-600 dark:text-rose-400 font-black leading-none">
+                                                <Icon name="add" className="text-base" />
+                                                {(() => {
+                                                  if (emp.atestadoStart && emp.atestadoEnd && fullDate >= emp.atestadoStart && fullDate <= emp.atestadoEnd) {
+                                                    const s = new Date(emp.atestadoStart + 'T00:00:00').getTime();
+                                                    const e = new Date(emp.atestadoEnd + 'T00:00:00').getTime();
+                                                    const c = new Date(fullDate + 'T00:00:00').getTime();
+                                                    const total = Math.round((e - s) / 86400000) + 1;
+                                                    const cur = Math.round((c - s) / 86400000) + 1;
+                                                    return <span className="text-sm">{cur}/{total}</span>;
+                                                  }
+                                                  return <span className="text-lg font-black uppercase">AT</span>;
+                                                })()}
                                               </div>
-                                              {dl?.isCoveringCashier && (
-                                                <div className="p-1 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-bold flex items-center gap-1">
-                                                  <span>🔄 Cobrirá Caixa no almoço ({dl.coveringCashierTime})</span>
-                                                </div>
-                                              )}
-                                              {dl?.coveredByEmployeeName && (
-                                                <div className="p-1 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold flex items-center gap-1">
-                                                  <span>🛡️ Coberto por {dl.coveredByEmployeeName} no almoço</span>
-                                                </div>
-                                              )}
+                                            ) : shift === 'FE' ? (
+                                              <div className="flex items-baseline gap-1 leading-none">
+                                                <span className="text-xl font-black">FE</span>
+                                                {(() => {
+                                                  if (emp.vacationStart && emp.vacationEnd && fullDate >= emp.vacationStart && fullDate <= emp.vacationEnd) {
+                                                    const s = new Date(emp.vacationStart + 'T00:00:00').getTime();
+                                                    const e = new Date(emp.vacationEnd + 'T00:00:00').getTime();
+                                                    const c = new Date(fullDate + 'T00:00:00').getTime();
+                                                    const total = Math.round((e - s) / 86400000) + 1;
+                                                    const cur = Math.round((c - s) / 86400000) + 1;
+                                                    return <span className="text-[11px] opacity-85">{cur}/{total}</span>;
+                                                  }
+                                                  return null;
+                                                })()}
+                                              </div>
+                                            ) : shift === 'C' ? (
+                                              <span className="text-xl font-black">C</span>
+                                            ) : shift === 'N/A' ? (
+                                              <span className="text-base text-zinc-400 dark:text-zinc-500 font-mono">-</span>
+                                            ) : isWorkingShift(shift) ? (
+                                              <span className="text-xl font-black tracking-tight">
+                                                {tacticalDisplayMode === 'roles'
+                                                  ? roleMeta?.code || 'T'
+                                                  : tacticalDisplayMode === 'positions'
+                                                  ? getTacticalCellCode(emp.tacticalPositions?.[monthKey]?.[d.num - 1] || resolvedPositions[emp.id]) || 'T'
+                                                  : 'T'}
+                                              </span>
+                                            ) : (
+                                              <span className="text-xl font-black tracking-tight">{shift.startsWith('FF') ? 'FF' : shift}</span>
+                                            )}
+                                          </button>
+                                        </div>
+
+                                        {/* Base do Cubo: Horário, Almoço / Legenda do Elemento e Pedido DENTRO do Cubo */}
+                                        <div className="flex flex-col items-center justify-end gap-0.5 w-full pt-1 border-t border-black/5 dark:border-white/5 z-20">
+                                          {isWorkingDay ? (
+                                            <>
+                                              <span className="text-[10px] font-bold tabular-nums leading-tight truncate max-w-full opacity-90">
+                                                {dayHour}
+                                              </span>
+                                              <div className="flex items-center justify-center gap-1 w-full">
+                                                {dayLunch && (
+                                                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-black/5 dark:bg-white/10 tabular-nums truncate">
+                                                    🍽️ {dayLunch.split(' ')[0]}
+                                                  </span>
+                                                )}
+                                                {dayRequest && (
+                                                  <div
+                                                    className="px-1.5 py-0.2 rounded-full text-[9px] font-black text-white flex items-center gap-0.5 cursor-help relative group/balloon"
+                                                    role="status"
+                                                    aria-label={`Pedido do colaborador: ${dayRequest.text} (${dayRequest.status})`}
+                                                  >
+                                                    <span className={`px-1 rounded ${
+                                                      dayRequest.status === 'granted' ? 'bg-emerald-500' :
+                                                      dayRequest.status === 'refused' ? 'bg-red-500' :
+                                                      dayRequest.status === 'seen' ? 'bg-blue-500' :
+                                                      'bg-orange-500 animate-pulse'
+                                                    }`}>
+                                                      💬
+                                                    </span>
+                                                  </div>
+                                                )}
+                                              </div>
                                             </>
+                                          ) : (
+                                            <div className="flex items-center justify-center gap-1 w-full">
+                                              <span className="text-[10px] font-bold uppercase tracking-tight truncate opacity-80">
+                                                {shift === 'F'
+                                                  ? d.isSunday ? 'Folga Dom' : 'Folga Sem'
+                                                  : shift?.startsWith('FF')
+                                                  ? 'Folga Fer'
+                                                  : shift === 'FE'
+                                                  ? 'Férias'
+                                                  : shift === 'AT'
+                                                  ? 'Atestado'
+                                                  : shift === 'DO'
+                                                  ? 'Aniversário'
+                                                  : shift === 'C'
+                                                  ? 'Curso'
+                                                  : 'Fora Vig.'}
+                                              </span>
+                                              {dayRequest && (
+                                                <div
+                                                  className="w-2.5 h-2.5 rounded-full z-30 ring-1 ring-white dark:ring-zinc-900 cursor-help flex items-center justify-center group/balloon shrink-0"
+                                                  role="status"
+                                                  aria-label={`Pedido do colaborador: ${dayRequest.text} (${dayRequest.status})`}
+                                                >
+                                                  <div className={`w-full h-full rounded-full ${
+                                                    dayRequest.status === 'granted' ? 'bg-emerald-500' :
+                                                    dayRequest.status === 'refused' ? 'bg-red-500' :
+                                                    dayRequest.status === 'seen' ? 'bg-blue-500' :
+                                                    'bg-orange-500 animate-pulse'
+                                                  }`} />
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        {isEditable && !isReadOnly && (() => {
+                                          const pendingCount = (holidayCredits[emp.id] || []).filter(c => c.status === 'pending').length;
+                                          return (
+                                            <select
+                                              value={isWorkingShift(shift) ? 'T' : shift}
+                                              onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === 'AT_PERIOD') {
+                                                  onOpenEmployeeCard(emp, 'atestado', fullDate);
+                                                  return;
+                                                }
+                                                onUpdateShift(emp.id, d.num - 1, val as ShiftType);
+                                              }}
+                                              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-50"
+                                            >
+                                              {shift === 'N/A' && <option value="N/A">Fora do Contrato (N/A)</option>}
+                                              <option value="T">Trabalha (T)</option>
+                                              <option value="F">Folga (F)</option>
+                                              <option value="AT">Atestado Médico (Apenas este dia) 🩺</option>
+                                              <option value="AT_PERIOD">🩺 Lançar Atestado por Período / Intervalo...</option>
+                                              {(holidayCredits[emp.id] || [])
+                                                .filter(c => c.status === 'pending')
+                                                .map(c => (
+                                                  <option key={c.id || c.holidayDate} value={`FF ${c.id || c.holidayDate}`}>
+                                                    FF — {c.holidayName}
+                                                  </option>
+                                                ))
+                                              }
+                                              {pendingCount === 0 && !shift?.startsWith('FF') && (
+                                                <option value="FF">Folga Feriado (FF)</option>
+                                              )}
+                                              {shift?.startsWith('FF') && !(holidayCredits[emp.id] || []).some(c => c.status === 'pending' && `FF ${c.id || c.holidayDate}` === shift) && (
+                                                <option value={shift}>
+                                                  {(() => {
+                                                    if (shift === 'FF') return 'FF — Folga Feriado';
+                                                    const explicitKey = shift.split(' ')[1];
+                                                    const matched = (holidayCredits[emp.id] || []).find(c => c.id === explicitKey || c.holidayDate === explicitKey);
+                                                    return matched ? `FF — ${matched.holidayName}` : shift.replace('FF ', 'FF — ');
+                                                  })()}
+                                                </option>
+                                              )}
+                                              <option value="FE">Férias (FE)</option>
+                                              <option value="C">Curso (C)</option>
+                                              <option value="DO">Aniversário / Day Off (DO)</option>
+                                            </select>
                                           );
                                         })()}
-
-                                        {isWorkingDay && (
-                                          <div className="flex items-start justify-between gap-2">
-                                            <span className="text-zinc-400 font-medium">Jornada:</span>
-                                            <span className="font-semibold text-zinc-100 tabular-nums text-right">
-                                              {(emp.dailyHours[monthKey] || [])[d.num - 1] || emp.workPeriod || 'Padrão'}
-                                            </span>
-                                          </div>
-                                        )}
-
-                                        {isWorkingDay && dailyLunchesMap.get(`${emp.id}_${d.num - 1}`) && (
-                                          <div className="flex items-start justify-between gap-2">
-                                            <span className="text-zinc-400 font-medium">Intervalo Almoço:</span>
-                                            <span className="font-semibold text-amber-300 tabular-nums text-right">
-                                              {dailyLunchesMap.get(`${emp.id}_${d.num - 1}`)}
-                                            </span>
-                                          </div>
-                                        )}
-
-                                        {isWorkingDay && (
-                                          <div className="flex items-start justify-between gap-2">
-                                            <span className="text-zinc-400 font-medium">Ciclo {maxStreak}x1:</span>
-                                            <span className={`font-semibold tabular-nums text-right ${streak > maxStreak ? 'text-rose-400 font-black' : 'text-zinc-200'}`}>
-                                              {streak > maxStreak ? `⚠️ ${streak}º dia (Violação CLT)` : `${streak} de ${maxStreak} dias`}
-                                            </span>
-                                          </div>
-                                        )}
-
-                                        {isSunday && (
-                                          <div className="flex items-start justify-between gap-2">
-                                            <span className="text-zinc-400 font-medium">Domingo:</span>
-                                            <span className={`font-semibold text-right ${finalSundayStreak >= 3 ? 'text-rose-400 font-black' : 'text-zinc-200'}`}>
-                                              {isWorkingDay ? `${finalSundayStreak}º domingo consecutivo` : 'Folga de domingo'}
-                                            </span>
-                                          </div>
-                                        )}
-
-                                        {emp.decisionReasons?.[monthKey]?.[d.num - 1] && (
-                                          <div className="pt-1.5 border-t border-zinc-700/60 mt-1">
-                                            <span className="text-[11px] uppercase font-bold text-zinc-400 block mb-0.5">Motivo da Alocação:</span>
-                                            <span className="text-zinc-200 font-medium leading-tight block">
-                                              {DECISION_REASON_LABELS[emp.decisionReasons[monthKey][d.num - 1]]}
-                                            </span>
-                                          </div>
-                                        )}
                                       </div>
-                                    </div>
-                                  </div>
-                                </td>
-                              );
+                                    ) : (
+                                      /* ============================================================ */
+                                      /* MODO TRADICIONAL (MÊS COMPLETO)                              */
+                                      /* ============================================================ */
+                                      <div className="relative group flex flex-col items-center justify-center">
+                                        {/* Indicador 4: Diferença pós-oficialização (Canto Inferior Esquerdo) */}
+                                        {!isReadOnly && cellDiff && (
+                                          <span 
+                                            className="absolute -bottom-0.5 -left-0.5 w-2 h-2 rounded-full bg-amber-500 ring-1.5 ring-white dark:ring-zinc-900 shadow-sm z-30 cursor-help"
+                                            title={`Alteração pós-oficialização (${cellDiff.type}): Oficial [${cellDiff.officialVal}] ➔ Atual [${cellDiff.currentVal}]`}
+                                            aria-label={`Alteração pós-oficialização (${cellDiff.type}): Oficial [${cellDiff.officialVal}] para Atual [${cellDiff.currentVal}]`}
+                                            role="status"
+                                          />
+                                        )}
+
+                                        {/* Indicador 3: Ciclo 6x1 / 5x2 (Canto Superior Esquerdo) */}
+                                        {sixByOneBadge && (
+                                          <span
+                                            onClick={(e) => { e.stopPropagation(); onSelectDay(d.num - 1); }}
+                                            className={`absolute -top-1 -left-1 px-1 py-0 text-[11px] leading-none font-black rounded-full z-30 transition-all cursor-help tracking-tighter ring-1 ring-white dark:ring-zinc-900 ${sixByOneBadge.className} ${sixByOneBadge.isHoverOnly ? 'opacity-0 group-hover:opacity-100' : ''}`}
+                                            title={sixByOneBadge.title}
+                                            aria-label={sixByOneBadge.title}
+                                            role="status"
+                                          >
+                                            {sixByOneBadge.text}
+                                          </span>
+                                        )}
+
+                                        {/* Indicador 3: Domingos Consecutivos (Canto Superior Direito) */}
+                                        {sundayBadge && (
+                                          <span
+                                            onClick={(e) => { e.stopPropagation(); onSelectDay(d.num - 1); }}
+                                            className={`absolute -top-1 -right-1 px-1 py-0 text-[11px] leading-none font-black rounded-full z-30 transition-all cursor-help tracking-tighter ring-1 ring-white dark:ring-zinc-900 ${sundayBadge.className} ${sundayBadge.isHoverOnly ? 'opacity-0 group-hover:opacity-100' : ''}`}
+                                            title={sundayBadge.title}
+                                            aria-label={sundayBadge.title}
+                                            role="status"
+                                          >
+                                            {sundayBadge.text}
+                                          </span>
+                                        )}
+
+                                        {/* Indicador 4: Pedido de Colaborador (Canto Inferior Direito) */}
+                                        {dayRequest && (
+                                          <div 
+                                            className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full z-30 ring-1.5 ring-white dark:ring-zinc-900 cursor-help flex items-center justify-center group/balloon"
+                                            role="status"
+                                            aria-label={`Pedido do colaborador: ${dayRequest.text} (${dayRequest.status})`}
+                                          >
+                                            <div className={`w-full h-full rounded-full ${
+                                              dayRequest.status === 'granted' ? 'bg-emerald-500' : 
+                                              dayRequest.status === 'refused' ? 'bg-red-500' :
+                                              dayRequest.status === 'seen' ? 'bg-blue-500' : 
+                                              'bg-orange-500 animate-pulse'
+                                            }`} />
+                                            
+                                            <div className="absolute bottom-full right-0 mb-2 w-48 bg-zinc-900 dark:bg-zinc-800 text-white p-3 rounded-2xl shadow-xl opacity-0 invisible group-hover/balloon:opacity-100 group-hover/balloon:visible transition-all z-[100] pointer-events-none scale-95 group-hover/balloon:scale-100 origin-bottom-right">
+                                              <div className="absolute top-full right-2 -mt-1 border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-800" />
+                                              <p className="text-[11px] font-black uppercase text-zinc-400 mb-1 border-b border-zinc-700 pb-1">Pedido do Colaborador</p>
+                                              <p className="text-xs font-bold leading-snug">{dayRequest.text}</p>
+                                              {dayRequest.feedback && (
+                                                <div className="mt-2 pt-2 border-t border-zinc-700">
+                                                  <p className="text-[11px] font-black uppercase text-orange-400 mb-0.5">Resposta do Gerente</p>
+                                                  <p className="text-[11px] font-bold text-zinc-300 italic">{dayRequest.feedback}</p>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Botão Principal de Turno com Explicabilidade Algorítmica */}
+                                        <button
+                                          type="button"
+                                          onClick={() => onSelectDay(d.num - 1)}
+                                          aria-label={`${emp.name}: Dia ${d.num}, ${d.weekday}. Turno: ${shift === 'N/A' ? 'Fora de vigência' : shift}${emp.decisionReasons?.[monthKey]?.[d.num - 1] ? ' • Motivo: ' + DECISION_REASON_LABELS[emp.decisionReasons[monthKey][d.num - 1]] : ''}`}
+                                          title={buttonTitle}
+                                          className={`${isCompactMode ? 'w-8 h-8 rounded-lg' : 'w-10 h-10 rounded-xl'} flex items-center justify-center font-bold transition-all shadow-xs relative border ${cellStyle.bg} ${cellStyle.text} ${cellStyle.border} ${
+                                            dayRequest ? (
+                                              dayRequest.status === 'granted' ? 'ring-1.5 ring-emerald-500/80' :
+                                              dayRequest.status === 'refused' ? 'ring-1.5 ring-red-500/80' :
+                                              dayRequest.status === 'seen' ? 'ring-1.5 ring-blue-500/80' :
+                                              'ring-2 ring-orange-500 animate-pulse'
+                                            ) : ''
+                                          }`}>
+                                        {shift === 'AT' ? (
+                                          <div className="flex flex-col items-center justify-center text-rose-500 font-black leading-none">
+                                            <Icon name="add" className="text-sm" />
+                                            {(() => {
+                                              if (emp.atestadoStart && emp.atestadoEnd && fullDate >= emp.atestadoStart && fullDate <= emp.atestadoEnd) {
+                                                const s = new Date(emp.atestadoStart + 'T00:00:00').getTime();
+                                                const e = new Date(emp.atestadoEnd + 'T00:00:00').getTime();
+                                                const c = new Date(fullDate + 'T00:00:00').getTime();
+                                                const total = Math.round((e - s) / 86400000) + 1;
+                                                const cur = Math.round((c - s) / 86400000) + 1;
+                                                return <span className="text-[11px] opacity-80 mt-0.5">{cur}/{total}</span>;
+                                              }
+                                              return <span className="text-[11px] font-black uppercase mt-0.5">AT</span>;
+                                            })()}
+                                          </div>
+                                        ) : shift === 'FE' ? (
+                                          <div className="flex flex-col items-center justify-center leading-none">
+                                            <span>FE</span>
+                                            {(() => {
+                                              if (emp.vacationStart && emp.vacationEnd && fullDate >= emp.vacationStart && fullDate <= emp.vacationEnd) {
+                                                const s = new Date(emp.vacationStart + 'T00:00:00').getTime();
+                                                const e = new Date(emp.vacationEnd + 'T00:00:00').getTime();
+                                                const c = new Date(fullDate + 'T00:00:00').getTime();
+                                                const total = Math.round((e - s) / 86400000) + 1;
+                                                const cur = Math.round((c - s) / 86400000) + 1;
+                                                return <span className="text-[11px] opacity-80 mt-0.5">{cur}/{total}</span>;
+                                              }
+                                              return null;
+                                            })()}
+                                          </div>
+                                        ) : shift === 'C' ? (
+                                          <span className="text-[13px] font-bold">C</span>
+                                        ) : shift === 'N/A' ? (
+                                           <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-mono">-</span>
+                                          ) : isWorkingShift(shift) ? (
+                                            <span className="text-[13px] font-bold">
+                                              {tacticalDisplayMode === 'roles' ? (
+                                                (() => {
+                                                  const codeMap: Record<string, string> = {
+                                                    'Caixa': 'CX',
+                                                    'Pacote': 'PC',
+                                                    'Vendas': 'VEND',
+                                                    'Apoio': 'AP',
+                                                    'Fiscal': 'FISC',
+                                                    'Estoque': 'ESTQ'
+                                                  };
+                                                  return codeMap[assignedRole] || 'T';
+                                                })()
+                                              ) : tacticalDisplayMode === 'positions' ? (
+                                                getTacticalCellCode(emp.tacticalPositions?.[monthKey]?.[d.num - 1] || resolvedPositions[emp.id]) || 'T'
+                                              ) : (
+                                                'T'
+                                              )}
+                                            </span>
+                                          ) : (
+                                            <span className="text-[13px] font-bold">{shift.startsWith('FF') ? 'FF' : shift}</span>
+                                          )}
+                                      </button>
+
+                                      
+                                      {isEditable && !isReadOnly && (() => {
+                                        const pendingCount = (holidayCredits[emp.id] || []).filter(c => c.status === 'pending').length;
+                                        return (
+                                          <select
+                                            value={isWorkingShift(shift) ? 'T' : shift}
+                                            onChange={(e) => {
+                                              const val = e.target.value;
+                                              if (val === 'AT_PERIOD') {
+                                                onOpenEmployeeCard(emp, 'atestado', fullDate);
+                                                return;
+                                              }
+                                              onUpdateShift(emp.id, d.num - 1, val as ShiftType);
+                                            }}
+                                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-50"
+                                          >
+                                            {shift === 'N/A' && <option value="N/A">Fora do Contrato (N/A)</option>}
+                                            <option value="T">Trabalha (T)</option>
+                                            <option value="F">Folga (F)</option>
+                                            <option value="AT">Atestado Médico (Apenas este dia) 🩺</option>
+                                            <option value="AT_PERIOD">🩺 Lançar Atestado por Período / Intervalo...</option>
+                                            
+                                            {/* Specific Pending Holidays */}
+                                            {(holidayCredits[emp.id] || [])
+                                              .filter(c => c.status === 'pending')
+                                              .map(c => (
+                                                <option key={c.id || c.holidayDate} value={`FF ${c.id || c.holidayDate}`}>
+                                                  FF — {c.holidayName}
+                                                </option>
+                                              ))
+                                            }
+                                            
+                                            {/* Fallback generic option if no specific pending ones */}
+                                            {pendingCount === 0 && !shift?.startsWith('FF') && (
+                                              <option value="FF">Folga Feriado (FF)</option>
+                                            )}
+
+                                            {/* Current value if it's already an FF */}
+                                            {shift?.startsWith('FF') && !(holidayCredits[emp.id] || []).some(c => c.status === 'pending' && `FF ${c.id || c.holidayDate}` === shift) && (
+                                              <option value={shift}>
+                                                {(() => {
+                                                  if (shift === 'FF') return 'FF — Folga Feriado';
+                                                  const explicitKey = shift.split(' ')[1];
+                                                  const matched = (holidayCredits[emp.id] || []).find(c => c.id === explicitKey || c.holidayDate === explicitKey);
+                                                  return matched ? `FF — ${matched.holidayName}` : shift.replace('FF ', 'FF — ');
+                                                })()}
+                                              </option>
+                                            )}
+                                            <option value="FE">Férias (FE)</option>
+                                            <option value="C">Curso (C)</option>
+                                            <option value="DO">Aniversário / Day Off (DO)</option>
+                                          </select>
+                                        );
+                                      })()}
+
+                                      {/* Tooltip Rico de Detalhes ao Hover */}
+                                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-zinc-900/95 dark:bg-zinc-800/95 backdrop-blur-md text-white p-3 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none scale-95 group-hover:scale-100 origin-bottom border border-zinc-700/60 text-left">
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-zinc-900/95 dark:border-t-zinc-800/95" />
+                                        <div className="flex items-center justify-between border-b border-zinc-700/80 pb-1.5 mb-2">
+                                          <div className="flex items-center gap-1.5">
+                                            <span className="text-xs font-black text-orange-400 tabular-nums">
+                                              {String(d.num).padStart(2, '0')}/{String(currentMY.month + 1).padStart(2, '0')}
+                                            </span>
+                                            <span className="text-[11px] font-bold uppercase text-zinc-300">({d.weekday})</span>
+                                          </div>
+                                          <span className={`text-[11px] font-black uppercase px-1.5 py-0.5 rounded ${
+                                            isWorkingDay ? 'bg-orange-500/20 text-orange-300' : 'bg-emerald-500/20 text-emerald-300'
+                                          }`}>
+                                            {shift === 'T' ? 'Trabalho (T)' : shift === 'F' ? 'Folga (F)' : shift}
+                                          </span>
+                                        </div>
+
+                                        <div className="space-y-1.5 text-[11px]">
+                                          {isWorkingDay && (() => {
+                                            const primaryRoleNorm = normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
+                                            const isDiff = assignedRole !== primaryRoleNorm;
+                                            const dl = dailyDetailedLunchesMap.get(`${emp.id}_${d.num - 1}`);
+
+                                            return (
+                                              <>
+                                                <div className="flex items-start justify-between gap-2">
+                                                  <span className="text-zinc-400 font-medium">Função Alocada:</span>
+                                                  <span className={`font-semibold text-right ${isDiff ? 'text-amber-300 font-bold' : 'text-zinc-100'}`}>
+                                                    {assignedRole} {isDiff ? `(1ª: ${primaryRoleNorm})` : ''}
+                                                  </span>
+                                                </div>
+                                                {dl?.isCoveringCashier && (
+                                                  <div className="p-1 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-bold flex items-center gap-1">
+                                                    <span>🔄 Cobrirá Caixa no almoço ({dl.coveringCashierTime})</span>
+                                                  </div>
+                                                )}
+                                                {dl?.coveredByEmployeeName && (
+                                                  <div className="p-1 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold flex items-center gap-1">
+                                                    <span>🛡️ Coberto por {dl.coveredByEmployeeName} no almoço</span>
+                                                  </div>
+                                                )}
+                                              </>
+                                            );
+                                          })()}
+
+                                          {isWorkingDay && (
+                                            <div className="flex items-start justify-between gap-2">
+                                              <span className="text-zinc-400 font-medium">Jornada:</span>
+                                              <span className="font-semibold text-zinc-100 tabular-nums text-right">
+                                                {(emp.dailyHours[monthKey] || [])[d.num - 1] || emp.workPeriod || 'Padrão'}
+                                              </span>
+                                            </div>
+                                          )}
+
+                                          {isWorkingDay && dailyLunchesMap.get(`${emp.id}_${d.num - 1}`) && (
+                                            <div className="flex items-start justify-between gap-2">
+                                              <span className="text-zinc-400 font-medium">Intervalo Almoço:</span>
+                                              <span className="font-semibold text-amber-300 tabular-nums text-right">
+                                                {dailyLunchesMap.get(`${emp.id}_${d.num - 1}`)}
+                                              </span>
+                                            </div>
+                                          )}
+
+                                          {isWorkingDay && (
+                                            <div className="flex items-start justify-between gap-2">
+                                              <span className="text-zinc-400 font-medium">Ciclo {maxStreak}x1:</span>
+                                              <span className={`font-semibold tabular-nums text-right ${streak > maxStreak ? 'text-rose-400 font-black' : 'text-zinc-200'}`}>
+                                                {streak > maxStreak ? `⚠️ ${streak}º dia (Violação CLT)` : `${streak} de ${maxStreak} dias`}
+                                              </span>
+                                            </div>
+                                          )}
+
+                                          {isSunday && (
+                                            <div className="flex items-start justify-between gap-2">
+                                              <span className="text-zinc-400 font-medium">Domingo:</span>
+                                              <span className={`font-semibold text-right ${finalSundayStreak >= 3 ? 'text-rose-400 font-black' : 'text-zinc-200'}`}>
+                                                {isWorkingDay ? `${finalSundayStreak}º domingo consecutivo` : 'Folga de domingo'}
+                                              </span>
+                                            </div>
+                                          )}
+
+                                          {emp.decisionReasons?.[monthKey]?.[d.num - 1] && (
+                                            <div className="pt-1.5 border-t border-zinc-700/60 mt-1">
+                                              <span className="text-[11px] uppercase font-bold text-zinc-400 block mb-0.5">Motivo da Alocação:</span>
+                                              <span className="text-zinc-200 font-medium leading-tight block">
+                                                {DECISION_REASON_LABELS[emp.decisionReasons[monthKey][d.num - 1]]}
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                      </div>
+                                    )}
+                                  </td>
+                                );
                             })}
                           </tr>
                         );
@@ -1908,7 +2527,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                     </button>
                   </div>
                 </td>
-                {filteredDays.map(d => {
+                {visibleDays.map(d => {
                   const dayIdx = d.num - 1;
                   const count = displayedEmployees.filter(emp => {
                     const s = resolveEffectiveShift(emp, d.dateStr, monthKey, dayIdx);
@@ -1936,7 +2555,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                         <span className="text-[11px] font-bold text-zinc-700 dark:text-zinc-200">{meta.label}</span>
                       </div>
                     </td>
-                    {filteredDays.map(d => {
+                    {visibleDays.map(d => {
                       const dayIdx = d.num - 1;
                       const count = displayedEmployees.filter(emp => {
                         const assignedRole = emp.dailyAssignedRoles?.[monthKey]?.[dayIdx] || normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
@@ -1977,7 +2596,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                       <span className="font-black uppercase text-zinc-700 dark:text-zinc-200">Meta (1 CX + 2 VEND)</span>
                     </div>
                   </td>
-                  {filteredDays.map(d => {
+                  {visibleDays.map(d => {
                     const dayIdx = d.num - 1;
                     const isSun = d.isSunday;
 
