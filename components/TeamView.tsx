@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDialog } from '../contexts/DialogContext';
-import { Employee, EmployeeCargo, EMPLOYEE_ROLES, ROLE_METADATA_MAP, normalizeEmployeeRole } from '../types';
+import { Employee, EmployeeCargo, EMPLOYEE_ROLES, ROLE_METADATA_MAP, normalizeEmployeeRole, InactiveReason } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD } from '../constants';
 import { addDaysToISODate } from '../src/utils/date';
+import { DeactivateEmployeeModal } from './DeactivateEmployeeModal';
 
 interface TeamViewProps {
   employees: Employee[];
@@ -30,7 +31,7 @@ interface TeamViewProps {
 
 const CARGO_OPTIONS: EmployeeCargo[] = EMPLOYEE_ROLES;
 
-type StatusCategoryFilter = 'ALL' | 'CLT' | 'SAZONAL' | 'APPRENTICE' | 'AWAY' | 'HIDDEN';
+type StatusCategoryFilter = 'ALL' | 'ACTIVE' | 'INACTIVE' | 'CLT' | 'SAZONAL' | 'APPRENTICE' | 'AWAY' | 'HIDDEN';
 type ShiftGroupFilter = 'ALL' | 'ABERTURA' | 'INTERMEDIARIO' | 'FECHAMENTO';
 type SortMode = 'NAME' | 'ROLE' | 'SHIFT';
 type EditModalSection = 'all' | 'identificacao' | 'contrato' | 'escala' | 'afastamentos' | 'acesso';
@@ -489,6 +490,8 @@ interface EditEmployeeModalProps {
   isReadOnly: boolean;
   onUpdateEmployee: (empId: string, data: Partial<Employee>) => void;
   onDeleteEmployee: (empId: string) => void;
+  onOpenDeactivateModal?: (emp: Employee) => void;
+  onReactivateEmployee?: (emp: Employee) => void;
   onClose: () => void;
   onSelectSiblingEmployee?: (empId: string) => void;
   prevEmpId?: string | null;
@@ -503,6 +506,8 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   isReadOnly,
   onUpdateEmployee,
   onDeleteEmployee,
+  onOpenDeactivateModal,
+  onReactivateEmployee,
   onClose,
   onSelectSiblingEmployee,
   prevEmpId,
@@ -577,12 +582,22 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                 <h4 className="text-base sm:text-lg font-black text-zinc-900 dark:text-zinc-100 uppercase truncate">
                   {employee.name}
                 </h4>
-                <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded-full ${
+                <span className={`text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full ${
                   employee.status === 'active'
                     ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                    : employee.inactiveReason === 'fim_contrato'
+                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                    : employee.inactiveReason === 'demissao'
+                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
                     : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
                 }`}>
-                  {employee.status === 'active' ? 'Ativo' : 'Inativo'}
+                  {employee.status === 'active'
+                    ? 'Ativo'
+                    : employee.inactiveReason === 'fim_contrato'
+                    ? 'Inativo (Fim de Contrato)'
+                    : employee.inactiveReason === 'demissao'
+                    ? 'Inativo (Demissão)'
+                    : 'Inativo'}
                 </span>
               </div>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -671,6 +686,41 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
 
         {/* Scrollable Body */}
         <div className="overflow-y-auto p-5 sm:p-6 space-y-6 flex-1 custom-scrollbar">
+          {/* Banner Informativo de Colaborador Desativado */}
+          {employee.status === 'inactive' && (
+            <div className="p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex flex-wrap items-center justify-between gap-3 shadow-inner">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 flex items-center justify-center shrink-0">
+                  <Icon name="person_off" className="text-xl" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black uppercase text-zinc-900 dark:text-zinc-100">
+                      Colaborador Desativado
+                    </span>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 uppercase">
+                      {employee.inactiveReason === 'fim_contrato' ? 'Fim de Contrato' : employee.inactiveReason === 'demissao' ? 'Demissão' : 'Inativo'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium mt-0.5">
+                    {employee.inactiveDate || employee.firedAt ? `Desligamento efetivado em ${formatDateBR(employee.inactiveDate || employee.firedAt)}. ` : ''}
+                    O cadastro e o histórico de escalas passadas permanecem 100% preservados para consultas e relatórios.
+                  </p>
+                </div>
+              </div>
+              {!isReadOnly && onReactivateEmployee && (
+                <button
+                  type="button"
+                  onClick={() => onReactivateEmployee(employee)}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all shrink-0"
+                >
+                  <Icon name="replay" className="text-sm" />
+                  <span>Reativar Cadastro</span>
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Section 1: Identificação & Cargo */}
           {showSection('identificacao') && (
             <div className="space-y-4">
@@ -683,15 +733,23 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                 {!isReadOnly && (
                   <button
                     type="button"
-                    onClick={() => onUpdateEmployee(employee.id, { status: employee.status === 'active' ? 'inactive' : 'active' })}
-                    className={`px-3 py-1 rounded-xl text-[11px] font-black uppercase border transition-all flex items-center gap-1.5 ${
+                    onClick={() => {
+                      if (employee.status === 'active') {
+                        onOpenDeactivateModal?.(employee);
+                      } else {
+                        onReactivateEmployee?.(employee);
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-[11px] font-black uppercase border transition-all flex items-center gap-1.5 ${
                       employee.status === 'active'
-                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-200'
                     }`}
+                    title={employee.status === 'active' ? 'Desativar colaborador por fim de contrato ou demissão' : 'Reativar colaborador na equipe'}
                   >
                     <span className={`w-2 h-2 rounded-full ${employee.status === 'active' ? 'bg-emerald-500' : 'bg-zinc-400'}`} />
                     <span>{employee.status === 'active' ? 'Cadastro Ativo' : 'Cadastro Inativo'}</span>
+                    <Icon name={employee.status === 'active' ? 'person_off' : 'replay'} className="text-xs ml-0.5" />
                   </button>
                 )}
               </div>
@@ -1236,23 +1294,48 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
         {/* Footer Actions */}
         <div className="p-4 sm:p-5 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/80 dark:bg-zinc-900/80">
           {!isReadOnly && (
-            <button
-              type="button"
-              onClick={async () => {
-                const confirmed = await showDialog({
-                  type: 'confirm',
-                  message: `Excluir o colaborador ${employee.name} permanentemente?`
-                });
-                if (confirmed) {
-                  onDeleteEmployee(employee.id);
-                  onClose();
-                }
-              }}
-              className="h-11 min-h-[44px] md:h-10 md:min-h-[38px] px-3.5 rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 font-bold text-xs uppercase transition-all flex items-center gap-1.5 border border-rose-200 dark:border-rose-900/40 focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none"
-            >
-              <Icon name="delete" className="text-sm" />
-              <span>Excluir</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {employee.status === 'active' ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenDeactivateModal?.(employee)}
+                  className="h-11 min-h-[44px] md:h-10 md:min-h-[38px] px-3.5 rounded-xl text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30 font-bold text-xs uppercase transition-all flex items-center gap-1.5 border border-amber-200 dark:border-amber-800"
+                  title="Desativar colaborador por fim de contrato ou demissão, preservando o histórico de escalas passadas"
+                >
+                  <Icon name="person_off" className="text-sm" />
+                  <span>Desativar</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onReactivateEmployee?.(employee)}
+                  className="h-11 min-h-[44px] md:h-10 md:min-h-[38px] px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                  title="Reativar colaborador na equipe"
+                >
+                  <Icon name="replay" className="text-sm" />
+                  <span>Reativar Cadastro</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={async () => {
+                  const confirmed = await showDialog({
+                    type: 'confirm',
+                    message: `Atenção: A desativação já oculta o colaborador mantendo o histórico de escalas passadas.\n\nExcluir definitivamente o cadastro de ${employee.name}?`
+                  });
+                  if (confirmed) {
+                    onDeleteEmployee(employee.id);
+                    onClose();
+                  }
+                }}
+                className="h-11 min-h-[44px] md:h-10 md:min-h-[38px] px-3 rounded-xl text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 font-bold text-xs uppercase transition-all flex items-center gap-1 border border-transparent hover:border-rose-200"
+                title="Excluir cadastro permanentemente (apenas para registros criados por engano)"
+              >
+                <Icon name="delete" className="text-sm" />
+                <span>Excluir</span>
+              </button>
+            </div>
           )}
 
           <div className="flex items-center gap-2 ml-auto">
@@ -1295,6 +1378,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingEmpId, setEditingEmpId] = useState<string | null>(initialEditingEmpId);
+  const [deactivatingEmployee, setDeactivatingEmployee] = useState<Employee | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [cargoFilter, setCargoFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<StatusCategoryFilter>('ALL');
@@ -1302,6 +1386,58 @@ export const TeamView: React.FC<TeamViewProps> = ({
   const [sortBy, setSortBy] = useState<SortMode>('NAME');
 
   const { showDialog } = useDialog();
+
+  const handleConfirmDeactivate = (empId: string, reason: InactiveReason, effectiveDate: string) => {
+    const emp = employees.find(e => e.id === empId);
+    if (!emp) return;
+
+    const syncedShifts = syncEmployeeContractShifts(emp, emp.hiredAt, effectiveDate);
+    onUpdateEmployee(empId, {
+      status: 'inactive',
+      inactiveReason: reason,
+      inactiveDate: effectiveDate,
+      firedAt: effectiveDate,
+      shifts: syncedShifts,
+    });
+
+    const reasonLabel =
+      reason === 'fim_contrato'
+        ? 'Fim de Contrato'
+        : reason === 'demissao'
+        ? 'Demissão'
+        : 'Desativação';
+
+    showDialog({
+      title: 'Colaborador Desativado',
+      message: `${emp.name} foi desativado por ${reasonLabel}. O cadastro e todo o histórico de escalas passadas foram preservados no sistema e ele pode ser reativado a qualquer momento.`,
+      type: 'alert',
+    });
+  };
+
+  const handleReactivateEmployee = async (emp: Employee) => {
+    const confirmed = await showDialog({
+      type: 'confirm',
+      message: `Deseja reativar o colaborador ${emp.name}? O cadastro voltará ao status ativo na equipe e poderá ser escalado normalmente.`
+    });
+
+    if (!confirmed) return;
+
+    // Restaura os turnos N/A futuros para T ao reativar
+    const syncedShifts = syncEmployeeContractShifts(emp, emp.hiredAt, undefined);
+    onUpdateEmployee(emp.id, {
+      status: 'active',
+      inactiveReason: undefined,
+      inactiveDate: undefined,
+      firedAt: undefined,
+      shifts: syncedShifts,
+    });
+
+    showDialog({
+      title: 'Colaborador Reativado',
+      message: `${emp.name} agora está novamente ativo na equipe e elegível para escalas.`,
+      type: 'alert',
+    });
+  };
 
   useEffect(() => {
     if (initialEditingEmpId) {
@@ -1318,17 +1454,27 @@ export const TeamView: React.FC<TeamViewProps> = ({
     let apprentice = 0;
     let away = 0;
     let hidden = 0;
+    let active = 0;
+    let inactive = 0;
 
     for (const emp of employees) {
+      if (emp.status === 'active') {
+        active++;
+        if (emp.isYoungApprentice) apprentice++;
+        if (emp.contractType === 'Sazonal') sazonal++;
+        else clt++;
+      } else {
+        inactive++;
+      }
+
       if (emp.isHidden || emp.status !== 'active') hidden++;
-      if (emp.isYoungApprentice) apprentice++;
-      if (emp.contractType === 'Sazonal') sazonal++;
-      else clt++;
       if ((emp.vacationStart && emp.vacationEnd) || (emp.atestadoStart && emp.atestadoEnd)) away++;
     }
 
     return {
       total: employees.length,
+      active,
+      inactive,
       clt,
       sazonal,
       apprentice,
@@ -1349,9 +1495,11 @@ export const TeamView: React.FC<TeamViewProps> = ({
       const matchesCargo = cargoFilter === 'ALL' || normalizedRole === cargoFilter;
 
       let matchesStatus = true;
-      if (statusFilter === 'CLT') matchesStatus = emp.contractType !== 'Sazonal';
-      else if (statusFilter === 'SAZONAL') matchesStatus = emp.contractType === 'Sazonal';
-      else if (statusFilter === 'APPRENTICE') matchesStatus = Boolean(emp.isYoungApprentice);
+      if (statusFilter === 'ACTIVE') matchesStatus = emp.status === 'active';
+      else if (statusFilter === 'INACTIVE') matchesStatus = emp.status === 'inactive';
+      else if (statusFilter === 'CLT') matchesStatus = emp.contractType !== 'Sazonal' && emp.status === 'active';
+      else if (statusFilter === 'SAZONAL') matchesStatus = emp.contractType === 'Sazonal' && emp.status === 'active';
+      else if (statusFilter === 'APPRENTICE') matchesStatus = Boolean(emp.isYoungApprentice) && emp.status === 'active';
       else if (statusFilter === 'AWAY') matchesStatus = Boolean((emp.vacationStart && emp.vacationEnd) || (emp.atestadoStart && emp.atestadoEnd));
       else if (statusFilter === 'HIDDEN') matchesStatus = Boolean(emp.isHidden || emp.status !== 'active');
 
@@ -1452,11 +1600,11 @@ export const TeamView: React.FC<TeamViewProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
         {[
           { id: 'ALL' as StatusCategoryFilter, label: 'Total Equipe', value: stats.total, icon: 'groups', color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-950/40' },
-          { id: 'CLT' as StatusCategoryFilter, label: 'Efetivos CLT', value: stats.clt, icon: 'badge', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40' },
+          { id: 'ACTIVE' as StatusCategoryFilter, label: 'Ativos na Escala', value: stats.active, icon: 'how_to_reg', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40' },
+          { id: 'INACTIVE' as StatusCategoryFilter, label: 'Desativados', value: stats.inactive, icon: 'person_off', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-950/40' },
+          { id: 'CLT' as StatusCategoryFilter, label: 'Efetivos CLT', value: stats.clt, icon: 'badge', color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-950/40' },
           { id: 'SAZONAL' as StatusCategoryFilter, label: 'Sazonais / Temp.', value: stats.sazonal, icon: 'date_range', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-950/40' },
           { id: 'APPRENTICE' as StatusCategoryFilter, label: 'Jovens Aprendizes', value: stats.apprentice, icon: 'child_care', color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-50 dark:bg-sky-950/40' },
-          { id: 'AWAY' as StatusCategoryFilter, label: 'Férias / Atestado', value: stats.away, icon: 'beach_access', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-950/40' },
-          { id: 'HIDDEN' as StatusCategoryFilter, label: 'Ocultos / Inativos', value: stats.hidden, icon: 'visibility_off', color: 'text-zinc-600 dark:text-zinc-400', bg: 'bg-zinc-100 dark:bg-zinc-800' },
         ].map(card => {
           const isSelected = statusFilter === card.id;
           return (
@@ -1589,6 +1737,8 @@ export const TeamView: React.FC<TeamViewProps> = ({
           isReadOnly={isReadOnly}
           onUpdateEmployee={onUpdateEmployee}
           onDeleteEmployee={onDeleteEmployee}
+          onOpenDeactivateModal={(emp) => setDeactivatingEmployee(emp)}
+          onReactivateEmployee={handleReactivateEmployee}
           onClose={() => setEditingEmpId(null)}
           onSelectSiblingEmployee={(id) => setEditingEmpId(id)}
           prevEmpId={prevEmpId}
@@ -1596,6 +1746,16 @@ export const TeamView: React.FC<TeamViewProps> = ({
           currentIndex={editingIndex}
           totalCount={filteredEmployees.length}
           onOpenPresetForEmployee={onOpenPresetForEmployee}
+        />
+      )}
+
+      {/* Deactivate Employee Modal */}
+      {deactivatingEmployee && (
+        <DeactivateEmployeeModal
+          employee={deactivatingEmployee}
+          isOpen={Boolean(deactivatingEmployee)}
+          onClose={() => setDeactivatingEmployee(null)}
+          onConfirm={handleConfirmDeactivate}
         />
       )}
 
@@ -1630,16 +1790,20 @@ export const TeamView: React.FC<TeamViewProps> = ({
                 <div className={`h-1.5 w-full transition-colors ${
                   emp.status === 'active' 
                     ? (emp.contractType === 'Sazonal' ? 'bg-amber-400' : 'bg-emerald-500') 
-                    : 'bg-slate-300'
+                    : 'bg-zinc-300 dark:bg-zinc-700'
                 }`} />
 
                 {/* Card Body */}
-                <div className="p-4 flex flex-col gap-3 flex-1">
+                <div className={`p-4 flex flex-col gap-3 flex-1 ${
+                  emp.status === 'inactive' ? 'bg-zinc-50/60 dark:bg-zinc-900/60' : ''
+                }`}>
                   {/* Header: Avatar, Name, Cargo */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shadow-sm uppercase shrink-0 transition-transform group-hover:scale-105 ${
-                        emp.isYoungApprentice
+                        emp.status === 'inactive'
+                          ? 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                          : emp.isYoungApprentice
                           ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
                           : role === 'Estoque'
                           ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
@@ -1650,12 +1814,25 @@ export const TeamView: React.FC<TeamViewProps> = ({
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-black text-slate-900 dark:text-zinc-100 uppercase truncate group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors" title={emp.name.toUpperCase()}>
+                          <span className={`text-sm font-black uppercase truncate group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors ${
+                            emp.status === 'inactive' ? 'text-zinc-500 line-through decoration-zinc-400' : 'text-slate-900 dark:text-zinc-100'
+                          }`} title={emp.name.toUpperCase()}>
                             {emp.name}
                           </span>
-                          <div className={`w-2 h-2 rounded-full shrink-0 ${emp.status === 'active' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                          <div className={`w-2 h-2 rounded-full shrink-0 ${emp.status === 'active' ? 'bg-emerald-500' : 'bg-zinc-400'}`} />
                         </div>
                         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          {emp.status === 'inactive' && (
+                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                              emp.inactiveReason === 'fim_contrato'
+                                ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300/50'
+                                : emp.inactiveReason === 'demissao'
+                                ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300/50'
+                                : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700'
+                            }`}>
+                              {emp.inactiveReason === 'fim_contrato' ? 'Fim de Contrato' : emp.inactiveReason === 'demissao' ? 'Demissão' : 'Inativo'}
+                            </span>
+                          )}
                           <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded-md border ${meta.badgeColor}`}>
                             {meta.label} ({meta.code})
                           </span>
@@ -1750,7 +1927,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
 
                     {!isReadOnly && (
                       <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        {onOpenPresetForEmployee && (
+                        {onOpenPresetForEmployee && emp.status === 'active' && (
                           <button
                             type="button"
                             onClick={() => onOpenPresetForEmployee(emp.id)}
@@ -1760,6 +1937,29 @@ export const TeamView: React.FC<TeamViewProps> = ({
                             <Icon name="tune" className="text-sm" />
                           </button>
                         )}
+
+                        {/* Botão Dinâmico: Desativar (se ativo) ou Reativar (se inativo) */}
+                        {emp.status === 'active' ? (
+                          <button
+                            type="button"
+                            onClick={() => setDeactivatingEmployee(emp)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-all"
+                            title={`Desativar ${emp.name} (fim de contrato ou demissão, preservando o cadastro)`}
+                          >
+                            <Icon name="person_off" className="text-sm" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleReactivateEmployee(emp)}
+                            className="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[10px] font-black uppercase tracking-wider hover:bg-emerald-100 transition-all flex items-center gap-1"
+                            title={`Reativar cadastro de ${emp.name} na equipe`}
+                          >
+                            <Icon name="replay" className="text-xs" />
+                            <span>Reativar</span>
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => onUpdateEmployee(emp.id, { isHidden: !emp.isHidden })}
@@ -1777,12 +1977,12 @@ export const TeamView: React.FC<TeamViewProps> = ({
                           onClick={async () => {
                             const confirmed = await showDialog({
                               type: 'confirm',
-                              message: `Excluir ${emp.name} permanentemente?`
+                              message: `Atenção: A desativação é a opção recomendada pois mantém os históricos de escalas passadas.\n\nDeseja realmente EXCLUIR DEFINITIVAMENTE ${emp.name}?`
                             });
                             if (confirmed) onDeleteEmployee(emp.id);
                           }}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition-all"
-                          title="Excluir Colaborador"
+                          title="Excluir Colaborador Permanentemente"
                         >
                           <Icon name="delete" className="text-sm" />
                         </button>

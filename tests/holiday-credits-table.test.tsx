@@ -36,25 +36,45 @@ describe('HolidayCreditsTable — Matriz de Folgas e Créditos de Feriados', () 
     {
       id: 'emp-1',
       name: 'Carlos Silva',
-      cargo: 'Vendedor',
+      cargo: 'Vendas',
+      status: 'active',
+      statusColor: '#3b82f6',
+      workPeriod: '10h às 18h20',
+      preferredDayOff: 'Segunda-feira',
+      shiftName: 'Abertura',
+      isYoungApprentice: false,
       shifts: {
         '2026-10': ['T', 'T', 'T', 'T', 'T', 'T', 'T', 'T', 'T', 'T', 'T', 'T', 'T', 'T', 'T'],
       },
+      dailyHours: {},
     },
     {
       id: 'emp-2',
       name: 'Mariana Souza',
-      cargo: 'Operadora de Caixa',
+      cargo: 'Caixa',
+      status: 'active',
+      statusColor: '#10b981',
+      workPeriod: '12h às 20h20',
+      preferredDayOff: 'Terça-feira',
+      shiftName: 'Intermediário',
+      isYoungApprentice: false,
       shifts: {
         '2026-10': ['F', 'T', 'T', 'T', 'T', 'T', 'T', 'T', 'T', 'T', 'T', 'F', 'T', 'T', 'T'],
       },
+      dailyHours: {},
     },
     {
       id: 'emp-3',
       name: 'João Lucas',
-      cargo: 'Jovem Aprendiz',
+      cargo: 'Apoio',
+      status: 'active',
+      statusColor: '#6366f1',
+      workPeriod: '10h às 16h15',
+      preferredDayOff: 'Quarta-feira',
+      shiftName: 'Abertura',
       isYoungApprentice: true,
       shifts: {},
+      dailyHours: {},
     },
   ];
 
@@ -64,12 +84,14 @@ describe('HolidayCreditsTable — Matriz de Folgas e Créditos de Feriados', () 
       date: '2026-10-12',
       name: 'Nossa Senhora Aparecida',
       type: 'national',
+      recurring: false,
     },
     {
       id: 'h-02-11',
       date: '2026-11-02',
       name: 'Finados',
       type: 'national',
+      recurring: false,
     },
   ];
 

@@ -149,6 +149,8 @@ export function normalizeShiftCode(raw: unknown): ShiftType {
 
 export type TacticalDisplayMode = 'positions' | 'roles' | 'off';
 
+export type InactiveReason = 'fim_contrato' | 'demissao' | 'outro';
+
 export interface Employee {
   id: string;
   name: string;
@@ -161,6 +163,8 @@ export interface Employee {
   role?: EmployeeRole;            // Alias moderno para cargo
   courseDay?: string; // e.g. 'Segunda-feira'
   status: 'active' | 'inactive';
+  inactiveReason?: InactiveReason;         // Motivo do desligamento / encerramento
+  inactiveDate?: string;                   // Data do desligamento / desativação (YYYY-MM-DD)
   statusColor: string;
   shifts: Record<string, ShiftType[]>;     // Keyed by "YYYY-MM"
   dailyHours: Record<string, string[]>;    // Keyed by "YYYY-MM"

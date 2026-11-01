@@ -142,12 +142,20 @@ export function isEmployeeHiddenInMonth(emp: Employee | undefined | null, monthK
  * Não considera o status de ocultação (para permitir listar em controles de reexibição).
  */
 export function isEmployeeEligibleForMonth(emp: Employee | undefined | null, year: number, month: number): boolean {
-  if (!emp || emp.status !== 'active') return false;
+  if (!emp) return false;
 
   const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
   const firstDayStr = `${monthKey}-01`;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const lastDayStr = `${monthKey}-${String(daysInMonth).padStart(2, '0')}`;
+
+  // Se o colaborador está inativo, verifica se possui data de término para histórico anterior
+  if (emp.status === 'inactive') {
+    const termDate = emp.firedAt || emp.inactiveDate;
+    if (!termDate || termDate < firstDayStr) {
+      return false;
+    }
+  }
 
   // Não iniciou ainda (data de início é posterior ao último dia do mês)
   if (emp.hiredAt && emp.hiredAt > lastDayStr) {
@@ -187,7 +195,14 @@ export function isEmployeeActiveInMonth(emp: Employee | undefined | null, year: 
  */
 export function isEmployeeActiveOnDay(emp: Employee | undefined | null, dateStr: string, monthKey?: string, dayIdx?: number): boolean {
   const effectiveMonthKey = monthKey || (dateStr ? dateStr.slice(0, 7) : undefined);
-  if (!emp || isEmployeeHiddenInMonth(emp, effectiveMonthKey) || emp.status !== 'active') return false;
+  if (!emp || isEmployeeHiddenInMonth(emp, effectiveMonthKey)) return false;
+
+  // Se o colaborador está inativo, só é ativo se a data for anterior ou igual à data de encerramento
+  if (emp.status === 'inactive') {
+    const termDate = emp.firedAt || emp.inactiveDate;
+    if (!termDate || dateStr > termDate) return false;
+  }
+
   if (emp.hiredAt && dateStr < emp.hiredAt) return false;
   if (emp.firedAt && dateStr > emp.firedAt) return false;
   if (effectiveMonthKey !== undefined && dayIdx !== undefined) {
