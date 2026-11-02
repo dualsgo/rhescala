@@ -31,10 +31,10 @@ export const HolidayCreditsTable: React.FC<HolidayCreditsTableProps> = ({
   const [isExporting, setIsExporting] = useState(false);
   const tableCaptureRef = useRef<HTMLDivElement>(null);
 
-  // Colaboradores ativos ordenados por nome
+  // Colaboradores ativos ordenados por nome (exclui desativados e jovens aprendizes)
   const activeEmployees = useMemo(() => {
     return employees
-      .filter(emp => !emp.isYoungApprentice) // Jovem aprendiz não trabalha em feriados
+      .filter(emp => !emp.isYoungApprentice && emp.status !== 'inactive')
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [employees]);
 

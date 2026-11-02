@@ -1384,6 +1384,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
   const [statusFilter, setStatusFilter] = useState<StatusCategoryFilter>('ALL');
   const [shiftFilter, setShiftFilter] = useState<ShiftGroupFilter>('ALL');
   const [sortBy, setSortBy] = useState<SortMode>('NAME');
+  const [showInactiveSection, setShowInactiveSection] = useState(false);
 
   const { showDialog } = useDialog();
 
@@ -1526,6 +1527,18 @@ export const TeamView: React.FC<TeamViewProps> = ({
       return a.name.localeCompare(b.name, 'pt-BR');
     });
   }, [employees, searchTerm, cargoFilter, statusFilter, shiftFilter, sortBy]);
+
+  const activeFilteredEmployees = useMemo(
+    () => filteredEmployees.filter(e => e.status !== 'inactive'),
+    [filteredEmployees]
+  );
+
+  const inactiveFilteredEmployees = useMemo(
+    () => filteredEmployees.filter(e => e.status === 'inactive'),
+    [filteredEmployees]
+  );
+
+  const isInactiveExpanded = showInactiveSection || statusFilter === 'INACTIVE' || Boolean(searchTerm.trim());
 
   const editingEmployee = useMemo(() => {
     if (!editingEmpId) return null;
@@ -1759,240 +1772,354 @@ export const TeamView: React.FC<TeamViewProps> = ({
         />
       )}
 
-      {/* Employee Cards Grid */}
-      {filteredEmployees.length === 0 ? (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800 p-12 text-center flex flex-col items-center justify-center gap-3">
-          <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-zinc-800 text-slate-400 flex items-center justify-center">
-            <Icon name="person_search" className="text-3xl" />
+      {/* Active Employee Cards Grid */}
+      {statusFilter !== 'INACTIVE' && (
+        activeFilteredEmployees.length === 0 ? (
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800 p-12 text-center flex flex-col items-center justify-center gap-3">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-zinc-800 text-slate-400 flex items-center justify-center">
+              <Icon name="person_search" className="text-3xl" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-slate-800 dark:text-zinc-200 uppercase">
+                Nenhum colaborador ativo encontrado
+              </h4>
+              <p className="text-xs font-medium text-slate-400 dark:text-zinc-500 mt-0.5">
+                Tente ajustar os filtros de busca, função ou categoria acima.
+              </p>
+            </div>
           </div>
-          <div>
-            <h4 className="text-sm font-black text-slate-800 dark:text-zinc-200 uppercase">
-              Nenhum colaborador encontrado
-            </h4>
-            <p className="text-xs font-medium text-slate-400 dark:text-zinc-500 mt-0.5">
-              Tente ajustar os filtros de busca, função ou categoria acima.
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredEmployees.map(emp => {
-            const role = normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
-            const meta = ROLE_METADATA_MAP[role];
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" data-testid="active-employees-grid">
+            {activeFilteredEmployees.map(emp => {
+              const role = normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
+              const meta = ROLE_METADATA_MAP[role];
 
-            return (
-              <div 
-                key={emp.id} 
-                onClick={() => setEditingEmpId(emp.id)}
-                className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 hover:border-orange-300 dark:hover:border-orange-500/40 transition-all shadow-sm hover:shadow-lg relative overflow-hidden flex flex-col cursor-pointer group select-none"
-              >
-                {/* Top Accent Indicator */}
-                <div className={`h-1.5 w-full transition-colors ${
-                  emp.status === 'active' 
-                    ? (emp.contractType === 'Sazonal' ? 'bg-amber-400' : 'bg-emerald-500') 
-                    : 'bg-zinc-300 dark:bg-zinc-700'
-                }`} />
+              return (
+                <div 
+                  key={emp.id} 
+                  onClick={() => setEditingEmpId(emp.id)}
+                  className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 hover:border-orange-300 dark:hover:border-orange-500/40 transition-all shadow-sm hover:shadow-lg relative overflow-hidden flex flex-col cursor-pointer group select-none"
+                >
+                  {/* Top Accent Indicator */}
+                  <div className={`h-1.5 w-full transition-colors ${
+                    emp.contractType === 'Sazonal' ? 'bg-amber-400' : 'bg-emerald-500'
+                  }`} />
 
-                {/* Card Body */}
-                <div className={`p-4 flex flex-col gap-3 flex-1 ${
-                  emp.status === 'inactive' ? 'bg-zinc-50/60 dark:bg-zinc-900/60' : ''
-                }`}>
-                  {/* Header: Avatar, Name, Cargo */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shadow-sm uppercase shrink-0 transition-transform group-hover:scale-105 ${
-                        emp.status === 'inactive'
-                          ? 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-                          : emp.isYoungApprentice
-                          ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
-                          : role === 'Estoque'
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
-                          : 'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300'
-                      }`}>
-                        {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className={`text-sm font-black uppercase truncate group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors ${
-                            emp.status === 'inactive' ? 'text-zinc-500 line-through decoration-zinc-400' : 'text-slate-900 dark:text-zinc-100'
-                          }`} title={emp.name.toUpperCase()}>
-                            {emp.name}
-                          </span>
-                          <div className={`w-2 h-2 rounded-full shrink-0 ${emp.status === 'active' ? 'bg-emerald-500' : 'bg-zinc-400'}`} />
+                  {/* Card Body */}
+                  <div className="p-4 flex flex-col gap-3 flex-1">
+                    {/* Header: Avatar, Name, Cargo */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shadow-sm uppercase shrink-0 transition-transform group-hover:scale-105 ${
+                          emp.isYoungApprentice
+                            ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
+                            : role === 'Estoque'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                            : 'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300'
+                        }`}>
+                          {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                         </div>
-                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                          {emp.status === 'inactive' && (
-                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
-                              emp.inactiveReason === 'fim_contrato'
-                                ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300/50'
-                                : emp.inactiveReason === 'demissao'
-                                ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300/50'
-                                : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700'
-                            }`}>
-                              {emp.inactiveReason === 'fim_contrato' ? 'Fim de Contrato' : emp.inactiveReason === 'demissao' ? 'Demissão' : 'Inativo'}
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-black uppercase truncate text-slate-900 dark:text-zinc-100 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors" title={emp.name.toUpperCase()}>
+                              {emp.name}
                             </span>
-                          )}
-                          <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded-md border ${meta.badgeColor}`}>
-                            {meta.label} ({meta.code})
-                          </span>
-                          {emp.secondaryRole && (
-                            <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200/50">
-                              2ª: {emp.secondaryRole}
+                            <div className="w-2 h-2 rounded-full shrink-0 bg-emerald-500" />
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded-md border ${meta.badgeColor}`}>
+                              {meta.label} ({meta.code})
                             </span>
-                          )}
-                          {emp.contractType === 'Sazonal' && (
-                            <span className="text-[11px] px-1.5 py-0.2 rounded font-black bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 uppercase">Sazonal</span>
-                          )}
-                          {emp.jornada === '5x2' && (
-                            <span className="text-[11px] px-1.5 py-0.2 rounded font-black bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-400 uppercase">5x2</span>
-                          )}
-                          {emp.isHidden && (
-                            <span className="text-[11px] px-1.5 py-0.2 rounded font-black bg-slate-100 dark:bg-zinc-800 text-slate-500 uppercase">Oculto</span>
-                          )}
+                            {emp.secondaryRole && (
+                              <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200/50">
+                                2ª: {emp.secondaryRole}
+                              </span>
+                            )}
+                            {emp.contractType === 'Sazonal' && (
+                              <span className="text-[11px] px-1.5 py-0.2 rounded font-black bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 uppercase">Sazonal</span>
+                            )}
+                            {emp.jornada === '5x2' && (
+                              <span className="text-[11px] px-1.5 py-0.2 rounded font-black bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-400 uppercase">5x2</span>
+                            )}
+                            {emp.isHidden && (
+                              <span className="text-[11px] px-1.5 py-0.2 rounded font-black bg-slate-100 dark:bg-zinc-800 text-slate-500 uppercase">Oculto</span>
+                            )}
+                          </div>
                         </div>
                       </div>
+
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-orange-500 group-hover:bg-orange-50 dark:group-hover:bg-orange-950/40 transition-all shrink-0">
+                        <Icon name="edit" className="text-sm" />
+                      </div>
                     </div>
 
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-orange-500 group-hover:bg-orange-50 dark:group-hover:bg-orange-950/40 transition-all shrink-0">
-                      <Icon name="edit" className="text-sm" />
+                    {/* Key Chips */}
+                    <div className="flex flex-col gap-1.5 text-[11px] font-bold text-slate-600 dark:text-zinc-300 pt-2 border-t border-slate-100 dark:border-zinc-800">
+                      {/* Período de Contrato / Início & Término */}
+                      {(emp.hiredAt || emp.firedAt) && (
+                        <div className={`flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-lg border w-fit ${
+                          emp.contractType === 'Sazonal'
+                            ? 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/40 font-black'
+                            : 'text-orange-600 dark:text-orange-400 bg-orange-50/70 dark:bg-orange-950/30 border-orange-100 dark:border-orange-900/30'
+                        }`}>
+                          <Icon name="date_range" className="text-xs shrink-0" />
+                          <span>
+                            {emp.contractType === 'Sazonal'
+                              ? `Contrato: ${formatDateBR(emp.hiredAt) || '...'} a ${formatDateBR(emp.firedAt) || 'Em aberto'}`
+                              : emp.hiredAt && emp.firedAt
+                              ? `Início: ${formatDateBR(emp.hiredAt)} • Término: ${formatDateBR(emp.firedAt)}`
+                              : emp.hiredAt
+                              ? `Início: ${formatDateBR(emp.hiredAt)}`
+                              : `Término: ${formatDateBR(emp.firedAt)}`}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Horário Base */}
+                      <div className="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400">
+                        <Icon name="schedule" className="text-xs text-orange-500 shrink-0" />
+                        <span>{emp.workPeriod || '10h às 18h20'}</span>
+                      </div>
+
+                      {/* Folga Fixa */}
+                      <div className="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400">
+                        <Icon name="event_busy" className="text-xs text-rose-500 shrink-0" />
+                        <span>Folga: {emp.preferredDayOff ? emp.preferredDayOff.replace('-feira', '') : 'Sem folga fixa'}</span>
+                      </div>
+
+                      {/* Aniversário */}
+                      {emp.birthday && (
+                        <div className="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 text-[11px]">
+                          <Icon name="cake" className="text-xs text-fuchsia-500 shrink-0" />
+                          <span>Aniversário: {formatDateBR(emp.birthday).substring(0, 5)}</span>
+                        </div>
+                      )}
+
+                      {/* Férias */}
+                      {emp.vacationStart && emp.vacationEnd && (
+                        <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-[11px] bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-lg w-fit">
+                          <Icon name="beach_access" className="text-xs shrink-0" />
+                          <span>Férias: {formatDateBR(emp.vacationStart).substring(0, 5)} a {formatDateBR(emp.vacationEnd).substring(0, 5)}</span>
+                        </div>
+                      )}
+
+                      {/* Atestado */}
+                      {emp.atestadoStart && emp.atestadoEnd && (
+                        <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 text-[11px] bg-rose-50 dark:bg-rose-950/30 px-2 py-0.5 rounded-lg w-fit">
+                          <Icon name="medical_services" className="text-xs shrink-0" />
+                          <span>Atestado: {formatDateBR(emp.atestadoStart).substring(0, 5)} a {formatDateBR(emp.atestadoEnd).substring(0, 5)}</span>
+                        </div>
+                      )}
                     </div>
-                  </div>
 
-                  {/* Key Chips */}
-                  <div className="flex flex-col gap-1.5 text-[11px] font-bold text-slate-600 dark:text-zinc-300 pt-2 border-t border-slate-100 dark:border-zinc-800">
-                    {/* Período de Contrato / Início & Término */}
-                    {(emp.hiredAt || emp.firedAt) && (
-                      <div className={`flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-lg border w-fit ${
-                        emp.contractType === 'Sazonal'
-                          ? 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/40 font-black'
-                          : 'text-orange-600 dark:text-orange-400 bg-orange-50/70 dark:bg-orange-950/30 border-orange-100 dark:border-orange-900/30'
-                      }`}>
-                        <Icon name="date_range" className="text-xs shrink-0" />
-                        <span>
-                          {emp.contractType === 'Sazonal'
-                            ? `Contrato: ${formatDateBR(emp.hiredAt) || '...'} a ${formatDateBR(emp.firedAt) || 'Em aberto'}`
-                            : emp.hiredAt && emp.firedAt
-                            ? `Início: ${formatDateBR(emp.hiredAt)} • Término: ${formatDateBR(emp.firedAt)}`
-                            : emp.hiredAt
-                            ? `Início: ${formatDateBR(emp.hiredAt)}`
-                            : `Término: ${formatDateBR(emp.firedAt)}`}
-                        </span>
-                      </div>
-                    )}
+                    {/* Bottom Action Strip */}
+                    <div className="flex items-center justify-between pt-2 mt-auto border-t border-slate-100 dark:border-zinc-800">
+                      <span className="text-[11px] font-black text-orange-500 dark:text-orange-400 uppercase tracking-wider group-hover:underline flex items-center gap-1">
+                        <Icon name="settings" className="text-xs" />
+                        Editar Colaborador
+                      </span>
 
-                    {/* Horário Base */}
-                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400">
-                      <Icon name="schedule" className="text-xs text-orange-500 shrink-0" />
-                      <span>{emp.workPeriod || '10h às 18h20'}</span>
-                    </div>
+                      {!isReadOnly && (
+                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                          {onOpenPresetForEmployee && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenPresetForEmployee(emp.id)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-all"
+                              title={`Atualizar pré-definições de ${emp.name} na escala (horários, folgas ou completo)`}
+                            >
+                              <Icon name="tune" className="text-sm" />
+                            </button>
+                          )}
 
-                    {/* Folga Fixa */}
-                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400">
-                      <Icon name="event_busy" className="text-xs text-rose-500 shrink-0" />
-                      <span>Folga: {emp.preferredDayOff ? emp.preferredDayOff.replace('-feira', '') : 'Sem folga fixa'}</span>
-                    </div>
-
-                    {/* Aniversário */}
-                    {emp.birthday && (
-                      <div className="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 text-[11px]">
-                        <Icon name="cake" className="text-xs text-fuchsia-500 shrink-0" />
-                        <span>Aniversário: {formatDateBR(emp.birthday).substring(0, 5)}</span>
-                      </div>
-                    )}
-
-                    {/* Férias */}
-                    {emp.vacationStart && emp.vacationEnd && (
-                      <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-[11px] bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-lg w-fit">
-                        <Icon name="beach_access" className="text-xs shrink-0" />
-                        <span>Férias: {formatDateBR(emp.vacationStart).substring(0, 5)} a {formatDateBR(emp.vacationEnd).substring(0, 5)}</span>
-                      </div>
-                    )}
-
-                    {/* Atestado */}
-                    {emp.atestadoStart && emp.atestadoEnd && (
-                      <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 text-[11px] bg-rose-50 dark:bg-rose-950/30 px-2 py-0.5 rounded-lg w-fit">
-                        <Icon name="medical_services" className="text-xs shrink-0" />
-                        <span>Atestado: {formatDateBR(emp.atestadoStart).substring(0, 5)} a {formatDateBR(emp.atestadoEnd).substring(0, 5)}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Bottom Action Strip */}
-                  <div className="flex items-center justify-between pt-2 mt-auto border-t border-slate-100 dark:border-zinc-800">
-                    <span className="text-[11px] font-black text-orange-500 dark:text-orange-400 uppercase tracking-wider group-hover:underline flex items-center gap-1">
-                      <Icon name="settings" className="text-xs" />
-                      Editar Colaborador
-                    </span>
-
-                    {!isReadOnly && (
-                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        {onOpenPresetForEmployee && emp.status === 'active' && (
-                          <button
-                            type="button"
-                            onClick={() => onOpenPresetForEmployee(emp.id)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-all"
-                            title={`Atualizar pré-definições de ${emp.name} na escala (horários, folgas ou completo)`}
-                          >
-                            <Icon name="tune" className="text-sm" />
-                          </button>
-                        )}
-
-                        {/* Botão Dinâmico: Desativar (se ativo) ou Reativar (se inativo) */}
-                        {emp.status === 'active' ? (
                           <button
                             type="button"
                             onClick={() => setDeactivatingEmployee(emp)}
                             className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-all"
-                            title={`Desativar ${emp.name} (fim de contrato ou demissão, preservando o cadastro)`}
+                            title={`Desativar ${emp.name} (fim de contrato, demissão ou outro motivo, preservando o histórico)`}
                           >
                             <Icon name="person_off" className="text-sm" />
                           </button>
-                        ) : (
+
                           <button
                             type="button"
-                            onClick={() => handleReactivateEmployee(emp)}
-                            className="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[10px] font-black uppercase tracking-wider hover:bg-emerald-100 transition-all flex items-center gap-1"
-                            title={`Reativar cadastro de ${emp.name} na equipe`}
+                            onClick={() => onUpdateEmployee(emp.id, { isHidden: !emp.isHidden })}
+                            className={`p-1.5 rounded-lg text-xs transition-all ${
+                              emp.isHidden
+                                ? 'text-slate-900 dark:text-white bg-slate-100 dark:bg-zinc-800'
+                                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                            }`}
+                            title={emp.isHidden ? 'Mostrar na Escala' : 'Ocultar da Escala'}
                           >
-                            <Icon name="replay" className="text-xs" />
-                            <span>Reativar</span>
+                            <Icon name={emp.isHidden ? 'visibility_off' : 'visibility'} className="text-sm" />
                           </button>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={() => onUpdateEmployee(emp.id, { isHidden: !emp.isHidden })}
-                          className={`p-1.5 rounded-lg text-xs transition-all ${
-                            emp.isHidden
-                              ? 'text-slate-900 dark:text-white bg-slate-100 dark:bg-zinc-800'
-                              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                          }`}
-                          title={emp.isHidden ? 'Mostrar na Escala' : 'Ocultar da Escala'}
-                        >
-                          <Icon name={emp.isHidden ? 'visibility_off' : 'visibility'} className="text-sm" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            const confirmed = await showDialog({
-                              type: 'confirm',
-                              message: `Atenção: A desativação é a opção recomendada pois mantém os históricos de escalas passadas.\n\nDeseja realmente EXCLUIR DEFINITIVAMENTE ${emp.name}?`
-                            });
-                            if (confirmed) onDeleteEmployee(emp.id);
-                          }}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition-all"
-                          title="Excluir Colaborador Permanentemente"
-                        >
-                          <Icon name="delete" className="text-sm" />
-                        </button>
-                      </div>
-                    )}
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const confirmed = await showDialog({
+                                type: 'confirm',
+                                message: `Atenção: A desativação é a opção recomendada pois mantém os históricos de escalas passadas.\n\nDeseja realmente EXCLUIR DEFINITIVAMENTE ${emp.name}?`
+                              });
+                              if (confirmed) onDeleteEmployee(emp.id);
+                            }}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition-all"
+                            title="Excluir Colaborador Permanentemente"
+                          >
+                            <Icon name="delete" className="text-sm" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
+              );
+            })}
+          </div>
+        )
+      )}
+
+      {/* Segregated & Collapsible Deactivated Employees Section */}
+      {statusFilter !== 'ACTIVE' && inactiveFilteredEmployees.length > 0 && (
+        <div
+          className="mt-2 rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-800 bg-zinc-100/60 dark:bg-zinc-900/40 p-4 transition-all"
+          data-testid="inactive-employees-section"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 flex items-center justify-center shrink-0">
+                <Icon name="inventory_2" className="text-lg" />
               </div>
-            );
-          })}
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
+                    Colaboradores Desativados / Arquivo Histórico
+                  </h4>
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                    {inactiveFilteredEmployees.length} {inactiveFilteredEmployees.length === 1 ? 'inativo' : 'inativos'}
+                  </span>
+                </div>
+                <p className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
+                  Ocultos da escala atual e rotinas do mês • Histórico de meses anteriores preservado
+                </p>
+              </div>
+            </div>
+
+            {statusFilter !== 'INACTIVE' && (
+              <button
+                type="button"
+                onClick={() => setShowInactiveSection(prev => !prev)}
+                data-testid="toggle-inactive-section-btn"
+                className="px-3.5 py-2 rounded-xl bg-white/80 dark:bg-zinc-800/80 hover:bg-white dark:hover:bg-zinc-800 border border-zinc-300/80 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all self-start sm:self-center"
+              >
+                <Icon name={isInactiveExpanded ? 'expand_less' : 'expand_more'} className="text-base" />
+                <span>{isInactiveExpanded ? 'Esconder Desativados' : `Mostrar Desativados (${inactiveFilteredEmployees.length})`}</span>
+              </button>
+            )}
+          </div>
+
+          {isInactiveExpanded && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 mt-4 pt-4 border-t border-dashed border-zinc-200 dark:border-zinc-800" data-testid="inactive-employees-grid">
+              {inactiveFilteredEmployees.map(emp => {
+                const role = normalizeEmployeeRole(emp.primaryRole || emp.cargo || emp.role);
+                const meta = ROLE_METADATA_MAP[role];
+                const deactDate = emp.inactiveDate || emp.firedAt;
+
+                return (
+                  <div
+                    key={emp.id}
+                    onClick={() => setEditingEmpId(emp.id)}
+                    data-testid={`inactive-card-${emp.id}`}
+                    className="bg-zinc-100/80 dark:bg-zinc-900/40 rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-800 opacity-60 hover:opacity-95 grayscale-[40%] hover:grayscale-0 transition-all relative overflow-hidden flex flex-col cursor-pointer group select-none"
+                  >
+                    {/* Top Muted Bar */}
+                    <div className="h-1.5 w-full bg-zinc-300 dark:bg-zinc-700" />
+
+                    <div className="p-4 flex flex-col gap-3 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs uppercase shrink-0 bg-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                            {emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-black uppercase truncate text-zinc-500 dark:text-zinc-400 line-through decoration-zinc-400" title={emp.name.toUpperCase()}>
+                                {emp.name}
+                              </span>
+                              <div className="w-2 h-2 rounded-full shrink-0 bg-zinc-400" />
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                                emp.inactiveReason === 'fim_contrato'
+                                  ? 'bg-amber-100/80 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300/50'
+                                  : emp.inactiveReason === 'demissao'
+                                  ? 'bg-rose-100/80 dark:bg-rose-950/50 text-rose-800 dark:text-rose-300 border border-rose-300/50'
+                                  : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700'
+                              }`}>
+                                {emp.inactiveReason === 'fim_contrato' ? 'Fim de Contrato' : emp.inactiveReason === 'demissao' ? 'Demissão' : 'Desativado'}
+                              </span>
+                              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
+                                {meta.label}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1 text-[11px] font-bold text-zinc-500 dark:text-zinc-400 pt-2 border-t border-dashed border-zinc-200 dark:border-zinc-800">
+                        {deactDate && (
+                          <div className="flex items-center gap-1.5">
+                            <Icon name="event_busy" className="text-xs text-zinc-400 shrink-0" />
+                            <span>Desativado em: {formatDateBR(deactDate)}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1.5 text-[10px] text-zinc-400">
+                          <Icon name="visibility_off" className="text-xs shrink-0" />
+                          <span>Oculto no mês atual • Histórico anterior mantido</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 mt-auto border-t border-dashed border-zinc-200 dark:border-zinc-800">
+                        <span className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-wider group-hover:underline flex items-center gap-1">
+                          <Icon name="manage_accounts" className="text-xs" />
+                          Ver Cadastro
+                        </span>
+
+                        {!isReadOnly && (
+                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => handleReactivateEmployee(emp)}
+                              className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[10px] font-black uppercase tracking-wider hover:bg-emerald-100 transition-all flex items-center gap-1"
+                              title={`Reativar cadastro de ${emp.name} na equipe`}
+                            >
+                              <Icon name="replay" className="text-xs" />
+                              <span>Reativar</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const confirmed = await showDialog({
+                                  type: 'confirm',
+                                  message: `Atenção: A desativação mantém os históricos de escalas passadas.\n\nDeseja realmente EXCLUIR DEFINITIVAMENTE ${emp.name}?`
+                                });
+                                if (confirmed) onDeleteEmployee(emp.id);
+                              }}
+                              className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-500 transition-all"
+                              title="Excluir Colaborador Permanentemente"
+                            >
+                              <Icon name="delete" className="text-sm" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -149,10 +149,15 @@ export function isEmployeeEligibleForMonth(emp: Employee | undefined | null, yea
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const lastDayStr = `${monthKey}-${String(daysInMonth).padStart(2, '0')}`;
 
-  // Se o colaborador está inativo, verifica se possui data de término para histórico anterior
+  // Se o colaborador está desativado (inactive), oculta integralmente no mês da desativação
+  // e em todos os meses posteriores, preservando apenas o histórico de meses estritamente anteriores
   if (emp.status === 'inactive') {
     const termDate = emp.firedAt || emp.inactiveDate;
-    if (!termDate || termDate < firstDayStr) {
+    if (!termDate) {
+      return false;
+    }
+    const termMonthKey = termDate.slice(0, 7);
+    if (monthKey >= termMonthKey) {
       return false;
     }
   }
@@ -197,10 +202,13 @@ export function isEmployeeActiveOnDay(emp: Employee | undefined | null, dateStr:
   const effectiveMonthKey = monthKey || (dateStr ? dateStr.slice(0, 7) : undefined);
   if (!emp || isEmployeeHiddenInMonth(emp, effectiveMonthKey)) return false;
 
-  // Se o colaborador está inativo, só é ativo se a data for anterior ou igual à data de encerramento
+  // Se o colaborador está desativado, não aparece em nenhum dia do mês da desativação ou posterior;
+  // preserva atividade apenas em meses estritamente anteriores à desativação
   if (emp.status === 'inactive') {
     const termDate = emp.firedAt || emp.inactiveDate;
     if (!termDate || dateStr > termDate) return false;
+    const termMonthKey = termDate.slice(0, 7);
+    if (effectiveMonthKey && effectiveMonthKey >= termMonthKey) return false;
   }
 
   if (emp.hiredAt && dateStr < emp.hiredAt) return false;

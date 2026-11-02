@@ -70,7 +70,9 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
     let text = "*📋 COLABORADORES COM FOLGAS PENDENTES*\n\n";
     let found = false;
     
-    const sortedEmployees = [...employees].sort((a, b) => a.name.localeCompare(b.name));
+    const sortedEmployees = [...employees]
+      .filter(emp => emp.status !== 'inactive')
+      .sort((a, b) => a.name.localeCompare(b.name));
     
     sortedEmployees.forEach(worker => {
       const pendingCredits = (holidayCredits[worker.id] || []).filter(c => c.status === 'pending');
@@ -101,7 +103,9 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
     let text = "*📅 FOLGAS DE FERIADO AGENDADAS*\n\n";
     let found = false;
     
-    const sortedEmployees = [...employees].sort((a, b) => a.name.localeCompare(b.name));
+    const sortedEmployees = [...employees]
+      .filter(emp => emp.status !== 'inactive')
+      .sort((a, b) => a.name.localeCompare(b.name));
     
     sortedEmployees.forEach(worker => {
       const scheduledCredits = (holidayCredits[worker.id] || []).filter(c => c.status === 'scheduled');

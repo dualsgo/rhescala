@@ -27,9 +27,9 @@ export const DeactivateEmployeeModal: React.FC<DeactivateEmployeeModalProps> = (
         setReason('demissao');
       }
 
-      // Preenche a data efetiva: se já tem firedAt usa, senão usa hoje
+      // Preenche a data efetiva: usa firedAt se já for passado/hoje, senão usa hoje para ocultar já no mês atual
       const today = new Date().toISOString().split('T')[0];
-      setEffectiveDate(employee.firedAt || today);
+      setEffectiveDate(employee.firedAt && employee.firedAt <= today ? employee.firedAt : today);
     }
   }, [employee, isOpen]);
 

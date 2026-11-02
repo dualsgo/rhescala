@@ -32,8 +32,8 @@ export function useHolidayCredits(
     const todayStr = new Date().toLocaleDateString('en-CA');
 
     employees.forEach(emp => {
-      // Jovem Aprendiz não trabalha em feriados/fins de semana e não gera créditos de feriado
-      if (emp.isYoungApprentice) {
+      // Jovem Aprendiz e colaboradores desativados não trabalham em feriados/fins de semana e não geram créditos ativos
+      if (emp.isYoungApprentice || emp.status === 'inactive') {
         results[emp.id] = [];
         return;
       }
