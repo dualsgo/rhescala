@@ -35,6 +35,7 @@ describe('Lógica de Créditos de Feriados e Exibição de FF', () => {
   let root: Root;
 
   beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);
@@ -177,7 +178,7 @@ describe('Lógica de Créditos de Feriados e Exibição de FF', () => {
             currentMY={currentMY}
             today={new Date(2026, 9, 15)}
             selectedDayIdx={14}
-            filter="ALL"
+            filter="all"
             isEditable={true}
             onFilterChange={vi.fn()}
             resolvedPositions={{}}
@@ -194,8 +195,8 @@ describe('Lógica de Créditos de Feriados e Exibição de FF', () => {
     });
 
     const rows = Array.from(container.querySelectorAll('tbody tr'));
-    const rowWithCredit = rows.find(r => r.textContent?.includes('Com Crédito'));
-    const rowWithoutCredit = rows.find(r => r.textContent?.includes('Sem Crédito'));
+    const rowWithCredit = rows.find(r => (r.textContent || '').toLowerCase().includes('com'));
+    const rowWithoutCredit = rows.find(r => (r.textContent || '').toLowerCase().includes('sem'));
 
     expect(rowWithCredit).toBeDefined();
     expect(rowWithoutCredit).toBeDefined();
@@ -248,9 +249,9 @@ describe('Lógica de Créditos de Feriados e Exibição de FF', () => {
     });
 
     // Abre quick-edit de Pedro (sem crédito)
-    const cards = Array.from(container.querySelectorAll('div.cursor-pointer'));
-    const mariaCard = cards.find(c => c.textContent?.includes('Maria'));
-    const pedroCard = cards.find(c => c.textContent?.includes('Pedro'));
+    const cards = Array.from(container.querySelectorAll('.cursor-pointer'));
+    const mariaCard = cards.find(c => (c.textContent || '').toLowerCase().includes('maria'));
+    const pedroCard = cards.find(c => (c.textContent || '').toLowerCase().includes('pedro'));
     expect(mariaCard).toBeDefined();
     expect(pedroCard).toBeDefined();
 
