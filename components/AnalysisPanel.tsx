@@ -174,9 +174,11 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
     if (!el || !selectedSummary) return;
 
     try {
+      const targetWidth = Math.ceil(el.getBoundingClientRect().width);
       const dataUrl = await toPng(el, {
         backgroundColor: '#ffffff',
         pixelRatio: 2,
+        width: targetWidth,
         filter: (node) => {
           if (node instanceof HTMLElement && node.dataset?.exportHide === 'true') {
             return false;
@@ -184,8 +186,11 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
           return true;
         },
         style: {
-          padding: '24px',
-          borderRadius: '20px',
+          margin: '0',
+          boxSizing: 'border-box',
+          width: `${targetWidth}px`,
+          maxWidth: 'none',
+          borderRadius: '16px',
         }
       });
       const link = document.createElement('a');
