@@ -56,22 +56,29 @@ export const HolidayCreditPanel: React.FC<HolidayCreditPanelProps> = ({
     if (holidaysInMonth.length === 0) return [];
 
     employees.forEach(emp => {
-      if (!isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month) || emp.isYoungApprentice) return;
+      if (!isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month) || emp.isYoungApprentice || emp.status === 'inactive') return;
 
       const shifts = emp.shifts[monthKey] || [];
       
       holidaysInMonth.forEach(h => {
-        const shifts = emp.shifts[monthKey] || [];
-        let currentShift = shifts[h.dayIdx];
         const hDateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(h.dayIdx + 1).padStart(2, '0')}`;
+        let currentShift = shifts[h.dayIdx];
         
-        // Override with vacation if applicable
-        if (emp.vacationStart && emp.vacationEnd && hDateStr >= emp.vacationStart && hDateStr <= emp.vacationEnd) {
-            currentShift = 'FE';
+        if ((emp.hiredAt && hDateStr < emp.hiredAt) || (emp.firedAt && hDateStr > emp.firedAt)) {
+          currentShift = 'N/A';
+        } else if (emp.vacationStart && emp.vacationEnd && hDateStr >= emp.vacationStart && hDateStr <= emp.vacationEnd) {
+          currentShift = 'FE';
+        } else if (emp.atestadoStart && emp.atestadoEnd && hDateStr >= emp.atestadoStart && hDateStr <= emp.atestadoEnd) {
+          currentShift = 'AT';
+        } else if (emp.birthday) {
+          const empMD = emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday;
+          if (empMD === hDateStr.substring(5) && currentShift === 'DO') {
+            currentShift = 'DO';
+          }
         }
 
-        // T, Posições e C contam como atividade (ganha crédito se trabalhar no feriado)
-        if (isWorkingShift(currentShift) || currentShift === 'C') {
+        // Apenas quem efetivamente trabalhou no feriado gera crédito
+        if (isWorkingShift(currentShift)) {
 
           // Suggest a day off
           let bestDayIdx = -1;

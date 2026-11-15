@@ -1277,6 +1277,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
             onOpenDayDetail={onOpenDayDetail || (() => {})}
             onToggleHideEmployee={onToggleHideEmployee}
             diffs={diffs}
+            holidayCredits={holidayCredits}
           />
         )}
       </div>
@@ -2184,16 +2185,17 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                                   </option>
                                                 ))
                                               }
-                                              {pendingCount === 0 && !shift?.startsWith('FF') && (
-                                                <option value="FF">Folga Feriado (FF)</option>
-                                              )}
                                               {shift?.startsWith('FF') && !(holidayCredits[emp.id] || []).some(c => c.status === 'pending' && `FF ${c.id || c.holidayDate}` === shift) && (
                                                 <option value={shift}>
                                                   {(() => {
-                                                    if (shift === 'FF') return 'FF — Folga Feriado';
-                                                    const explicitKey = shift.split(' ')[1];
-                                                    const matched = (holidayCredits[emp.id] || []).find(c => c.id === explicitKey || c.holidayDate === explicitKey);
-                                                    return matched ? `FF — ${matched.holidayName}` : shift.replace('FF ', 'FF — ');
+                                                    const cellDateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d.num).padStart(2, '0')}`;
+                                                    const empCreds = holidayCredits[emp.id] || [];
+                                                    const byOffDate = empCreds.find(c => c.offDate === cellDateStr);
+                                                    const explicitKey = shift === 'FF' ? undefined : shift.split(' ')[1];
+                                                    const matched = byOffDate || (explicitKey ? empCreds.find(c => c.id === explicitKey || c.holidayDate === explicitKey) : undefined);
+                                                    return matched
+                                                      ? `FF — ${matched.holidayName}`
+                                                      : 'FF (Sem crédito de feriado válido — altere para F ou T)';
                                                   })()}
                                                 </option>
                                               )}
@@ -2368,7 +2370,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                             <option value="AT">Atestado Médico (Apenas este dia) 🩺</option>
                                             <option value="AT_PERIOD">🩺 Lançar Atestado por Período / Intervalo...</option>
                                             
-                                            {/* Specific Pending Holidays */}
+                                            {/* Specific Pending Holidays (apenas se trabalhou em feriado) */}
                                             {(holidayCredits[emp.id] || [])
                                               .filter(c => c.status === 'pending')
                                               .map(c => (
@@ -2377,20 +2379,19 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                                 </option>
                                               ))
                                             }
-                                            
-                                            {/* Fallback generic option if no specific pending ones */}
-                                            {pendingCount === 0 && !shift?.startsWith('FF') && (
-                                              <option value="FF">Folga Feriado (FF)</option>
-                                            )}
 
                                             {/* Current value if it's already an FF */}
                                             {shift?.startsWith('FF') && !(holidayCredits[emp.id] || []).some(c => c.status === 'pending' && `FF ${c.id || c.holidayDate}` === shift) && (
                                               <option value={shift}>
                                                 {(() => {
-                                                  if (shift === 'FF') return 'FF — Folga Feriado';
-                                                  const explicitKey = shift.split(' ')[1];
-                                                  const matched = (holidayCredits[emp.id] || []).find(c => c.id === explicitKey || c.holidayDate === explicitKey);
-                                                  return matched ? `FF — ${matched.holidayName}` : shift.replace('FF ', 'FF — ');
+                                                  const cellDateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d.num).padStart(2, '0')}`;
+                                                  const empCreds = holidayCredits[emp.id] || [];
+                                                  const byOffDate = empCreds.find(c => c.offDate === cellDateStr);
+                                                  const explicitKey = shift === 'FF' ? undefined : shift.split(' ')[1];
+                                                  const matched = byOffDate || (explicitKey ? empCreds.find(c => c.id === explicitKey || c.holidayDate === explicitKey) : undefined);
+                                                  return matched
+                                                    ? `FF — ${matched.holidayName}`
+                                                    : 'FF (Sem crédito de feriado válido — altere para F ou T)';
                                                 })()}
                                               </option>
                                             )}

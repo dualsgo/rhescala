@@ -434,10 +434,17 @@ export const HolidayCreditsTable: React.FC<HolidayCreditsTableProps> = ({
                         // Caso o colaborador não tenha créditos oficiais nesta data:
                         // Verificamos o turno da escala
                         let shift = emp.shifts[monthKey]?.[dayIdx];
-                        if (emp.vacationStart && emp.vacationEnd && h.date >= emp.vacationStart && h.date <= emp.vacationEnd) {
+                        if ((emp.hiredAt && h.date < emp.hiredAt) || (emp.firedAt && h.date > emp.firedAt)) {
+                          shift = 'N/A';
+                        } else if (emp.vacationStart && emp.vacationEnd && h.date >= emp.vacationStart && h.date <= emp.vacationEnd) {
                           shift = 'FE';
                         } else if (emp.atestadoStart && emp.atestadoEnd && h.date >= emp.atestadoStart && h.date <= emp.atestadoEnd) {
                           shift = 'AT';
+                        } else if (emp.birthday) {
+                          const empMD = emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday;
+                          if (empMD === h.date.substring(5) && shift === 'DO') {
+                            shift = 'DO';
+                          }
                         }
 
                         // Se o mês ainda não foi oficializado mas o turno está como trabalhado

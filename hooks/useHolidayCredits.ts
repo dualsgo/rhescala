@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Employee, Holiday } from '../types';
-import { getNationalHolidays } from '../constants';
+import { getNationalHolidays, isEmployeeHiddenInMonth } from '../constants';
 import { isWorkingShift } from './useScheduleEngine';
 
 export interface HolidayCredit {
@@ -9,6 +9,25 @@ export interface HolidayCredit {
   holidayName: string;
   status: 'pending' | 'scheduled' | 'granted';
   offDate?: string;
+}
+
+/**
+ * Normaliza referências explícitas de FF (ex.: "2026-09-07", "07/09", "2026-05-01-extra")
+ * para comparação segura contra datas YYYY-MM-DD.
+ */
+function matchesExplicitHoliday(explicitHoliday: string, targetId: string, targetDate: string): boolean {
+  if (explicitHoliday === targetId || explicitHoliday === targetDate) return true;
+  const clean = explicitHoliday.replace('-extra', '').trim();
+  if (clean === targetDate) return true;
+
+  // Formato DD/MM -> converter para MM-DD para casar com YYYY-MM-DD
+  const ddmmMatch = clean.match(/^(\d{2})\/(\d{2})$/);
+  if (ddmmMatch) {
+    const mmdd = `-${ddmmMatch[2]}-${ddmmMatch[1]}`;
+    return targetDate.endsWith(mmdd);
+  }
+
+  return targetDate.endsWith(clean) || targetId.endsWith(clean);
 }
 
 export function useHolidayCredits(
@@ -45,6 +64,7 @@ export function useHolidayCredits(
 
       sortedMonthKeys.forEach(monthKey => {
         if (!monthKey.startsWith(String(currentYear))) return;
+        if (isEmployeeHiddenInMonth(emp, monthKey)) return;
 
         // REGRA: Apenas meses com escala oficializada são considerados para gerar créditos de feriado
         const isMonthOfficialized = validatedMonths[monthKey] === true;
@@ -56,9 +76,11 @@ export function useHolidayCredits(
           
           if (trackingStartDate && dateStr < trackingStartDate) return;
 
-          // Resolve afastamentos e status efetivo no dia
+          // Resolve vigência contratual, afastamentos e status efetivo no dia
           let shift = rawShift;
-          if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
+          if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) {
+            shift = 'N/A';
+          } else if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
             shift = 'FE';
           } else if (emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd) {
             shift = 'AT';
@@ -99,10 +121,7 @@ export function useHolidayCredits(
         // 1. Tentar encontrar casamento explícito pelo id ou data
         const explicitMatch = offDays.find(o => {
           if (usedOffDates.has(o.date) || !o.explicitHoliday) return false;
-          if (o.explicitHoliday === wh.id || o.explicitHoliday === wh.date) return true;
-          // Suporte a formato DD/MM ou MM-DD
-          const cleanExplicit = o.explicitHoliday.replace('/', '-');
-          return wh.date.endsWith(cleanExplicit) || wh.id.endsWith(cleanExplicit);
+          return matchesExplicitHoliday(o.explicitHoliday, wh.id, wh.date);
         });
 
         if (explicitMatch) {

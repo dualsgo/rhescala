@@ -760,19 +760,17 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
     return jornadaSettings.shiftHours.weekday;
   };
 
-  const yearHolidays = useMemo(() => {
-    const all = [...getNationalHolidays(currentMY.year), ...customHolidays]
-      .filter(h => h.date.startsWith(String(currentMY.year)));
-    const unique = all.filter((h, i, self) => i === self.findIndex(t => t.date === h.date));
-    return unique.sort((a, b) => a.date.localeCompare(b.date));
-  }, [currentMY.year, customHolidays]);
-
-  // Mapeia cada dia de folga compensatória (FF) para a data do feriado a que se refere
-  // e calcula quais créditos de feriado o colaborador tem direito a agendar
+  // Mapeia cada dia de folga compensatória (FF) para a data do feriado trabalhado
+  // exclusivamente a partir dos créditos reais calculados por useHolidayCredits
   const { holidayCompMap, eligiblePendingCredits } = useMemo(() => {
     const map: Record<string, { dateLabel: string; holidayName?: string }> = {};
+    const pendingList: { id: string; holidayDate: string; holidayName: string }[] = [];
+    const seenIds = new Set<string>();
 
-    // Primeiro preenche com os créditos já casados pelo useHolidayCredits
+    if (employee.isYoungApprentice || employee.status === 'inactive') {
+      return { holidayCompMap: map, eligiblePendingCredits: pendingList };
+    }
+
     for (const credit of employeeHolidayCredits) {
       if (credit.offDate) {
         map[credit.offDate] = {
@@ -780,134 +778,21 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
           holidayName: credit.holidayName,
         };
       }
-    }
-
-    const workedHolidays: { id: string; date: string; name: string }[] = [];
-    const ffOffDays: { offDate: string; explicitRef?: string }[] = [];
-
-    const sortedMonthKeys = Object.keys(employee.shifts || {})
-      .filter(mk => mk.startsWith(String(currentMY.year)))
-      .sort();
-
-    for (const mk of sortedMonthKeys) {
-      const mShifts = employee.shifts[mk] || [];
-      mShifts.forEach((rawShift, idx) => {
-        const dStr = `${mk}-${String(idx + 1).padStart(2, '0')}`;
-        let effShift = rawShift;
-        if (employee.vacationStart && employee.vacationEnd && dStr >= employee.vacationStart && dStr <= employee.vacationEnd) {
-          effShift = 'FE';
-        } else if (employee.atestadoStart && employee.atestadoEnd && dStr >= employee.atestadoStart && dStr <= employee.atestadoEnd) {
-          effShift = 'AT';
-        }
-
-        const hol = yearHolidays.find(h => h.date === dStr);
-        if (!employee.isYoungApprentice && hol && isWorkingShift(effShift)) {
-          if (dStr.endsWith('-05-01')) {
-            workedHolidays.push({ id: dStr, date: dStr, name: `${hol.name} (Folga 1)` });
-            workedHolidays.push({ id: `${dStr}-extra`, date: dStr, name: `${hol.name} (Folga 2)` });
-          } else {
-            workedHolidays.push({ id: dStr, date: dStr, name: hol.name });
-          }
-        }
-
-        if (typeof effShift === 'string' && effShift.startsWith('FF')) {
-          const explicit = effShift.length > 2 ? effShift.slice(2).trim() : undefined;
-          ffOffDays.push({ offDate: dStr, explicitRef: explicit || undefined });
-        }
-      });
-    }
-
-    const usedWorkedIndices = new Set<number>();
-    const resolvedOffDates = new Set<string>();
-
-    // 1. Casamento explícito (ex.: "FF 2026-04-21" ou "FF 21/04")
-    for (const off of ffOffDays) {
-      const explicitRef = off.explicitRef;
-      if (!explicitRef) continue;
-      const cleanRef = explicitRef.replace('-extra', '').replace('/', '-');
-      const whIdx = workedHolidays.findIndex((wh, idx) => {
-        if (usedWorkedIndices.has(idx)) return false;
-        return wh.id === explicitRef || wh.date === explicitRef || wh.date.endsWith(cleanRef);
-      });
-
-      if (whIdx !== -1) {
-        usedWorkedIndices.add(whIdx);
-        resolvedOffDates.add(off.offDate);
-        map[off.offDate] = {
-          dateLabel: formatHolidayDDMM(workedHolidays[whIdx].date),
-          holidayName: workedHolidays[whIdx].name,
-        };
-      } else {
-        const directHoliday = yearHolidays.find(h => h.date === explicitRef.replace('-extra', '') || h.date.endsWith(cleanRef));
-        resolvedOffDates.add(off.offDate);
-        map[off.offDate] = {
-          dateLabel: formatHolidayDDMM(directHoliday ? directHoliday.date : explicitRef),
-          holidayName: directHoliday?.name,
-        };
-      }
-    }
-
-    // 2. Casamento FIFO para "FF" genérico com feriados trabalhados no ano/mês
-    const monthHolidays = yearHolidays.filter(h => h.date.startsWith(monthKey));
-    for (const off of ffOffDays) {
-      if (resolvedOffDates.has(off.offDate)) continue;
-      const whIdx = workedHolidays.findIndex((_, idx) => !usedWorkedIndices.has(idx));
-      if (whIdx !== -1) {
-        usedWorkedIndices.add(whIdx);
-        resolvedOffDates.add(off.offDate);
-        map[off.offDate] = {
-          dateLabel: formatHolidayDDMM(workedHolidays[whIdx].date),
-          holidayName: workedHolidays[whIdx].name,
-        };
-      } else if (monthHolidays.length > 0) {
-        const fallbackHol = monthHolidays[0];
-        resolvedOffDates.add(off.offDate);
-        map[off.offDate] = {
-          dateLabel: formatHolidayDDMM(fallbackHol.date),
-          holidayName: fallbackHol.name,
-        };
-      } else {
-        const priorHol = [...yearHolidays].reverse().find(h => h.date <= off.offDate) || yearHolidays[0];
-        if (priorHol) {
-          resolvedOffDates.add(off.offDate);
-          map[off.offDate] = {
-            dateLabel: formatHolidayDDMM(priorHol.date),
-            holidayName: priorHol.name,
-          };
+      if (credit.status === 'pending') {
+        const cid = credit.id || credit.holidayDate;
+        if (!seenIds.has(cid)) {
+          seenIds.add(cid);
+          pendingList.push({
+            id: cid,
+            holidayDate: credit.holidayDate,
+            holidayName: credit.holidayName,
+          });
         }
       }
     }
-
-    // 3. Créditos pendentes aos quais o colaborador tem direito (do menu de créditos pendentes + feriados trabalhados ainda não compensados)
-    const pendingList: { id: string; holidayDate: string; holidayName: string }[] = [];
-    const seenIds = new Set<string>();
-
-    for (const c of employeeHolidayCredits) {
-      if (c.status === 'pending') {
-        const cid = c.id || c.holidayDate;
-        seenIds.add(cid);
-        pendingList.push({
-          id: cid,
-          holidayDate: c.holidayDate,
-          holidayName: c.holidayName,
-        });
-      }
-    }
-
-    // Também inclui feriados trabalhados no mês em construção que ainda não foram compensados
-    workedHolidays.forEach((wh, idx) => {
-      if (!usedWorkedIndices.has(idx) && !seenIds.has(wh.id)) {
-        seenIds.add(wh.id);
-        pendingList.push({
-          id: wh.id,
-          holidayDate: wh.date,
-          holidayName: wh.name,
-        });
-      }
-    });
 
     return { holidayCompMap: map, eligiblePendingCredits: pendingList };
-  }, [employee, currentMY.year, monthKey, yearHolidays, employeeHolidayCredits]);
+  }, [employee.isYoungApprentice, employee.status, employeeHolidayCredits]);
 
   // Build calendar matrix (leading empty cells for first week)
   const calendarCells: ({ type: 'empty' } | {
@@ -1097,7 +982,7 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
                     <option value={shift}>
                       {ffInfo?.dateLabel
                         ? `Ref. ${ffInfo.dateLabel} — Folga Feriado${ffInfo.holidayName ? ` (${ffInfo.holidayName})` : ''}`
-                        : `FF — Folga Compensatória`}
+                        : `FF — Sem crédito de feriado válido`}
                     </option>
                   )}
 

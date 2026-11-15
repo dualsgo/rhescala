@@ -3,6 +3,7 @@ import { Employee, MonthYear, ShiftType, JornadaSettings, normalizeEmployeeRole,
 import { Icon } from './Icon';
 import { getShortName, isEmployeeActiveOnDay, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS } from '../constants';
 import { getShiftClassification, isWorkingShift, resolveEffectiveShift } from '../src/engine/shifts/shift-predicates';
+import type { HolidayCredit } from '../hooks/useHolidayCredits';
 
 interface MobileDayScheduleViewProps {
   employees: Employee[];
@@ -25,6 +26,7 @@ interface MobileDayScheduleViewProps {
   onOpenDayDetail: (dayIdx: number) => void;
   onToggleHideEmployee?: (empId: string) => void;
   diffs?: any[];
+  holidayCredits?: Record<string, HolidayCredit[]>;
 }
 
 export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
@@ -48,6 +50,7 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
   onOpenDayDetail,
   onToggleHideEmployee,
   diffs = [],
+  holidayCredits = {},
 }) => {
   const [showFolgas, setShowFolgas] = useState(false);
   const [quickEditEmp, setQuickEditEmp] = useState<Employee | null>(null);
@@ -262,28 +265,41 @@ export const MobileDayScheduleView: React.FC<MobileDayScheduleViewProps> = ({
                   Trocar Turno / Status
                 </label>
                 <div className="grid grid-cols-4 gap-2">
-                  {[
-                    { code: 'T', label: 'Trabalho', color: 'bg-emerald-600 text-white' },
-                    { code: 'F', label: 'Folga (DSR)', color: 'bg-rose-500 text-white' },
-                    { code: 'FF', label: 'Folga Feriado', color: 'bg-amber-500 text-white' },
-                    { code: 'FE', label: 'Férias', color: 'bg-emerald-700 text-white' },
-                    { code: 'DO', label: 'Aniversário', color: 'bg-fuchsia-600 text-white' },
-                    { code: 'AT', label: 'Atestado', color: 'bg-rose-400 text-white' },
-                    { code: 'C', label: 'Treinamento', color: 'bg-slate-500 text-white' },
-                  ].map(s => (
-                    <button
-                      key={s.code}
-                      type="button"
-                      onClick={() => {
-                        onUpdateShift(quickEditEmp.id, selectedDayIdx, s.code as ShiftType);
-                        setQuickEditEmp(null);
-                      }}
-                      className={`p-2 rounded-xl text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95 ${s.color}`}
-                    >
-                      <span className="text-sm font-black">{s.code}</span>
-                      <span className="text-[11px] opacity-90 truncate w-full">{s.label}</span>
-                    </button>
-                  ))}
+                  {(() => {
+                    const empPendingCredits = (holidayCredits[quickEditEmp.id] || []).filter(c => c.status === 'pending');
+                    const firstPendingCredit = empPendingCredits[0];
+                    const quickShiftButtons = [
+                      { code: 'T', value: 'T', label: 'Trabalho', color: 'bg-emerald-600 text-white' },
+                      { code: 'F', value: 'F', label: 'Folga (DSR)', color: 'bg-rose-500 text-white' },
+                      ...(firstPendingCredit
+                        ? [{
+                            code: 'FF',
+                            value: `FF ${firstPendingCredit.id || firstPendingCredit.holidayDate}`,
+                            label: 'Folga Feriado',
+                            color: 'bg-amber-500 text-white',
+                          }]
+                        : []),
+                      { code: 'FE', value: 'FE', label: 'Férias', color: 'bg-emerald-700 text-white' },
+                      { code: 'DO', value: 'DO', label: 'Aniversário', color: 'bg-fuchsia-600 text-white' },
+                      { code: 'AT', value: 'AT', label: 'Atestado', color: 'bg-rose-400 text-white' },
+                      { code: 'C', value: 'C', label: 'Treinamento', color: 'bg-slate-500 text-white' },
+                    ];
+
+                    return quickShiftButtons.map(s => (
+                      <button
+                        key={s.code}
+                        type="button"
+                        onClick={() => {
+                          onUpdateShift(quickEditEmp.id, selectedDayIdx, s.value as ShiftType);
+                          setQuickEditEmp(null);
+                        }}
+                        className={`p-2 rounded-xl text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95 ${s.color}`}
+                      >
+                        <span className="text-sm font-black">{s.code}</span>
+                        <span className="text-[11px] opacity-90 truncate w-full">{s.label}</span>
+                      </button>
+                    ));
+                  })()}
                 </div>
               </div>
 
