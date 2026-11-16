@@ -346,35 +346,86 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
   const protectedConfig = useMemo(() => normalizeProtectedDaysConfig(protectedDaysConfig), [protectedDaysConfig]);
 
-  const dailyDetailedLunchesMap = useMemo(() => {
-    const map = new Map<string, DetailedLunchAssignment>();
-    days.forEach(d => {
-      const dayIdx = d.num - 1;
-      const isSun = d.isSunday;
-      const isHol = d.isHoliday;
-      const workingInDay = employees.filter(emp => {
-        if (!isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month)) return false;
-        const s = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
-        return isWorkingShift(s) || s === 'C';
-      });
-      const detailedLunches = calculateDetailedLunches(workingInDay, isHol, isSun, undefined, jornadaSettings, {
-        monthKey,
-        dayIdx,
-      });
-      detailedLunches.forEach((dl) => {
-        map.set(`${dl.employeeId || dl.member?.id}_${dayIdx}`, dl);
-      });
-    });
-    return map;
-  }, [days, employees, currentMY.year, currentMY.month, monthKey, jornadaSettings]);
+  const activeMonthEmployees = useMemo(() => {
+    return employees.filter(emp => isEmployeeActiveInMonth(emp, currentMY.year, currentMY.month));
+  }, [employees, currentMY.year, currentMY.month]);
 
-  const dailyLunchesMap = useMemo(() => {
-    const map = new Map<string, string>();
-    dailyDetailedLunchesMap.forEach((dl, key) => {
-      if (dl.lunchSlot) map.set(key, dl.lunchSlot);
-    });
+  const diffsMap = useMemo(() => {
+    const map = new Map<string, ScheduleDiffItem>();
+    if (!diffs || diffs.length === 0) return map;
+    for (const diff of diffs) {
+      map.set(`${diff.empId}_${diff.dayIdx}`, diff);
+    }
     return map;
-  }, [dailyDetailedLunchesMap]);
+  }, [diffs]);
+
+  const cellMetricsMap = useMemo(() => {
+    const map = new Map<string, {
+      streak: number;
+      currentSunCount: number;
+      finalSundayStreak: number;
+      isSundayViolation: boolean;
+      isSundayWarning: boolean;
+    }>();
+
+    for (const emp of activeMonthEmployees) {
+      const prevStreak = prevWorkStreaks.get(emp.id) || 0;
+      let runningStreak = prevStreak;
+      let runningSunCount = prevMonthConsecs.get(emp.id) || 0;
+      const monthShifts = emp.shifts[monthKey];
+
+      for (let idx = 0; idx < days.length; idx++) {
+        const d = days[idx];
+        const checkDate = d.dateStr;
+        let s = monthShifts?.[idx];
+
+        if (emp.hiredAt && checkDate < emp.hiredAt) {
+          s = 'N/A';
+        } else if (emp.firedAt && checkDate > emp.firedAt) {
+          s = 'N/A';
+        } else if (emp.atestadoStart && emp.atestadoEnd && checkDate >= emp.atestadoStart && checkDate <= emp.atestadoEnd) {
+          s = 'AT';
+        } else if (emp.vacationStart && emp.vacationEnd && checkDate >= emp.vacationStart && checkDate <= emp.vacationEnd) {
+          s = 'FE';
+        }
+
+        const isWorking = isWorkingShift(s) || s === 'C';
+        if (isWorking) {
+          runningStreak++;
+        } else {
+          runningStreak = 0;
+        }
+
+        let finalSundayStreak = 0;
+        let isSundayViolation = false;
+        let isSundayWarning = false;
+        const sunBefore = runningSunCount;
+
+        if (d.isSunday && !emp.isYoungApprentice) {
+          if (isWorking) {
+            finalSundayStreak = sunBefore + 1;
+            runningSunCount = finalSundayStreak;
+            if (finalSundayStreak >= 3) isSundayViolation = true;
+            else if (finalSundayStreak === 2) isSundayWarning = true;
+          } else {
+            runningSunCount = 0;
+          }
+        }
+
+        map.set(`${emp.id}_${idx}`, {
+          streak: runningStreak,
+          currentSunCount: sunBefore,
+          finalSundayStreak,
+          isSundayViolation,
+          isSundayWarning,
+        });
+      }
+    }
+
+    return map;
+  }, [activeMonthEmployees, days, monthKey, prevWorkStreaks, prevMonthConsecs]);
+
+  const todayStr = useMemo(() => toLocalISODate(), [currentMY.month, currentMY.year]);
 
   const daysRemainingCount = isCurrentMonth ? Math.max(0, daysInMonth - todayDayNum + 1) : 0;
 
@@ -440,6 +491,35 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     }
     return filteredDays;
   }, [gridLayoutMode, filteredDays, safeCubeStartIdx]);
+
+  const dailyDetailedLunchesMap = useMemo(() => {
+    const map = new Map<string, DetailedLunchAssignment>();
+    visibleDays.forEach(d => {
+      const dayIdx = d.num - 1;
+      const isSun = d.isSunday;
+      const isHol = d.isHoliday;
+      const workingInDay = activeMonthEmployees.filter(emp => {
+        const s = (emp.shifts[monthKey] || [])[dayIdx] || 'T';
+        return isWorkingShift(s) || s === 'C';
+      });
+      const detailedLunches = calculateDetailedLunches(workingInDay, isHol, isSun, undefined, jornadaSettings, {
+        monthKey,
+        dayIdx,
+      });
+      detailedLunches.forEach((dl) => {
+        map.set(`${dl.employeeId || dl.member?.id}_${dayIdx}`, dl);
+      });
+    });
+    return map;
+  }, [visibleDays, activeMonthEmployees, monthKey, jornadaSettings]);
+
+  const dailyLunchesMap = useMemo(() => {
+    const map = new Map<string, string>();
+    dailyDetailedLunchesMap.forEach((dl, key) => {
+      if (dl.lunchSlot) map.set(key, dl.lunchSlot);
+    });
+    return map;
+  }, [dailyDetailedLunchesMap]);
 
   const handleStepCubeDays = useCallback((delta: number) => {
     setCubeStartIdx(prev => {
@@ -1710,83 +1790,18 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
 
                             {/* Shift Cells */}
                             {visibleDays.map(d => {
-                              const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d.num).padStart(2, '0')}`;
-                              const rawShift = resolveEffectiveShift(emp, fullDate, monthKey, d.num - 1);
+                              const dayIdx = d.num - 1;
+                              const fullDate = d.dateStr;
+                              const rawShift = resolveEffectiveShift(emp, fullDate, monthKey, dayIdx);
                               const shift = isWorkingShift(rawShift) ? 'T' : rawShift;
-                              
-                              const prevStreak = prevWorkStreaks.get(emp.id) || 0;
-                              let streak = 0;
-                              let hitRest = false;
 
-                              for (let i = d.num - 1; i >= 0; i--) {
-                                const checkDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
-                                let s = emp.shifts[monthKey]?.[i];
-                                if (emp.hiredAt && checkDate < emp.hiredAt) {
-                                  s = 'N/A';
-                                } else if (emp.firedAt && checkDate > emp.firedAt) {
-                                  s = 'N/A';
-                                } else if (emp.atestadoStart && emp.atestadoEnd && checkDate >= emp.atestadoStart && checkDate <= emp.atestadoEnd) {
-                                  s = 'AT';
-                                } else if (emp.vacationStart && emp.vacationEnd && checkDate >= emp.vacationStart && checkDate <= emp.vacationEnd) {
-                                  s = 'FE';
-                                }
-
-                                if (isWorkingShift(s) || s === 'C') {
-                                  streak++;
-                                } else {
-                                  hitRest = true;
-                                  break;
-                                }
-                              }
-
-                              if (!hitRest) {
-                                streak += prevStreak;
-                              }
-
-                              // Cálculo de domingos consecutivos
+                              const metrics = cellMetricsMap.get(`${emp.id}_${dayIdx}`);
+                              const streak = metrics?.streak || 0;
                               const isSunday = d.isSunday;
-                              let isSundayViolation = false;
-                              let isSundayWarning = false;
-                              let isSundayRestAfterStreak = false;
-                              let finalSundayStreak = 0;
-                              let currentSunCount = 0;
-
-                              if (isSunday && !emp.isYoungApprentice) {
-                                const initialSundayStreak = prevMonthConsecs.get(emp.id) || 0;
-                                currentSunCount = initialSundayStreak;
-                                
-                                for (let i = 0; i < d.num - 1; i++) {
-                                  const dDate = new Date(currentMY.year, currentMY.month, i + 1);
-                                  if (dDate.getDay() === 0) {
-                                    const fullDateI = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
-                                    let sI = emp.shifts[monthKey]?.[i] || 'T';
-                                    if (emp.hiredAt && fullDateI < emp.hiredAt) sI = 'N/A';
-                                    else if (emp.firedAt && fullDateI > emp.firedAt) sI = 'N/A';
-                                    else if (emp.atestadoStart && emp.atestadoEnd && fullDateI >= emp.atestadoStart && fullDateI <= emp.atestadoEnd) sI = 'AT';
-                                    else if (emp.vacationStart && emp.vacationEnd && fullDateI >= emp.vacationStart && fullDateI <= emp.vacationEnd) sI = 'FE';
-
-                                    if (isWorkingShift(sI) || sI === 'C') {
-                                      currentSunCount++;
-                                    } else {
-                                      currentSunCount = 0;
-                                    }
-                                  }
-                                }
-
-                                const isCurrentSundayWorking = isWorkingShift(shift) || shift === 'C';
-                                if (isCurrentSundayWorking) {
-                                  finalSundayStreak = currentSunCount + 1;
-                                  if (finalSundayStreak >= 3) {
-                                    isSundayViolation = true;
-                                  } else if (finalSundayStreak === 2) {
-                                    isSundayWarning = true;
-                                  }
-                                } else {
-                                  if (currentSunCount >= 2) {
-                                    isSundayRestAfterStreak = true;
-                                  }
-                                }
-                              }
+                              const isSundayViolation = metrics?.isSundayViolation || false;
+                              const isSundayWarning = metrics?.isSundayWarning || false;
+                              const finalSundayStreak = metrics?.finalSundayStreak || 0;
+                              const currentSunCount = metrics?.currentSunCount || 0;
 
                               // 6x1 / 5x2 Cycle Badge (Canto Superior Esquerdo)
                               const isWorkingDay = isWorkingShift(shift) || shift === 'C';
@@ -1898,12 +1913,11 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const is7thDay = streak === 7;
                               const hasAlert = streak > maxStreak && isWorkingDay;
                               const hasCellViolation = hasAlert || isSundayViolation;
-                              const todayStr = toLocalISODate();
-                               const isPast = d.dateStr < todayStr;
-                               const isSelectedCol = safeSelectedDayIdx === d.num - 1;
-                               const pastDimClass = isPast && !isSelectedCol && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
-                               const dayRequest = !isReadOnly ? (emp.requests || []).find(r => r.date === fullDate) : undefined;
-                               const cellDiff = diffs?.find(diff => diff.empId === emp.id && diff.dayIdx === d.num - 1);
+                              const isPast = d.dateStr < todayStr;
+                              const isSelectedCol = safeSelectedDayIdx === dayIdx;
+                              const pastDimClass = isPast && !isSelectedCol && (!isEditable || !allowRetroactive) ? 'opacity-30 grayscale' : '';
+                              const dayRequest = !isReadOnly ? (emp.requests || []).find(r => r.date === fullDate) : undefined;
+                              const cellDiff = diffsMap.get(`${emp.id}_${dayIdx}`);
                                const focusDimColClass = focusSelectedDay && !isSelectedCol ? 'opacity-40 hover:opacity-100 transition-opacity duration-150' : '';
                                const focusHighlight = isSelectedCol && focusSelectedDay ? 'ring-2 ring-inset ring-orange-500 bg-orange-500/10 dark:bg-orange-950/30' : isSelectedCol ? 'ring-2 ring-inset ring-orange-400/40' : '';
 

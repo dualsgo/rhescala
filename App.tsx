@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef, Suspense, lazy } from 'react';
 import { useDialog } from './contexts/DialogContext';
 import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
 import { useScheduleFilters } from './hooks/useScheduleFilters';
@@ -17,25 +17,13 @@ import {
 import { Header } from './components/Header';
 
 import { ShiftGrid } from './components/ShiftGrid';
-import { TeamView } from './components/TeamView';
-import { AnalysisPanel } from './components/AnalysisPanel';
-import { HolidayManager } from './components/HolidayManager';
 import { DaySummaryCard } from './components/DaySummaryCard';
-import { DataManager } from './components/DataManager';
-import { WorkedHolidaysList } from './components/WorkedHolidaysList';
-import { CleaningSchedule } from './components/CleaningSchedule';
-import { PatrolSchedule } from './components/PatrolSchedule';
-import { SectionManager } from './components/SectionManager';
 import { Icon } from './components/Icon';
 import { Login } from './components/Login';
-import { PrintableSchedule } from './components/PrintableSchedule';
 import { useHolidayCredits } from './hooks/useHolidayCredits';
 import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, buildHolidaySet, DEFAULT_JORNADA_SETTINGS, getDefaultProtectedDays, isEmployeeHiddenInMonth } from './constants';
 import { Employee, MonthYear, Holiday, JornadaSettings, OfficialScheduleSnapshot, TacticalDisplayMode, ProtectedDaysConfig, ProtectedDaysMap, AuditLogEntry } from './types';
-import { HelpCenter } from './components/HelpCenter';
-import { JornadaManager } from './components/JornadaManager';
 import { EmployeeScheduleCard } from './components/EmployeeScheduleCard';
-import { RequestManager } from './components/RequestManager';
 import { InconsistencyModal } from './components/InconsistencyModal';
 import { detectInconsistencies } from './components/InconsistencyPanel';
 import { SyncBlockingOverlay } from './components/SyncBlockingOverlay';
@@ -48,6 +36,20 @@ import { DailyScheduleModulatorModal } from './components/DailyScheduleModulator
 import { AuditJustificationModal, AuditImpactPreview } from './components/AuditJustificationModal';
 import { MobileNavBar } from './components/MobileNavBar';
 import { ScheduleSkeleton } from './components/ScheduleSkeleton';
+
+// Lazy-loaded secondary views to keep the initial PWA bundle lean (bundle-dynamic-imports)
+const TeamView = lazy(() => import('./components/TeamView').then(m => ({ default: m.TeamView })));
+const AnalysisPanel = lazy(() => import('./components/AnalysisPanel').then(m => ({ default: m.AnalysisPanel })));
+const HolidayManager = lazy(() => import('./components/HolidayManager').then(m => ({ default: m.HolidayManager })));
+const DataManager = lazy(() => import('./components/DataManager').then(m => ({ default: m.DataManager })));
+const WorkedHolidaysList = lazy(() => import('./components/WorkedHolidaysList').then(m => ({ default: m.WorkedHolidaysList })));
+const CleaningSchedule = lazy(() => import('./components/CleaningSchedule').then(m => ({ default: m.CleaningSchedule })));
+const PatrolSchedule = lazy(() => import('./components/PatrolSchedule').then(m => ({ default: m.PatrolSchedule })));
+const SectionManager = lazy(() => import('./components/SectionManager').then(m => ({ default: m.SectionManager })));
+const PrintableSchedule = lazy(() => import('./components/PrintableSchedule').then(m => ({ default: m.PrintableSchedule })));
+const HelpCenter = lazy(() => import('./components/HelpCenter').then(m => ({ default: m.HelpCenter })));
+const JornadaManager = lazy(() => import('./components/JornadaManager').then(m => ({ default: m.JornadaManager })));
+const RequestManager = lazy(() => import('./components/RequestManager').then(m => ({ default: m.RequestManager })));
 import { migrateLegacyEmployeeData } from './src/services/scheduleMigrationService';
 import { useScheduleExport } from './hooks/useScheduleExport';
 import { useHolidayHandlers } from './hooks/useHolidayHandlers';
@@ -962,6 +964,7 @@ const App: React.FC = () => {
             />
 
        <main className="flex-1 overflow-y-auto print:overflow-visible p-2 sm:p-4 pb-24 lg:pb-4 print:p-0">
+         <Suspense fallback={<ScheduleSkeleton />}>
          {(() => {
            const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
            const isHoliday = buildHolidaySet(currentMY.year, customHolidays, deletedNationalHolidays).has(dateStr);
@@ -1347,10 +1350,15 @@ const App: React.FC = () => {
                return null;
            }
          })()}
+          </Suspense>
        </main>
 
 
-       {showHelp && <HelpCenter onClose={() => setShowHelp(false)} />}
+       {showHelp && (
+         <Suspense fallback={null}>
+           <HelpCenter onClose={() => setShowHelp(false)} />
+         </Suspense>
+       )}
 
        {showProtectedModal && (
          <ProtectedDaysModal
@@ -1539,13 +1547,15 @@ const App: React.FC = () => {
         )}
 
         {currentView !== 'analysis' && (
-          <PrintableSchedule 
-            employees={employees} 
-            currentMY={currentMY} 
-            customHolidays={customHolidays} 
-            monthNotes={monthNotes[monthKey] || ''}
-            jornadaSettings={jornadaSettings}
-          />
+          <Suspense fallback={null}>
+            <PrintableSchedule 
+              employees={employees} 
+              currentMY={currentMY} 
+              customHolidays={customHolidays} 
+              monthNotes={monthNotes[monthKey] || ''}
+              jornadaSettings={jornadaSettings}
+            />
+          </Suspense>
         )}
 
         {/* Barra de Navegação Inferior Mobile (< lg) */}
