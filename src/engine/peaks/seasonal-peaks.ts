@@ -191,7 +191,7 @@ export function optimizeDecemberPeak(
 
         const isProtected = (idx: number) => isProtectedShift(shifts[idx]);
         const isRestCode = (s: ShiftType | undefined) =>
-            ['F', 'FE', 'AT', 'DO', 'N/A'].includes(s as string) || Boolean(s?.startsWith('FF'));
+            ['F', 'LF', 'FE', 'AT', 'DO', 'N/A'].includes(s as string) || Boolean(s?.startsWith('FF'));
 
         // 1. Limpa folgas comuns 'F' nos 5 dias de pico do Natal (20 a 24)
         criticalIndices.forEach(idx => {
@@ -200,23 +200,23 @@ export function optimizeDecemberPeak(
             }
         });
 
-        // 2. Escalonamento cirúrgico de folgas Pré-Pico (dias 18 e 19) e Pós-Pico (25 + 26/27 no 5x2)
+        // 2. Escalonamento cirúrgico de folgas Pré-Pico (dias 18 e 19) e Pós-Pico (25 = LF Loja Fechada + 26/27 no 5x2)
         const isGroupA = empIdx % 2 === 0;
 
         if (isGroupA) {
-            // Grupo A: Folga dia 18, trabalha 19..24 (6 dias — legal CLT), folga dia 25 (Natal) e 27 (2ª folga 5x2)
-            if (!isProtected(17)) shifts[17] = 'F'; // Dia 18
-            if (!isProtected(18)) shifts[18] = 'T'; // Dia 19
-            if (!isProtected(24)) shifts[24] = 'F'; // Dia 25 (Natal)
-            if (!isProtected(25)) shifts[25] = 'T'; // Dia 26
-            if (!isProtected(26)) shifts[26] = 'F'; // Dia 27 (2ª folga da semana 5x2)
+            // Grupo A: Folga dia 18, trabalha 19..24 (6 dias — legal CLT), dia 25 Loja Fechada (LF) e 27 (2ª folga 5x2)
+            if (!isProtected(17)) shifts[17] = 'F';  // Dia 18
+            if (!isProtected(18)) shifts[18] = 'T';  // Dia 19
+            if (!isProtected(24)) shifts[24] = 'LF'; // Dia 25 (Natal — Loja Fechada)
+            if (!isProtected(25)) shifts[25] = 'T';  // Dia 26
+            if (!isProtected(26)) shifts[26] = 'F';  // Dia 27 (2ª folga da semana 5x2)
         } else {
-            // Grupo B: Folga dia 19, trabalha 20..24 (5 dias), folga dia 25 (Natal) e 26 (2ª folga 5x2)
-            if (!isProtected(17)) shifts[17] = 'T'; // Dia 18
-            if (!isProtected(18)) shifts[18] = 'F'; // Dia 19
-            if (!isProtected(24)) shifts[24] = 'F'; // Dia 25 (Natal)
-            if (!isProtected(25)) shifts[25] = 'F'; // Dia 26 (2ª folga da semana 5x2)
-            if (!isProtected(26)) shifts[26] = 'T'; // Dia 27
+            // Grupo B: Folga dia 19, trabalha 20..24 (5 dias), dia 25 Loja Fechada (LF) e 26 (2ª folga 5x2)
+            if (!isProtected(17)) shifts[17] = 'T';  // Dia 18
+            if (!isProtected(18)) shifts[18] = 'F';  // Dia 19
+            if (!isProtected(24)) shifts[24] = 'LF'; // Dia 25 (Natal — Loja Fechada)
+            if (!isProtected(25)) shifts[25] = 'F';  // Dia 26 (2ª folga da semana 5x2)
+            if (!isProtected(26)) shifts[26] = 'T';  // Dia 27
         }
 
         // 3. Validação do Período Anterior (Dias 1 a 17) garantindo teto CLT (6x1) antes do Dia 18/19

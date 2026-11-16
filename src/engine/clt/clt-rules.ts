@@ -1,5 +1,5 @@
 import { Employee, ShiftType, Holiday, JornadaSettings } from '../../../types';
-import { DEFAULT_JORNADA_SETTINGS, APPRENTICE_WORK_PERIOD, buildHolidaySet } from '../config/schedule-constants';
+import { DEFAULT_JORNADA_SETTINGS, APPRENTICE_WORK_PERIOD, buildHolidaySet, getStoreClosedDatesForYear } from '../config/schedule-constants';
 
 export const WEEKDAY_NAMES = [
   'Domingo', 'Segunda', 'Terça', 'Quarta',
@@ -101,6 +101,7 @@ export function generateMonthForEmployee(
 ): { shifts: ShiftType[]; hours: string[] } {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const holidaySet = buildHolidaySet(year, customHolidays, deletedNationalHolidays);
+  const storeClosedDates = getStoreClosedDatesForYear(year, customHolidays, deletedNationalHolidays);
 
   const today = new Date();
   const isPastMonth = year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth());
@@ -131,6 +132,9 @@ export function generateMonthForEmployee(
     }
     if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) {
       shifts.push('N/A'); hours.push(getTargetHours(emp, dow, isHoliday, settings)); continue;
+    }
+    if (storeClosedDates.has(dateStr)) {
+      shifts.push('LF'); hours.push(getTargetHours(emp, dow, isHoliday, settings)); continue;
     }
 
     // ── Jovem Aprendiz ────────────────────────────────────────────────

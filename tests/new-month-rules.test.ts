@@ -201,10 +201,14 @@ describe('Criação do Novo Mês e Aplicação Avulsa (Regras CLT, Domingos e Fo
       expect(result['emp-single']).toBeDefined();
       expect(result['emp-single']).toHaveLength(31);
 
-      // Segundas-feiras de Outubro 2028: dias 2, 9, 16, 23, 30 (índices 1, 8, 15, 22, 29)
+      // Segundas-feiras de Outubro 2028: dias 2, 9, 16 (Dia do Comerciário -> LF), 23, 30
       const mondays = [1, 8, 15, 22, 29];
       mondays.forEach(mIdx => {
-        expect(result['emp-single'][mIdx]).toBe('F');
+        if (mIdx === 15) {
+          expect(result['emp-single'][mIdx]).toBe('LF');
+        } else {
+          expect(result['emp-single'][mIdx]).toBe('F');
+        }
       });
     });
 

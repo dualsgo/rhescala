@@ -120,6 +120,9 @@ describe('Regras de Escala CLT (6x1, 5x2, Aprendiz, Afastamentos, Aniversários)
           // 12 de Outubro = Feriado Nacional (N. Sra Aparecida)
           expect(shifts[dayIdx]).toBe('F');
           expect(hours[dayIdx]).toBe('12h às 20h');
+        } else if (dayIdx === 15) {
+          // 16 de Outubro 2028 (3ª segunda-feira) = Dia do Comerciário RJ -> Loja Fechada (LF)
+          expect(shifts[dayIdx]).toBe('LF');
         } else {
           expect(shifts[dayIdx]).toBe('T');
           expect(hours[dayIdx]).toBe('10h às 16h15');

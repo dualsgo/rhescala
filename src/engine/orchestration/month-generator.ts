@@ -15,6 +15,7 @@ import {
     normalizeProtectedDaysConfig,
     isEmployeeHiddenInMonth,
     getEffectiveJornadaOnDate,
+    getStoreClosedDatesForYear,
 } from '../config/schedule-constants';
 import {
     WEEKDAY_NAMES,
@@ -58,6 +59,7 @@ export function applyMonthUpdate(
 
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const holidaySet = buildHolidaySet(year, customHolidays, deletedNationalHolidays);
+    const storeClosedDates = getStoreClosedDatesForYear(year, customHolidays, deletedNationalHolidays);
 
     // Helper para verificar status legal/especial
     const getLegalOverride = (emp: Employee, dayIdx: number): ShiftType | null =>
@@ -84,6 +86,12 @@ export function applyMonthUpdate(
             const legal = getLegalOverride(app, i);
             if (legal) {
                 shifts[i] = legal;
+                decisionReasons[i] = 'LEGAL_IMMUTABLE';
+                continue;
+            }
+
+            if (storeClosedDates.has(dateStr)) {
+                shifts[i] = 'LF';
                 decisionReasons[i] = 'LEGAL_IMMUTABLE';
                 continue;
             }
@@ -173,9 +181,15 @@ export function applyMonthUpdate(
             const maxStreak = is5x2 ? 5 : 6;
             const legal = getLegalOverride(emp, dayIdx);
 
-            // 3.1 Se houver condição legal (Férias, Atestado, Aniversário, Não-contratado)
+            // 3.1 Se houver condição legal (Férias, Atestado, Aniversário, Não-contratado) ou Loja Fechada (LF)
             if (legal) {
                 shifts[dayIdx] = legal;
+                decisionReasons[dayIdx] = 'LEGAL_IMMUTABLE';
+                currentStreak = 0;
+                continue;
+            }
+            if (storeClosedDates.has(dateStr)) {
+                shifts[dayIdx] = 'LF';
                 decisionReasons[dayIdx] = 'LEGAL_IMMUTABLE';
                 currentStreak = 0;
                 continue;
@@ -306,7 +320,7 @@ export function applyMonthUpdate(
             if (!has5x2InWeek) continue;
 
             const weekRests = weekIndices.filter(
-                k => ['F', 'FE', 'AT', 'DO', 'N/A'].includes(shifts[k]) || shifts[k]?.startsWith('FF')
+                k => ['F', 'LF', 'FE', 'AT', 'DO', 'N/A'].includes(shifts[k]) || shifts[k]?.startsWith('FF')
             );
 
             // Completa até 2 folgas na semana distribuindo de forma escalonada entre dias úteis (Seg..Sáb)
@@ -586,6 +600,7 @@ export function applyHoursOnly(
     const result: Record<string, string[]> = {};
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const holidaySet = buildHolidaySet(year, customHolidays, deletedNationalHolidays);
+    const storeClosedDates = getStoreClosedDatesForYear(year, customHolidays, deletedNationalHolidays);
     const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
     const targetEmps = targetEmpId 
         ? employees.filter(e => e.id === targetEmpId)

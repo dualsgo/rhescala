@@ -61,7 +61,7 @@ describe('Transição Híbrida 6x1 -> 5x2 em 16/12/2026', () => {
     const team = makeTeam();
     const res = applyMonthUpdate(team, 2026, 11); // Dezembro = month 11
 
-    const isRest = (s: string) => ['F', 'FE', 'AT', 'DO', 'N/A'].includes(s) || s.startsWith('FF');
+    const isRest = (s: string) => ['F', 'LF', 'FE', 'AT', 'DO', 'N/A'].includes(s) || s.startsWith('FF');
 
     for (const emp of team) {
       const shifts = res[emp.id].shifts;
@@ -94,7 +94,7 @@ describe('Transição Híbrida 6x1 -> 5x2 em 16/12/2026', () => {
     }));
 
     const optimized = optimizeDecemberPeak(withBase, '2026-12');
-    const isRest = (s: string) => ['F', 'FE', 'AT', 'DO', 'N/A'].includes(s) || s.startsWith('FF');
+    const isRest = (s: string) => ['F', 'LF', 'FE', 'AT', 'DO', 'N/A'].includes(s) || s.startsWith('FF');
 
     for (const emp of team) {
       const shifts = optimized[emp.id].shifts;

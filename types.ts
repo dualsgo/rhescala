@@ -121,6 +121,7 @@ export type StandardShiftType =
   | 'T'    // Trabalho regular
   | 'F'    // Folga regular semanal
   | 'FF'   // Folga Feriado compensatória
+  | 'LF'   // Loja Fechada (feriado sem funcionamento: Natal, Ano Novo, Carnaval RJ, Dia do Comerciário)
   | 'FE'   // Férias
   | 'AT'   // Atestado médico
   | 'C'    // Curso (Jovem Aprendiz)
@@ -133,7 +134,7 @@ export type ShiftType = StandardShiftType | HolidayCreditShiftType;
 
 export function isShiftType(val: unknown): val is ShiftType {
   if (typeof val !== 'string') return false;
-  const standard: string[] = ['T', 'F', 'FF', 'FE', 'AT', 'C', 'DO', 'N/A'];
+  const standard: string[] = ['T', 'F', 'FF', 'LF', 'FE', 'AT', 'C', 'DO', 'N/A'];
   return standard.includes(val) || val.startsWith('FF');
 }
 

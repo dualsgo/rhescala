@@ -293,6 +293,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                     let borderClass = 'border-transparent';
                     
                     if (shift === 'F') bgClass = 'bg-rose-100 text-rose-600 dark:bg-rose-900/40';
+                    else if (shift === 'LF') bgClass = 'bg-slate-200 text-slate-700 dark:bg-zinc-800 dark:text-zinc-200';
                     else if (shift === 'AT') bgClass = 'bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-300';
                     else if (shift.startsWith('FF')) bgClass = 'bg-amber-100 text-amber-600 dark:bg-amber-900/40';
                     else if (shift === 'FE') bgClass = 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40';
@@ -500,7 +501,7 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                       </div>
                       <div>
                         <p className={`text-[11px] font-black uppercase ${shift === 'F' ? 'text-rose-600' : (typeof shift === 'string' && shift.startsWith('FF')) ? 'text-amber-600' : 'text-slate-800 dark:text-zinc-100'}`}>
-                          {shift === 'T' ? 'Trabalha' : shift === 'F' ? 'Folga' : (typeof shift === 'string' && shift.startsWith('FF')) ? 'Folga Feriado' : shift === 'FE' ? (() => {
+                          {shift === 'T' ? 'Trabalha' : shift === 'F' ? 'Folga' : shift === 'LF' ? 'Loja Fechada' : (typeof shift === 'string' && shift.startsWith('FF')) ? 'Folga Feriado' : shift === 'FE' ? (() => {
                             if (employee.vacationStart && employee.vacationEnd && fullDate >= employee.vacationStart && fullDate <= employee.vacationEnd) {
                               const s = new Date(employee.vacationStart + 'T00:00:00').getTime();
                               const e = new Date(employee.vacationEnd + 'T00:00:00').getTime();

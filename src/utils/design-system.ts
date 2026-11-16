@@ -141,6 +141,13 @@ export const SHIFT_CELL_STYLES: Record<string, ShiftCellStyle> = {
     label: 'Folga Compensatória (Feriado)',
     dotColor: 'bg-fuchsia-500',
   },
+  LF: {
+    bg: 'bg-slate-200/90 hover:bg-slate-300/80 dark:bg-zinc-800/90 dark:hover:bg-zinc-700/80',
+    text: 'text-slate-700 dark:text-zinc-200 font-black',
+    border: 'border-slate-300 dark:border-zinc-700 hover:border-slate-500',
+    label: 'Loja Fechada',
+    dotColor: 'bg-slate-500',
+  },
   FE: {
     bg: 'bg-sky-50/90 hover:bg-sky-100/90 dark:bg-sky-950/40 dark:hover:bg-sky-950/60',
     text: 'text-sky-800 dark:text-sky-200 font-black',

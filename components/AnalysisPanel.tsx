@@ -41,6 +41,7 @@ const MONTH_NAMES = [
 const BASE_SHIFT_OPTIONS: { value: ShiftType; label: string; desc: string }[] = [
   { value: 'T', label: 'T', desc: 'Trabalho Regular' },
   { value: 'F', label: 'F', desc: 'Folga Semanal' },
+  { value: 'LF', label: 'LF', desc: 'Loja Fechada' },
   { value: 'FE', label: 'FE', desc: 'Férias' },
   { value: 'AT', label: 'AT', desc: 'Atestado Médico' },
   { value: 'DO', label: 'DO', desc: 'Folga Aniversário (Day Off)' },
@@ -887,7 +888,9 @@ const IndividualWeeklyCalendarView: React.FC<IndividualWeeklyCalendarViewProps> 
               ? 'Folga'
               : isFF
                 ? (ffInfo?.holidayName ? `Feriado • ${ffInfo.holidayName}` : 'Folga Feriado')
-                : shift === 'FE'
+                : shift === 'LF'
+                  ? 'Loja Fechada'
+                  : shift === 'FE'
                   ? 'Férias'
                   : shift === 'AT'
                     ? 'Atestado'

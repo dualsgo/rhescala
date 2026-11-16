@@ -292,6 +292,98 @@ export function getNationalHolidays(year: number): Holiday[] {
 }
 
 /**
+ * Retorna um mapa YYYY-MM-DD -> motivo para datas em que lojas/quiosques de shopping no RJ não abrem:
+ * - 01/01 (Confraternização Universal / Ano Novo)
+ * - Terça-feira de Carnaval (47 dias antes da Páscoa — feriado estadual RJ)
+ * - Dia do Comerciário RJ (3ª segunda-feira de outubro ou data customizada com "Comerciário" no nome)
+ * - 25/12 (Natal)
+ */
+export function getStoreClosedDatesForYear(
+  year: number,
+  customHolidays: Holiday[] = [],
+  deletedNationalHolidays: string[] = []
+): Map<string, string> {
+  const map = new Map<string, string>();
+
+  const easterDate = (y: number): Date => {
+    const a = y % 19;
+    const b = Math.floor(y / 100);
+    const c = y % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31) - 1;
+    const day = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(y, month, day);
+  };
+
+  const fmt = (d: Date): string =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  // 1. 1º de Janeiro (Ano Novo) e 25 de Dezembro (Natal)
+  if (!deletedNationalHolidays.includes(`national-${year}-0`)) {
+    map.set(`${year}-01-01`, 'Ano Novo (Loja Fechada)');
+  }
+  if (!deletedNationalHolidays.includes(`national-${year}-9`)) {
+    map.set(`${year}-12-25`, 'Natal (Loja Fechada)');
+  }
+
+  // 2. Terça-feira de Carnaval (47 dias antes do Domingo de Páscoa)
+  const carnivalTuesday = easterDate(year);
+  carnivalTuesday.setDate(carnivalTuesday.getDate() - 47);
+  map.set(fmt(carnivalTuesday), 'Terça-feira de Carnaval (Loja Fechada - RJ)');
+
+  // 3. Dia do Comerciário: usa feriado customizado se houver ("Comerciário"), senão 3ª segunda-feira de outubro
+  const customComerciario = customHolidays.find(
+    h =>
+      h.date?.startsWith(`${year}-`) &&
+      (h.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('comerciario')
+  );
+  if (customComerciario) {
+    map.set(customComerciario.date, `${customComerciario.name} (Loja Fechada)`);
+  } else {
+    // 3ª segunda-feira de outubro (month = 9)
+    let mondays = 0;
+    for (let day = 1; day <= 31; day++) {
+      const dt = new Date(year, 9, day);
+      if (dt.getDay() === 1) {
+        mondays++;
+        if (mondays === 3) {
+          map.set(fmt(dt), 'Dia do Comerciário RJ (Loja Fechada)');
+          break;
+        }
+      }
+    }
+  }
+
+  return map;
+}
+
+export function isStoreClosedDate(
+  dateStr: string,
+  year: number,
+  customHolidays: Holiday[] = [],
+  deletedNationalHolidays: string[] = []
+): boolean {
+  return getStoreClosedDatesForYear(year, customHolidays, deletedNationalHolidays).has(dateStr);
+}
+
+export function getStoreClosedReason(
+  dateStr: string,
+  year: number,
+  customHolidays: Holiday[] = [],
+  deletedNationalHolidays: string[] = []
+): string | null {
+  return getStoreClosedDatesForYear(year, customHolidays, deletedNationalHolidays).get(dateStr) || null;
+}
+
+/**
  * Returns a Set of "YYYY-MM-DD" holiday date strings for fast lookup.
  */
 export function buildHolidaySet(

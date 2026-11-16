@@ -296,6 +296,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       { code: 'T', label: 'Trabalho Regular (T)', color: 'bg-emerald-500' },
       { code: 'F', label: 'Folga Semanal (F)', color: 'bg-rose-500' },
       { code: 'FF', label: 'Folga Feriado (FF)', color: 'bg-fuchsia-500' },
+      { code: 'LF', label: 'Loja Fechada (LF)', color: 'bg-slate-600' },
       { code: 'FE', label: 'Férias (FE)', color: 'bg-sky-500' },
       { code: 'DO', label: 'Aniversário / Day Off', color: 'bg-purple-500' },
       { code: 'C', label: 'Curso Aprendiz (C)', color: 'bg-indigo-500' },
@@ -1961,6 +1962,8 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                     const explicit = shift.split(' ')[1];
                                     const matched = (holidayCredits[emp.id] || []).find(c => c.id === explicit || c.holidayDate === explicit);
                                     baseTitle = matched ? `Folga Feriado: ${matched.holidayName}` : 'Folga Feriado (FF)';
+                                  } else if (shift === 'LF') {
+                                    baseTitle = 'Loja Fechada (LF) — Sem funcionamento';
                                   } else if (shift === 'FE') {
                                     baseTitle = 'Férias (FE)';
                                   } else if (shift === 'AT') {
@@ -2207,6 +2210,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                               {shift === 'N/A' && <option value="N/A">Fora do Contrato (N/A)</option>}
                                               <option value="T">Trabalha (T)</option>
                                               <option value="F">Folga (F)</option>
+                                              <option value="LF">Loja Fechada (LF)</option>
                                               <option value="AT">Atestado Médico (Apenas este dia) 🩺</option>
                                               <option value="AT_PERIOD">🩺 Lançar Atestado por Período / Intervalo...</option>
                                               {(holidayCredits[emp.id] || [])
@@ -2399,6 +2403,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                             {shift === 'N/A' && <option value="N/A">Fora do Contrato (N/A)</option>}
                                             <option value="T">Trabalha (T)</option>
                                             <option value="F">Folga (F)</option>
+                                            <option value="LF">Loja Fechada (LF)</option>
                                             <option value="AT">Atestado Médico (Apenas este dia) 🩺</option>
                                             <option value="AT_PERIOD">🩺 Lançar Atestado por Período / Intervalo...</option>
                                             
