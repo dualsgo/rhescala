@@ -33,6 +33,8 @@ import { MobileEmployerViewer } from './components/MobileEmployerViewer';
 import { ProtectedDaysModal } from './components/ProtectedDaysModal';
 import { CreateMonthModal } from './components/CreateMonthModal';
 import { DailyScheduleModulatorModal } from './components/DailyScheduleModulatorModal';
+import { RefreshMonthModal } from './components/RefreshMonthModal';
+import { analyzeMonthRefresh, applyMonthRefresh } from './src/engine/orchestration/refresh-month';
 import { AuditJustificationModal, AuditImpactPreview } from './components/AuditJustificationModal';
 import { MobileNavBar } from './components/MobileNavBar';
 import { ScheduleSkeleton } from './components/ScheduleSkeleton';
@@ -792,7 +794,47 @@ const App: React.FC = () => {
 
   
 
+  const [isRefreshModalOpen, setIsRefreshModalOpen] = useState(false);
+  const [refreshContextBanner, setRefreshContextBanner] = useState<string | null>(null);
+
+  const refreshAnalysis = useMemo(() => {
+    if (!isRefreshModalOpen) return null;
+    return analyzeMonthRefresh(
+      employees,
+      currentMY.year,
+      currentMY.month,
+      customHolidays,
+      deletedNationalHolidays,
+      activeJornadaSettings
+    );
+  }, [isRefreshModalOpen, employees, currentMY.year, currentMY.month, customHolidays, deletedNationalHolidays, activeJornadaSettings]);
+
+  const handleConfirmRefreshMonth = useCallback((generateForEmpIds: string[]) => {
+    setEmployees(
+      prev => applyMonthRefresh(prev, currentMY.year, currentMY.month, {
+        generateForEmpIds,
+        customHolidays,
+        deletedNationalHolidays,
+        settings: activeJornadaSettings,
+        protectedDays: protectedDaysMap[monthKey],
+        pendingCreditsByEmp,
+      }),
+      'Atualização de dados da grade'
+    );
+    setIsRefreshModalOpen(false);
+    setRefreshContextBanner(null);
+    setHistoryToast({
+      message: 'Grade atualizada com sucesso com os dados do cadastro.',
+      actionLabel: 'Desfazer (Ctrl+Z)',
+      onAction: () => handleUndo(),
+      type: 'info',
+    });
+  }, [currentMY.year, currentMY.month, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap, monthKey, pendingCreditsByEmp, setEmployees, handleUndo]);
+
   const handleToggleEmployeeVisibilityInMonth = useCallback((empId: string) => {
+    const targetEmp = employees.find(e => e.id === empId);
+    const wasHidden = targetEmp ? isEmployeeHiddenInMonth(targetEmp, monthKey) : false;
+
     setEmployees(prev => prev.map(emp => {
       if (emp.id !== empId) return emp;
       const currentlyHidden = isEmployeeHiddenInMonth(emp, monthKey);
@@ -814,7 +856,22 @@ const App: React.FC = () => {
         };
       }
     }));
-  }, [monthKey, setEmployees]);
+
+    // Ao reexibir um colaborador que ficou sem escala/folgas geradas no mês, abre o modal de contexto
+    if (wasHidden && targetEmp && !targetEmp.isYoungApprentice) {
+      const mShifts = targetEmp.shifts?.[monthKey] || [];
+      const daysInM = new Date(currentMY.year, currentMY.month + 1, 0).getDate();
+      const hasAnyRest = mShifts.slice(0, daysInM).some(s =>
+        ['F', 'LF', 'FE', 'AT', 'DO', 'N/A'].includes(s) || (typeof s === 'string' && s.startsWith('FF'))
+      );
+      if (mShifts.length < daysInM || !hasAnyRest) {
+        setRefreshContextBanner(
+          `${targetEmp.name} foi reexibido(a) na grade, mas não possui folgas/escala geradas neste mês (estava oculto quando o mês foi criado). Confira abaixo e confirme para aplicar a escala sugerida apenas para ele(a).`
+        );
+        setIsRefreshModalOpen(true);
+      }
+    }
+  }, [employees, monthKey, currentMY.year, currentMY.month, setEmployees]);
 
   const handleSaveDayPositions = useCallback((dayIdx: number, posMap: Record<string, string>) => {
     setEmployees(prev => prev.map(emp => {
@@ -1104,6 +1161,10 @@ const App: React.FC = () => {
                       setCurrentView('team');
                     }}
                     onToggleHideEmployee={isReadOnly ? undefined : handleToggleEmployeeVisibilityInMonth}
+                    onOpenRefreshModal={isReadOnly ? undefined : () => {
+                      setRefreshContextBanner(null);
+                      setIsRefreshModalOpen(true);
+                    }}
                   />
                 );
 
@@ -1646,6 +1707,18 @@ const App: React.FC = () => {
             </button>
           </aside>
         )}
+
+        <RefreshMonthModal
+          isOpen={isRefreshModalOpen}
+          onClose={() => {
+            setIsRefreshModalOpen(false);
+            setRefreshContextBanner(null);
+          }}
+          monthLabel={`${new Date(currentMY.year, currentMY.month, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`}
+          analysis={refreshAnalysis}
+          contextBanner={refreshContextBanner}
+          onConfirm={handleConfirmRefreshMonth}
+        />
 
         <SyncBlockingOverlay syncStatus={syncStatus} onRetrySync={handleManualSave} />
       </>

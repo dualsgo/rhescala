@@ -65,6 +65,7 @@ interface ShiftGridProps {
   protectedDaysConfig?: ProtectedDaysConfig;
   onEditEmployee?: (empId: string) => void;
   onToggleHideEmployee?: (empId: string) => void;
+  onOpenRefreshModal?: () => void;
 }
 
 export const ShiftGrid: React.FC<ShiftGridProps> = ({
@@ -114,6 +115,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
   protectedDaysConfig,
   onEditEmployee,
   onToggleHideEmployee,
+  onOpenRefreshModal,
 }) => {
   const [isSectorCoverageExpanded, setIsSectorCoverageExpanded] = useState(true);
   const monthKey = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}`;
@@ -1108,6 +1110,19 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
               <span>Legenda</span>
               <Icon name={showLegend ? 'expand_less' : 'expand_more'} className="text-xs" />
             </button>
+
+            {/* Atualizar Informações da Grade */}
+            {!isReadOnly && onOpenRefreshModal && (
+              <button
+                type="button"
+                onClick={onOpenRefreshModal}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all shadow-sm whitespace-nowrap bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-orange-500/10 hover:border-orange-500/40 hover:text-orange-600 dark:hover:text-orange-400"
+                title="Atualizar dados cadastrais (nome, turno, férias, atestado, aniversário) e verificar colaboradores sem escala"
+              >
+                <Icon name="sync" className="text-xs" />
+                <span>Atualizar</span>
+              </button>
+            )}
 
             {/* Equipe / Visibilidade */}
             {!isReadOnly && onToggleHideEmployee && (
