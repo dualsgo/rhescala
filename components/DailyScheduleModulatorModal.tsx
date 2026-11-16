@@ -570,60 +570,63 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
       }}
       className="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-zinc-950/70 backdrop-blur-md animate-fade-in"
     >
-      <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-6xl w-full h-[94vh] max-h-[900px] shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl max-w-7xl w-full h-[95vh] sm:h-[92vh] max-h-[920px] shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col">
         
         {/* Header Bar */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/80 dark:bg-zinc-900/90 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-400 flex items-center justify-center shadow-sm shrink-0">
-              <Icon name="chat" className="text-xl sm:text-2xl" />
+        <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between gap-3 bg-slate-50/80 dark:bg-zinc-900/90 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-400 flex items-center justify-center shadow-sm shrink-0">
+              <Icon name="chat" className="text-xl" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 id="modulator-modal-title" className="text-base sm:text-lg font-black text-slate-900 dark:text-zinc-100 tracking-tight uppercase">
+                <h3 id="modulator-modal-title" className="text-sm sm:text-lg font-black text-slate-900 dark:text-zinc-100 tracking-tight uppercase truncate">
                   Modulador da Escala Diária
                 </h3>
-                <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 shrink-0">
                   WhatsApp
                 </span>
               </div>
-              <p className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 mt-0.5">
+              <p className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 mt-0.5 truncate">
                 {dateInfo.weekdayName}, {dateInfo.dateFormatted} {dateInfo.isHoliday ? '• Feriado (5h45)' : ''}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Mobile View Toggle */}
-            <div className="flex md:hidden bg-slate-200 dark:bg-zinc-800 p-0.5 rounded-xl">
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Mobile & Tablet (< lg) View Toggle */}
+            <div className="flex lg:hidden bg-slate-200/80 dark:bg-zinc-800 p-0.5 rounded-xl border border-slate-300/40 dark:border-zinc-700">
               <button
                 type="button"
                 onClick={() => setActiveMobileTab('modulator')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-1 ${
                   activeMobileTab === 'modulator'
                     ? 'bg-emerald-600 text-white shadow-sm'
                     : 'text-slate-600 dark:text-zinc-400'
                 }`}
               >
-                ⚙️ Modular
+                <Icon name="tune" className="text-xs" />
+                <span>Modular</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveMobileTab('preview')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-1 ${
                   activeMobileTab === 'preview'
                     ? 'bg-emerald-600 text-white shadow-sm'
                     : 'text-slate-600 dark:text-zinc-400'
                 }`}
               >
-                👁️ Ver Texto
+                <Icon name="visibility" className="text-xs" />
+                <span>Preview</span>
               </button>
             </div>
 
             <button
               type="button"
               onClick={onClose}
-              className="p-2 hover:bg-slate-200/70 dark:hover:bg-zinc-800 rounded-full text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors"
+              aria-label="Fechar modulador"
+              className="w-9 h-9 flex items-center justify-center hover:bg-slate-200/70 dark:hover:bg-zinc-800 rounded-full text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors"
               title="Fechar"
             >
               <Icon name="close" className="text-xl" />
@@ -631,61 +634,59 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
           </div>
         </div>
 
-        {/* Modal Body: 2 Columns on Desktop */}
-        <div className="flex-1 min-h-0 overflow-hidden grid grid-cols-1 md:grid-cols-12">
+        {/* Modal Body: 50/50 Balanced Split on Desktop (lg+) */}
+        <div className="flex-1 min-h-0 overflow-hidden grid grid-cols-1 lg:grid-cols-12">
           
-          {/* Column 1: Modulation Controls (Desktop: 7 cols) */}
-          <div className={`md:col-span-7 h-full min-h-0 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-6 pb-12 border-r border-slate-100 dark:border-zinc-800 ${
-            activeMobileTab === 'preview' ? 'hidden md:block' : 'block'
+          {/* Column 1: Modulation Controls (Desktop: 6 cols = 50%) */}
+          <div className={`lg:col-span-6 h-full min-h-0 overflow-y-auto custom-scrollbar p-4 sm:p-5 space-y-5 pb-10 lg:border-r border-slate-200/80 dark:border-zinc-800 ${
+            activeMobileTab === 'preview' ? 'hidden lg:block' : 'block'
           }`}>
             
             {/* Quick Action Helper Banner */}
             <div className="flex flex-col gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-orange-50/80 to-amber-50/60 dark:from-orange-950/20 dark:to-amber-950/20 border border-orange-200/60 dark:border-orange-900/40 text-orange-900 dark:text-orange-200 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0 shadow-xs">
-                    <Icon name="auto_awesome" className="text-base" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-black uppercase tracking-wider block">
-                      Modulação Inteligente (Troca 14h • Máx. 2/h)
-                    </span>
-                    <span className="text-[11px] font-normal text-zinc-600 dark:text-zinc-400 block">
-                      Aprendiz fixo 12h45 • Estoquista flexível • Mín. 3 no salão até 14h • Fechamento máx. 2/h.
-                    </span>
-                  </div>
+              <div className="flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                  <Icon name="auto_awesome" className="text-base" />
                 </div>
-
-                <div className="flex items-center gap-1.5 flex-wrap shrink-0">
-                  <button
-                    type="button"
-                    onClick={handleRecalculateLunches}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[11px] font-black uppercase tracking-wider shadow-sm transition-all cursor-pointer"
-                    title="Recalcular apenas os horários de almoço pela regra de 14h e máximo 2/h"
-                  >
-                    <Icon name="restaurant" className="text-sm" />
-                    <span>Recalcular Almoços</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleAutoDistribute}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-95 text-white text-[11px] font-black uppercase tracking-wider shadow-sm transition-all cursor-pointer"
-                    title="Distribuir postos de trabalho e horários de almoço automaticamente"
-                  >
-                    <Icon name="magic_button" className="text-sm" />
-                    <span>Funções & Almoço</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={computeInitialState}
-                    className="px-2.5 py-1.5 rounded-xl bg-zinc-200/70 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[11px] font-black uppercase tracking-wider transition-colors cursor-pointer"
-                    title="Redefinir todas as alterações para a sugestão calculada automaticamente"
-                  >
-                    Restaurar
-                  </button>
+                <div className="min-w-0 flex-1">
+                  <span className="text-xs font-black uppercase tracking-wider block">
+                    Modulação Inteligente (Troca 14h • Máx. 2/h)
+                  </span>
+                  <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 block mt-0.5">
+                    Aprendiz fixo 12h45 • Estoquista flexível • Mín. 3 no salão até 14h • Fechamento máx. 2/h.
+                  </span>
                 </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleRecalculateLunches}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[11px] font-black uppercase tracking-wider shadow-sm transition-all cursor-pointer"
+                  title="Recalcular apenas os horários de almoço pela regra de 14h e máximo 2/h"
+                >
+                  <Icon name="restaurant" className="text-sm" />
+                  <span>Recalcular Almoços</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleAutoDistribute}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-95 text-white text-[11px] font-black uppercase tracking-wider shadow-sm transition-all cursor-pointer"
+                  title="Distribuir postos de trabalho e horários de almoço automaticamente"
+                >
+                  <Icon name="magic_button" className="text-sm" />
+                  <span>Funções & Almoço</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={computeInitialState}
+                  className="px-3 py-2 rounded-xl bg-zinc-200/80 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[11px] font-black uppercase tracking-wider transition-colors cursor-pointer"
+                  title="Redefinir todas as alterações para a sugestão calculada automaticamente"
+                >
+                  Restaurar
+                </button>
               </div>
 
               {/* Painel ao vivo de cobertura */}
@@ -761,7 +762,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
                       }`}
                     >
                       {/* Checkbox + Nome */}
-                      <div className="flex items-center gap-2.5 min-w-[160px]">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <input
                           type="checkbox"
                           checked={item.included}
@@ -769,9 +770,9 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
                             const newIncluded = e.target.checked;
                             setItems(prev => prev.map(it => it.id === item.id ? { ...it, included: newIncluded } : it));
                           }}
-                          className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                          className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
                         />
-                        <div>
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-xs font-black text-slate-900 dark:text-zinc-100">
                               {item.firstName}
@@ -1040,27 +1041,30 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
             </div>
           </div>
 
-          {/* Column 2: Live Preview (Desktop: 5 cols) */}
-          <div className={`md:col-span-5 h-full min-h-0 flex flex-col bg-slate-50/50 dark:bg-zinc-950/50 ${
-            activeMobileTab === 'modulator' ? 'hidden md:flex' : 'flex'
+          {/* Column 2: Live Preview (Desktop: 6 cols = 50% balanced) */}
+          <div className={`lg:col-span-6 h-full min-h-0 flex flex-col bg-slate-100/70 dark:bg-zinc-950/70 ${
+            activeMobileTab === 'modulator' ? 'hidden lg:flex' : 'flex'
           }`}>
             {/* Preview Header */}
-            <div className="p-4 border-b border-slate-200/70 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900 shrink-0">
-              <div className="flex items-center gap-2">
-                <Icon name="visibility" className="text-emerald-600 text-sm" />
-                <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-zinc-200">
-                  Pré-visualização Dinâmica
+            <div className="px-4 py-3.5 border-b border-slate-200/70 dark:border-zinc-800 flex items-center justify-between gap-2 bg-white dark:bg-zinc-900 shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <Icon name="visibility" className="text-emerald-600 text-sm shrink-0" />
+                <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-zinc-200 truncate">
+                  Pré-visualização WhatsApp
+                </span>
+                <span className="hidden sm:inline-flex px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800 text-[10px] font-bold text-slate-500 dark:text-zinc-400 tabular-nums shrink-0">
+                  {(isFreeTextMode ? manualText : generatedText).length} chars
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={handleToggleFreeText}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-black uppercase tracking-wider transition-all ${
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[11px] font-black uppercase tracking-wider transition-all ${
                     isFreeTextMode
                       ? 'bg-amber-500 text-white border-amber-500 shadow-xs'
-                      : 'bg-white dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-50'
+                      : 'bg-white dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-700'
                   }`}
                   title={isFreeTextMode ? 'Voltar para o modo de modulação automática' : 'Permitir digitação direta no texto'}
                 >
@@ -1071,16 +1075,16 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
             </div>
 
             {/* Preview Content Area */}
-            <div className="flex-1 min-h-0 p-4 overflow-y-auto custom-scrollbar">
+            <div className="flex-1 min-h-0 p-4 sm:p-5 overflow-y-auto custom-scrollbar flex flex-col">
               {isFreeTextMode ? (
                 <textarea
                   value={manualText}
                   onChange={(e) => setManualText(e.target.value)}
-                  className="w-full h-full min-h-0 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-2xl p-4 text-xs font-mono font-medium focus:ring-2 focus:ring-emerald-500 outline-none resize-none text-slate-800 dark:text-zinc-200 leading-relaxed custom-scrollbar shadow-inner"
+                  className="w-full flex-1 min-h-[300px] bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-2xl p-4 sm:p-5 text-xs sm:text-[13px] font-mono font-medium focus:ring-2 focus:ring-emerald-500 outline-none resize-none text-slate-800 dark:text-zinc-200 leading-relaxed custom-scrollbar shadow-inner"
                   placeholder="Edite o texto diretamente aqui..."
                 />
               ) : (
-                <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 text-xs font-mono font-medium text-slate-800 dark:text-zinc-200 whitespace-pre-wrap leading-relaxed shadow-sm break-words select-text">
+                <div className="bg-white dark:bg-zinc-900 border border-emerald-200/70 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 text-xs sm:text-[13px] font-mono font-medium text-slate-800 dark:text-zinc-200 whitespace-pre-wrap leading-relaxed shadow-sm break-words select-text">
                   {generatedText}
                 </div>
               )}
