@@ -481,6 +481,19 @@ const App: React.FC = () => {
     validatedMonths
   );
 
+  const pendingCreditsByEmp = useMemo(() => {
+    const map: Record<string, Array<{ id: string; holidayDate: string; holidayName: string }>> = {};
+    Object.entries(holidayCredits).forEach(([empId, list]) => {
+      const pending = list.filter(c => c.status === 'pending').map(c => ({
+        id: c.id,
+        holidayDate: c.holidayDate,
+        holidayName: c.holidayName,
+      }));
+      if (pending.length > 0) map[empId] = pending;
+    });
+    return map;
+  }, [holidayCredits]);
+
   const pendingRequestsCount = useMemo(() => {
     let count = 0;
     employees.forEach(emp => {
@@ -654,7 +667,7 @@ const App: React.FC = () => {
       });
 
     } else if (applyMode === 'full') {
-      const updatedData = applyMonthUpdate(employees, currentMY.year, currentMY.month, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap[monthKey], 'suggested_retro', empId);
+      const updatedData = applyMonthUpdate(employees, currentMY.year, currentMY.month, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap[monthKey], 'suggested_retro', empId, pendingCreditsByEmp);
       setEmployees(prev => prev.map(emp => {
         if (empId && emp.id !== empId) return emp;
         if (updatedData[emp.id]) {
@@ -685,10 +698,10 @@ const App: React.FC = () => {
         message: 'Redefinição geral completa aplicada com sucesso respeitando regras sazonais!\n\n💡 Dica: Se aplicou por engano, você pode clicar em "Desfazer" na barra superior ou pressionar Ctrl+Z para reverter.'
       });
     }
-  }, [employees, currentMY, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap, setEmployees, showDialog, handleUndo]);
+  }, [employees, currentMY, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap, pendingCreditsByEmp, setEmployees, showDialog, handleUndo]);
 
   const handleApplyFolgas = (targetMY = currentMY, targetKey = monthKey) => {
-    const updatedData = applyMonthUpdate(employees, targetMY.year, targetMY.month, customHolidays, deletedNationalHolidays, jornadaSettings, protectedDaysMap[monthKey]);
+    const updatedData = applyMonthUpdate(employees, targetMY.year, targetMY.month, customHolidays, deletedNationalHolidays, jornadaSettings, protectedDaysMap[monthKey], 'suggested_retro', undefined, pendingCreditsByEmp);
     setEmployees(prev => prev.map(emp => {
       if (updatedData[emp.id]) {
         return {
@@ -717,7 +730,7 @@ const App: React.FC = () => {
 
   const handleSortearDomingo = (targetMY = currentMY, targetKey = monthKey, skipConfirm = false) => {
     const perform = () => {
-      const updatedData = applyMonthUpdate(employees, targetMY.year, targetMY.month, customHolidays, deletedNationalHolidays, jornadaSettings, protectedDaysMap[monthKey]);
+      const updatedData = applyMonthUpdate(employees, targetMY.year, targetMY.month, customHolidays, deletedNationalHolidays, jornadaSettings, protectedDaysMap[monthKey], 'suggested_retro', undefined, pendingCreditsByEmp);
       setEmployees(prev => prev.map(emp => {
         if (updatedData[emp.id]) {
           return {

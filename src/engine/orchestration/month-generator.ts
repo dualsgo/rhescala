@@ -33,12 +33,67 @@ import { optimizeProtectedDays } from '../peaks/protected-days';
 import { getShiftClassification } from '../shifts/shift-predicates';
 import { assignDailyRolesForMonth, isEmployeeCaixaEligible } from '../tactical/tactical-positions';
 
+export interface PendingHolidayCreditInput {
+    id: string;
+    holidayDate: string;
+    holidayName: string;
+}
+
+/**
+ * Calcula créditos de feriado pendentes de meses anteriores do mesmo ano para um colaborador,
+ * quando o chamador não fornece `pendingHolidayCredits` explicitamente.
+ */
+function inferPendingHolidayCreditsBeforeMonth(
+    emp: Employee,
+    year: number,
+    targetMonth: number,
+    customHolidays: Holiday[],
+    deletedNationalHolidays: string[]
+): PendingHolidayCreditInput[] {
+    if (emp.isYoungApprentice || emp.status === 'inactive') return [];
+    const nationals = buildHolidaySet(year, customHolidays, deletedNationalHolidays);
+    if (nationals.size === 0) return [];
+
+    const worked: PendingHolidayCreditInput[] = [];
+    const usedRefs = new Set<string>();
+    let genericFFCount = 0;
+
+    for (let m = 0; m < targetMonth; m++) {
+        const mk = `${year}-${String(m + 1).padStart(2, '0')}`;
+        const mShifts = emp.shifts?.[mk] || [];
+        mShifts.forEach((rawShift, idx) => {
+            const dStr = `${mk}-${String(idx + 1).padStart(2, '0')}`;
+            let s = rawShift;
+            if ((emp.hiredAt && dStr < emp.hiredAt) || (emp.firedAt && dStr > emp.firedAt)) s = 'N/A';
+            else if (emp.vacationStart && emp.vacationEnd && dStr >= emp.vacationStart && dStr <= emp.vacationEnd) s = 'FE';
+            else if (emp.atestadoStart && emp.atestadoEnd && dStr >= emp.atestadoStart && dStr <= emp.atestadoEnd) s = 'AT';
+
+            if (nationals.has(dStr) && (s === 'T' || ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ', 'CX', 'REP', 'VEND', 'FISC', 'AP'].includes(s))) {
+                const hObj = customHolidays.find(h => h.date === dStr);
+                worked.push({ id: dStr, holidayDate: dStr, holidayName: hObj?.name || 'Feriado' });
+                if (dStr.endsWith('-05-01')) {
+                    worked.push({ id: `${dStr}-extra`, holidayDate: dStr, holidayName: `${hObj?.name || 'Dia do Trabalho'} (Folga 2)` });
+                }
+            }
+            if (typeof s === 'string' && s.startsWith('FF')) {
+                const ref = s.split(' ')[1];
+                if (ref) usedRefs.add(ref);
+                else genericFFCount++;
+            }
+        });
+    }
+
+    const remaining = worked.filter(w => !usedRefs.has(w.id) && !usedRefs.has(w.holidayDate));
+    return remaining.slice(genericFFCount);
+}
+
 /**
  * "Smart Update" para geração/atualização mensal completa de escala.
  * 
  * Modos de operação:
- * - 'suggested_retro': Motor inteligente com verificação retroativa CLT (domingos e 6x1 contínuos).
- * - 'all_working': Modo base 100% trabalhado (preserva férias/afastamentos/aniversário para ajuste manual).
+ * - 'suggested_retro': Motor inteligente com verificação retroativa CLT (domingos e 6x1/5x2 contínuos),
+ *   garantia de >= 70% de cobertura (geral e por turno) e alocação automática de folgas de feriado (FF) pendentes.
+ * - 'all_working': Modo base 100% trabalhado (preserva férias/afastamentos/aniversário/LF para ajuste manual).
  */
 export function applyMonthUpdate(
     employees: Employee[],
@@ -49,7 +104,8 @@ export function applyMonthUpdate(
     settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS,
     protectedDays?: ProtectedDaysConfig | number[],
     mode: 'suggested_retro' | 'all_working' = 'suggested_retro',
-    targetEmpId?: string
+    targetEmpId?: string,
+    pendingHolidayCredits?: Record<string, PendingHolidayCreditInput[]>
 ): Record<string, { shifts: ShiftType[]; hours: string[]; decisionReasons?: Record<number, DecisionReason>; dailyAssignedRoles?: Record<number, EmployeeRole> }> {
     const result: Record<string, { shifts: ShiftType[]; hours: string[]; decisionReasons?: Record<number, DecisionReason>; dailyAssignedRoles?: Record<number, EmployeeRole> }> = {};
 
@@ -450,6 +506,190 @@ export function applyMonthUpdate(
                         candData.shifts[altD] = 'F';
                         if (candData.decisionReasons) candData.decisionReasons[altD] = 'PREFERRED_DAY_OFF';
                         break;
+                    }
+                }
+            }
+        }
+
+        // 3.9B Balanceador Coletivo de Cobertura >= 70% (Geral e por Turno) em dias úteis (Seg-Sáb)
+        const isRestOrOff = (s: ShiftType | undefined) =>
+            ['F', 'LF', 'FE', 'AT', 'DO', 'N/A'].includes(s as string) || Boolean(s?.startsWith('FF'));
+
+        const isValidCandidateSchedule = (emp: Employee, simShifts: ShiftType[]): boolean => {
+            let runStreak = prevStreaks.get(emp.id) || 0;
+            for (let k = 0; k < daysInMonth; k++) {
+                if (isRestOrOff(simShifts[k])) {
+                    runStreak = 0;
+                } else {
+                    runStreak++;
+                    const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(k + 1).padStart(2, '0')}`;
+                    const cap = getEffectiveJornadaOnDate(emp, ds) === '5x2' ? 6 : 6; // Teto absoluto CLT
+                    if (runStreak > cap) return false;
+                }
+            }
+            return true;
+        };
+
+        const getCoverageMetrics = (dayIndex: number, override?: { empId: string; shift: ShiftType }) => {
+            let totalWorking = 0;
+            const byTurno: Record<'Abertura' | 'Fechamento', { total: number; working: number }> = {
+                Abertura: { total: 0, working: 0 },
+                Fechamento: { total: 0, working: 0 },
+            };
+
+            for (const e of activeRegular) {
+                const s = override && e.id === override.empId ? override.shift : result[e.id]?.shifts[dayIndex];
+                const working = s === 'T';
+                if (working) totalWorking++;
+
+                const t = getShiftClassification(e.workPeriod, false, settings);
+                const bucket = t === 'Fechamento' ? 'Fechamento' : 'Abertura';
+                byTurno[bucket].total++;
+                if (working) byTurno[bucket].working++;
+            }
+
+            const overallRatio = activeRegular.length > 0 ? totalWorking / activeRegular.length : 1;
+            const aberturaRatio = byTurno.Abertura.total > 0 ? byTurno.Abertura.working / byTurno.Abertura.total : 1;
+            const fechamentoRatio = byTurno.Fechamento.total > 0 ? byTurno.Fechamento.working / byTurno.Fechamento.total : 1;
+            return { totalWorking, overallRatio, aberturaRatio, fechamentoRatio, byTurno };
+        };
+
+        for (let d = 0; d < daysInMonth; d++) {
+            const dow = new Date(year, month, d + 1).getDay();
+            const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`;
+            if (dow === 0 || storeClosedDates.has(dStr) || holidaySet.has(dStr)) continue;
+
+            const cov = getCoverageMetrics(d);
+            const overallLow = activeRegular.length >= 4 && cov.overallRatio < 0.7;
+            const aberturaLow = cov.byTurno.Abertura.total >= 4 && cov.aberturaRatio < 0.7;
+            const fechamentoLow = cov.byTurno.Fechamento.total >= 4 && cov.fechamentoRatio < 0.7;
+
+            if (!overallLow && !aberturaLow && !fechamentoLow) continue;
+
+            // Busca colaboradores em folga 'F' que podem ter a folga movida para um dia mais folgado da mesma semana
+            const restingInDay = activeRegular.filter(e => {
+                if (result[e.id]?.shifts[d] !== 'F' || getLegalOverride(e, d)) return false;
+                if (aberturaLow && !overallLow && !fechamentoLow) {
+                    return getShiftClassification(e.workPeriod, false, settings) !== 'Fechamento';
+                }
+                if (fechamentoLow && !overallLow && !aberturaLow) {
+                    return getShiftClassification(e.workPeriod, false, settings) === 'Fechamento';
+                }
+                return true;
+            });
+
+            for (const cand of restingInDay) {
+                const cData = result[cand.id];
+                if (!cData) continue;
+
+                const candTurno = getShiftClassification(cand.workPeriod, false, settings) === 'Fechamento' ? 'Fechamento' : 'Abertura';
+                const candidateOffsets = [1, -1, 2, -2, 3, -3, 4, -4, 5, -5];
+                let bestAltDay = -1;
+                let bestAltScore = -1;
+
+                for (const off of candidateOffsets) {
+                    const altD = d + off;
+                    if (altD < 0 || altD >= daysInMonth) continue;
+                    const altDow = new Date(year, month, altD + 1).getDay();
+                    const altDStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(altD + 1).padStart(2, '0')}`;
+                    if (altDow === 0 || storeClosedDates.has(altDStr) || holidaySet.has(altDStr)) continue;
+                    if (cData.shifts[altD] !== 'T' || getLegalOverride(cand, altD)) continue;
+
+                    const sim = [...cData.shifts];
+                    sim[d] = 'T';
+                    sim[altD] = 'F';
+                    if (!isValidCandidateSchedule(cand, sim)) continue;
+
+                    const altCov = getCoverageMetrics(altD, { empId: cand.id, shift: 'F' });
+                    if (activeRegular.length >= 4 && altCov.overallRatio < 0.7) continue;
+                    const altTurnoRatio = candTurno === 'Fechamento' ? altCov.fechamentoRatio : altCov.aberturaRatio;
+                    if (altCov.byTurno[candTurno].total >= 4 && altTurnoRatio < 0.7) continue;
+
+                    const score = altTurnoRatio * 2 + altCov.overallRatio;
+                    if (score > bestAltScore) {
+                        bestAltScore = score;
+                        bestAltDay = altD;
+                    }
+                }
+
+                if (bestAltDay !== -1) {
+                    cData.shifts[d] = 'T';
+                    cData.shifts[bestAltDay] = 'F';
+                    if (cData.decisionReasons) {
+                        cData.decisionReasons[d] = 'REGULAR_WORK';
+                        cData.decisionReasons[bestAltDay] = 'PREFERRED_DAY_OFF';
+                    }
+                    const updated = getCoverageMetrics(d);
+                    if (
+                        (activeRegular.length < 4 || updated.overallRatio >= 0.7) &&
+                        (updated.byTurno.Abertura.total < 4 || updated.aberturaRatio >= 0.7) &&
+                        (updated.byTurno.Fechamento.total < 4 || updated.fechamentoRatio >= 0.7)
+                    ) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 3.9C Alocação Inteligente de Folgas de Feriado Pendentes (FF)
+        // Sugere o dia útil (Seg-Sex) em que o turno do colaborador estiver mais completo (mantendo >= 70%)
+        const protectedSet = new Set(Object.keys(normalizeProtectedDaysDetails(protectedDays)).map(Number));
+        for (const emp of targetEmps) {
+            const empData = result[emp.id];
+            if (!empData) continue;
+
+            const credits = pendingHolidayCredits?.[emp.id]
+                ?? inferPendingHolidayCreditsBeforeMonth(emp, year, month, customHolidays, deletedNationalHolidays);
+            if (!credits || credits.length === 0) continue;
+
+            const empTurno = getShiftClassification(emp.workPeriod, false, settings) === 'Fechamento' ? 'Fechamento' : 'Abertura';
+
+            for (const credit of credits) {
+                let bestDay = -1;
+                let bestScore = -1;
+
+                for (let d = 0; d < daysInMonth; d++) {
+                    const dayNum = d + 1;
+                    const dow = new Date(year, month, dayNum).getDay();
+                    const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+
+                    // Apenas dias úteis (Seg-Sex), não feriado, não loja fechada, não dia protegido ou pico sazonal
+                    const isPeakRetailDate = (month === 9 && dayNum >= 8 && dayNum <= 12) || (month === 11 && dayNum >= 20 && dayNum <= 24);
+                    if (dow === 0 || dow === 6) continue;
+                    if (holidaySet.has(dStr) || storeClosedDates.has(dStr) || protectedSet.has(dayNum) || isPeakRetailDate) continue;
+                    if (empData.shifts[d] !== 'T' || getLegalOverride(emp, d)) continue;
+
+                    const afterCov = getCoverageMetrics(d, { empId: emp.id, shift: 'FF' });
+                    const turnoRatioAfter = empTurno === 'Fechamento' ? afterCov.fechamentoRatio : afterCov.aberturaRatio;
+
+                    // Evita derrubar o turno ou a loja abaixo de 70% quando há equipe suficiente
+                    if (activeRegular.length >= 4 && afterCov.overallRatio < 0.7) continue;
+                    if (afterCov.byTurno[empTurno].total >= 4 && turnoRatioAfter < 0.7) continue;
+
+                    // Não deixar o turno sem Caixa
+                    if (isEmployeeCaixaEligible(emp)) {
+                        const caixasInTurnoWorking = activeRegular.filter(e =>
+                            e.id !== emp.id &&
+                            isEmployeeCaixaEligible(e) &&
+                            (getShiftClassification(e.workPeriod, false, settings) === 'Fechamento' ? 'Fechamento' : 'Abertura') === empTurno &&
+                            empData.shifts && result[e.id]?.shifts[d] === 'T'
+                        ).length;
+                        if (caixasInTurnoWorking === 0) continue;
+                    }
+
+                    // Pontua pela completude do turno do colaborador + completude geral da loja
+                    const score = turnoRatioAfter * 3 + afterCov.overallRatio;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestDay = d;
+                    }
+                }
+
+                if (bestDay !== -1) {
+                    const ffCode = `FF ${credit.id || credit.holidayDate}` as ShiftType;
+                    empData.shifts[bestDay] = ffCode;
+                    if (empData.decisionReasons) {
+                        empData.decisionReasons[bestDay] = 'PREFERRED_DAY_OFF';
                     }
                 }
             }
