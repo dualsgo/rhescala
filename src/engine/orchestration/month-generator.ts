@@ -339,8 +339,8 @@ export function applyMonthUpdate(
                 }
             }
 
-            // 3.6 Para 5x2 já cadastrado sem dia preferido, folga aos sábados (na virada 16/12 a 2ª folga é distribuída no bloco 3.8)
-            if (emp.jornada === '5x2' && dow === 6) {
+            // 3.6 Para 5x2 já cadastrado sem dia preferido (em geração individual sem otimizador coletivo), sugere sábado
+            if (emp.jornada === '5x2' && (!emp.preferredDayOff || emp.preferredDayOff === 'Nenhum') && dow === 6 && targetEmpId) {
                 shifts[dayIdx] = 'F';
                 decisionReasons[dayIdx] = 'PREFERRED_DAY_OFF';
                 currentStreak = 0;
@@ -353,58 +353,59 @@ export function applyMonthUpdate(
             currentStreak++;
         }
 
-        // 3.8 Para semanas-calendário (Seg–Dom) em regime 5x2: assegura 2 folgas por semana
-        // Agrupa os dias do mês por semana-calendário (Segunda = início da semana)
-        const calendarWeeks: number[][] = [];
-        let currentWeek: number[] = [];
-        for (let d = 0; d < daysInMonth; d++) {
-            const dow = new Date(year, month, d + 1).getDay();
-            if (dow === 1 && currentWeek.length > 0) {
-                calendarWeeks.push(currentWeek);
-                currentWeek = [];
+        // 3.8 Fallback individual para 5x2 quando apenas 1 colaborador é recalculado isoladamente (targetEmpId).
+        // Na geração coletiva completa, a 2ª folga variável do 5x2 é alocada no passo 3.9A-bis considerando a cobertura da equipe.
+        if (targetEmpId) {
+            const calendarWeeks: number[][] = [];
+            let currentWeek: number[] = [];
+            for (let d = 0; d < daysInMonth; d++) {
+                const dow = new Date(year, month, d + 1).getDay();
+                if (dow === 1 && currentWeek.length > 0) {
+                    calendarWeeks.push(currentWeek);
+                    currentWeek = [];
+                }
+                currentWeek.push(d);
             }
-            currentWeek.push(d);
-        }
-        if (currentWeek.length > 0) calendarWeeks.push(currentWeek);
+            if (currentWeek.length > 0) calendarWeeks.push(currentWeek);
 
-        for (const weekIndices of calendarWeeks) {
-            if (weekIndices.length < 5) continue; // Semana incompleta de borda de mês
-            const has5x2InWeek = weekIndices.some(k => {
-                const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(k + 1).padStart(2, '0')}`;
-                return getEffectiveJornadaOnDate(emp, ds) === '5x2';
-            });
-            if (!has5x2InWeek) continue;
+            for (const weekIndices of calendarWeeks) {
+                if (weekIndices.length < 5) continue;
+                const has5x2InWeek = weekIndices.some(k => {
+                    const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(k + 1).padStart(2, '0')}`;
+                    return getEffectiveJornadaOnDate(emp, ds) === '5x2';
+                });
+                if (!has5x2InWeek) continue;
 
-            const weekRests = weekIndices.filter(
-                k => ['F', 'LF', 'FE', 'AT', 'DO', 'N/A'].includes(shifts[k]) || shifts[k]?.startsWith('FF')
-            );
+                const weekRests = weekIndices.filter(
+                    k => ['F', 'LF', 'FE', 'AT', 'DO', 'N/A'].includes(shifts[k]) || shifts[k]?.startsWith('FF')
+                );
 
-            // Completa até 2 folgas na semana distribuindo de forma escalonada entre dias úteis (Seg..Sáb)
-            let neededRests = 2 - weekRests.length;
-            if (neededRests > 0) {
-                const candidateDows = [1, 2, 3, 4, 5, 6]; // Seg..Sáb
-                const rotatedStart = targetEmpIdx % candidateDows.length;
-                const orderedDows = [
-                    ...candidateDows.slice(rotatedStart),
-                    ...candidateDows.slice(0, rotatedStart),
-                ];
+                let neededRests = 2 - weekRests.length;
+                if (neededRests > 0) {
+                    const candidateDows = [1, 2, 3, 4, 5, 6];
+                    const rotatedStart = targetEmpIdx % candidateDows.length;
+                    const orderedDows = [
+                        ...candidateDows.slice(rotatedStart),
+                        ...candidateDows.slice(0, rotatedStart),
+                    ];
 
-                for (const targetDow of orderedDows) {
-                    if (neededRests <= 0) break;
-                    const candidateIdx = weekIndices.find(k => {
-                        const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(k + 1).padStart(2, '0')}`;
-                        const dow = new Date(year, month, k + 1).getDay();
-                        return (
-                            dow === targetDow &&
-                            getEffectiveJornadaOnDate(emp, ds) === '5x2' &&
-                            shifts[k] === 'T' &&
-                            !getLegalOverride(emp, k)
-                        );
-                    });
-                    if (candidateIdx !== undefined) {
-                        shifts[candidateIdx] = 'F';
-                        decisionReasons[candidateIdx] = 'PREFERRED_DAY_OFF';
-                        neededRests--;
+                    for (const targetDow of orderedDows) {
+                        if (neededRests <= 0) break;
+                        const candidateIdx = weekIndices.find(k => {
+                            const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(k + 1).padStart(2, '0')}`;
+                            const dow = new Date(year, month, k + 1).getDay();
+                            return (
+                                dow === targetDow &&
+                                getEffectiveJornadaOnDate(emp, ds) === '5x2' &&
+                                shifts[k] === 'T' &&
+                                !getLegalOverride(emp, k)
+                            );
+                        });
+                        if (candidateIdx !== undefined) {
+                            shifts[candidateIdx] = 'F';
+                            decisionReasons[candidateIdx] = 'PREFERRED_DAY_OFF';
+                            neededRests--;
+                        }
                     }
                 }
             }
@@ -511,24 +512,11 @@ export function applyMonthUpdate(
             }
         }
 
-        // 3.9B Balanceador Coletivo de Cobertura >= 70% (Geral e por Turno) em dias úteis (Seg-Sáb)
+        // Helpers compartilhados de cobertura e validação CLT / 5x2 (usados em 3.9A-bis, 3.9B e 3.9C)
         const isRestOrOff = (s: ShiftType | undefined) =>
             ['F', 'LF', 'FE', 'AT', 'DO', 'N/A'].includes(s as string) || Boolean(s?.startsWith('FF'));
 
-        const isValidCandidateSchedule = (emp: Employee, simShifts: ShiftType[]): boolean => {
-            let runStreak = prevStreaks.get(emp.id) || 0;
-            for (let k = 0; k < daysInMonth; k++) {
-                if (isRestOrOff(simShifts[k])) {
-                    runStreak = 0;
-                } else {
-                    runStreak++;
-                    const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(k + 1).padStart(2, '0')}`;
-                    const cap = getEffectiveJornadaOnDate(emp, ds) === '5x2' ? 6 : 6; // Teto absoluto CLT
-                    if (runStreak > cap) return false;
-                }
-            }
-            return true;
-        };
+        const protectedSet = new Set(Object.keys(normalizeProtectedDaysDetails(protectedDays)).map(Number));
 
         const getCoverageMetrics = (dayIndex: number, override?: { empId: string; shift: ShiftType }) => {
             let totalWorking = 0;
@@ -552,6 +540,157 @@ export function applyMonthUpdate(
             const aberturaRatio = byTurno.Abertura.total > 0 ? byTurno.Abertura.working / byTurno.Abertura.total : 1;
             const fechamentoRatio = byTurno.Fechamento.total > 0 ? byTurno.Fechamento.working / byTurno.Fechamento.total : 1;
             return { totalWorking, overallRatio, aberturaRatio, fechamentoRatio, byTurno };
+        };
+
+        // 3.9A-bis Alocador Inteligente 5x2 (a partir de 16/12/2026 ou colaboradores 5x2):
+        // Garante 2 folgas a cada 7 dias (não obrigatoriamente seguidas, podendo incluir domingo).
+        // Mantém o dia fixo (preferredDayOff) como referência e escolhe o 2º dia variável onde a equipe estiver mais completa.
+        const maxStreakIfRestAt = (emp: Employee, baseShifts: ShiftType[], restIdx: number): number => {
+            let run = prevStreaks.get(emp.id) || 0;
+            let worst = 0;
+            for (let k = 0; k < daysInMonth; k++) {
+                const s = k === restIdx ? 'F' : baseShifts[k];
+                if (isRestOrOff(s)) {
+                    run = 0;
+                } else {
+                    run++;
+                    if (run > worst) worst = run;
+                }
+            }
+            return worst;
+        };
+
+        const pickBest5x2VariableDay = (emp: Employee, candidateIndices: number[]): number => {
+            const empData = result[emp.id];
+            if (!empData) return -1;
+            const empTurno = getShiftClassification(emp.workPeriod, false, settings) === 'Fechamento' ? 'Fechamento' : 'Abertura';
+            let bestDay = -1;
+            let bestScore = -Infinity;
+
+            for (const k of candidateIndices) {
+                const dayNum = k + 1;
+                const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                if (getEffectiveJornadaOnDate(emp, dStr) !== '5x2') continue;
+                if (empData.shifts[k] !== 'T' || getLegalOverride(emp, k) || storeClosedDates.has(dStr)) continue;
+
+                const afterCov = getCoverageMetrics(k, { empId: emp.id, shift: 'F' });
+                const turnoRatioAfter = empTurno === 'Fechamento' ? afterCov.fechamentoRatio : afterCov.aberturaRatio;
+
+                let caixaSafe = true;
+                if (isEmployeeCaixaEligible(emp)) {
+                    const caixasInTurnoWorking = activeRegular.filter(e =>
+                        e.id !== emp.id &&
+                        isEmployeeCaixaEligible(e) &&
+                        (getShiftClassification(e.workPeriod, false, settings) === 'Fechamento' ? 'Fechamento' : 'Abertura') === empTurno &&
+                        result[e.id]?.shifts[k] === 'T'
+                    ).length;
+                    if (caixasInTurnoWorking === 0) caixaSafe = false;
+                }
+
+                const isPeakRetailDate = (month === 9 && dayNum >= 8 && dayNum <= 12) || (month === 11 && dayNum >= 20 && dayNum <= 24);
+                const isProtected = protectedSet.has(dayNum) || isPeakRetailDate || holidaySet.has(dStr);
+                const worstStreak = maxStreakIfRestAt(emp, empData.shifts, k);
+
+                let score = turnoRatioAfter * 3 + afterCov.overallRatio;
+                if (!caixaSafe) score -= 200;
+                if (activeRegular.length >= 4 && afterCov.overallRatio < 0.7) score -= 100;
+                if (afterCov.byTurno[empTurno].total >= 4 && turnoRatioAfter < 0.7) score -= 100;
+                if (isProtected) score -= 50;
+                if (worstStreak <= 5) score += 20;
+                else if (worstStreak <= 6) score += 5;
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestDay = k;
+                }
+            }
+            return bestDay;
+        };
+
+        // Agrupa semanas-calendário (Seg–Dom) do mês
+        const calendarWeeks: number[][] = [];
+        let cw: number[] = [];
+        for (let d = 0; d < daysInMonth; d++) {
+            const dow = new Date(year, month, d + 1).getDay();
+            if (dow === 1 && cw.length > 0) {
+                calendarWeeks.push(cw);
+                cw = [];
+            }
+            cw.push(d);
+        }
+        if (cw.length > 0) calendarWeeks.push(cw);
+
+        // Passada A: semanas-calendário com regime 5x2 recebem 2 folgas (incluindo domingos se houver)
+        for (const weekIndices of calendarWeeks) {
+            if (weekIndices.length < 5) continue;
+            for (const emp of activeRegular) {
+                const empData = result[emp.id];
+                if (!empData) continue;
+                const has5x2InWeek = weekIndices.some(k => {
+                    const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(k + 1).padStart(2, '0')}`;
+                    return getEffectiveJornadaOnDate(emp, ds) === '5x2';
+                });
+                if (!has5x2InWeek) continue;
+
+                let restCount = weekIndices.filter(k => isRestOrOff(empData.shifts[k])).length;
+                while (restCount < 2) {
+                    const best = pickBest5x2VariableDay(emp, weekIndices);
+                    if (best === -1) break;
+                    empData.shifts[best] = 'F';
+                    if (empData.decisionReasons) empData.decisionReasons[best] = 'PREFERRED_DAY_OFF';
+                    restCount++;
+                }
+            }
+        }
+
+        // Passada B: garante 2 folgas em qualquer janela deslizante de 7 dias 100% em regime 5x2
+        for (let start = 0; start <= daysInMonth - 7; start++) {
+            const windowIndices = [start, start + 1, start + 2, start + 3, start + 4, start + 5, start + 6];
+            for (const emp of activeRegular) {
+                const empData = result[emp.id];
+                if (!empData) continue;
+                const all5x2 = windowIndices.every(k => {
+                    const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(k + 1).padStart(2, '0')}`;
+                    return getEffectiveJornadaOnDate(emp, ds) === '5x2';
+                });
+                if (!all5x2) continue;
+
+                const restCount = windowIndices.filter(k => isRestOrOff(empData.shifts[k])).length;
+                if (restCount < 2) {
+                    const best = pickBest5x2VariableDay(emp, windowIndices);
+                    if (best !== -1) {
+                        empData.shifts[best] = 'F';
+                        if (empData.decisionReasons) empData.decisionReasons[best] = 'PREFERRED_DAY_OFF';
+                    }
+                }
+            }
+        }
+
+        // 3.9B Balanceador Coletivo de Cobertura >= 70% (Geral e por Turno) em dias úteis (Seg-Sáb)
+        // Flexibiliza o dia fixo quando necessário para garantir a equipe mínima sem violar CLT nem o 5x2 (2 folgas/7 dias).
+        const isValidCandidateSchedule = (emp: Employee, simShifts: ShiftType[], origShifts: ShiftType[]): boolean => {
+            let runStreak = prevStreaks.get(emp.id) || 0;
+            for (let k = 0; k < daysInMonth; k++) {
+                if (isRestOrOff(simShifts[k])) {
+                    runStreak = 0;
+                } else {
+                    runStreak++;
+                    if (runStreak > 6) return false;
+                }
+            }
+            // Não pode destruir janelas 100% 5x2 de 7 dias que já cumpriam >= 2 folgas
+            for (let s = 0; s <= daysInMonth - 7; s++) {
+                const win = [s, s + 1, s + 2, s + 3, s + 4, s + 5, s + 6];
+                const all5x2 = win.every(k => {
+                    const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(k + 1).padStart(2, '0')}`;
+                    return getEffectiveJornadaOnDate(emp, ds) === '5x2';
+                });
+                if (!all5x2) continue;
+                const origRests = win.filter(k => isRestOrOff(origShifts[k])).length;
+                const simRests = win.filter(k => isRestOrOff(simShifts[k])).length;
+                if (origRests >= 2 && simRests < 2) return false;
+            }
+            return true;
         };
 
         for (let d = 0; d < daysInMonth; d++) {
@@ -598,7 +737,7 @@ export function applyMonthUpdate(
                     const sim = [...cData.shifts];
                     sim[d] = 'T';
                     sim[altD] = 'F';
-                    if (!isValidCandidateSchedule(cand, sim)) continue;
+                    if (!isValidCandidateSchedule(cand, sim, cData.shifts)) continue;
 
                     const altCov = getCoverageMetrics(altD, { empId: cand.id, shift: 'F' });
                     if (activeRegular.length >= 4 && altCov.overallRatio < 0.7) continue;
@@ -633,7 +772,6 @@ export function applyMonthUpdate(
 
         // 3.9C Alocação Inteligente de Folgas de Feriado Pendentes (FF)
         // Sugere o dia útil (Seg-Sex) em que o turno do colaborador estiver mais completo (mantendo >= 70%)
-        const protectedSet = new Set(Object.keys(normalizeProtectedDaysDetails(protectedDays)).map(Number));
         for (const emp of targetEmps) {
             const empData = result[emp.id];
             if (!empData) continue;

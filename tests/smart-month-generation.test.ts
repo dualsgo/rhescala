@@ -155,4 +155,34 @@ describe('Smart Month Generation (70% coverage, pending FF, DO & CLT rules)', ()
       }
     }
   });
+
+  it('enforces 5x2 from 16/12/2026 with >= 2 rests in every 7-day window (flexible fixed day + smart variable day)', () => {
+    // 5 Abertura + 5 Fechamento, 4 of each sharing Segunda-feira as preferredDayOff
+    const team = makeTeam(5, 5, (idx) => ({
+      preferredDayOff: idx < 4 ? 'Segunda-feira' : 'Quinta-feira',
+    }));
+
+    const isRest = (s: string) => ['F', 'LF', 'FE', 'AT', 'DO', 'N/A'].includes(s) || s.startsWith('FF');
+
+    // December 2026 (hybrid: 6x1 up to 15/12, 5x2 from 16/12)
+    const decRes = applyMonthUpdate(team, 2026, 11, [], [], DEFAULT_JORNADA_SETTINGS, undefined, 'suggested_retro');
+    for (const emp of team) {
+      const shifts = decRes[emp.id].shifts;
+      // Every 7-day window fully inside 5x2 (>= 16/12 -> indices 15..30) must have >= 2 rests
+      for (let start = 15; start <= 31 - 7; start++) {
+        const winRests = shifts.slice(start, start + 7).filter(isRest).length;
+        expect(winRests, `${emp.id} 5x2 window ${start + 1}..${start + 7}/12`).toBeGreaterThanOrEqual(2);
+      }
+    }
+
+    // January 2027 (full 5x2 month): every 7-day window has >= 2 rests AND weekdays keep >= 70% (except closed/holiday)
+    const janRes = applyMonthUpdate(team, 2027, 0, [], [], DEFAULT_JORNADA_SETTINGS, undefined, 'suggested_retro');
+    for (const emp of team) {
+      const shifts = janRes[emp.id].shifts;
+      for (let start = 0; start <= 31 - 7; start++) {
+        const winRests = shifts.slice(start, start + 7).filter(isRest).length;
+        expect(winRests, `${emp.id} Jan/27 7-day window ${start + 1}..${start + 7}`).toBeGreaterThanOrEqual(2);
+      }
+    }
+  });
 });

@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { Icon } from './Icon';
 import { Employee, MonthYear, Holiday, JornadaSettings } from '../types';
-import { buildHolidaySet, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth } from '../constants';
+import { buildHolidaySet, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth, isEmployeeActiveOnDay } from '../constants';
 import { isWorkingShift } from '../src/engine/shifts/shift-predicates';
 import { calculateLunches } from '../hooks/useScheduleEngine';
 
@@ -121,12 +121,13 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({
 
   // Fonte única de verdade: calcula almoços para toda a equipe que trabalha hoje
   const workingMembers = useMemo(() => {
+    const dateStr = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(selectedDayIdx + 1).padStart(2, '0')}`;
     return employees.filter(e => {
-      if (!isEmployeeActiveInMonth(e, currentMY.year, currentMY.month)) return false;
+      if (!isEmployeeActiveOnDay(e, dateStr, monthKey, selectedDayIdx)) return false;
       const shift = (e.shifts[monthKey] || [])[selectedDayIdx];
       return isWorkingShift(shift);
     });
-  }, [employees, monthKey, selectedDayIdx]);
+  }, [employees, currentMY.year, currentMY.month, monthKey, selectedDayIdx]);
 
   const lunchTimes = useMemo(() => {
     return calculateLunches(workingMembers, isHoliday, isSun, undefined, jornadaSettings, {

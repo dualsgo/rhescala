@@ -552,7 +552,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
     || `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(safeSelectedDayIdx + 1).padStart(2, '0')}`;
 
   const displayedEmployees = useMemo(() => {
-    let list = employees.filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
+    let list = employees.filter(e =>
+      isEmployeeActiveInMonth(e, currentMY.year, currentMY.month) &&
+      (!e.hiredAt || selectedDayDateStr >= e.hiredAt)
+    );
     if (contractFilter === 'clt') list = list.filter(e => e.contractType !== 'Sazonal');
     else if (contractFilter === 'sazonal') list = list.filter(e => e.contractType === 'Sazonal');
 

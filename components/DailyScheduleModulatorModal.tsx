@@ -9,7 +9,7 @@ import {
   getShortName, 
   getTacticalEmoji, 
   getTacticalLabel, 
-  isEmployeeActiveInMonth 
+  isEmployeeActiveOnDay 
 } from '../constants';
 import { isWorkingShift, getShiftClassification } from '../src/engine/shifts/shift-predicates';
 import { resolveTacticalDay } from '../hooks/useScheduleEngine';
@@ -115,7 +115,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
   // Initial Calculation from System Logic
   const computeInitialState = useCallback(() => {
     const { isHoliday, isSunday } = dateInfo;
-    const activeEmps = (employees || []).filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
+    const activeEmps = (employees || []).filter(e => isEmployeeActiveOnDay(e, dateInfo.dateStr, monthKey, dayIdx));
     const resolvedPositions = resolveTacticalDay(activeEmps, monthKey, dayIdx, isHoliday, isSunday, jornadaSettings);
 
     const initialFolgas: StatusItem[] = [];
@@ -303,7 +303,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
   // Distribuição Automática de Funções e Horários de Almoço
   const handleAutoDistribute = useCallback(async () => {
     const { isHoliday, isSunday } = dateInfo;
-    const activeEmps = (employees || []).filter(e => isEmployeeActiveInMonth(e, currentMY.year, currentMY.month));
+    const activeEmps = (employees || []).filter(e => isEmployeeActiveOnDay(e, dateInfo.dateStr, monthKey, dayIdx));
 
     // Apenas colaboradores que estão incluídos e trabalhando
     const includedEmpIds = new Set(items.filter(it => it.included).map(it => it.id));
