@@ -37,6 +37,26 @@ export function clearConfiguredApiUrl(): void {
     localStorage.removeItem(STORAGE_KEY_API_URL);
 }
 
+const DEFAULT_FETCH_TIMEOUT_MS = 25000;
+
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeoutMs = DEFAULT_FETCH_TIMEOUT_MS): Promise<Response> {
+    if (typeof AbortController === 'undefined') {
+        return fetch(input, init);
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        return await fetch(input, { ...init, signal: controller.signal });
+    } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') {
+            throw new Error(`Tempo limite excedido (${Math.round(timeoutMs / 1000)}s) ao comunicar com o servidor.`);
+        }
+        throw err;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 /**
  * Adapter para chamadas ao servidor Google Apps Script via fetch.
  * A URL do Web App é configurada pelo usuário na tela de setup.
@@ -50,7 +70,7 @@ export const apiStore = {
         }
 
         try {
-            const response = await fetch(`${url}?key=${encodeURIComponent(key)}`, {
+            const response = await fetchWithTimeout(`${url}?key=${encodeURIComponent(key)}`, {
                 method: 'GET',
                 redirect: 'follow',
             });
@@ -67,13 +87,30 @@ export const apiStore = {
         if (!url) return;
 
         try {
-            const response = await fetch(`${url}?key=${encodeURIComponent(key)}`, {
+            const response = await fetchWithTimeout(`${url}?key=${encodeURIComponent(key)}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(value),
                 redirect: 'follow',
             });
             if (!response.ok) throw new Error(`Erro na API: ${response.statusText}`);
+
+            // GAS pode responder 200 OK com payload JSON de erro lógico
+            const text = typeof response.text === 'function' ? await response.text() : '';
+            if (text) {
+                try {
+                    const parsed = JSON.parse(text);
+                    if (parsed && (parsed.success === false || typeof parsed.error === 'string')) {
+                        throw new Error(parsed.error || 'Falha retornada pelo servidor ao salvar dados.');
+                    }
+                } catch (parseErr) {
+                    if (parseErr instanceof SyntaxError) {
+                        // Resposta não-JSON (ex: "OK" em texto puro) é válida
+                    } else {
+                        throw parseErr;
+                    }
+                }
+            }
         } catch (e) {
             console.error(`Erro ao salvar ${key}:`, e);
             throw e;

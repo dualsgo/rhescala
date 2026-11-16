@@ -17,11 +17,26 @@ import { globalSyncQueue } from '../src/infrastructure/sync/syncQueue';
  */
 export const keyGenerationMap = new Map<string, number>();
 
+/**
+ * Conjunto global de chaves com alterações locais ainda não confirmadas na nuvem
+ * (seja durante o debounce, em fila de envio ou em erro de rede).
+ */
+const dirtyKeysSet = new Set<string>();
+
+export function markKeyDirty(key: string, dirty: boolean): void {
+    if (dirty) dirtyKeysSet.add(key);
+    else dirtyKeysSet.delete(key);
+}
+
+export function hasPendingCloudSync(): boolean {
+    return dirtyKeysSet.size > 0 || globalSyncQueue.size > 0;
+}
+
 export function getLocalKeyGeneration(key: string): number {
     return keyGenerationMap.get(key) || 0;
 }
 
-function updateGlobalSync(state: SyncState, key: string, message?: string, isSilent = false) {
+export function updateGlobalSync(state: SyncState, key: string, message?: string, isSilent = false) {
     GLOBAL_SYNC_STATUS.state = state;
     GLOBAL_SYNC_STATUS.isSilent = isSilent;
     if (state === 'synced') {
@@ -41,6 +56,30 @@ function updateGlobalSync(state: SyncState, key: string, message?: string, isSil
 
     // Dispatch event for components
     window.dispatchEvent(new CustomEvent('sync-update', { detail: GLOBAL_SYNC_STATUS }));
+}
+
+function safeWriteLocalStorage(key: string, serialized: string): void {
+    try {
+        window.localStorage.setItem(key, serialized);
+    } catch (error) {
+        console.error(`[useLocalStorage] Falha crítica ao gravar ${key} no localStorage:`, error);
+        window.dispatchEvent(new CustomEvent('local-storage-error', {
+            detail: { key, error }
+        }));
+    }
+}
+
+function safeBroadcast(key: string, data: unknown): void {
+    if (typeof BroadcastChannel === 'undefined') return;
+    let bc: BroadcastChannel | null = null;
+    try {
+        bc = new BroadcastChannel(`sync_${key}`);
+        bc.postMessage(data);
+    } catch {
+        // Ignora indisponibilidade de BroadcastChannel
+    } finally {
+        bc?.close();
+    }
 }
 
 export function useSyncStatus() {
@@ -130,15 +169,15 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                                         setStoredValue(cloudData);
                                         lastCloudValue.current = dataStr;
                                         isDirty.current = false;
+                                        markKeyDirty(key, false);
                                         updateGlobalSync('synced', key, 'Nuvem Restaurada', false);
-                                        try {
-                                            window.localStorage.setItem(key, dataStr);
-                                            new BroadcastChannel(`sync_${key}`).postMessage(cloudData);
-                                        } catch (e) { }
+                                        safeWriteLocalStorage(key, dataStr);
+                                        safeBroadcast(key, cloudData);
                                     } else {
                                         // Usuário optou por manter as alterações locais
                                         lastCloudValue.current = dataStr; 
                                         isDirty.current = true;
+                                        markKeyDirty(key, true);
                                         updateGlobalSync('error', key, 'Alterações Locais Preservadas', false);
                                     }
                                 }
@@ -150,11 +189,10 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                     setStoredValue(cloudData);
                     lastCloudValue.current = dataStr;
                     isDirty.current = false;
+                    markKeyDirty(key, false);
                     // Atualiza o cache local
-                    try {
-                        window.localStorage.setItem(key, dataStr);
-                        new BroadcastChannel(`sync_${key}`).postMessage(cloudData);
-                    } catch (e) { }
+                    safeWriteLocalStorage(key, dataStr);
+                    safeBroadcast(key, cloudData);
                     updateGlobalSync('synced', key, force ? 'Dados Atualizados' : 'Salvo na Planilha', !force);
                 } else {
                     updateGlobalSync(isDirty.current ? 'error' : 'synced', key, isDirty.current ? 'Alterações Locais Pendentes' : 'Salvo na Planilha', !force);
@@ -190,17 +228,19 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
         const currentValueStr = JSON.stringify(storedValue);
         if (currentValueStr === lastCloudValue.current) {
             isDirty.current = false;
+            markKeyDirty(key, false);
             return;
         }
 
         isDirty.current = true;
+        markKeyDirty(key, true);
 
         // Avança a geração local da chave. Qualquer retry de geração anterior torna-se obsoleto.
         const taskGeneration = (keyGenerationMap.get(key) || 0) + 1;
         keyGenerationMap.set(key, taskGeneration);
         retryCount.current = 0;
 
-        const timer = setTimeout(() => {
+        const buildSyncTask = () => {
             const syncTask = async () => {
                 // Validação no momento em que a tarefa inicia execução
                 if (taskGeneration !== (keyGenerationMap.get(key) || 0)) {
@@ -214,7 +254,8 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                 const dataToSync = currentValueStr;
 
                 try {
-                    await apiStore.set(key, JSON.parse(dataToSync));
+                    const parsedPayload = JSON.parse(dataToSync);
+                    await apiStore.set(key, parsedPayload);
 
                     // Validação pós-rede: descarta finalização se nova alteração ocorreu durante a requisição
                     if (taskGeneration !== (keyGenerationMap.get(key) || 0)) {
@@ -223,12 +264,10 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
 
                     lastCloudValue.current = dataToSync;
                     isDirty.current = false;
+                    markKeyDirty(key, false);
                     retryCount.current = 0;
                     updateGlobalSync('synced', key, 'Salvo na Planilha', true);
-
-                    try {
-                        new BroadcastChannel(`sync_${key}`).postMessage(storedValue);
-                    } catch (e) { }
+                    safeBroadcast(key, parsedPayload);
                 } catch (err) {
                     console.error('Sync failure:', err);
 
@@ -257,22 +296,37 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
                     syncInProgress.current = false;
                 }
             };
+            return syncTask;
+        };
 
+        const syncTask = buildSyncTask();
+        const timer = setTimeout(() => {
             globalSyncQueue.enqueue(syncTask);
         }, 2500);
 
-        return () => clearTimeout(timer);
+        const handleOnline = () => {
+            if (isDirty.current && taskGeneration === (keyGenerationMap.get(key) || 0) && !syncInProgress.current) {
+                retryCount.current = 0;
+                globalSyncQueue.enqueue(syncTask);
+            }
+        };
+        window.addEventListener('online', handleOnline);
+
+        return () => {
+            clearTimeout(timer);
+            window.removeEventListener('online', handleOnline);
+        };
     }, [storedValue, key]);
 
     const setValue = (value: T | ((val: T) => T)) => {
         setStoredValue(prev => {
             const next = value instanceof Function ? value(prev) : value;
-            if (JSON.stringify(next) !== JSON.stringify(prev)) {
+            const nextStr = JSON.stringify(next);
+            if (nextStr !== JSON.stringify(prev)) {
                 isDirty.current = true;
+                markKeyDirty(key, true);
                 // Salva no localStorage imediatamente para evitar perda de dados
-                try {
-                    window.localStorage.setItem(key, JSON.stringify(next));
-                } catch (e) {}
+                safeWriteLocalStorage(key, nextStr);
             }
             return next;
         });

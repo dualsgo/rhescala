@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef, Suspense, lazy } from 'react';
 import { useDialog } from './contexts/DialogContext';
-import { useLocalStorage, useLocalPreference, useSyncStatus } from './hooks/useLocalStorage';
+import { useLocalStorage, useLocalPreference, useSyncStatus, hasPendingCloudSync } from './hooks/useLocalStorage';
 import { useScheduleFilters } from './hooks/useScheduleFilters';
 import { 
   applyMonthUpdate, 
@@ -394,14 +394,36 @@ const App: React.FC = () => {
       });
     };
 
+    const handleLocalStorageError = (event: Event) => {
+      const customEvent = event as CustomEvent<{ key: string; error?: unknown }>;
+      const key = customEvent.detail?.key || 'dados';
+      showDialog({
+        title: 'Armazenamento Local Indisponível',
+        message: `Não foi possível gravar "${key}" no cache local do navegador (cota cheia ou modo privado restrito). Faça um backup imediato ou libere espaço antes de fechar a página.`,
+        type: 'alert'
+      });
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasPendingCloudSync() || isSaving) {
+        e.preventDefault();
+        e.returnValue = 'Existem alterações pendentes de envio para a planilha. Aguarde a conclusão do salvamento antes de sair.';
+        return e.returnValue;
+      }
+    };
+
     window.addEventListener('sync-conflict', handleSyncConflict);
     window.addEventListener('sync-persistent-error', handleSyncPersistentError);
+    window.addEventListener('local-storage-error', handleLocalStorageError);
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
       window.removeEventListener('sync-conflict', handleSyncConflict);
       window.removeEventListener('sync-persistent-error', handleSyncPersistentError);
+      window.removeEventListener('local-storage-error', handleLocalStorageError);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [showDialog]);
+  }, [showDialog, isSaving]);
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -1625,7 +1647,7 @@ const App: React.FC = () => {
           </aside>
         )}
 
-        <SyncBlockingOverlay syncStatus={syncStatus} />
+        <SyncBlockingOverlay syncStatus={syncStatus} onRetrySync={handleManualSave} />
       </>
     );
 };

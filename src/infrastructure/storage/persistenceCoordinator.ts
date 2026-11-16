@@ -9,6 +9,7 @@ import {
 import { STORAGE_KEYS, BROADCAST_CHANNELS } from './storageKeys';
 import { apiStore, getConfiguredApiUrl } from '../../gas-api';
 import { globalSyncQueue } from '../sync/syncQueue';
+import { markKeyDirty, updateGlobalSync } from '../../../hooks/useLocalStorage';
 
 export interface PersistencePayload {
   employees: Employee[];
@@ -55,11 +56,18 @@ export function flushLocalStorage(payload: PersistencePayload): void {
 export function broadcastPersistenceSync(payload: PersistencePayload): void {
   if (typeof window === 'undefined' || typeof BroadcastChannel === 'undefined') return;
 
+  let empBc: BroadcastChannel | null = null;
+  let valBc: BroadcastChannel | null = null;
   try {
-    new BroadcastChannel(BROADCAST_CHANNELS.employeesSync).postMessage(payload.employees);
-    new BroadcastChannel(BROADCAST_CHANNELS.validatedMonthsSync).postMessage(payload.validatedMonths);
+    empBc = new BroadcastChannel(BROADCAST_CHANNELS.employeesSync);
+    empBc.postMessage(payload.employees);
+    valBc = new BroadcastChannel(BROADCAST_CHANNELS.validatedMonthsSync);
+    valBc.postMessage(payload.validatedMonths);
   } catch (err) {
     console.warn('[persistenceCoordinator] Aviso ao transmitir via BroadcastChannel:', err);
+  } finally {
+    empBc?.close();
+    valBc?.close();
   }
 }
 
@@ -142,6 +150,11 @@ export async function flushCloudStorage(payload: PersistencePayload): Promise<Cl
     { key: STORAGE_KEYS.auditLogs, task: () => apiStore.set(STORAGE_KEYS.auditLogs, payload.auditLogs) }
   ];
 
+  // Ativa o bloqueio visual temporário durante o salvamento manual na planilha
+  if (typeof window !== 'undefined') {
+    updateGlobalSync('syncing', STORAGE_KEYS.employees, 'Salvando na Planilha (Aguarde)...', false);
+  }
+
   const results = await Promise.allSettled(items.map(item => globalSyncQueue.enqueue(item.task)));
 
   const failedKeys: string[] = [];
@@ -149,13 +162,23 @@ export async function flushCloudStorage(payload: PersistencePayload): Promise<Cl
   let succeeded = 0;
 
   results.forEach((res, idx) => {
+    const key = items[idx].key;
     if (res.status === 'fulfilled') {
       succeeded++;
+      markKeyDirty(key, false);
     } else {
-      failedKeys.push(items[idx].key);
-      errors.push({ key: items[idx].key, error: res.reason });
+      failedKeys.push(key);
+      errors.push({ key, error: res.reason });
     }
   });
+
+  if (typeof window !== 'undefined') {
+    if (failedKeys.length > 0) {
+      updateGlobalSync('error', failedKeys[0], `${failedKeys.length} item(ns) falharam ao salvar`, false);
+    } else {
+      updateGlobalSync('synced', STORAGE_KEYS.employees, 'Salvo na Planilha', false);
+    }
+  }
 
   return {
     total: items.length,
