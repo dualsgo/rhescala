@@ -144,77 +144,95 @@ export const HolidayCreditPanel: React.FC<HolidayCreditPanelProps> = ({
   }, [employees, currentMY, customHolidays, holidaySet, monthKey, daysInMonth]);
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in transition-colors">
-      <div className="bg-white  rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] border ">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="holiday-credit-panel-title"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose();
+      }}
+      className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in transition-colors"
+    >
+      <div className="bg-white dark:bg-zinc-900 rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] border border-slate-200 dark:border-zinc-800">
         {/* Header */}
-        <div className="p-6 bg-slate-50  border-b border-slate-200  flex justify-between items-center transition-colors">
+        <div className="p-6 bg-slate-50 dark:bg-zinc-950/60 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center transition-colors">
             <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-rose-100  text-rose-600  rounded-xl flex items-center justify-center shadow-sm">
+                <div className="w-10 h-10 bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 rounded-xl flex items-center justify-center shadow-sm">
                     <Icon name="event_repeat" className="text-xl" fill />
                 </div>
                 <div>
-                    <h3 className="text-lg font-black text-slate-900 ">Gestão de Folgas de Feriado</h3>
-                    <p className="text-[11px] font-extrabold text-slate-400  uppercase tracking-widest">Compensação Mensal de Créditos de Feriados</p>
+                    <h3 id="holiday-credit-panel-title" className="text-lg font-black text-slate-900 dark:text-zinc-100">
+                      Gestão de Folgas de Feriado
+                    </h3>
+                    <p className="text-[11px] font-extrabold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">
+                      Compensação Mensal de Créditos de Feriados
+                    </p>
                 </div>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
-                <Icon name="close" className="text-slate-400" />
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Fechar gestão de folgas de feriado"
+              className="w-9 h-9 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-zinc-800 rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-orange-500 outline-none"
+            >
+                <Icon name="close" className="text-slate-400 dark:text-zinc-400" />
             </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 bg-white  transition-colors">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-white dark:bg-zinc-900 transition-colors">
           {credits.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-slate-400 ">
-                <Icon name="celebration" className="text-5xl mb-4 opacity-20" />
-                <p className="font-bold">Nenhum crédito de feriado pendente para este mês.</p>
-                <p className="text-xs">Isso acontece quando não há feriados ou todos já foram compensados.</p>
+            <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-zinc-500 text-center">
+                <Icon name="celebration" className="text-5xl mb-4 opacity-30" />
+                <p className="font-bold text-slate-600 dark:text-zinc-300">Nenhum crédito de feriado pendente para este mês.</p>
+                <p className="text-xs mt-1">Isso acontece quando não há feriados ou todos já foram compensados.</p>
             </div>
           ) : (
-            <div className="border border-slate-200  rounded-xl overflow-hidden shadow-sm transition-colors">
+            <div className="border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm transition-colors">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50  text-[11px] font-extrabold text-slate-500  uppercase tracking-widest border-b border-slate-200 ">
+                  <tr className="bg-slate-50 dark:bg-zinc-800/80 text-[11px] font-extrabold text-slate-500 dark:text-zinc-400 uppercase tracking-widest border-b border-slate-200 dark:border-zinc-800">
                     <th className="p-4">Feriado</th>
                     <th className="p-4">Colaborador</th>
                     <th className="p-4">Sugestão de Folga</th>
                     <th className="p-4 text-center">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 ">
+                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
                   {credits.map((item, idx) => {
                     const hDate = new Date(item.holidayDate + 'T00:00:00');
                     return (
-                      <tr key={`${item.empId}-${item.holidayDate}-${idx}`} className="hover:bg-slate-50/50  transition-colors">
+                      <tr key={`${item.empId}-${item.holidayDate}-${idx}`} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors">
                         <td className="p-4">
                           <div className="flex flex-col">
-                            <span className="text-xs font-black text-slate-900 ">{item.holidayName}</span>
-                            <span className="text-[11px] font-bold text-slate-400  truncate">
+                            <span className="text-xs font-black text-slate-900 dark:text-zinc-100">{item.holidayName}</span>
+                            <span className="text-[11px] font-bold text-slate-400 dark:text-zinc-500 truncate">
                               {String(hDate.getDate()).padStart(2, '0')}/{String(hDate.getMonth() + 1).padStart(2, '0')}
                             </span>
                           </div>
                         </td>
                         <td className="p-4">
                           <div className="flex items-center gap-2">
-                             <div className="w-6 h-6 rounded-full bg-slate-100  flex items-center justify-center text-[11px] font-black text-slate-500  uppercase">
+                             <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-[11px] font-black text-slate-500 dark:text-zinc-400 uppercase">
                                 {item.empName.charAt(0)}
                              </div>
-                             <span className="text-xs font-bold text-slate-700  uppercase">{item.empName}</span>
+                             <span className="text-xs font-bold text-slate-700 dark:text-zinc-200 uppercase">{item.empName}</span>
                           </div>
                         </td>
                         <td className="p-4">
-                           <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50  text-blue-700  rounded-lg border border-blue-100 ">
+                           <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 rounded-lg border border-blue-100 dark:border-blue-900/50">
                               <Icon name="auto_fix_high" className="text-xs" />
                               <span className="text-[11px] font-black">{item.suggestedDayLabel}</span>
                            </div>
                         </td>
                         <td className="p-4 text-center">
                           <button
+                            type="button"
                             onClick={() => {
                               const holidayLabel = `${String(hDate.getDate()).padStart(2, '0')}/${String(hDate.getMonth() + 1).padStart(2, '0')}`;
                               onApplyFix(item.empId, item.suggestedDayIdx, `FF ${holidayLabel}`);
                             }}
-                            className="bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-black px-4 py-2 rounded-lg transition-all shadow-sm active:scale-95"
+                            className="bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-black px-4 py-2 min-h-[36px] rounded-xl transition-all shadow-sm active:scale-95 focus-visible:ring-2 focus-visible:ring-orange-500 outline-none"
                           >
                             Aplicar Folga
                           </button>
@@ -229,13 +247,13 @@ export const HolidayCreditPanel: React.FC<HolidayCreditPanelProps> = ({
         </div>
 
         {/* Footer info */}
-        <div className="p-6 bg-slate-50  border-t border-slate-200 ">
-            <div className="bg-blue-50  border border-blue-100  p-4 rounded-xl flex gap-3 items-start">
-               <Icon name="info" className="text-blue-500  mt-1" />
-               <div className="text-[11px] leading-relaxed text-blue-800  font-medium">
+        <div className="p-6 bg-slate-50 dark:bg-zinc-950/60 border-t border-slate-200 dark:border-zinc-800">
+            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 p-4 rounded-xl flex gap-3 items-start">
+               <Icon name="info" className="text-blue-500 dark:text-blue-400 mt-0.5 shrink-0" />
+               <div className="text-[11px] leading-relaxed text-blue-800 dark:text-blue-200 font-medium">
                   <p className="font-black uppercase mb-1">Como as sugestões são geradas?</p>
-                  O sistema busca dias de **segunda a sexta** que não coincidam com a folga padrão do colaborador. 
-                  A sugestão prioriza dias onde a **equipe está mais completa**, garantindo que a operação da loja não seja afetada pela ausência compensatória.
+                  O sistema busca dias de <strong>segunda a sexta</strong> que não coincidam com a folga padrão do colaborador.
+                  A sugestão prioriza dias onde a <strong>equipe está mais completa</strong>, garantindo que a operação da loja não seja afetada pela ausência compensatória.
                </div>
             </div>
         </div>

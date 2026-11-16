@@ -11,6 +11,7 @@ interface LoginProps {
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const { showDialog } = useDialog();
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -48,29 +49,48 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <p className="text-slate-500 dark:text-zinc-400 font-bold text-[11px] uppercase tracking-widest mt-1">Sistema de Gestão de Escalas</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
           <div>
-            <label className="block text-[11px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-2 ml-1">Senha de Acesso</label>
+            <label htmlFor="login-password" className="block text-[11px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-2 ml-1">
+              Senha de Acesso
+            </label>
             <div className="relative">
               <input
-                type="password"
+                id="login-password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 disabled={isLoading}
-                className={`w-full bg-slate-50 dark:bg-zinc-900/50 border ${error ? 'border-rose-500 ring-2 ring-rose-500/20' : 'border-slate-200 dark:border-zinc-800'} rounded-2xl p-4 text-center text-lg font-bold focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all dark:text-white disabled:opacity-50`}
+                required
+                aria-required="true"
+                aria-invalid={!!error}
+                aria-describedby={error ? 'login-password-error' : undefined}
+                autoComplete="current-password"
+                className={`w-full bg-slate-50 dark:bg-zinc-900/50 border ${error ? 'border-rose-500 ring-2 ring-rose-500/20' : 'border-slate-200 dark:border-zinc-800'} rounded-2xl py-4 pl-12 pr-12 text-center text-lg font-bold focus-visible:ring-4 focus-visible:ring-orange-500/25 focus-visible:border-orange-500 outline-none transition-all dark:text-white disabled:opacity-50`}
                 autoFocus
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(prev => !prev)}
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-200/60 dark:hover:bg-zinc-800 transition-colors focus-visible:ring-2 focus-visible:ring-orange-500 outline-none"
+              >
+                <Icon name={showPassword ? 'visibility_off' : 'visibility'} className="text-lg" />
+              </button>
               {error && (
-                <p className="absolute -bottom-6 left-0 right-0 text-center text-[11px] font-black text-rose-500 uppercase tracking-widest animate-shake">{error}</p>
+                <p id="login-password-error" role="alert" className="absolute -bottom-6 left-0 right-0 text-center text-[11px] font-black text-rose-500 uppercase tracking-widest animate-shake">
+                  {error}
+                </p>
               )}
             </div>
           </div>
 
           <button
             type="submit"
-            disabled={isLoading}
-            className="w-full bg-slate-900 dark:bg-white text-white dark:text-zinc-900 font-black py-4 rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-70"
+            disabled={isLoading || !password}
+            className="w-full min-h-[48px] bg-slate-900 dark:bg-white text-white dark:text-zinc-900 font-black py-4 rounded-2xl shadow-xl hover:scale-[1.01] active:scale-[0.98] transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed focus-visible:ring-4 focus-visible:ring-orange-500/30 outline-none"
           >
             {isLoading ? (
               <>

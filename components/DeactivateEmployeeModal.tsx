@@ -45,7 +45,15 @@ export const DeactivateEmployeeModal: React.FC<DeactivateEmployeeModalProps> = (
   };
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="deactivate-employee-modal-title"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose();
+      }}
+      className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in"
+    >
       <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[90vh]">
         {/* Header do Modal */}
         <div className="p-6 border-b border-slate-100 dark:border-zinc-800 flex items-start justify-between gap-3">
@@ -60,7 +68,7 @@ export const DeactivateEmployeeModal: React.FC<DeactivateEmployeeModalProps> = (
                 </span>
                 <span className="text-[10px] font-bold text-zinc-400">• Preserva Histórico</span>
               </div>
-              <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-zinc-100 uppercase tracking-tight mt-0.5">
+              <h3 id="deactivate-employee-modal-title" className="text-lg sm:text-xl font-black text-slate-900 dark:text-zinc-100 uppercase tracking-tight mt-0.5">
                 {employee.name}
               </h3>
               <p className="text-xs font-bold text-slate-400 flex items-center gap-1.5 mt-0.5">
