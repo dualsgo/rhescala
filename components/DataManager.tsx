@@ -161,14 +161,35 @@ export const DataManager: React.FC<DataManagerProps> = ({
   };
 
   const handleImportBackup = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (role !== 'admin') return;
     const file = event.target.files?.[0];
     if (!file) return;
+
+    const maxBytes = 10 * 1024 * 1024; // 10 MB
+    if (file.size > maxBytes || !file.name.toLowerCase().endsWith('.json')) {
+      showDialog({
+        title: 'Arquivo Inválido',
+        message: 'Selecione um arquivo .json válido com tamanho máximo de 10 MB.',
+        type: 'alert'
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
         const importedData = JSON.parse(e.target?.result as string);
-        const hasValidEmployees = Array.isArray(importedData) || (importedData.employees && Array.isArray(importedData.employees));
+        const empList = Array.isArray(importedData) ? importedData : importedData?.employees;
+        const hasValidEmployees =
+          Array.isArray(empList) &&
+          empList.every(
+            (emp: unknown) =>
+              emp &&
+              typeof emp === 'object' &&
+              typeof (emp as Employee).id === 'string' &&
+              typeof (emp as Employee).name === 'string'
+          );
 
         if (hasValidEmployees) {
           const confirm = await showDialog({
@@ -228,7 +249,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
   };
 
   const handleUpdatePassword = async () => {
-    if (!passForm.password) return;
+    if (role !== 'admin' || !passForm.password) return;
     
     const confirm = await showDialog({
       title: 'Alterar Senha',

@@ -10,10 +10,24 @@ export function getConfiguredApiUrl(): string {
 }
 
 /**
- * Salva a URL do GAS no localStorage.
+ * Salva a URL do GAS no localStorage após validar que utiliza protocolo seguro (HTTPS ou localhost).
  */
 export function setConfiguredApiUrl(url: string): void {
-    localStorage.setItem(STORAGE_KEY_API_URL, url.trim());
+    const trimmed = url.trim();
+    if (!trimmed) {
+        throw new Error('URL da API não pode ser vazia.');
+    }
+    let parsed: URL;
+    try {
+        parsed = new URL(trimmed);
+    } catch {
+        throw new Error('URL da API inválida.');
+    }
+    const isLocalDev = parsed.protocol === 'http:' && (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1');
+    if (parsed.protocol !== 'https:' && !isLocalDev) {
+        throw new Error('A URL da API deve utilizar HTTPS.');
+    }
+    localStorage.setItem(STORAGE_KEY_API_URL, trimmed);
 }
 
 /**
