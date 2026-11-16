@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { Employee, ShiftType, MonthYear, Holiday, JornadaSettings, ScheduleDiffItem, TacticalDisplayMode, ProtectedDaysConfig, DECISION_REASON_LABELS, EmployeeRole, EMPLOYEE_ROLES, ROLE_METADATA_MAP, normalizeEmployeeRole } from '../types';
 import { Icon } from './Icon';
 import { SHIFT_HOURS, buildHolidaySet, getNationalHolidays, getShortName, getDefaultHourForDay, DEFAULT_JORNADA_SETTINGS, isEmployeeActiveInMonth, isEmployeeHiddenInMonth, isEmployeeEligibleForMonth, PLACEHOLDER_EMPLOYEE_ID, normalizeProtectedDaysConfig, getTacticalLabel, getTacticalCellCode, getTacticalEmoji } from '../constants';
+import { FIVE_BY_TWO_EFFECTIVE_DATE, getEffectiveJornadaOnDate } from '../src/engine/config/schedule-constants';
 import { getShiftClassification, isWorkingShift, resolveEffectiveShift, getPrevMonthWorkStreak, getPrevMonthConsecutive, calculateLunches, calculateDetailedLunches, DetailedLunchAssignment } from '../hooks/useScheduleEngine';
 import { OperationalGuideModal } from './OperationalGuideModal';
 import { MobileDayScheduleView } from './MobileDayScheduleView';
@@ -1516,6 +1517,14 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               🛡️
                             </span>
                           )}
+                          {d.dateStr === FIVE_BY_TWO_EFFECTIVE_DATE && (
+                            <span
+                              className="text-[9px] font-black px-1 rounded bg-purple-600 text-white shadow-2xs"
+                              title="Início da jornada 5x2 (42h semanais)"
+                            >
+                              5x2
+                            </span>
+                          )}
                         </div>
                         <span className={`${gridLayoutMode === 'cubes' ? 'text-base font-black' : 'text-sm font-bold'} tabular-nums ${d.isSunday ? 'text-rose-600' : isToday ? 'text-orange-600 dark:text-orange-400 font-black' : 'text-zinc-900 dark:text-zinc-100'}`}>
                           {d.num}
@@ -1803,37 +1812,46 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               const finalSundayStreak = metrics?.finalSundayStreak || 0;
                               const currentSunCount = metrics?.currentSunCount || 0;
 
-                              // 6x1 / 5x2 Cycle Badge (Canto Superior Esquerdo)
+                              // 6x1 / 5x2 Cycle Badge (Canto Superior Esquerdo) — Contagem contínua com regra híbrida a partir de 16/12
                               const isWorkingDay = isWorkingShift(shift) || shift === 'C';
-                              const maxStreak = emp.jornada === '5x2' ? 5 : 6;
+                              const effectiveJornada = getEffectiveJornadaOnDate(emp, fullDate);
+                              const maxStreak = effectiveJornada === '5x2' ? 5 : 6;
                               let sixByOneBadge: { text: string; className: string; title: string; isHoverOnly?: boolean } | null = null;
 
                               if (!isReadOnly && shift !== 'N/A' && isWorkingDay) {
-                                if (streak > maxStreak) {
+                                if (streak > 6) {
                                   sixByOneBadge = {
                                     text: `${streak}º`,
                                     className: 'bg-rose-600 text-white shadow-md ring-2 ring-white dark:ring-zinc-900 animate-pulse',
-                                    title: `VIOLAÇÃO CLT: ${streak}º dia consecutivo sem folga! Limite legal da escala é de ${maxStreak} dias seguidos.`
+                                    title: `VIOLAÇÃO CLT: ${streak}º dia consecutivo sem folga! Limite legal absoluto (Art. 67 CLT / OJ 410) é de 6 dias seguidos.`
+                                  };
+                                } else if (effectiveJornada === '5x2' && streak === 6) {
+                                  sixByOneBadge = {
+                                    text: `6/5`,
+                                    className: 'bg-orange-500 text-white shadow-sm ring-1 ring-white dark:ring-zinc-900',
+                                    title: `6º dia seguido na transição 5x2 (legal na CLT até 6 dias, mas exige folga obrigatória amanhã para não violar o 7º dia!).`
                                   };
                                 } else if (streak === maxStreak) {
                                   sixByOneBadge = {
                                     text: `${streak}/${maxStreak}`,
                                     className: 'bg-amber-500 text-white shadow-xs ring-1 ring-white dark:ring-zinc-900',
-                                    title: `${streak}º dia consecutivo de trabalho: LIMITE DO CICLO ${maxStreak}x1! O próximo dia DEVE ser folga!`,
+                                    title: effectiveJornada === '5x2'
+                                      ? `${streak}º dia consecutivo de trabalho: limite do ciclo 5x2 (ideal folgar amanhã).`
+                                      : `${streak}º dia consecutivo de trabalho: LIMITE DO CICLO 6x1! O próximo dia DEVE ser folga!`,
                                     isHoverOnly: densityMode === 'clean'
                                   };
                                 } else if (streak === maxStreak - 1) {
                                   sixByOneBadge = {
                                     text: `${streak}/${maxStreak}`,
                                     className: 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-2xs',
-                                    title: `${streak}º dia consecutivo de trabalho (${streak}/${maxStreak}): Penúltimo dia antes do descanso semanal obrigatório.`,
+                                    title: `${streak}º dia consecutivo de trabalho (${streak}/${maxStreak}): Penúltimo dia antes do descanso semanal.`,
                                     isHoverOnly: densityMode === 'clean'
                                   };
                                 } else if (streak >= 1) {
                                   sixByOneBadge = {
                                     text: `${streak}/${maxStreak}`,
                                     className: 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 shadow-2xs',
-                                    title: `${streak}º dia consecutivo de trabalho no ciclo ${maxStreak}x1.`,
+                                    title: `${streak}º dia consecutivo de trabalho no ciclo ${effectiveJornada}.`,
                                     isHoverOnly: densityMode === 'clean'
                                   };
                                 }
@@ -1911,7 +1929,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                               }
 
                               const is7thDay = streak === 7;
-                              const hasAlert = streak > maxStreak && isWorkingDay;
+                              const hasAlert = streak > 6 && isWorkingDay;
                               const hasCellViolation = hasAlert || isSundayViolation;
                               const isPast = d.dateStr < todayStr;
                               const isSelectedCol = safeSelectedDayIdx === dayIdx;

@@ -13,7 +13,8 @@ import {
     DEFAULT_JORNADA_SETTINGS,
     normalizeProtectedDaysDetails,
     normalizeProtectedDaysConfig,
-    isEmployeeHiddenInMonth
+    isEmployeeHiddenInMonth,
+    getEffectiveJornadaOnDate,
 } from '../config/schedule-constants';
 import {
     WEEKDAY_NAMES,
@@ -149,10 +150,8 @@ export function applyMonthUpdate(
         ? activeRegular.filter(e => e.id === targetEmpId)
         : activeRegular;
 
-    targetEmps.forEach(emp => {
+    targetEmps.forEach((emp, targetEmpIdx) => {
         const restSundays = sundayAssignments.get(emp.id) ?? new Set<number>();
-        const is5x2 = emp.jornada === '5x2';
-        const maxStreak = is5x2 ? 5 : 6;
         const shifts: ShiftType[] = Array(daysInMonth).fill('T');
         const decisionReasons: Record<number, DecisionReason> = {};
 
@@ -168,6 +167,10 @@ export function applyMonthUpdate(
         for (let dayIdx = 0; dayIdx < daysInMonth; dayIdx++) {
             const date = new Date(year, month, dayIdx + 1);
             const dow = date.getDay();
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIdx + 1).padStart(2, '0')}`;
+            const effectiveJornada = getEffectiveJornadaOnDate(emp, dateStr);
+            const is5x2 = effectiveJornada === '5x2';
+            const maxStreak = is5x2 ? 5 : 6;
             const legal = getLegalOverride(emp, dayIdx);
 
             // 3.1 Se houver condição legal (Férias, Atestado, Aniversário, Não-contratado)
@@ -266,8 +269,8 @@ export function applyMonthUpdate(
                 }
             }
 
-            // 3.6 Para 5x2 sem dia preferido, folga aos sábados
-            if (is5x2 && dow === 6) {
+            // 3.6 Para 5x2 já cadastrado sem dia preferido, folga aos sábados (na virada 16/12 a 2ª folga é distribuída no bloco 3.8)
+            if (emp.jornada === '5x2' && dow === 6) {
                 shifts[dayIdx] = 'F';
                 decisionReasons[dayIdx] = 'PREFERRED_DAY_OFF';
                 currentStreak = 0;
@@ -280,20 +283,58 @@ export function applyMonthUpdate(
             currentStreak++;
         }
 
-        // 3.8 Para jornada 5x2: assegura 2 folgas por semana
-        if (is5x2) {
-            for (let w = 0; w < daysInMonth; w += 7) {
-                const weekIndices: number[] = [];
-                for (let k = 0; k < 7 && w + k < daysInMonth; k++) weekIndices.push(w + k);
-                const weekRests = weekIndices.filter(k => ['F', 'FE', 'AT', 'DO', 'N/A'].includes(shifts[k]) || shifts[k]?.startsWith('FF'));
-                if (weekRests.length < 2) {
-                    const candidate = weekIndices.find(k => {
-                        const d = new Date(year, month, k + 1).getDay();
-                        return shifts[k] === 'T' && d !== 6 && !getLegalOverride(emp, k);
+        // 3.8 Para semanas-calendário (Seg–Dom) em regime 5x2: assegura 2 folgas por semana
+        // Agrupa os dias do mês por semana-calendário (Segunda = início da semana)
+        const calendarWeeks: number[][] = [];
+        let currentWeek: number[] = [];
+        for (let d = 0; d < daysInMonth; d++) {
+            const dow = new Date(year, month, d + 1).getDay();
+            if (dow === 1 && currentWeek.length > 0) {
+                calendarWeeks.push(currentWeek);
+                currentWeek = [];
+            }
+            currentWeek.push(d);
+        }
+        if (currentWeek.length > 0) calendarWeeks.push(currentWeek);
+
+        for (const weekIndices of calendarWeeks) {
+            if (weekIndices.length < 5) continue; // Semana incompleta de borda de mês
+            const has5x2InWeek = weekIndices.some(k => {
+                const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(k + 1).padStart(2, '0')}`;
+                return getEffectiveJornadaOnDate(emp, ds) === '5x2';
+            });
+            if (!has5x2InWeek) continue;
+
+            const weekRests = weekIndices.filter(
+                k => ['F', 'FE', 'AT', 'DO', 'N/A'].includes(shifts[k]) || shifts[k]?.startsWith('FF')
+            );
+
+            // Completa até 2 folgas na semana distribuindo de forma escalonada entre dias úteis (Seg..Sáb)
+            let neededRests = 2 - weekRests.length;
+            if (neededRests > 0) {
+                const candidateDows = [1, 2, 3, 4, 5, 6]; // Seg..Sáb
+                const rotatedStart = targetEmpIdx % candidateDows.length;
+                const orderedDows = [
+                    ...candidateDows.slice(rotatedStart),
+                    ...candidateDows.slice(0, rotatedStart),
+                ];
+
+                for (const targetDow of orderedDows) {
+                    if (neededRests <= 0) break;
+                    const candidateIdx = weekIndices.find(k => {
+                        const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(k + 1).padStart(2, '0')}`;
+                        const dow = new Date(year, month, k + 1).getDay();
+                        return (
+                            dow === targetDow &&
+                            getEffectiveJornadaOnDate(emp, ds) === '5x2' &&
+                            shifts[k] === 'T' &&
+                            !getLegalOverride(emp, k)
+                        );
                     });
-                    if (candidate !== undefined) {
-                        shifts[candidate] = 'F';
-                        decisionReasons[candidate] = 'PREFERRED_DAY_OFF';
+                    if (candidateIdx !== undefined) {
+                        shifts[candidateIdx] = 'F';
+                        decisionReasons[candidateIdx] = 'PREFERRED_DAY_OFF';
+                        neededRests--;
                     }
                 }
             }

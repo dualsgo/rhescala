@@ -2,6 +2,26 @@ import { Employee, Holiday, JornadaSettings, ProtectedDayDetail } from '../../..
 
 export const APPRENTICE_WORK_PERIOD = '10h às 16h15'; // Jornada fixa do Jovem Aprendiz (pausa 15 min)
 
+/**
+ * Data oficial de transição do regime 6x1 (44h) para 5x2 (42h).
+ * Até 15/12/2026 vigora 6x1; a partir de 16/12/2026 vigora 5x2 para toda a equipe regular.
+ */
+export const FIVE_BY_TWO_EFFECTIVE_DATE = '2026-12-16';
+
+/**
+ * Retorna a jornada efetiva ('6x1' ou '5x2') de um colaborador em uma data YYYY-MM-DD,
+ * considerando a data de corte oficial da transição para 5x2.
+ */
+export function getEffectiveJornadaOnDate(
+  emp: Pick<Employee, 'jornada' | 'isYoungApprentice'> | undefined | null,
+  dateStr: string,
+  effectiveDate: string = FIVE_BY_TWO_EFFECTIVE_DATE
+): '6x1' | '5x2' {
+  if (emp?.isYoungApprentice) return '5x2';
+  if (dateStr >= effectiveDate) return '5x2';
+  return emp?.jornada === '5x2' ? '5x2' : '6x1';
+}
+
 export const SHIFT_HOURS = {
   WEEKDAY: ['10h às 18h20', '12h às 20h20', '13h40 às 22h'],
   SUNDAY:  ['12h às 20h', '13h às 21h'],

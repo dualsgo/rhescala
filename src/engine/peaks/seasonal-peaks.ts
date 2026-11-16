@@ -1,4 +1,4 @@
-import { DEFAULT_JORNADA_SETTINGS, isEmployeeHiddenInMonth } from '../config/schedule-constants';
+import { DEFAULT_JORNADA_SETTINGS, isEmployeeHiddenInMonth, getEffectiveJornadaOnDate } from '../config/schedule-constants';
 import { getPrevMonthWorkStreak } from '../clt/clt-rules';
 import { isProtectedShift } from '../clt/legal-overrides';
 import { Employee, Holiday, JornadaSettings, ShiftType } from '../../../types';
@@ -187,10 +187,11 @@ export function optimizeDecemberPeak(
 
     activeRegular.forEach((emp, empIdx) => {
         const shifts = [...(emp.shifts[monthKey] || Array(daysInMonth).fill('T'))];
-        const is5x2 = emp.jornada === '5x2';
-        const maxStreak = is5x2 ? 5 : 6;
+        const prevStreak = prevStreaks.get(emp.id) || 0;
 
         const isProtected = (idx: number) => isProtectedShift(shifts[idx]);
+        const isRestCode = (s: ShiftType | undefined) =>
+            ['F', 'FE', 'AT', 'DO', 'N/A'].includes(s as string) || Boolean(s?.startsWith('FF'));
 
         // 1. Limpa folgas comuns 'F' nos 5 dias de pico do Natal (20 a 24)
         criticalIndices.forEach(idx => {
@@ -199,30 +200,33 @@ export function optimizeDecemberPeak(
             }
         });
 
-        // 2. Escalonamento cirúrgico de folgas Pré-Pico (dias 18 e 19) e Pós-Pico (dia 25)
+        // 2. Escalonamento cirúrgico de folgas Pré-Pico (dias 18 e 19) e Pós-Pico (25 + 26/27 no 5x2)
         const isGroupA = empIdx % 2 === 0;
 
         if (isGroupA) {
-            // Grupo A: Folga dia 18, trabalha 19..24 (6 dias), folga dia 25 (Natal)
+            // Grupo A: Folga dia 18, trabalha 19..24 (6 dias — legal CLT), folga dia 25 (Natal) e 27 (2ª folga 5x2)
             if (!isProtected(17)) shifts[17] = 'F'; // Dia 18
             if (!isProtected(18)) shifts[18] = 'T'; // Dia 19
-            if (!isProtected(24)) shifts[24] = 'F'; // Dia 25
+            if (!isProtected(24)) shifts[24] = 'F'; // Dia 25 (Natal)
+            if (!isProtected(25)) shifts[25] = 'T'; // Dia 26
+            if (!isProtected(26)) shifts[26] = 'F'; // Dia 27 (2ª folga da semana 5x2)
         } else {
-            // Grupo B: Folga dia 19, trabalha 20..24 (5 dias), folga dia 25 (Natal)
+            // Grupo B: Folga dia 19, trabalha 20..24 (5 dias), folga dia 25 (Natal) e 26 (2ª folga 5x2)
             if (!isProtected(17)) shifts[17] = 'T'; // Dia 18
             if (!isProtected(18)) shifts[18] = 'F'; // Dia 19
-            if (!isProtected(24)) shifts[24] = 'F'; // Dia 25
+            if (!isProtected(24)) shifts[24] = 'F'; // Dia 25 (Natal)
+            if (!isProtected(25)) shifts[25] = 'F'; // Dia 26 (2ª folga da semana 5x2)
+            if (!isProtected(26)) shifts[26] = 'T'; // Dia 27
         }
 
-        // 3. Validação do Período Anterior (Dias 1 a 17) para prevenir estouro 6x1 antes do Dia 18/19
-        const prevStreak = prevStreaks.get(emp.id) || 0;
+        // 3. Validação do Período Anterior (Dias 1 a 17) garantindo teto CLT (6x1) antes do Dia 18/19
         let streak = prevStreak;
         for (let i = 0; i < 17; i++) {
-            if (['F', 'FE', 'AT', 'DO', 'N/A'].includes(shifts[i]) || shifts[i]?.startsWith('FF')) {
+            if (isRestCode(shifts[i])) {
                 streak = 0;
             } else {
                 streak++;
-                if (streak > maxStreak) {
+                if (streak > 6) {
                     if (!isProtected(i)) {
                         shifts[i] = 'F';
                         streak = 0;
@@ -231,26 +235,31 @@ export function optimizeDecemberPeak(
             }
         }
 
-        // 4. Suporte a jornada 5x2
-        if (is5x2) {
-            const wRests = [10, 11, 12, 13, 14, 15, 16].filter(i => ['F', 'FE', 'AT', 'DO'].includes(shifts[i]));
-            if (wRests.length < 2) {
-                const addIdx = isGroupA ? 12 : 13;
-                if (!isProtected(addIdx) && shifts[addIdx] === 'T') {
-                    shifts[addIdx] = 'F';
-                }
+        // 4. Semana de transição 14/12 a 20/12 (indices 13..19): garante 2 folgas na semana (5x2 a partir de 16/12)
+        // sem tirar presença dos dias de pico (20/12 = idx 19)
+        const transitionWeek = [13, 14, 15, 16, 17, 18, 19]; // 14..20/12
+        const transitionRests = transitionWeek.filter(i => isRestCode(shifts[i]));
+        if (transitionRests.length < 2) {
+            const firstHalfCandidate = isGroupA ? 14 : 15; // 15/12 ou 16/12
+            if (!isProtected(firstHalfCandidate) && shifts[firstHalfCandidate] === 'T') {
+                shifts[firstHalfCandidate] = 'F';
             }
         }
 
-        // 5. Varredura completa do mês garantindo 0 violações 6x1 / 5x2
+        // 5. Varredura completa do mês garantindo 0 violações CLT (nunca passa de 6 dias seguidos / trava 7º dia)
         streak = prevStreak;
         for (let i = 0; i < daysInMonth; i++) {
             const s = shifts[i];
-            if (['F', 'FE', 'AT', 'DO', 'N/A'].includes(s) || s?.startsWith('FF')) {
+            if (isRestCode(s)) {
                 streak = 0;
             } else {
                 streak++;
-                if (streak > maxStreak) {
+                const dateStr = `${yearStr}-${monthStr}-${String(i + 1).padStart(2, '0')}`;
+                const hardCap = 6; // Art. 67 CLT / OJ 410 (inclusive na transição 5x2)
+                const is5x2Date = getEffectiveJornadaOnDate(emp, dateStr) === '5x2';
+                const targetCap = is5x2Date && i >= 25 ? 5 : hardCap;
+
+                if (streak > targetCap) {
                     if (!criticalIndices.includes(i)) {
                         if (!isProtected(i)) {
                             shifts[i] = 'F';
@@ -270,10 +279,10 @@ export function optimizeDecemberPeak(
             }
         }
 
-        // 6. Otimização de cobertura fora do pico (remove folgas 'F' duplicadas consecutivas desnecessárias)
-        for (let i = 1; i < daysInMonth; i++) {
-            if (!is5x2 && shifts[i] === 'F' && shifts[i - 1] === 'F' && i !== 17 && i !== 18 && i !== 24 && i !== 25) {
-                const nextRest = shifts.slice(i + 1).findIndex(x => ['F', 'FE', 'AT', 'DO', 'N/A'].includes(x));
+        // 6. Otimização de cobertura fora do pico (remove folgas 'F' duplicadas consecutivas em 6x1 até dia 15/12)
+        for (let i = 1; i < 15; i++) {
+            if (emp.jornada !== '5x2' && shifts[i] === 'F' && shifts[i - 1] === 'F') {
+                const nextRest = shifts.slice(i + 1).findIndex(x => isRestCode(x));
                 if (nextRest !== -1 && nextRest <= 5) {
                     shifts[i] = 'T';
                 }
