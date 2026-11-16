@@ -12,10 +12,8 @@ import {
   isEmployeeActiveInMonth 
 } from '../constants';
 import { isWorkingShift, getShiftClassification } from '../src/engine/shifts/shift-predicates';
-import { 
-  calculateLunches, 
-  resolveTacticalDay 
-} from '../hooks/useScheduleEngine';
+import { resolveTacticalDay } from '../hooks/useScheduleEngine';
+import { modulateDailyLunches } from '../src/engine/tactical/modulator-lunches';
 
 interface DailyScheduleModulatorModalProps {
   isOpen: boolean;
@@ -39,6 +37,8 @@ interface ModulatorItem {
   lunch: string;
   pos: string;
   posEmoji: string;
+  cargo?: string;
+  isYoungApprentice?: boolean;
   included: boolean;
 }
 
@@ -50,7 +50,7 @@ interface StatusItem {
 }
 
 const COMMON_LUNCH_TIMES = [
-  '11h30', '12h', '12h30', '13h', '13h30', '14h', '14h30', 
+  '11h30', '12h', '12h30', '12h45', '13h', '13h30', '14h', '14h30', 
   '15h', '15h30', '16h', '16h30', '17h', '17h30', '18h'
 ];
 
@@ -172,21 +172,22 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
     const allMembersFlat: any[] = [];
     sortedHours.forEach(hour => {
       initialGroups[hour].forEach((m: any) => {
-        allMembersFlat.push({ ...m, hour });
+        const shiftName = getShiftClassification(hour, isSunday, jornadaSettings);
+        allMembersFlat.push({
+          ...m,
+          hour,
+          shiftName,
+          pos: m.pos,
+          cargo: m.cargo,
+          isYoungApprentice: m.isYoungApprentice,
+        });
       });
     });
 
-    const calculatedLunches = calculateLunches(
-      allMembersFlat,
+    const { lunchesById } = modulateDailyLunches(allMembersFlat, {
       isHoliday,
       isSunday,
-      undefined,
-      jornadaSettings
-    ) || [];
-
-    const memberLunchMap = new Map<string, string>();
-    allMembersFlat.forEach((m, idx) => {
-      memberLunchMap.set(m.id, calculatedLunches[idx] || '13h');
+      jornadaSettings,
     });
 
     const initialItems: ModulatorItem[] = [];
@@ -196,7 +197,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
       const shiftName = getShiftClassification(hour, isSunday, jornadaSettings);
 
       members.forEach((m) => {
-        const lunchTime = memberLunchMap.get(m.id) || '13h';
+        const lunchTime = lunchesById[m.id] || '14h';
         initialItems.push({
           id: m.id,
           name: m.name,
@@ -206,6 +207,8 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
           lunch: lunchTime,
           pos: m.pos,
           posEmoji: m.posEmoji,
+          cargo: m.cargo,
+          isYoungApprentice: m.isYoungApprentice,
           included: true
         });
       });
@@ -282,6 +285,21 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
     }
   }, [isOpen, dayIdx, computeInitialState]);
 
+  // Recalcular apenas os horários de almoço com base nos colaboradores incluídos e funções atuais
+  const handleRecalculateLunches = useCallback(() => {
+    const { isHoliday, isSunday } = dateInfo;
+    const included = items.filter(it => it.included);
+    if (included.length === 0) return;
+
+    const { lunchesById } = modulateDailyLunches(included, {
+      isHoliday,
+      isSunday,
+      jornadaSettings,
+    });
+
+    setItems(prev => prev.map(it => (it.included && lunchesById[it.id] ? { ...it, lunch: lunchesById[it.id] } : it)));
+  }, [dateInfo, items, jornadaSettings]);
+
   // Distribuição Automática de Funções e Horários de Almoço
   const handleAutoDistribute = useCallback(async () => {
     const { isHoliday, isSunday } = dateInfo;
@@ -311,35 +329,28 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
 
     const resolvedPositions = resolveTacticalDay(empsForResolve, monthKey, dayIdx, isHoliday, isSunday, jornadaSettings);
 
-    // Preparar lista plana com as horas e novas funções para o calculateLunches
+    // Preparar lista plana com as horas e novas funções para o modulateDailyLunches
     const updatedMembersFlat = items.filter(it => it.included).map(it => {
       const newPos = resolvedPositions[it.id] || it.pos || 'Vendas';
       return {
         ...it,
         pos: newPos,
-        cargo: newPos,
+        cargo: it.cargo || newPos,
         role: newPos,
       };
     });
 
-    const calculatedLunches = calculateLunches(
-      updatedMembersFlat,
+    const { lunchesById } = modulateDailyLunches(updatedMembersFlat, {
       isHoliday,
       isSunday,
-      undefined,
-      jornadaSettings
-    ) || [];
-
-    const memberLunchMap = new Map<string, string>();
-    updatedMembersFlat.forEach((m, idx) => {
-      memberLunchMap.set(m.id, calculatedLunches[idx] || m.lunch || '13h');
+      jornadaSettings,
     });
 
     const newItems = items.map(it => {
       if (!it.included) return it;
       const newPos = resolvedPositions[it.id] || it.pos || 'Vendas';
       const newEmoji = getTacticalEmoji(newPos);
-      const newLunch = memberLunchMap.get(it.id) || it.lunch;
+      const newLunch = lunchesById[it.id] || it.lunch;
       return {
         ...it,
         pos: newPos,
@@ -361,9 +372,57 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
 
     await showDialog({
       title: 'Funções e Almoço Distribuídos!',
-      message: 'As funções operacionais (Caixa, Pacote, Vendas, Apoio, Fiscal e Estoque) e os intervalos de almoço foram balanceados e escalonados automaticamente para a equipe presente.'
+      message: 'As funções foram balanceadas e os almoços escalonados mantendo no mínimo 3 pessoas até a troca de turno (14h) e máximo 2 por hora no fechamento.'
     });
   }, [dateInfo, employees, currentMY, items, monthKey, dayIdx, jornadaSettings, onSaveDayPositions, showDialog]);
+
+  // Painel ao vivo de cobertura e contagem por faixa de almoço
+  const coverageStats = useMemo(() => {
+    const included = items.filter(it => it.included);
+    const isApprentice = (it: ModulatorItem) =>
+      Boolean(it.isYoungApprentice || (it.cargo || '').toLowerCase().includes('aprendiz'));
+    const isEstoquista = (it: ModulatorItem) =>
+      it.pos === 'Estoque' || (it.cargo || '').toLowerCase().includes('estoq');
+
+    const aberturaSalon = included.filter(
+      it => it.shiftName === 'Abertura' && !isApprentice(it) && !isEstoquista(it)
+    );
+    const fechamentoSalon = included.filter(
+      it => (it.shiftName === 'Fechamento' || it.shiftName === 'Intermediário') && !isApprentice(it) && !isEstoquista(it)
+    );
+
+    const ab12 = aberturaSalon.filter(it => it.lunch === '12h').length;
+    const ab13 = aberturaSalon.filter(it => it.lunch === '13h').length;
+    const ab14 = aberturaSalon.filter(it => it.lunch === '14h').length;
+
+    // Quantos ficam efetivamente no salão das 12h às 13h e das 13h às 14h
+    const salonAt12 = aberturaSalon.length - ab12;
+    const salonAt13 = aberturaSalon.length - ab13;
+
+    const fech15 = fechamentoSalon.filter(it => it.lunch === '15h').length;
+    const fech16 = fechamentoSalon.filter(it => it.lunch === '16h').length;
+    const fech17 = fechamentoSalon.filter(it => it.lunch === '17h').length;
+
+    const hasAberturaFloorAlert = aberturaSalon.length >= 3 && (salonAt12 < 3 || salonAt13 < 3);
+    const hasFechamentoOverflow = fech15 > 2 || fech16 > 2 || fech17 > 2;
+
+    return {
+      aberturaSalonCount: aberturaSalon.length,
+      ab12,
+      ab13,
+      ab14,
+      salonAt12,
+      salonAt13,
+      fechamentoCount: fechamentoSalon.length,
+      fech15,
+      fech16,
+      fech17,
+      apprenticeCount: included.filter(isApprentice).length,
+      estoquistaCount: included.filter(isEstoquista).length,
+      hasAberturaFloorAlert,
+      hasFechamentoOverflow,
+    };
+  }, [items]);
 
   // Real-Time Generated Text Builder
   const generatedText = useMemo(() => {
@@ -502,7 +561,15 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-zinc-950/70 backdrop-blur-md animate-fade-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modulator-modal-title"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose();
+      }}
+      className="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-zinc-950/70 backdrop-blur-md animate-fade-in"
+    >
       <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-6xl w-full h-[94vh] max-h-[900px] shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col">
         
         {/* Header Bar */}
@@ -513,7 +580,7 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-zinc-100 tracking-tight uppercase">
+                <h3 id="modulator-modal-title" className="text-base sm:text-lg font-black text-slate-900 dark:text-zinc-100 tracking-tight uppercase">
                   Modulador da Escala Diária
                 </h3>
                 <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
@@ -573,40 +640,87 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
           }`}>
             
             {/* Quick Action Helper Banner */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-orange-50/80 to-amber-50/60 dark:from-orange-950/20 dark:to-amber-950/20 border border-orange-200/60 dark:border-orange-900/40 text-orange-900 dark:text-orange-200 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0 shadow-xs">
-                  <Icon name="auto_awesome" className="text-base" />
+            <div className="flex flex-col gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-orange-50/80 to-amber-50/60 dark:from-orange-950/20 dark:to-amber-950/20 border border-orange-200/60 dark:border-orange-900/40 text-orange-900 dark:text-orange-200 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Icon name="auto_awesome" className="text-base" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-black uppercase tracking-wider block">
+                      Modulação Inteligente (Troca 14h • Máx. 2/h)
+                    </span>
+                    <span className="text-[11px] font-normal text-zinc-600 dark:text-zinc-400 block">
+                      Aprendiz fixo 12h45 • Estoquista flexível • Mín. 3 no salão até 14h • Fechamento máx. 2/h.
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-xs font-black uppercase tracking-wider block">
-                    Distribuição Inteligente de Turno
-                  </span>
-                  <span className="text-[11px] font-normal text-zinc-500 dark:text-zinc-400 block">
-                    Aloca funções balanceadas e escala intervalos de almoço com trava CLT.
-                  </span>
+
+                <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleRecalculateLunches}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[11px] font-black uppercase tracking-wider shadow-sm transition-all cursor-pointer"
+                    title="Recalcular apenas os horários de almoço pela regra de 14h e máximo 2/h"
+                  >
+                    <Icon name="restaurant" className="text-sm" />
+                    <span>Recalcular Almoços</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleAutoDistribute}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-95 text-white text-[11px] font-black uppercase tracking-wider shadow-sm transition-all cursor-pointer"
+                    title="Distribuir postos de trabalho e horários de almoço automaticamente"
+                  >
+                    <Icon name="magic_button" className="text-sm" />
+                    <span>Funções & Almoço</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={computeInitialState}
+                    className="px-2.5 py-1.5 rounded-xl bg-zinc-200/70 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[11px] font-black uppercase tracking-wider transition-colors cursor-pointer"
+                    title="Redefinir todas as alterações para a sugestão calculada automaticamente"
+                  >
+                    Restaurar
+                  </button>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={handleAutoDistribute}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-95 text-white text-[11px] font-black uppercase tracking-wider shadow-sm transition-all cursor-pointer"
-                  title="Distribuir postos de trabalho e horários de almoço automaticamente com inteligência de cobertura"
-                >
-                  <Icon name="magic_button" className="text-sm" />
-                  <span>Distribuir Funções & Almoço</span>
-                </button>
+              {/* Painel ao vivo de cobertura */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-orange-200/60 dark:border-orange-900/40 text-[11px]">
+                <div className={`px-2.5 py-2 rounded-xl border ${
+                  coverageStats.hasAberturaFloorAlert
+                    ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200'
+                    : 'bg-white/80 dark:bg-zinc-900/70 border-orange-200/60 dark:border-zinc-800 text-slate-700 dark:text-zinc-300'
+                }`}>
+                  <div className="flex items-center justify-between font-black uppercase">
+                    <span>Abertura Salão ({coverageStats.aberturaSalonCount})</span>
+                    <span className={coverageStats.hasAberturaFloorAlert ? 'text-rose-600' : 'text-emerald-600 dark:text-emerald-400'}>
+                      {coverageStats.hasAberturaFloorAlert ? '⚠️ < 3 até 14h' : '✓ Piso 3 ok'}
+                    </span>
+                  </div>
+                  <div className="text-[10.5px] font-bold text-slate-500 dark:text-zinc-400 mt-0.5">
+                    12h: <strong>{coverageStats.ab12}</strong> • 13h: <strong>{coverageStats.ab13}</strong> • 14h (Troca): <strong>{coverageStats.ab14}</strong>
+                  </div>
+                </div>
 
-                <button
-                  type="button"
-                  onClick={computeInitialState}
-                  className="px-2.5 py-1.5 rounded-xl bg-zinc-200/70 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[11px] font-black uppercase tracking-wider transition-colors cursor-pointer"
-                  title="Redefinir todas as alterações para a sugestão calculada automaticamente"
-                >
-                  Restaurar
-                </button>
+                <div className={`px-2.5 py-2 rounded-xl border ${
+                  coverageStats.hasFechamentoOverflow
+                    ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200'
+                    : 'bg-white/80 dark:bg-zinc-900/70 border-orange-200/60 dark:border-zinc-800 text-slate-700 dark:text-zinc-300'
+                }`}>
+                  <div className="flex items-center justify-between font-black uppercase">
+                    <span>Fechamento/Tarde ({coverageStats.fechamentoCount})</span>
+                    <span className={coverageStats.hasFechamentoOverflow ? 'text-rose-600' : 'text-emerald-600 dark:text-emerald-400'}>
+                      {coverageStats.hasFechamentoOverflow ? '⚠️ > 2 por hora' : '✓ Máx. 2/h'}
+                    </span>
+                  </div>
+                  <div className="text-[10.5px] font-bold text-slate-500 dark:text-zinc-400 mt-0.5">
+                    15h: <strong>{coverageStats.fech15}/2</strong> • 16h: <strong>{coverageStats.fech16}/2</strong> • 17h: <strong>{coverageStats.fech17}/2</strong>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -658,13 +772,23 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
                           className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                         />
                         <div>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-xs font-black text-slate-900 dark:text-zinc-100">
                               {item.firstName}
                             </span>
                             <span className="text-[11px] text-slate-400 font-bold">
                               ({item.shiftName})
                             </span>
+                            {(item.isYoungApprentice || (item.cargo || '').toLowerCase().includes('aprendiz')) && (
+                              <span className="text-[10px] font-black uppercase px-1.5 py-0.2 rounded bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300">
+                                Aprendiz • Fixo 12h45
+                              </span>
+                            )}
+                            {(item.pos === 'Estoque' || (item.cargo || '').toLowerCase().includes('estoq')) && (
+                              <span className="text-[10px] font-black uppercase px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300">
+                                Estoquista • Flexível
+                              </span>
+                            )}
                           </div>
                           <span className="text-[11px] text-slate-400 block">
                             {item.hour}
