@@ -583,7 +583,22 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
       });
     }
 
-    return list.sort((a, b) => (a.workPeriod || '').localeCompare(b.workPeriod || '') || a.name.localeCompare(b.name));
+    const parseHourStartMinutes = (hourStr: string): number => {
+      const m = (hourStr || '').match(/^(\d{1,2})[h:](\d{2})?/);
+      if (!m) return 9999;
+      return parseInt(m[1], 10) * 60 + parseInt(m[2] || '0', 10);
+    };
+
+    const isSunSelected = Boolean(days[safeSelectedDayIdx]?.isSunday);
+    const isHolSelected = Boolean(days[safeSelectedDayIdx]?.isHoliday);
+
+    return list.sort((a, b) => {
+      const hourA = (a.dailyHours[monthKey] || [])[safeSelectedDayIdx] || a.workPeriod || getDefaultHourForDay(a, isHolSelected, isSunSelected);
+      const hourB = (b.dailyHours[monthKey] || [])[safeSelectedDayIdx] || b.workPeriod || getDefaultHourForDay(b, isHolSelected, isSunSelected);
+      const diff = parseHourStartMinutes(hourA) - parseHourStartMinutes(hourB);
+      if (diff !== 0) return diff;
+      return a.name.localeCompare(b.name);
+    });
   }, [employees, currentMY.year, currentMY.month, contractFilter, onlyWorkingToday, selectedGroup, monthKey, safeSelectedDayIdx, selectedDayDateStr, days, jornadaSettings]);
 
   return (

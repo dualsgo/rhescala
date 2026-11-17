@@ -30,8 +30,129 @@ import {
 } from '../clt/sunday-rotation';
 import { getLegalOverrideForDay } from '../clt/legal-overrides';
 import { optimizeProtectedDays } from '../peaks/protected-days';
-import { getShiftClassification } from '../shifts/shift-predicates';
+import { isWorkingShift, getShiftClassification } from '../shifts/shift-predicates';
 import { assignDailyRolesForMonth, isEmployeeCaixaEligible } from '../tactical/tactical-positions';
+
+/**
+ * Distribui `total` pessoas entre faixas segundo pesos percentuais (método dos maiores restos),
+ * garantindo que a soma final seja exatamente `total`.
+ * Exemplo: total=7 com [0.30, 0.20, 0.10, 0.40] -> [2, 1, 1, 3].
+ * Exemplo: total=6 com [0.35, 0.65] -> [2, 4].
+ */
+export function allocateProportionalSlots(total: number, weights: number[]): number[] {
+    if (total <= 0 || weights.length === 0) return weights.map(() => 0);
+    const weightSum = weights.reduce((s, w) => s + w, 0) || 1;
+    const exact = weights.map(w => (total * w) / weightSum);
+    const floors = exact.map(v => Math.floor(v));
+    let remaining = total - floors.reduce((s, v) => s + v, 0);
+
+    const remainders = exact
+        .map((v, idx) => ({ idx, rem: v - floors[idx], weight: weights[idx] }))
+        .sort((a, b) => b.rem - a.rem || b.weight - a.weight || a.idx - b.idx);
+
+    for (let i = 0; i < remaining; i++) {
+        floors[remainders[i % remainders.length].idx]++;
+    }
+    return floors;
+}
+
+function deterministicHash(seed: string): number {
+    let h = 2166136261;
+    for (let i = 0; i < seed.length; i++) {
+        h ^= seed.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+}
+
+/**
+ * Exclusivo para Domingos e Feriados:
+ * Distribui os horários de forma rotativa/aleatória (desvinculada do turno fixo da semana),
+ * seguindo proporção com base no total de colaboradores disponíveis no dia:
+ * - Domingo: ~35% às 12h e ~65% às 13h–21h.
+ * - Feriado: 4 turnos de 6h (12h, 13h, 14h, 15h) na proporção 30% / 20% / 10% / 40% (ex: 7 -> 2 / 1 / 1 / 3).
+ */
+export function assignSundayAndHolidayHours(
+    employees: Employee[],
+    year: number,
+    month: number,
+    shiftsByEmp: Record<string, ShiftType[]>,
+    hoursByEmp: Record<string, string[]>,
+    holidaySet: Set<string>,
+    storeClosedDates: Map<string, string> | Set<string>,
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS
+): void {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const sundaySlots = settings.shiftHours.sunday.length >= 2
+        ? [settings.shiftHours.sunday[0], settings.shiftHours.sunday[settings.shiftHours.sunday.length - 1]]
+        : [settings.shiftHours.sunday[0] || '12h às 20h', '13h às 21h'];
+    const holidaySlots = settings.shiftHours.holiday.length >= 4
+        ? settings.shiftHours.holiday.slice(0, 4)
+        : ['12h às 18h', '13h às 19h', '14h às 20h', '15h às 21h'];
+
+    for (let d = 0; d < daysInMonth; d++) {
+        const date = new Date(year, month, d + 1);
+        const dow = date.getDay();
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`;
+        if (storeClosedDates.has(dateStr)) continue;
+
+        const isSunday = dow === 0;
+        const isHoliday = holidaySet.has(dateStr) && !isSunday;
+        if (!isSunday && !isHoliday) continue;
+
+        const workingRegular = employees.filter(emp => {
+            if (emp.isYoungApprentice || emp.status !== 'active') return false;
+            const s = shiftsByEmp[emp.id]?.[d];
+            return isWorkingShift(s);
+        });
+        if (workingRegular.length === 0) continue;
+
+        // Embaralhamento determinístico por data + id para turnos aleatórios/rotativos justos
+        const shuffled = [...workingRegular].sort(
+            (a, b) => deterministicHash(`${dateStr}:${a.id}`) - deterministicHash(`${dateStr}:${b.id}`)
+        );
+
+        // Garante que se houver >= 2 Caixas, não fiquem todos no mesmo slot extremo
+        const caixas = shuffled.filter(e => isEmployeeCaixaEligible(e));
+        const nonCaixas = shuffled.filter(e => !isEmployeeCaixaEligible(e));
+
+        const slots = isSunday ? sundaySlots : holidaySlots;
+        const weights = isSunday ? [0.35, 0.65] : [0.30, 0.20, 0.10, 0.40];
+        const counts = allocateProportionalSlots(shuffled.length, weights);
+
+        // Monta lista ordenada de slots a preencher (ex: ['12h às 20h', '12h às 20h', '13h às 21h', ...])
+        const slotQueue: string[] = [];
+        counts.forEach((cnt, idx) => {
+            for (let k = 0; k < cnt; k++) slotQueue.push(slots[idx]);
+        });
+
+        // Distribui Caixas alternando entre início (Abertura) e fim (Fechamento) da fila de slots
+        const assignedMap = new Map<string, string>();
+        const remainingSlotIndices = slotQueue.map((_, idx) => idx);
+
+        caixas.forEach((cx, idx) => {
+            if (remainingSlotIndices.length === 0) return;
+            const pickFromStart = idx % 2 === 0;
+            const posInRemaining = pickFromStart ? 0 : remainingSlotIndices.length - 1;
+            const slotIdx = remainingSlotIndices.splice(posInRemaining, 1)[0];
+            assignedMap.set(cx.id, slotQueue[slotIdx]);
+        });
+
+        nonCaixas.forEach((emp, idx) => {
+            const slotIdx = remainingSlotIndices[idx];
+            if (slotIdx !== undefined) {
+                assignedMap.set(emp.id, slotQueue[slotIdx]);
+            }
+        });
+
+        for (const emp of workingRegular) {
+            const chosenHour = assignedMap.get(emp.id);
+            if (chosenHour && hoursByEmp[emp.id]) {
+                hoursByEmp[emp.id][d] = chosenHour;
+            }
+        }
+    }
+}
 
 export interface PendingHolidayCreditInput {
     id: string;
@@ -856,6 +977,28 @@ export function applyMonthUpdate(
         });
     }
 
+    // 3.9D Distribuição proporcional e rotativa/aleatória exclusiva de Domingos (35%/65%) e Feriados (30%/20%/10%/40%)
+    if (mode === 'suggested_retro' && !targetEmpId) {
+        const shiftsByEmp: Record<string, ShiftType[]> = {};
+        const hoursByEmp: Record<string, string[]> = {};
+        for (const emp of employees) {
+            if (result[emp.id]) {
+                shiftsByEmp[emp.id] = result[emp.id].shifts;
+                hoursByEmp[emp.id] = result[emp.id].hours;
+            }
+        }
+        assignSundayAndHolidayHours(
+            employees,
+            year,
+            month,
+            shiftsByEmp,
+            hoursByEmp,
+            holidaySet,
+            storeClosedDates,
+            settings
+        );
+    }
+
     // 3.10 Computa as funções atribuídas diariamente por turno e dupla preferência
     const simulatedEmployees: Employee[] = employees
         .filter(emp => emp.status === 'active' && !isEmployeeHiddenInMonth(emp, monthKey))
@@ -995,6 +1138,23 @@ export function applyHoursOnly(
         }
         result[emp.id] = hours;
     });
+
+    if (!targetEmpId) {
+        const shiftsByEmp: Record<string, ShiftType[]> = {};
+        for (const emp of targetEmps) {
+            shiftsByEmp[emp.id] = emp.shifts?.[monthKey] || Array(daysInMonth).fill('T');
+        }
+        assignSundayAndHolidayHours(
+            targetEmps,
+            year,
+            month,
+            shiftsByEmp,
+            result,
+            holidaySet,
+            storeClosedDates,
+            settings
+        );
+    }
 
     return result;
 }

@@ -436,7 +436,13 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
     }
     text += `\n`;
 
-    // Group items by hour
+    // Group items by hour, ordered chronologically; members inside each shift ordered by role (função)
+    const parseHourMinutes = (h: string): number => {
+      const m = (h || '').match(/^(\d{1,2})[h:](\d{2})?/);
+      if (!m) return 9999;
+      return parseInt(m[1], 10) * 60 + parseInt(m[2] || '0', 10);
+    };
+
     const includedItems = items.filter(it => it.included);
     const groups: Record<string, ModulatorItem[]> = {};
 
@@ -445,8 +451,15 @@ export const DailyScheduleModulatorModal: React.FC<DailyScheduleModulatorModalPr
       groups[item.hour].push(item);
     });
 
-    Object.keys(groups).forEach(hour => {
-      const members = groups[hour];
+    const sortedGroupHours = Object.keys(groups).sort((a, b) => parseHourMinutes(a) - parseHourMinutes(b));
+
+    sortedGroupHours.forEach(hour => {
+      const members = [...groups[hour]].sort((a, b) => {
+        const rA = EMPLOYEE_ROLES.indexOf(normalizeEmployeeRole(a.pos));
+        const rB = EMPLOYEE_ROLES.indexOf(normalizeEmployeeRole(b.pos));
+        if (rA !== rB) return (rA === -1 ? 99 : rA) - (rB === -1 ? 99 : rB);
+        return a.firstName.localeCompare(b.firstName);
+      });
       const shiftName = members[0]?.shiftName || 'Turno';
 
       text += `⏰ *${shiftName} ${hour}*\n`;
