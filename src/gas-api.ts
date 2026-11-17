@@ -160,15 +160,15 @@ export const apiStore = {
         return await response.json();
     },
 
-    async updatePassword(role: 'admin' | 'viewer', newPassword: string): Promise<{ success: boolean, error?: string }> {
+    async updatePassword(role: 'admin' | 'viewer', newPassword: string, currentAdminPassword?: string): Promise<{ success: boolean, error?: string }> {
         const url = getConfiguredApiUrl();
         if (!url) return { success: false, error: 'URL da Planilha não configurada.' };
 
         try {
-            const response = await fetch(`${url}?action=update_password`, {
+            const response = await fetchWithTimeout(`${url}?action=update_password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ role, newPassword }),
+                body: JSON.stringify({ role, newPassword, currentAdminPassword }),
                 redirect: 'follow',
             });
             if (!response.ok) throw new Error('Erro ao atualizar senha.');

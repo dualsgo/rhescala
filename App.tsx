@@ -35,6 +35,7 @@ import { CreateMonthModal } from './components/CreateMonthModal';
 import { DailyScheduleModulatorModal } from './components/DailyScheduleModulatorModal';
 import { RefreshMonthModal } from './components/RefreshMonthModal';
 import { analyzeMonthRefresh, applyMonthRefresh } from './src/engine/orchestration/refresh-month';
+import { verifyEmployeePassword, hashEmployeePassword, isHashedPassword } from './src/utils/passwordHash';
 import { AuditJustificationModal, AuditImpactPreview } from './components/AuditJustificationModal';
 import { MobileNavBar } from './components/MobileNavBar';
 import { ScheduleSkeleton } from './components/ScheduleSkeleton';
@@ -961,8 +962,13 @@ const App: React.FC = () => {
 
     if (typeof password === 'string') {
       const entered = password.trim();
-      const expected = (emp.password || '1234').trim();
-      if (entered === expected) {
+      const isValid = await verifyEmployeePassword(entered, emp.password, emp.id);
+      if (isValid) {
+        // Migração transparente: se a senha ainda estava em texto puro ou vazia, converte para hash SHA-256
+        if (!isHashedPassword(emp.password)) {
+          const hashed = await hashEmployeePassword(entered, emp.id);
+          setEmployees(prev => prev.map(e => (e.id === emp.id ? { ...e, password: hashed } : e)));
+        }
         setAuthenticatedEmployeeId(emp.id);
         setEmployeeCardInitialTab(tab);
         setEmployeeCardInitialDate(initialDate);

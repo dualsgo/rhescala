@@ -66,7 +66,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showDialog } = useDialog();
   const [isUpdatingPass, setIsUpdatingPass] = useState(false);
-  const [passForm, setPassForm] = useState({ role: 'admin' as 'admin' | 'viewer', password: '' });
+  const [passForm, setPassForm] = useState({ role: 'admin' as 'admin' | 'viewer', currentAdminPassword: '', password: '' });
 
   const handleExportBackup = () => {
     const backupData = {
@@ -249,7 +249,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
   };
 
   const handleUpdatePassword = async () => {
-    if (role !== 'admin' || !passForm.password) return;
+    if (role !== 'admin' || !passForm.password || !passForm.currentAdminPassword) return;
     
     const confirm = await showDialog({
       title: 'Alterar Senha',
@@ -261,10 +261,10 @@ export const DataManager: React.FC<DataManagerProps> = ({
 
     setIsUpdatingPass(true);
     try {
-      const result = await apiStore.updatePassword(passForm.role, passForm.password);
+      const result = await apiStore.updatePassword(passForm.role, passForm.password, passForm.currentAdminPassword);
       if (result.success) {
         await showDialog({ title: 'Sucesso', message: 'Senha atualizada na planilha com sucesso!' });
-        setPassForm({ ...passForm, password: '' });
+        setPassForm({ ...passForm, currentAdminPassword: '', password: '' });
       } else {
         await showDialog({ title: 'Erro', message: result.error || 'Falha ao atualizar senha.' });
       }
@@ -337,7 +337,17 @@ export const DataManager: React.FC<DataManagerProps> = ({
                 <div className="relative">
                   <input 
                     type="password" 
-                    placeholder="Nova Senha"
+                    placeholder="Senha Atual de Admin"
+                    value={passForm.currentAdminPassword}
+                    onChange={(e) => setPassForm({...passForm, currentAdminPassword: e.target.value})}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white text-sm font-bold outline-none focus:border-orange-500 transition-colors"
+                  />
+                </div>
+
+                <div className="relative">
+                  <input 
+                    type="password" 
+                    placeholder="Nova Senha (mín. 4 caracteres)"
                     value={passForm.password}
                     onChange={(e) => setPassForm({...passForm, password: e.target.value})}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white text-sm font-bold outline-none focus:border-orange-500 transition-colors"
@@ -346,7 +356,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
 
                 <button 
                   onClick={handleUpdatePassword}
-                  disabled={isUpdatingPass || !passForm.password}
+                  disabled={isUpdatingPass || !passForm.password || !passForm.currentAdminPassword}
                   className="w-full py-3 bg-white text-slate-900 rounded-xl font-black uppercase text-[11px] tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {isUpdatingPass ? (
@@ -354,7 +364,7 @@ export const DataManager: React.FC<DataManagerProps> = ({
                   ) : 'Atualizar na Planilha'}
                 </button>
                 
-                <p className="text-[11px] text-slate-500 text-center italic mt-2">Dica: As senhas são salvas na aba "Config" da sua planilha.</p>
+                <p className="text-[11px] text-slate-500 text-center italic mt-2">As senhas são armazenadas com hash criptográfico (SHA-256 + salt) na aba "Config".</p>
               </div>
             </div>
           )}

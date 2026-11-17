@@ -12,17 +12,7 @@ function doGet(e) {
 
     // Login/Verificação de Senha
     if (action === 'login') {
-      var password = e.parameter.password;
-      var adminPass = getConfig('admin_password', 'admin');
-      var viewerPass = getConfig('viewer_password', '1234');
-
-      if (password === adminPass) {
-        return buildCorsResponse(JSON.stringify({ success: true, role: 'admin' }));
-      } else if (password === viewerPass) {
-        return buildCorsResponse(JSON.stringify({ success: true, role: 'viewer' }));
-      } else {
-        return buildCorsResponse(JSON.stringify({ success: false, error: 'Senha incorreta' }));
-      }
+      return handleLoginRequest(e.parameter.password);
     }
 
     // Requisição de dados normal (API)
@@ -60,26 +50,30 @@ function doPost(e) {
       var body = {};
       try { body = JSON.parse(e.postData.contents); } catch (err) {}
       var password = body.password || e.parameter.password;
-      var adminPass = getConfig('admin_password', 'admin');
-      var viewerPass = getConfig('viewer_password', '1234');
-
-      if (password === adminPass) {
-        return buildCorsResponse(JSON.stringify({ success: true, role: 'admin' }));
-      } else if (password === viewerPass) {
-        return buildCorsResponse(JSON.stringify({ success: true, role: 'viewer' }));
-      } else {
-        return buildCorsResponse(JSON.stringify({ success: false, error: 'Senha incorreta' }));
-      }
+      return handleLoginRequest(password);
     }
 
-    // Atualização de Senha
+    // Atualização de Senha (exige senha atual de admin quando já configurado)
     if (action === 'update_password') {
       var body = JSON.parse(e.postData.contents);
       var role = body.role; // 'admin' ou 'viewer'
       var newPassword = body.newPassword;
+      var currentAdminPassword = body.currentAdminPassword;
+
+      if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 4) {
+        return buildCorsResponse(JSON.stringify({ success: false, error: 'A nova senha deve ter pelo menos 4 caracteres.' }));
+      }
+
+      var existingAdminPass = getConfig('admin_password');
+      if (existingAdminPass) {
+        var authCheck = verifyStoredPassword(currentAdminPassword, existingAdminPass);
+        if (!authCheck.valid) {
+          return buildCorsResponse(JSON.stringify({ success: false, error: 'Senha atual de administrador inválida ou não informada.' }));
+        }
+      }
       
       if (role === 'admin' || role === 'viewer') {
-        setConfig(role + '_password', newPassword);
+        setConfig(role + '_password', hashPasswordWithSalt(newPassword));
         return buildCorsResponse(JSON.stringify({ success: true }));
       }
       return buildCorsResponse(JSON.stringify({ success: false, error: 'Role inválido' }));
@@ -257,5 +251,89 @@ function cleanupDatabase() {
   }
   
   return removedCount;
+}
+
+function constantTimeEquals(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  if (a.length !== b.length) return false;
+  var diff = 0;
+  for (var i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+function sha256Hex(text) {
+  var raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, text, Utilities.Charset.UTF_8);
+  var out = [];
+  for (var i = 0; i < raw.length; i++) {
+    var b = (raw[i] < 0 ? raw[i] + 256 : raw[i]).toString(16);
+    out.push(b.length === 1 ? '0' + b : b);
+  }
+  return out.join('');
+}
+
+function hashPasswordWithSalt(plain, existingSalt) {
+  var salt = existingSalt || Utilities.getUuid().replace(/-/g, '').substring(0, 16);
+  return 'sha256:' + salt + ':' + sha256Hex(salt + ':' + plain);
+}
+
+function verifyStoredPassword(input, stored) {
+  if (typeof input !== 'string' || !input || typeof stored !== 'string' || !stored) {
+    return { valid: false, needsMigration: false };
+  }
+  if (stored.indexOf('sha256:') === 0) {
+    var parts = stored.split(':');
+    if (parts.length !== 3) return { valid: false, needsMigration: false };
+    var expected = hashPasswordWithSalt(input, parts[1]);
+    return { valid: constantTimeEquals(expected, stored), needsMigration: false };
+  }
+  return { valid: constantTimeEquals(input, stored), needsMigration: true };
+}
+
+function handleLoginRequest(password) {
+  var cache = CacheService.getScriptCache();
+  var attemptsKey = 'login_failed_attempts';
+  var lockKey = 'login_lock_until';
+
+  if (cache.get(lockKey)) {
+    return buildCorsResponse(JSON.stringify({
+      success: false,
+      error: 'Muitas tentativas inválidas. Aguarde 5 minutos e tente novamente.'
+    }));
+  }
+
+  var adminPass = getConfig('admin_password', 'admin');
+  var viewerPass = getConfig('viewer_password', '1234');
+
+  var adminCheck = verifyStoredPassword(password, adminPass);
+  if (adminCheck.valid) {
+    cache.remove(attemptsKey);
+    if (adminCheck.needsMigration) {
+      setConfig('admin_password', hashPasswordWithSalt(password));
+    }
+    return buildCorsResponse(JSON.stringify({ success: true, role: 'admin' }));
+  }
+
+  var viewerCheck = verifyStoredPassword(password, viewerPass);
+  if (viewerCheck.valid) {
+    cache.remove(attemptsKey);
+    if (viewerCheck.needsMigration) {
+      setConfig('viewer_password', hashPasswordWithSalt(password));
+    }
+    return buildCorsResponse(JSON.stringify({ success: true, role: 'viewer' }));
+  }
+
+  var fails = parseInt(cache.get(attemptsKey) || '0', 10) + 1;
+  if (fails >= 5) {
+    cache.put(lockKey, '1', 300);
+    cache.remove(attemptsKey);
+    return buildCorsResponse(JSON.stringify({
+      success: false,
+      error: 'Muitas tentativas inválidas. Aguarde 5 minutos e tente novamente.'
+    }));
+  }
+  cache.put(attemptsKey, String(fails), 300);
+  return buildCorsResponse(JSON.stringify({ success: false, error: 'Senha incorreta' }));
 }
 `;

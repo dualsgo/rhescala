@@ -4,6 +4,7 @@ import { Employee, EmployeeCargo, EMPLOYEE_ROLES, ROLE_METADATA_MAP, normalizeEm
 import { Icon } from './Icon';
 import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD } from '../constants';
 import { addDaysToISODate } from '../src/utils/date';
+import { hashEmployeePassword, isHashedPassword } from '../src/utils/passwordHash';
 import { DeactivateEmployeeModal } from './DeactivateEmployeeModal';
 
 interface TeamViewProps {
@@ -519,6 +520,11 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   const { showDialog } = useDialog();
   const [activeSection, setActiveSection] = useState<EditModalSection>('all');
   const [showPassword, setShowPassword] = useState(false);
+  const [draftPassword, setDraftPassword] = useState('');
+
+  useEffect(() => {
+    setDraftPassword('');
+  }, [employee.id]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1231,35 +1237,61 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Senha */}
                 <div className="p-3.5 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Senha Individual do Colaborador</label>
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                      <span>Senha Individual</span>
+                      {isHashedPassword(employee.password) && (
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[9px] font-bold normal-case">
+                          Protegida (Hash)
+                        </span>
+                      )}
+                    </label>
                     {!isReadOnly && (
                       <button 
                         type="button"
-                        onClick={() => onUpdateEmployee(employee.id, { password: '1234' })}
+                        onClick={async () => {
+                          const hashed = await hashEmployeePassword('1234', employee.id);
+                          onUpdateEmployee(employee.id, { password: hashed });
+                          setDraftPassword('');
+                        }}
                         className="text-[11px] font-black text-orange-500 hover:underline uppercase"
                       >
                         Resetar (1234)
                       </button>
                     )}
                   </div>
-                  <div className="relative flex items-center">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      disabled={isReadOnly}
-                      value={employee.password || ''}
-                      onChange={(e) => onUpdateEmployee(employee.id, { password: e.target.value })}
-                      placeholder="Padrão: 1234"
-                      className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl pl-3 pr-9 py-2 text-xs font-mono font-bold text-slate-800 dark:text-zinc-200 outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(prev => !prev)}
-                      className="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
-                      title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                    >
-                      <Icon name={showPassword ? 'visibility_off' : 'visibility'} className="text-sm" />
-                    </button>
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1 flex items-center">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        disabled={isReadOnly}
+                        value={draftPassword}
+                        onChange={(e) => setDraftPassword(e.target.value)}
+                        placeholder={isHashedPassword(employee.password) ? '•••••••• (digite para alterar)' : 'Padrão: 1234'}
+                        className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl pl-3 pr-9 py-2 text-xs font-mono font-bold text-slate-800 dark:text-zinc-200 outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(prev => !prev)}
+                        className="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
+                        title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                      >
+                        <Icon name={showPassword ? 'visibility_off' : 'visibility'} className="text-sm" />
+                      </button>
+                    </div>
+                    {!isReadOnly && draftPassword.trim().length > 0 && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const hashed = await hashEmployeePassword(draftPassword, employee.id);
+                          onUpdateEmployee(employee.id, { password: hashed });
+                          setDraftPassword('');
+                        }}
+                        className="px-3 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-black uppercase tracking-wider shrink-0 transition-colors"
+                      >
+                        Salvar
+                      </button>
+                    )}
                   </div>
                 </div>
 
