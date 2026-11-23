@@ -15,6 +15,23 @@ describe('Atualização Contextual da Grade (RefreshMonth)', () => {
   let root: Root;
 
   beforeEach(() => {
+    if (typeof globalThis.CSS === 'undefined') {
+      (globalThis as unknown as { CSS: { escape: (s: string) => string } }).CSS = {
+        escape: (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, '\\$&'),
+      };
+    }
+    if (typeof HTMLDialogElement !== 'undefined') {
+      if (!HTMLDialogElement.prototype.showModal) {
+        HTMLDialogElement.prototype.showModal = function showModal() {
+          this.setAttribute('open', '');
+        };
+      }
+      if (!HTMLDialogElement.prototype.close) {
+        HTMLDialogElement.prototype.close = function close() {
+          this.removeAttribute('open');
+        };
+      }
+    }
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);

@@ -1,0 +1,31 @@
+@import '@astryxdesign/core/astryx.css';
+@import '@astryxdesign/theme-neutral/theme.css';
+
+/* Tema Rhescala (Ri Happy) sobre os tokens CSS do Astryx */
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+[data-astryx-theme="neutral"] {
+  --font-family-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-heading: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Acento laranja oficial Rhescala */
+  --color-accent: light-dark(#f97316, #fb923c);
+  --color-accent-muted: light-dark(#ffedd5, #7c2d124d);
+  --color-on-accent: light-dark(#ffffff, #09090b);
+  --color-text-accent: light-dark(#c2410c, #fdba74);
+
+  /* Superfícies alinhadas à paleta zinc do projeto */
+  --color-background-surface: light-dark(#ffffff, #18181b);
+  --color-background-card: light-dark(#ffffff, #18181b);
+  --color-background-popover: light-dark(#ffffff, #18181b);
+  --color-background-body: light-dark(#fafafa, #09090b);
+  --color-background-muted: light-dark(#f4f4f5, #27272a);
+  --color-border: light-dark(#e4e4e7, #27272a);
+  --color-border-emphasized: light-dark(#d4d4d8, #3f3f46);
+}

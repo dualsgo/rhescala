@@ -6,6 +6,7 @@ import { DialogProvider } from './contexts/DialogContext';
 import { SetupScreen } from './components/SetupScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { getConfiguredApiUrl } from './src/gas-api';
+import './src/styles/astryx-theme.css';
 
 function Root() {
   const [configured, setConfigured] = useState<boolean>(() => {
@@ -17,9 +18,11 @@ function Root() {
   }
 
   return (
-    <DialogProvider>
-      <App />
-    </DialogProvider>
+    <div data-astryx-theme="neutral">
+      <DialogProvider>
+        <App />
+      </DialogProvider>
+    </div>
   );
 }
 
