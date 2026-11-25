@@ -20,7 +20,8 @@ export function isSundayUnavailable(
   emp: Employee,
   dateStr: string,           // 'YYYY-MM-DD'
   monthKey: string,          // 'YYYY-MM'
-  dayIdx: number             // 0-based day index
+  dayIdx: number,            // 0-based day index
+  estoqueFixedSunday: boolean = true
 ): boolean {
   // 1. Vacation
   if (emp.vacationStart && emp.vacationEnd) {
@@ -30,8 +31,9 @@ export function isSundayUnavailable(
   if (isEmployeeOnAtestado(emp, dateStr)) return true;
   // 1b. Birthday
   if (isBirthday(emp, dateStr)) return true;
-  // 2. Preferred day off is Sunday or Estoque
-  if (isEmployeePreferredDayOff(emp, 0) || emp.cargo === 'Estoque' || (emp.cargo as string) === 'Estoquista' || emp.role === 'Estoque') return true;
+  // 2. Preferred day off is Sunday or Estoque (quando regra fixa estiver ativada)
+  const isEstoque = emp.cargo === 'Estoque' || (emp.cargo as string) === 'Estoquista' || emp.role === 'Estoque';
+  if (isEmployeePreferredDayOff(emp, 0, estoqueFixedSunday) || (estoqueFixedSunday && isEstoque)) return true;
   // 3. Not yet hired
   if (emp.hiredAt && dateStr < emp.hiredAt) return true;
   // 4. Already fired
@@ -101,7 +103,8 @@ export function buildSundayAssignments(
   initialConsecutive?: Map<string, number>,
   settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS,
   protectedDays?: Record<number, number | ProtectedDayDetail> | number[],
-  targetEmpId?: string
+  targetEmpId?: string,
+  estoqueFixedSunday: boolean = true
 ): { assignments: Map<string, Set<number>>, nextConsecutive: Map<string, number> } {
   const assignments = new Map<string, Set<number>>();
   const consecutive = new Map<string, number>();
@@ -129,7 +132,7 @@ export function buildSundayAssignments(
 
     // Build the eligible pool for rotation
     const available = activeRegular.filter(
-      emp => !isSundayUnavailable(emp, dateStr, monthKey, sundayDayIdx)
+      emp => !isSundayUnavailable(emp, dateStr, monthKey, sundayDayIdx, estoqueFixedSunday)
     );
 
     const resting = new Set<string>();
@@ -164,8 +167,8 @@ export function buildSundayAssignments(
       const canWork = available.filter(emp => !working.has(emp.id) && (consecutive.get(emp.id) ?? 0) < 2);
 
       const isEstoque = (emp: Employee) => emp.cargo === 'Estoque' || emp.role === 'Estoque' || (emp.cargo as string) === 'Estoquista';
-      const regularCanWork = canWork.filter(emp => !isEstoque(emp));
-      const estoquistasCanWork = canWork.filter(emp => isEstoque(emp));
+      const regularCanWork = estoqueFixedSunday ? canWork.filter(emp => !isEstoque(emp)) : canWork;
+      const estoquistasCanWork = estoqueFixedSunday ? canWork.filter(emp => isEstoque(emp)) : [];
 
       const maxRestAllowed = maxFolgas !== undefined ? Math.max(0, maxFolgas) : available.length;
 

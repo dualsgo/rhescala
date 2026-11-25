@@ -1,4 +1,4 @@
-import { Employee, Holiday, JornadaSettings, ProtectedDayDetail } from '../../../types';
+import { Employee, Holiday, JornadaSettings, ProtectedDayDetail, ScheduleRulesConfig } from '../../../types';
 
 export const APPRENTICE_WORK_PERIOD = '10h às 16h15'; // Jornada fixa do Jovem Aprendiz (pausa 15 min)
 
@@ -30,6 +30,36 @@ export const SHIFT_HOURS = {
   EXTENDED: ['09h às 17h20', '10h às 18h20', '12h às 20h20', '13h40 às 22h', '14h40 às 23h', '09h às 15h', '12h às 18h', '15h às 21h', '17h às 23h'],
 };
 
+export const DEFAULT_SCHEDULE_RULES: ScheduleRulesConfig = {
+  estoqueFixedSundayOff: {
+    enabled: false,
+    roles: ['Estoque'],
+    fixedWeekday: 0,
+  },
+  seasonalPeakPresets: {
+    9: [8, 9, 10, 11, 12],
+    10: [26, 27, 28, 29],
+    11: [20, 21, 22, 23, 24],
+  },
+  lfCountsAsRest: false,
+  fiveByTwoRestMode: 'strict',
+  coverageMinFloor: 0.70,
+  coverageTargetCap: 0.80,
+  maxConsecutiveSundays: 2,
+  preferentialDayOffPolicy: 'preferential',
+  useSmartRestAllocatorV2: false,
+};
+
+export const SMART_ALLOCATOR_WEIGHTS = {
+  PEAK_REST_PENALTY: 10000,
+  FLOOR_BREACH_PENALTY: 2000,
+  PREFERENCE_BONUS: 500,
+  FF_BONUS: 300,
+  CAIXA_MISSING_PENALTY: 150,
+  EQUITY_PENALTY: 50,
+  TARGET_GAP_PENALTY: 40,
+} as const;
+
 export const DEFAULT_JORNADA_SETTINGS: JornadaSettings = {
   minSundayWorkers: 5,
   shiftHours: {
@@ -46,7 +76,8 @@ export const DEFAULT_JORNADA_SETTINGS: JornadaSettings = {
     weekdayOpening: ['13h', '13h45', '14h'],
     weekdayClosing: ['15h', '15h30', '16h', '16h30', '17h'],
     apprentice: '12h45',
-  }
+  },
+  rulesConfig: DEFAULT_SCHEDULE_RULES,
 };
 
 /**

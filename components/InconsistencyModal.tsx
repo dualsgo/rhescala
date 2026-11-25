@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Employee, MonthYear, ShiftType } from '../types';
+import { AllocationReport, Employee, MonthYear, ShiftType } from '../types';
 import { Icon } from './Icon';
 import { detectInconsistencies, Inconsistency } from './InconsistencyPanel';
 
@@ -9,6 +9,7 @@ interface InconsistencyModalProps {
   employees: Employee[];
   currentMY: MonthYear;
   today: Date;
+  allocationReport?: AllocationReport | null;
   onSelectDay: (idx: number) => void;
   onApplyFix: (empId: string, dayIdx: number, shift: ShiftType) => void;
   onApplyBulkFixes: (updates: { empId: string; dayIdx: number; newShift: ShiftType }[]) => void;
@@ -20,6 +21,7 @@ export const InconsistencyModal: React.FC<InconsistencyModalProps> = ({
   employees,
   currentMY,
   today,
+  allocationReport,
   onSelectDay,
   onApplyFix,
   onApplyBulkFixes,
@@ -283,6 +285,35 @@ export const InconsistencyModal: React.FC<InconsistencyModalProps> = ({
             })
           )}
         </div>
+
+        {/* Relatório do motor de alocação V2 (relaxamentos / capacidade / picos) */}
+        {allocationReport &&
+          allocationReport.monthKey === `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}` &&
+          (allocationReport.relaxations.length > 0 ||
+            allocationReport.capacityWarnings.length > 0 ||
+            allocationReport.displacedPreferences.length > 0) && (
+            <div className="px-6 py-3 border-t border-slate-100 dark:border-zinc-800 bg-amber-50/70 dark:bg-amber-950/20 max-h-40 overflow-y-auto custom-scrollbar space-y-1.5">
+              <p className="text-[11px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                <Icon name="psychology" className="text-sm" />
+                Relatório do Motor de Folgas (teto teórico {(allocationReport.theoreticalMaxPresence * 100).toFixed(1)}%)
+              </p>
+              {allocationReport.capacityWarnings.map((w, idx) => (
+                <p key={`cap-${idx}`} className="text-[11px] text-amber-800 dark:text-amber-300 font-medium">
+                  • {w}
+                </p>
+              ))}
+              {allocationReport.relaxations.map((r, idx) => (
+                <p key={`rel-${idx}`} className="text-[11px] text-amber-900 dark:text-amber-200 font-medium">
+                  • [{r.dateStr} • {r.rule}] {r.reason} — {r.alternative}
+                </p>
+              ))}
+              {allocationReport.displacedPreferences.length > 0 && (
+                <p className="text-[11px] text-slate-600 dark:text-zinc-300 font-medium">
+                  • {allocationReport.displacedPreferences.length} folga(s) fixa(s) realocada(s) fora de dias de pico.
+                </p>
+              )}
+            </div>
+          )}
 
         {/* Footer */}
         <div className="p-4 border-t border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between text-xs font-medium text-slate-500 dark:text-zinc-400">

@@ -15,6 +15,7 @@ export const STORAGE_KEYS = {
   trackingStart: 'riHappyTrackingStart',
   officialSnapshots: 'riHappyOfficialSnapshots',
   protectedDays: 'riHappyProtectedDays',
+  monthGuidelines: 'riHappyMonthGuidelines',
   sectionAssignments: 'riHappySectionAssignments',
   validatedMonths: 'riHappyValidatedMonths',
   auditLogs: 'rhescala_audit_logs',

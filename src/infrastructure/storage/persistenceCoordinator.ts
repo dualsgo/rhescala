@@ -20,6 +20,7 @@ export interface PersistencePayload {
   trackingStartDate: string;
   officialSnapshots: Record<string, OfficialScheduleSnapshot>;
   protectedDaysMap: ProtectedDaysMap;
+  monthGuidelines?: Record<string, unknown>;
   sectionAssignments: Record<string, unknown>;
   validatedMonths: Record<string, boolean>;
   auditLogs: AuditLogEntry[];
@@ -41,6 +42,9 @@ export function flushLocalStorage(payload: PersistencePayload): void {
     window.localStorage.setItem(STORAGE_KEYS.trackingStart, JSON.stringify(payload.trackingStartDate));
     window.localStorage.setItem(STORAGE_KEYS.officialSnapshots, JSON.stringify(payload.officialSnapshots));
     window.localStorage.setItem(STORAGE_KEYS.protectedDays, JSON.stringify(payload.protectedDaysMap));
+    if (payload.monthGuidelines) {
+      window.localStorage.setItem(STORAGE_KEYS.monthGuidelines, JSON.stringify(payload.monthGuidelines));
+    }
     window.localStorage.setItem(STORAGE_KEYS.sectionAssignments, JSON.stringify(payload.sectionAssignments));
     window.localStorage.setItem(STORAGE_KEYS.validatedMonths, JSON.stringify(payload.validatedMonths));
     window.localStorage.setItem(STORAGE_KEYS.auditLogs, JSON.stringify(payload.auditLogs));

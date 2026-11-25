@@ -10,9 +10,15 @@ export const WEEKDAY_NAMES = [
 import { isWorkingShift } from '../shifts/shift-predicates';
 export { isWorkingShift };
 
-export function isEmployeePreferredDayOff(emp: Employee, dow: number): boolean {
-  const isEstoque = emp.cargo === 'Estoque' || emp.role === 'Estoque' || (emp.cargo as string) === 'Estoquista';
-  if (isEstoque && dow === 0) return true;
+export function isEmployeePreferredDayOff(
+  emp: Employee,
+  dow: number,
+  includeEstoqueSundayRule: boolean = true
+): boolean {
+  if (includeEstoqueSundayRule) {
+    const isEstoque = emp.cargo === 'Estoque' || emp.role === 'Estoque' || (emp.cargo as string) === 'Estoquista';
+    if (isEstoque && dow === 0) return true;
+  }
   if (!emp.preferredDayOff || emp.preferredDayOff === 'Nenhum') return false;
   const pref = emp.preferredDayOff.trim().toLowerCase().replace('-feira', '');
   const dayName = WEEKDAY_NAMES[dow].toLowerCase().replace('-feira', '');

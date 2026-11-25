@@ -1,4 +1,14 @@
-import { Employee, Holiday, JornadaSettings, ProtectedDaysConfig, ShiftType } from '../../../types';
+import {
+  AllocationReport,
+  DecisionReason,
+  Employee,
+  Holiday,
+  JornadaSettings,
+  MonthGuidelines,
+  OfficialScheduleSnapshot,
+  ProtectedDaysConfig,
+  ShiftType,
+} from '../../../types';
 import {
   DEFAULT_JORNADA_SETTINGS,
   buildHolidaySet,
@@ -7,9 +17,12 @@ import {
   isEmployeeEligibleForMonth,
   isEmployeeHiddenInMonth,
 } from '../config/schedule-constants';
+import { resolveMonthGuidelines } from '../config/guidelines';
 import { getShiftClassification } from '../shifts/shift-predicates';
 import { getLegalOverrideForDay } from '../clt/legal-overrides';
+import { getPrevMonthWorkStreak } from '../clt/clt-rules';
 import { applyMonthUpdate, PendingHolidayCreditInput } from './month-generator';
+import { allocateSmartRestsV2 } from './smart-rest-allocator';
 
 export type RefreshChangeKind = 'missing_schedule' | 'legal_override' | 'hours_sync' | 'shift_name_sync';
 
@@ -182,6 +195,9 @@ export interface ApplyMonthRefreshOptions {
   settings?: JornadaSettings;
   protectedDays?: ProtectedDaysConfig | number[];
   pendingCreditsByEmp?: Record<string, PendingHolidayCreditInput[]>;
+  guidelines?: Partial<MonthGuidelines>;
+  reoptimizeFromDayIdx?: number; // Data de corte para reajuste incremental (preserva < reoptimizeFromDayIdx)
+  officialSnapshot?: OfficialScheduleSnapshot;
 }
 
 /**
@@ -203,6 +219,9 @@ export function applyMonthRefresh(
     settings = DEFAULT_JORNADA_SETTINGS,
     protectedDays,
     pendingCreditsByEmp,
+    guidelines,
+    reoptimizeFromDayIdx,
+    officialSnapshot,
   } = options;
 
   const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
@@ -249,7 +268,7 @@ export function applyMonthRefresh(
   }
 
   // 2. Aplica atualizações seguras (não-destrutivas) para os demais colaboradores
-  return nextEmployees.map(emp => {
+  let finalEmployees = nextEmployees.map(emp => {
     if (generateSet.has(emp.id)) return emp;
     if (!isEmployeeEligibleForMonth(emp, year, month) || isEmployeeHiddenInMonth(emp, monthKey)) {
       return emp;
@@ -307,4 +326,142 @@ export function applyMonthRefresh(
       dailyHours: { ...emp.dailyHours, [monthKey]: nextHours },
     };
   });
+
+  // 3. Reajuste incremental a partir da data de corte (quando solicitado ou V2 ativo)
+  if (typeof reoptimizeFromDayIdx === 'number' && reoptimizeFromDayIdx >= 0 && reoptimizeFromDayIdx < daysInMonth) {
+    finalEmployees = reoptimizeMonthFromCutoff(finalEmployees, year, month, {
+      cutoffDayIdx: reoptimizeFromDayIdx,
+      customHolidays,
+      deletedNationalHolidays,
+      settings,
+      protectedDays,
+      guidelines,
+      officialSnapshot,
+    }).employees;
+  }
+
+  return finalEmployees;
+}
+
+/**
+ * Reotimiza apenas os dias futuros (>= cutoffDayIdx) após entrada de atestado/férias/admissão,
+ * preservando dias passados, dias oficializados (officialSnapshot) e FF já agendados.
+ */
+export function reoptimizeMonthFromCutoff(
+  employees: Employee[],
+  year: number,
+  month: number,
+  options: {
+    cutoffDayIdx: number;
+    customHolidays?: Holiday[];
+    deletedNationalHolidays?: string[];
+    settings?: JornadaSettings;
+    protectedDays?: ProtectedDaysConfig | number[];
+    guidelines?: Partial<MonthGuidelines>;
+    officialSnapshot?: OfficialScheduleSnapshot;
+  }
+): { employees: Employee[]; report: AllocationReport } {
+  const {
+    cutoffDayIdx,
+    customHolidays = [],
+    deletedNationalHolidays = [],
+    settings = DEFAULT_JORNADA_SETTINGS,
+    protectedDays,
+    guidelines,
+    officialSnapshot,
+  } = options;
+
+  const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const effectiveGuidelines = resolveMonthGuidelines(month, settings, undefined, guidelines);
+  const storeClosedDates = getStoreClosedDatesForYear(year);
+  const activeRegular = employees.filter(
+    e => e.status === 'active' && !isEmployeeHiddenInMonth(e, monthKey) && !e.isYoungApprentice
+  );
+
+  const shiftsByEmp: Record<string, ShiftType[]> = {};
+  const reasonsByEmp: Record<string, Record<number, DecisionReason>> = {};
+  const lockedDaysByEmp: Record<string, Set<number>> = {};
+  const restSundaysByEmp = new Map<string, Set<number>>();
+  const sundaysInMonth: number[] = [];
+
+  for (let d = 0; d < daysInMonth; d++) {
+    if (new Date(year, month, d + 1).getDay() === 0) sundaysInMonth.push(d);
+  }
+
+  for (const emp of activeRegular) {
+    const curShifts = [...(emp.shifts?.[monthKey] || Array(daysInMonth).fill('T'))];
+    const curReasons: Record<number, DecisionReason> = { ...(emp.decisionReasons?.[monthKey] || {}) };
+    const locked = new Set<number>();
+    const restSundays = new Set<number>();
+
+    for (let d = 0; d < daysInMonth; d++) {
+      if (d < cutoffDayIdx) {
+        locked.add(d);
+        if (new Date(year, month, d + 1).getDay() === 0 && (curShifts[d] === 'F' || curShifts[d] === 'FF')) {
+          restSundays.add(d);
+        }
+        continue;
+      }
+
+      const dateStr = `${monthKey}-${String(d + 1).padStart(2, '0')}`;
+      const legalShift = storeClosedDates.has(dateStr)
+        ? 'LF'
+        : getLegalOverrideForDay(emp, year, month, d);
+      if (legalShift !== null) {
+        curShifts[d] = legalShift;
+        curReasons[d] = 'LEGAL_IMMUTABLE';
+        locked.add(d);
+        continue;
+      }
+
+      if (officialSnapshot?.shifts?.[emp.id]?.[d] !== undefined && curShifts[d] === officialSnapshot.shifts[emp.id][d]) {
+        locked.add(d);
+      }
+      if (typeof curShifts[d] === 'string' && curShifts[d].startsWith('FF')) {
+        locked.add(d);
+      }
+      if (new Date(year, month, d + 1).getDay() === 0 && (curShifts[d] === 'F' || curShifts[d] === 'FF')) {
+        restSundays.add(d);
+      }
+    }
+
+    shiftsByEmp[emp.id] = curShifts;
+    reasonsByEmp[emp.id] = curReasons;
+    lockedDaysByEmp[emp.id] = locked;
+    restSundaysByEmp.set(emp.id, restSundays);
+  }
+
+  const report = allocateSmartRestsV2({
+    employees,
+    activeRegular,
+    year,
+    month,
+    shiftsByEmp,
+    decisionReasonsByEmp: reasonsByEmp,
+    customHolidays,
+    deletedNationalHolidays,
+    settings,
+    guidelines: effectiveGuidelines,
+    protectedDays,
+    prevStreaks: getPrevMonthWorkStreak(activeRegular, year, month),
+    sundaysInMonth,
+    restSundaysByEmp,
+    cutoffDayIdx,
+    lockedDaysByEmp,
+  });
+
+  const nextEmployees = employees.map(emp => {
+    if (!shiftsByEmp[emp.id]) return emp;
+    return {
+      ...emp,
+      shifts: { ...emp.shifts, [monthKey]: shiftsByEmp[emp.id] },
+      decisionReasons: {
+        ...(emp.decisionReasons || {}),
+        [monthKey]: reasonsByEmp[emp.id],
+      },
+    };
+  });
+
+  return { employees: nextEmployees, report };
 }

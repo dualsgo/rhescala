@@ -102,15 +102,21 @@ export type DecisionReason =
   | 'PREFERRED_DAY_OFF'
   | 'PRE_SUNDAY_GUARD'
   | 'PEAK_DAY_SHIFTED'
+  | 'PEAK_PREFERENCE_DISPLACED'
+  | 'FIVE_BY_TWO_VARIABLE_OFF'
+  | 'GUIDELINE_COVERAGE_REBALANCED'
   | 'REGULAR_WORK';
 
 export const DECISION_REASON_LABELS: Record<DecisionReason, string> = {
-  LEGAL_IMMUTABLE: 'Bloqueio legal (Férias, Atestado, Curso ou Aniversário)',
+  LEGAL_IMMUTABLE: 'Bloqueio legal (Férias, Atestado, Curso, Aniversário ou LF)',
   SUNDAY_ROTATION_OFF: 'Folga de revezamento dominical (CLT)',
   CLT_MAX_STREAK_GUARD: 'Folga obrigatória por limite de dias seguidos (Art. 67 CLT)',
-  PREFERRED_DAY_OFF: 'Folga fixa semanal preferencial',
+  PREFERRED_DAY_OFF: 'Folga semanal preferencial',
   PRE_SUNDAY_GUARD: 'Folga técnica de escala dominical (Pre-Sunday Guard)',
-  PEAK_DAY_SHIFTED: 'Folga remanejada por dia protegido de alta demanda',
+  PEAK_DAY_SHIFTED: 'Folga remanejada por diretriz de pico / dia protegido',
+  PEAK_PREFERENCE_DISPLACED: 'Folga preferencial deslocada por diretriz de pico',
+  FIVE_BY_TWO_VARIABLE_OFF: 'Folga variável (5x2) alocada por cobertura',
+  GUIDELINE_COVERAGE_REBALANCED: 'Folga ajustada para atender piso/nivelamento de cobertura',
   REGULAR_WORK: 'Trabalho regular escalado',
 };
 
@@ -270,6 +276,57 @@ export interface SyncStatus {
   history: SyncHistoryItem[];
   isSilent?: boolean;
 }
+export interface ScheduleRulesConfig {
+  estoqueFixedSundayOff: {
+    enabled: boolean;
+    roles: EmployeeRole[];
+    fixedWeekday?: number; // 0 = Domingo
+  };
+  seasonalPeakPresets: Record<number, number[]>; // 0-indexed month -> day numbers
+  lfCountsAsRest: boolean;
+  fiveByTwoRestMode: 'strict' | 'flexible';
+  coverageMinFloor: number;   // 0.70
+  coverageTargetCap: number;  // 0.80
+  maxConsecutiveSundays: number; // 2
+  preferentialDayOffPolicy: 'preferential';
+  useSmartRestAllocatorV2?: boolean;
+}
+
+export interface MonthGuidelines {
+  estoqueFixedOffEnabled: boolean;
+  estoqueFixedOffWeekday: number; // 0..6
+  peakDays: number[];
+  lfCountsAsRest: boolean;
+  fiveByTwoRestMode: 'strict' | 'flexible';
+  coverageMinFloor: number;
+  coverageTargetCap: number;
+  minSundayWorkers: number;
+  allocatePendingHolidayCredits: boolean;
+}
+
+export interface AllocationRelaxationItem {
+  dateStr: string;
+  rule: string;
+  reason: string;
+  alternative: string;
+}
+
+export interface DisplacedPreferenceItem {
+  empId: string;
+  empName: string;
+  originalDate: string;
+  newDate: string;
+  reason: string;
+}
+
+export interface AllocationReport {
+  monthKey: string;
+  relaxations: AllocationRelaxationItem[];
+  displacedPreferences: DisplacedPreferenceItem[];
+  capacityWarnings: string[];
+  theoreticalMaxPresence: number;
+}
+
 export interface JornadaSettings {
   minSundayWorkers: number;
   shiftHours: {
@@ -287,6 +344,7 @@ export interface JornadaSettings {
     weekdayClosing: string[];
     apprentice: string;
   };
+  rulesConfig?: ScheduleRulesConfig;
 }
 
 export interface OfficialScheduleSnapshot {
@@ -295,6 +353,7 @@ export interface OfficialScheduleSnapshot {
   shifts: Record<string, ShiftType[]>;
   dailyHours: Record<string, string[]>;
   tacticalPositions: Record<string, (string | null)[]>;
+  guidelines?: MonthGuidelines;
 }
 
 export interface ScheduleDiffItem {

@@ -22,7 +22,7 @@ import { Icon } from './components/Icon';
 import { Login } from './components/Login';
 import { useHolidayCredits } from './hooks/useHolidayCredits';
 import { PLACEHOLDER_EMPLOYEE, PLACEHOLDER_EMPLOYEE_ID, buildHolidaySet, DEFAULT_JORNADA_SETTINGS, getDefaultProtectedDays, isEmployeeHiddenInMonth } from './constants';
-import { Employee, MonthYear, Holiday, JornadaSettings, OfficialScheduleSnapshot, TacticalDisplayMode, ProtectedDaysConfig, ProtectedDaysMap, AuditLogEntry } from './types';
+import { Employee, MonthYear, Holiday, JornadaSettings, OfficialScheduleSnapshot, TacticalDisplayMode, ProtectedDaysConfig, ProtectedDaysMap, AuditLogEntry, MonthGuidelines, AllocationReport } from './types';
 import { EmployeeScheduleCard } from './components/EmployeeScheduleCard';
 import { InconsistencyModal } from './components/InconsistencyModal';
 import { detectInconsistencies } from './components/InconsistencyPanel';
@@ -35,6 +35,9 @@ import { CreateMonthModal } from './components/CreateMonthModal';
 import { DailyScheduleModulatorModal } from './components/DailyScheduleModulatorModal';
 import { RefreshMonthModal } from './components/RefreshMonthModal';
 import { analyzeMonthRefresh, applyMonthRefresh } from './src/engine/orchestration/refresh-month';
+import { generateCleanMonthScheduleWithReport } from './src/engine/orchestration/month-generator';
+import { resolveMonthGuidelines } from './src/engine/config/guidelines';
+import { migrateJornadaSettings, migrateMonthGuidelines } from './src/services/scheduleMigrationService';
 import { verifyEmployeePassword, hashEmployeePassword, isHashedPassword } from './src/utils/passwordHash';
 import { AuditJustificationModal, AuditImpactPreview } from './components/AuditJustificationModal';
 import { MobileNavBar } from './components/MobileNavBar';
@@ -137,12 +140,19 @@ const App: React.FC = () => {
     }
   }), [jornadaSettings]);
 
+  const migratedJornadaSettings = useMemo(
+    () => migrateJornadaSettings(activeJornadaSettings),
+    [activeJornadaSettings]
+  );
+
   const [customHolidays, setCustomHolidays] = useLocalStorage<Holiday[]>(STORAGE_KEYS.customHolidays, []);
   const [deletedNationalHolidays, setDeletedNationalHolidays] = useLocalStorage<string[]>(STORAGE_KEYS.deletedNationalHolidays, []);
   const [monthNotes, setMonthNotes] = useLocalStorage<Record<string, string>>(STORAGE_KEYS.monthNotes, {});
   const [trackingStartDate, setTrackingStartDate] = useLocalStorage<string>(STORAGE_KEYS.trackingStart, `${new Date().getFullYear()}-01-01`);
   const [officialSnapshots, setOfficialSnapshots] = useLocalStorage<Record<string, OfficialScheduleSnapshot>>(STORAGE_KEYS.officialSnapshots, {});
   const [protectedDaysMap, setProtectedDaysMap] = useLocalStorage<ProtectedDaysMap>(STORAGE_KEYS.protectedDays, {});
+  const [monthGuidelines, setMonthGuidelines] = useLocalStorage<Record<string, MonthGuidelines>>(STORAGE_KEYS.monthGuidelines, {});
+  const [lastAllocationReport, setLastAllocationReport] = useState<AllocationReport | null>(null);
   const [showProtectedModal, setShowProtectedModal] = useState(false);
   
   const syncStatus = useSyncStatus();
@@ -466,12 +476,18 @@ const App: React.FC = () => {
       setValidatedMonths(prev => ({ ...prev, [monthKey]: true }));
 
       if (createSnapshot) {
+        const currentGuidelines = resolveMonthGuidelines(
+          currentMY.month,
+          migratedJornadaSettings,
+          monthGuidelines[monthKey]
+        );
         const newSnapshot: OfficialScheduleSnapshot = {
           validatedAt: new Date().toISOString(),
           monthKey,
           shifts: {},
           dailyHours: {},
-          tacticalPositions: {}
+          tacticalPositions: {},
+          guidelines: currentGuidelines
         };
         employees.forEach(emp => {
           if (emp.shifts[monthKey]) newSnapshot.shifts[emp.id] = [...emp.shifts[monthKey]];
@@ -811,14 +827,26 @@ const App: React.FC = () => {
   }, [isRefreshModalOpen, employees, currentMY.year, currentMY.month, customHolidays, deletedNationalHolidays, activeJornadaSettings]);
 
   const handleConfirmRefreshMonth = useCallback((generateForEmpIds: string[]) => {
+    const now = new Date();
+    const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const cutoffIdx =
+      monthKey === todayKey
+        ? now.getDate() - 1
+        : monthKey > todayKey
+          ? 0
+          : undefined;
+
     setEmployees(
       prev => applyMonthRefresh(prev, currentMY.year, currentMY.month, {
         generateForEmpIds,
         customHolidays,
         deletedNationalHolidays,
-        settings: activeJornadaSettings,
+        settings: migratedJornadaSettings,
         protectedDays: protectedDaysMap[monthKey],
         pendingCreditsByEmp,
+        guidelines: monthGuidelines[monthKey],
+        officialSnapshot: officialSnapshots[monthKey],
+        reoptimizeFromDayIdx: migratedJornadaSettings.rulesConfig?.useSmartRestAllocatorV2 ? cutoffIdx : undefined,
       }),
       'Atualização de dados da grade'
     );
@@ -830,7 +858,7 @@ const App: React.FC = () => {
       onAction: () => handleUndo(),
       type: 'info',
     });
-  }, [currentMY.year, currentMY.month, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap, monthKey, pendingCreditsByEmp, setEmployees, handleUndo]);
+  }, [currentMY.year, currentMY.month, customHolidays, deletedNationalHolidays, migratedJornadaSettings, protectedDaysMap, monthKey, pendingCreditsByEmp, monthGuidelines, officialSnapshots, setEmployees, handleUndo]);
 
   const handleToggleEmployeeVisibilityInMonth = useCallback((empId: string) => {
     const targetEmp = employees.find(e => e.id === empId);
@@ -905,29 +933,51 @@ const App: React.FC = () => {
     setShowCreateMonthModal(true);
   };
 
-  const handleConfirmCreateMonth = (mode: 'suggested_retro' | 'all_working') => {
+  const handleConfirmCreateMonth = (
+    mode: 'suggested_retro' | 'all_working',
+    guidelines?: Partial<MonthGuidelines>
+  ) => {
     if (!createMonthTargetMY) return;
     const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
     const targetMonthName = monthNames[createMonthTargetMY.month];
     const targetKey = `${createMonthTargetMY.year}-${String(createMonthTargetMY.month + 1).padStart(2, '0')}`;
 
-    const updatedEmployees = generateCleanMonthSchedule(
+    const resolvedGuidelines = resolveMonthGuidelines(
+      createMonthTargetMY.month,
+      migratedJornadaSettings,
+      monthGuidelines[targetKey],
+      guidelines
+    );
+    setMonthGuidelines((prev) => ({
+      ...prev,
+      [targetKey]: resolvedGuidelines,
+    }));
+
+    const { employees: updatedEmployees, report } = generateCleanMonthScheduleWithReport(
       employees,
       createMonthTargetMY.year,
       createMonthTargetMY.month,
       customHolidays,
       deletedNationalHolidays,
-      activeJornadaSettings,
+      migratedJornadaSettings,
       protectedDaysMap[targetKey],
-      mode
+      mode,
+      resolvedGuidelines
     );
     setEmployees(updatedEmployees);
+    setLastAllocationReport(report);
     setCurrentMY(createMonthTargetMY);
+
+    const relaxationSuffix =
+      report && report.relaxations.length > 0
+        ? `\n\nAvisos do motor (${report.relaxations.length}): ${report.relaxations[0].reason}`
+        : '';
+
     showDialog({
       title: 'Sucesso!',
-      message: mode === 'all_working'
+      message: (mode === 'all_working'
         ? `Escala base 100% trabalhada de ${targetMonthName}/${createMonthTargetMY.year} gerada com sucesso! Você pode lançar as folgas manualmente no grid.`
-        : `Escala de ${targetMonthName}/${createMonthTargetMY.year} criada com sucesso e validada com verificação retroativa CLT!`,
+        : `Escala de ${targetMonthName}/${createMonthTargetMY.year} criada com sucesso e validada com verificação retroativa CLT!`) + relaxationSuffix,
       type: 'alert'
     });
   };
@@ -1480,6 +1530,15 @@ const App: React.FC = () => {
            isOpen={showCreateMonthModal}
            onClose={() => setShowCreateMonthModal(false)}
            targetMY={createMonthTargetMY}
+           employees={employees}
+           customHolidays={customHolidays}
+           deletedNationalHolidays={deletedNationalHolidays}
+           settings={migratedJornadaSettings}
+           savedGuidelines={
+             monthGuidelines[
+               `${createMonthTargetMY.year}-${String(createMonthTargetMY.month + 1).padStart(2, '0')}`
+             ]
+           }
            onConfirm={handleConfirmCreateMonth}
          />
        )}
@@ -1600,6 +1659,7 @@ const App: React.FC = () => {
             employees={employees}
             currentMY={currentMY}
             today={new Date()}
+            allocationReport={lastAllocationReport}
             onSelectDay={(idx) => {
               setSelectedDayIdx(idx);
               setCurrentView('grid');

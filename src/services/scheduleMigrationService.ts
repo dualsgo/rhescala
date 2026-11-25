@@ -1,4 +1,5 @@
-import { Employee, ShiftType, normalizeEmployeeRole, normalizeShiftCode } from '../../types';
+import { Employee, JornadaSettings, MonthGuidelines, normalizeEmployeeRole, normalizeShiftCode } from '../../types';
+import { DEFAULT_JORNADA_SETTINGS, DEFAULT_SCHEDULE_RULES } from '../engine/config/schedule-constants';
 
 export interface MigrationResult {
   employees: Employee[];
@@ -63,4 +64,63 @@ export function migrateLegacyEmployeeData(employees: Employee[]): MigrationResul
     employees: hasChanged ? migratedEmployees : employees,
     hasChanged,
   };
+}
+
+/**
+ * Migra configurações de jornada legadas adicionando `rulesConfig` com os padrões seguros
+ * sem sobrescrever nenhum parâmetro já configurado pelo usuário.
+ */
+export function migrateJornadaSettings(raw?: Partial<JornadaSettings> | null): JornadaSettings {
+  const base = DEFAULT_JORNADA_SETTINGS;
+  const savedRules = raw?.rulesConfig;
+  return {
+    minSundayWorkers: typeof raw?.minSundayWorkers === 'number' ? raw.minSundayWorkers : base.minSundayWorkers,
+    shiftHours: {
+      ...base.shiftHours,
+      ...(raw?.shiftHours || {}),
+    },
+    lunchRules: {
+      ...base.lunchRules,
+      ...(raw?.lunchRules || {}),
+    },
+    rulesConfig: {
+      ...DEFAULT_SCHEDULE_RULES,
+      ...(savedRules || {}),
+      estoqueFixedSundayOff: {
+        ...DEFAULT_SCHEDULE_RULES.estoqueFixedSundayOff,
+        ...(savedRules?.estoqueFixedSundayOff || {}),
+      },
+      seasonalPeakPresets: {
+        ...DEFAULT_SCHEDULE_RULES.seasonalPeakPresets,
+        ...(savedRules?.seasonalPeakPresets || {}),
+      },
+    },
+  };
+}
+
+/**
+ * Normaliza mapa legado de diretrizes mensais garantindo fallback seguro.
+ */
+export function migrateMonthGuidelines(
+  raw?: Record<string, Partial<MonthGuidelines>> | null
+): Record<string, MonthGuidelines> {
+  if (!raw || typeof raw !== 'object') return {};
+  const result: Record<string, MonthGuidelines> = {};
+  for (const [key, val] of Object.entries(raw)) {
+    if (!val || typeof val !== 'object') continue;
+    const monthPart = parseInt(key.split('-')[1] || '1', 10) - 1;
+    const presetDays = DEFAULT_SCHEDULE_RULES.seasonalPeakPresets[monthPart] || [];
+    result[key] = {
+      estoqueFixedOffEnabled: Boolean(val.estoqueFixedOffEnabled),
+      estoqueFixedOffWeekday: typeof val.estoqueFixedOffWeekday === 'number' ? val.estoqueFixedOffWeekday : 0,
+      peakDays: Array.isArray(val.peakDays) ? [...val.peakDays] : [...presetDays],
+      lfCountsAsRest: typeof val.lfCountsAsRest === 'boolean' ? val.lfCountsAsRest : false,
+      fiveByTwoRestMode: val.fiveByTwoRestMode === 'flexible' ? 'flexible' : 'strict',
+      coverageMinFloor: typeof val.coverageMinFloor === 'number' ? val.coverageMinFloor : 0.70,
+      coverageTargetCap: typeof val.coverageTargetCap === 'number' ? val.coverageTargetCap : 0.80,
+      minSundayWorkers: typeof val.minSundayWorkers === 'number' ? val.minSundayWorkers : DEFAULT_JORNADA_SETTINGS.minSundayWorkers,
+      allocatePendingHolidayCredits: typeof val.allocatePendingHolidayCredits === 'boolean' ? val.allocatePendingHolidayCredits : true,
+    };
+  }
+  return result;
 }

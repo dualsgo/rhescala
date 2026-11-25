@@ -1,6 +1,8 @@
 
 import React, { useState } from 'react';
-import { JornadaSettings } from '../types';
+import { JornadaSettings, ScheduleRulesConfig } from '../types';
+import { DEFAULT_SCHEDULE_RULES } from '../src/engine/config/schedule-constants';
+import { resolveRulesConfig } from '../src/engine/config/guidelines';
 import { Icon } from './Icon';
 
 interface JornadaManagerProps {
@@ -16,7 +18,21 @@ export const JornadaManager: React.FC<JornadaManagerProps> = ({
   onClose,
   isReadOnly = false 
 }) => {
-  const [localSettings, setLocalSettings] = useState<JornadaSettings>(settings);
+  const [localSettings, setLocalSettings] = useState<JornadaSettings>(() => ({
+    ...settings,
+    rulesConfig: resolveRulesConfig(settings),
+  }));
+
+  const rules = localSettings.rulesConfig || DEFAULT_SCHEDULE_RULES;
+  const updateRules = (patch: Partial<ScheduleRulesConfig>) => {
+    setLocalSettings(prev => ({
+      ...prev,
+      rulesConfig: {
+        ...resolveRulesConfig(prev),
+        ...patch,
+      },
+    }));
+  };
 
   const handleSave = () => {
     onUpdate(localSettings);
@@ -344,6 +360,128 @@ export const JornadaManager: React.FC<JornadaManagerProps> = ({
                 </div>
               </div>
 
+            </div>
+          </section>
+
+          {/* 4. Regras Editáveis de Inteligência & Cobertura (Item F) */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+              <Icon name="tune" className="text-sm text-orange-500" />
+              <span>Regras de Alocação de Folgas & Cobertura</span>
+            </div>
+
+            <div className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-4">
+              <label className="flex items-center justify-between gap-3 cursor-pointer">
+                <div>
+                  <span className="text-xs font-black text-slate-800 dark:text-slate-100 block">
+                    Motor de Inteligência V2 (Pool Ativo + Diretrizes)
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    Considera disponibilidade diária real, priorização de picos e faixa 70%–80%.
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  disabled={isReadOnly}
+                  checked={Boolean(rules.useSmartRestAllocatorV2)}
+                  onChange={(e) => updateRules({ useSmartRestAllocatorV2: e.target.checked })}
+                  className="w-4 h-4 accent-orange-500"
+                />
+              </label>
+
+              <label className="flex items-center justify-between gap-3 cursor-pointer pt-3 border-t border-slate-200/70 dark:border-slate-700/70">
+                <div>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100 block">
+                    Folga fixa de domingo para Estoque (padrão: desativada)
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    Quando desativada, estoquistas entram na rotação dominical como os demais.
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  disabled={isReadOnly}
+                  checked={Boolean(rules.estoqueFixedSundayOff?.enabled)}
+                  onChange={(e) =>
+                    updateRules({
+                      estoqueFixedSundayOff: {
+                        ...rules.estoqueFixedSundayOff,
+                        enabled: e.target.checked,
+                      },
+                    })
+                  }
+                  className="w-4 h-4 accent-orange-500"
+                />
+              </label>
+
+              <label className="flex items-center justify-between gap-3 cursor-pointer pt-3 border-t border-slate-200/70 dark:border-slate-700/70">
+                <div>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100 block">
+                    Loja Fechada (LF) conta como folga na janela 5x2/6x1?
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    Padrão: NÃO (25/12 e outros LF não substituem folga semanal, apenas zeram o streak).
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  disabled={isReadOnly}
+                  checked={Boolean(rules.lfCountsAsRest)}
+                  onChange={(e) => updateRules({ lfCountsAsRest: e.target.checked })}
+                  className="w-4 h-4 accent-orange-500"
+                />
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-200/70 dark:border-slate-700/70">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Modo 5x2</label>
+                  <select
+                    disabled={isReadOnly}
+                    value={rules.fiveByTwoRestMode}
+                    onChange={(e) => updateRules({ fiveByTwoRestMode: e.target.value as 'strict' | 'flexible' })}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200"
+                  >
+                    <option value="strict">Estrito (2 folgas/7d)</option>
+                    <option value="flexible">Flexível (mín. 1/sem)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Piso Cobertura (%)</label>
+                  <input
+                    type="number"
+                    min={40}
+                    max={95}
+                    disabled={isReadOnly}
+                    value={Math.round((rules.coverageMinFloor ?? 0.7) * 100)}
+                    onChange={(e) => updateRules({ coverageMinFloor: Math.max(0.4, Math.min(0.95, (parseInt(e.target.value, 10) || 70) / 100)) })}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Meta Nivelamento (%)</label>
+                  <input
+                    type="number"
+                    min={50}
+                    max={100}
+                    disabled={isReadOnly}
+                    value={Math.round((rules.coverageTargetCap ?? 0.8) * 100)}
+                    onChange={(e) => updateRules({ coverageTargetCap: Math.max(0.5, Math.min(1, (parseInt(e.target.value, 10) || 80) / 100)) })}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Máx. Dom. Seguidos</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={3}
+                    disabled={isReadOnly}
+                    value={rules.maxConsecutiveSundays ?? 2}
+                    onChange={(e) => updateRules({ maxConsecutiveSundays: Math.max(1, Math.min(3, parseInt(e.target.value, 10) || 2)) })}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200"
+                  />
+                </div>
+              </div>
             </div>
           </section>
 

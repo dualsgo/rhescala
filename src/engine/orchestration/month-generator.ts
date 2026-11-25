@@ -4,6 +4,8 @@ import {
     ShiftType,
     Holiday,
     JornadaSettings,
+    MonthGuidelines,
+    AllocationReport,
     ProtectedDaysConfig,
     ProtectedDayDetail,
     DecisionReason
@@ -33,6 +35,8 @@ import { optimizeProtectedDays } from '../peaks/protected-days';
 import { isWorkingShift, getShiftClassification } from '../shifts/shift-predicates';
 import { assignDailyRolesForMonth, isEmployeeCaixaEligible } from '../tactical/tactical-positions';
 import { isEmployeeOnAtestado } from '../../utils/atestado';
+import { resolveMonthGuidelines } from '../config/guidelines';
+import { allocateSmartRestsV2 } from './smart-rest-allocator';
 
 /**
  * Distribui `total` pessoas entre faixas segundo pesos percentuais (método dos maiores restos),
@@ -227,9 +231,47 @@ export function applyMonthUpdate(
     protectedDays?: ProtectedDaysConfig | number[],
     mode: 'suggested_retro' | 'all_working' = 'suggested_retro',
     targetEmpId?: string,
-    pendingHolidayCredits?: Record<string, PendingHolidayCreditInput[]>
+    pendingHolidayCredits?: Record<string, PendingHolidayCreditInput[]>,
+    guidelines?: Partial<MonthGuidelines>
 ): Record<string, { shifts: ShiftType[]; hours: string[]; decisionReasons?: Record<number, DecisionReason>; dailyAssignedRoles?: Record<number, EmployeeRole> }> {
+    return applyMonthUpdateWithReport(
+        employees,
+        year,
+        month,
+        customHolidays,
+        deletedNationalHolidays,
+        settings,
+        protectedDays,
+        mode,
+        targetEmpId,
+        pendingHolidayCredits,
+        guidelines
+    ).data;
+}
+
+export function applyMonthUpdateWithReport(
+    employees: Employee[],
+    year: number,
+    month: number,
+    customHolidays: Holiday[] = [],
+    deletedNationalHolidays: string[] = [],
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS,
+    protectedDays?: ProtectedDaysConfig | number[],
+    mode: 'suggested_retro' | 'all_working' = 'suggested_retro',
+    targetEmpId?: string,
+    pendingHolidayCredits?: Record<string, PendingHolidayCreditInput[]>,
+    guidelines?: Partial<MonthGuidelines>
+): {
+    data: Record<string, { shifts: ShiftType[]; hours: string[]; decisionReasons?: Record<number, DecisionReason>; dailyAssignedRoles?: Record<number, EmployeeRole> }>;
+    report: AllocationReport | null;
+} {
     const result: Record<string, { shifts: ShiftType[]; hours: string[]; decisionReasons?: Record<number, DecisionReason>; dailyAssignedRoles?: Record<number, EmployeeRole> }> = {};
+    let allocationReport: AllocationReport | null = null;
+    const useV2 = Boolean(settings.rulesConfig?.useSmartRestAllocatorV2 || guidelines);
+    const effectiveGuidelines = useV2 ? resolveMonthGuidelines(month, settings, undefined, guidelines) : null;
+    const effectiveSettings: JornadaSettings = effectiveGuidelines
+        ? { ...settings, minSundayWorkers: effectiveGuidelines.minSundayWorkers }
+        : settings;
 
     const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
     const activeRegular = employees.filter(e => e.status === 'active' && !isEmployeeHiddenInMonth(e, monthKey) && !e.isYoungApprentice);
@@ -313,7 +355,7 @@ export function applyMonthUpdate(
 
             result[emp.id] = { shifts, hours, decisionReasons };
         });
-        return result;
+        return { data: result, report: null };
     }
 
     // ── 3. MODO: Sugerida Inteligente com Verificação Retroativa Estrita CLT ─────
@@ -325,8 +367,19 @@ export function applyMonthUpdate(
 
     // Retro-análise dos 2 últimos domingos do mês anterior
     const prevConsecutive = getPrevMonthConsecutive(activeRegular, year, month);
+    const estoqueFixedSunday = effectiveGuidelines
+        ? (effectiveGuidelines.estoqueFixedOffEnabled && effectiveGuidelines.estoqueFixedOffWeekday === 0)
+        : true;
     const { assignments: sundayAssignments } = buildSundayAssignments(
-        activeRegular, year, month, sundaysInMonth, prevConsecutive, settings, protectedDays, targetEmpId
+        activeRegular,
+        year,
+        month,
+        sundaysInMonth,
+        prevConsecutive,
+        effectiveSettings,
+        protectedDays,
+        targetEmpId,
+        estoqueFixedSunday
     );
 
     // Retro-análise dos dias trabalhados no mês anterior até o dia 31
@@ -536,11 +589,40 @@ export function applyMonthUpdate(
         result[emp.id] = { shifts, hours, decisionReasons };
     });
 
-    // 3.9 Validador Coletivo de Cobertura Diária por Turno (Segunda a Sábado)
-    // Se múltiplos colaboradores do mesmo turno tiverem a mesma preferredDayOff, deixando o turno
-    // sem Caixa, desloca a folga de um deles para um dia vizinho válido da mesma semana (D-1 ou D+1),
-    // desde que não viole o limite máximo de 6 dias trabalhados (currentStreak <= 6) nem o Pre-Sunday Guard.
-    if (mode === 'suggested_retro' && !targetEmpId) {
+    // 3.9 Validador Coletivo / Alocador V2
+    if (mode === 'suggested_retro' && !targetEmpId && useV2 && effectiveGuidelines) {
+        const shiftsMap: Record<string, ShiftType[]> = {};
+        const reasonsMap: Record<string, Record<number, DecisionReason>> = {};
+        for (const emp of activeRegular) {
+            if (result[emp.id]) {
+                shiftsMap[emp.id] = result[emp.id].shifts;
+                reasonsMap[emp.id] = result[emp.id].decisionReasons || {};
+            }
+        }
+        const resolvedCredits: Record<string, PendingHolidayCreditInput[]> = {};
+        for (const emp of activeRegular) {
+            resolvedCredits[emp.id] = pendingHolidayCredits?.[emp.id]
+                ?? inferPendingHolidayCreditsBeforeMonth(emp, year, month, customHolidays, deletedNationalHolidays);
+        }
+
+        allocationReport = allocateSmartRestsV2({
+            employees,
+            activeRegular,
+            year,
+            month,
+            shiftsByEmp: shiftsMap,
+            decisionReasonsByEmp: reasonsMap,
+            customHolidays,
+            deletedNationalHolidays,
+            settings: effectiveSettings,
+            guidelines: effectiveGuidelines,
+            protectedDays,
+            pendingHolidayCredits: resolvedCredits,
+            prevStreaks,
+            sundaysInMonth,
+            restSundaysByEmp: sundayAssignments,
+        });
+    } else if (mode === 'suggested_retro' && !targetEmpId) {
         const turnos = ['Abertura', 'Fechamento'] as const;
 
         for (let d = 0; d < daysInMonth; d++) {
@@ -956,9 +1038,9 @@ export function applyMonthUpdate(
         }
     }
 
-    // Se houver dias protegidos configurados, otimiza com Peak-Centric
+    // Se houver dias protegidos configurados no modo legado, otimiza com Peak-Centric
     const configuredDays = Object.keys(normalizeProtectedDaysDetails(protectedDays)).map(Number);
-    if (configuredDays.length > 0) {
+    if (!useV2 && configuredDays.length > 0) {
         const peakResult = optimizeProtectedDays(employees, monthKey, protectedDays || {}, customHolidays, deletedNationalHolidays, settings);
         activeRegular.forEach(emp => {
             if (peakResult[emp.id] && result[emp.id]) {
@@ -1030,7 +1112,7 @@ export function applyMonthUpdate(
         }
     }
 
-    return result;
+    return { data: result, report: allocationReport };
 }
 
 /**
@@ -1213,8 +1295,36 @@ export function generateCleanMonthSchedule(
     deletedNationalHolidays: string[] = [],
     settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS,
     protectedDays?: Record<number, number | ProtectedDayDetail> | number[],
-    mode: 'suggested_retro' | 'all_working' = 'suggested_retro'
+    mode: 'suggested_retro' | 'all_working' = 'suggested_retro',
+    guidelines?: Partial<MonthGuidelines>,
+    pendingHolidayCredits?: Record<string, PendingHolidayCreditInput[]>
 ): Employee[] {
+    return generateCleanMonthScheduleWithReport(
+        employees,
+        targetYear,
+        targetMonth,
+        customHolidays,
+        deletedNationalHolidays,
+        settings,
+        protectedDays,
+        mode,
+        guidelines,
+        pendingHolidayCredits
+    ).employees;
+}
+
+export function generateCleanMonthScheduleWithReport(
+    employees: Employee[],
+    targetYear: number,
+    targetMonth: number,
+    customHolidays: Holiday[] = [],
+    deletedNationalHolidays: string[] = [],
+    settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS,
+    protectedDays?: Record<number, number | ProtectedDayDetail> | number[],
+    mode: 'suggested_retro' | 'all_working' = 'suggested_retro',
+    guidelines?: Partial<MonthGuidelines>,
+    pendingHolidayCredits?: Record<string, PendingHolidayCreditInput[]>
+): { employees: Employee[]; report: AllocationReport | null } {
     const targetKey = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
     const prevDate = new Date(targetYear, targetMonth - 1, 1);
     const prevKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
@@ -1234,10 +1344,22 @@ export function generateCleanMonthSchedule(
     });
     
     // 1. Gera folgas e horários validados (com suporte a modo retroativo ou 100% trabalhado)
-    const monthData = applyMonthUpdate(preparedEmployees, targetYear, targetMonth, customHolidays, deletedNationalHolidays, settings, protectedDays, mode);
+    const { data: monthData, report } = applyMonthUpdateWithReport(
+        preparedEmployees,
+        targetYear,
+        targetMonth,
+        customHolidays,
+        deletedNationalHolidays,
+        settings,
+        protectedDays,
+        mode,
+        undefined,
+        pendingHolidayCredits,
+        guidelines
+    );
     
     // 2. Aplica nos colaboradores
-    return preparedEmployees.map(emp => {
+    const nextEmployees = preparedEmployees.map(emp => {
         const d = monthData[emp.id];
         if (d) {
             return {
@@ -1256,5 +1378,6 @@ export function generateCleanMonthSchedule(
         }
         return emp;
     });
+    return { employees: nextEmployees, report };
 }
 
