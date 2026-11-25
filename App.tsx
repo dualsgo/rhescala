@@ -35,7 +35,8 @@ import { CreateMonthModal } from './components/CreateMonthModal';
 import { DailyScheduleModulatorModal } from './components/DailyScheduleModulatorModal';
 import { RefreshMonthModal } from './components/RefreshMonthModal';
 import { analyzeMonthRefresh, applyMonthRefresh } from './src/engine/orchestration/refresh-month';
-import { generateCleanMonthScheduleWithReport } from './src/engine/orchestration/month-generator';
+import { applyMonthUpdateWithReport, generateCleanMonthScheduleWithReport } from './src/engine/orchestration/month-generator';
+import { normalizeProtectedDaysDetails } from './src/engine/config/schedule-constants';
 import { resolveMonthGuidelines } from './src/engine/config/guidelines';
 import { migrateJornadaSettings, migrateMonthGuidelines } from './src/services/scheduleMigrationService';
 import { verifyEmployeePassword, hashEmployeePassword, isHashedPassword } from './src/utils/passwordHash';
@@ -246,20 +247,43 @@ const App: React.FC = () => {
 
   const handleOptimizeScheduleWithProtectedDays = useCallback((configToUse?: ProtectedDaysConfig) => {
     const config = configToUse ?? activeProtectedDays;
-    const optimized = optimizeProtectedDays(
+    const details = normalizeProtectedDaysDetails(config);
+    const peakDaysFromConfig = Object.keys(details).map(Number).filter(n => !isNaN(n));
+    const resolvedGuidelines = resolveMonthGuidelines(
+      currentMY.month,
+      migratedJornadaSettings,
+      monthGuidelines[monthKey],
+      peakDaysFromConfig.length > 0 ? { peakDays: peakDaysFromConfig } : undefined
+    );
+
+    const { data: optimized, report } = applyMonthUpdateWithReport(
       employees,
-      monthKey,
-      config,
+      currentMY.year,
+      currentMY.month,
       customHolidays,
       deletedNationalHolidays,
-      activeJornadaSettings
+      migratedJornadaSettings,
+      config,
+      'suggested_retro',
+      undefined,
+      undefined,
+      resolvedGuidelines
     );
+    setLastAllocationReport(report);
 
     setEmployees(prev => prev.map(emp => {
       if (optimized[emp.id]) {
         return {
           ...emp,
-          shifts: { ...emp.shifts, [monthKey]: optimized[emp.id].shifts }
+          shifts: { ...emp.shifts, [monthKey]: optimized[emp.id].shifts },
+          decisionReasons: {
+            ...(emp.decisionReasons || {}),
+            [monthKey]: optimized[emp.id].decisionReasons || {}
+          },
+          dailyAssignedRoles: {
+            ...(emp.dailyAssignedRoles || {}),
+            [monthKey]: optimized[emp.id].dailyAssignedRoles || {}
+          }
         };
       }
       return emp;
@@ -267,9 +291,9 @@ const App: React.FC = () => {
 
     showDialog({
       title: 'Otimização Concluída',
-      message: 'Escala sazonal e dias protegidos otimizados com sucesso com 0 infrações CLT!'
+      message: 'Escala sazonal e dias protegidos otimizados preservando piso de 70% e meta de 80% nos dias úteis/sábados e regras específicas de domingo!'
     });
-  }, [activeProtectedDays, employees, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, setEmployees, showDialog]);
+  }, [activeProtectedDays, employees, currentMY.year, currentMY.month, monthKey, customHolidays, deletedNationalHolidays, migratedJornadaSettings, monthGuidelines, setEmployees, showDialog]);
 
   const scheduleDiffs = useMemo(
     () => detectScheduleDiffs(officialSnapshots[monthKey], employees, currentMY),
@@ -689,7 +713,8 @@ const App: React.FC = () => {
         message: 'Horários padrão recalculados com sucesso! Todas as folgas e turnos foram preservados.\n\n💡 Dica: Se aplicou por engano, você pode clicar em "Desfazer" na barra superior ou pressionar Ctrl+Z para reverter.'
       });
     } else if (applyMode === 'folgas_only') {
-      const updatedShifts = applyFolgasOnly(employees, currentMY.year, currentMY.month, empId, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap[monthKey]);
+      const resolvedGuidelines = resolveMonthGuidelines(currentMY.month, migratedJornadaSettings, monthGuidelines[monthKey]);
+      const updatedShifts = applyFolgasOnly(employees, currentMY.year, currentMY.month, empId, customHolidays, deletedNationalHolidays, migratedJornadaSettings, protectedDaysMap[monthKey], pendingCreditsByEmp, resolvedGuidelines);
       setEmployees(prev => prev.map(emp => {
         if (updatedShifts[emp.id]) {
           return { ...emp, shifts: { ...emp.shifts, [monthKey]: updatedShifts[emp.id] } };
@@ -704,11 +729,13 @@ const App: React.FC = () => {
       });
       showDialog({
         title: 'Sucesso',
-        message: 'Folgas e rotação de domingos recalculadas com sucesso respeitando os dias protegidos/sazonais!\n\n💡 Dica: Se aplicou por engano, você pode clicar em "Desfazer" na barra superior ou pressionar Ctrl+Z para reverter.'
+        message: 'Folgas e rotação de domingos recalculadas com sucesso respeitando piso de 70%, meta de 80% e dias protegidos/sazonais!\n\n💡 Dica: Se aplicou por engano, você pode clicar em "Desfazer" na barra superior ou pressionar Ctrl+Z para reverter.'
       });
 
     } else if (applyMode === 'full') {
-      const updatedData = applyMonthUpdate(employees, currentMY.year, currentMY.month, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap[monthKey], 'suggested_retro', empId, pendingCreditsByEmp);
+      const resolvedGuidelines = resolveMonthGuidelines(currentMY.month, migratedJornadaSettings, monthGuidelines[monthKey]);
+      const { data: updatedData, report } = applyMonthUpdateWithReport(employees, currentMY.year, currentMY.month, customHolidays, deletedNationalHolidays, migratedJornadaSettings, protectedDaysMap[monthKey], 'suggested_retro', empId, pendingCreditsByEmp, resolvedGuidelines);
+      if (!empId) setLastAllocationReport(report);
       setEmployees(prev => prev.map(emp => {
         if (empId && emp.id !== empId) return emp;
         if (updatedData[emp.id]) {
@@ -739,10 +766,12 @@ const App: React.FC = () => {
         message: 'Redefinição geral completa aplicada com sucesso respeitando regras sazonais!\n\n💡 Dica: Se aplicou por engano, você pode clicar em "Desfazer" na barra superior ou pressionar Ctrl+Z para reverter.'
       });
     }
-  }, [employees, currentMY, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, protectedDaysMap, pendingCreditsByEmp, setEmployees, showDialog, handleUndo]);
+  }, [employees, currentMY, monthKey, customHolidays, deletedNationalHolidays, activeJornadaSettings, migratedJornadaSettings, monthGuidelines, protectedDaysMap, pendingCreditsByEmp, setEmployees, showDialog, handleUndo]);
 
   const handleApplyFolgas = (targetMY = currentMY, targetKey = monthKey) => {
-    const updatedData = applyMonthUpdate(employees, targetMY.year, targetMY.month, customHolidays, deletedNationalHolidays, jornadaSettings, protectedDaysMap[monthKey], 'suggested_retro', undefined, pendingCreditsByEmp);
+    const resolvedGuidelines = resolveMonthGuidelines(targetMY.month, migratedJornadaSettings, monthGuidelines[targetKey]);
+    const { data: updatedData, report } = applyMonthUpdateWithReport(employees, targetMY.year, targetMY.month, customHolidays, deletedNationalHolidays, migratedJornadaSettings, protectedDaysMap[targetKey], 'suggested_retro', undefined, pendingCreditsByEmp, resolvedGuidelines);
+    setLastAllocationReport(report);
     setEmployees(prev => prev.map(emp => {
       if (updatedData[emp.id]) {
         return {

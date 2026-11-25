@@ -165,6 +165,72 @@ describe('Motor V2 de Alocação Inteligente de Folgas', () => {
     }
   });
 
+  it('8. garante piso de >= 70% em TODOS os dias não-domingo (incluindo dia 18 e dia 19 pré-pico) e aplica meta reduzida apenas nos domingos', () => {
+    // Cenário crítico: 10 colaboradores, pico 20..24/12, 5x2 estrito, lfCountsAsRest=false e protectedDays legados {20:0..24:0}
+    const team = makeTeam(10).map((e, i) => ({
+      ...e,
+      preferredDayOff: ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira'][i % 4],
+    }));
+    const settings = makeV2Settings({ minSundayWorkers: 5 });
+    const guidelines = resolveMonthGuidelines(11, settings, undefined, {
+      peakDays: [20, 21, 22, 23, 24],
+      lfCountsAsRest: false,
+      fiveByTwoRestMode: 'strict',
+      coverageMinFloor: 0.70,
+      coverageTargetCap: 0.80,
+      minSundayWorkers: 5,
+    });
+    const legacyProtected = { 20: 0, 21: 0, 22: 0, 23: 0, 24: 0 };
+
+    const res = generateCleanMonthScheduleWithReport(
+      team,
+      2026,
+      11,
+      [],
+      [],
+      settings,
+      legacyProtected,
+      'suggested_retro',
+      guidelines
+    );
+
+    // Verifica todos os 31 dias de Dezembro/2026
+    for (let d = 0; d < 31; d++) {
+      if (d === 24) {
+        // 25/12 = LF (Loja Fechada)
+        for (const emp of res.employees) {
+          expect(emp.shifts['2026-12'][d]).toBe('LF');
+        }
+        continue;
+      }
+
+      const dow = new Date(2026, 11, d + 1).getDay();
+      const workingCount = res.employees.filter((e) =>
+        isWorkingShift(e.shifts['2026-12'][d])
+      ).length;
+      const ratio = workingCount / res.employees.length;
+
+      if (dow === 0) {
+        // Domingos: seguem regra específica de domingo (minSundayWorkers = 5, podendo ficar abaixo de 70%)
+        expect(workingCount).toBeGreaterThanOrEqual(5);
+      } else {
+        // Todos os demais dias (inclusive dia 18 idx=17, dia 19 idx=18 e picos 21..24): piso estrito >= 70%
+        expect(ratio).toBeGreaterThanOrEqual(0.70);
+      }
+    }
+
+    // Especificamente no dia 19/12 (idx 18): nunca pode concentrar 90% de folgas (>= 70% trabalhando)
+    const workingDay19 = res.employees.filter((e) =>
+      isWorkingShift(e.shifts['2026-12'][18])
+    ).length;
+    expect(workingDay19).toBeGreaterThanOrEqual(7);
+
+    // Zero violações de 7º dia consecutivo
+    for (const emp of res.employees) {
+      expect(maxConsecutiveWorkDays(emp.shifts['2026-12'])).toBeLessThanOrEqual(6);
+    }
+  });
+
   it('3. getDailyAvailability exclui colaboradores com atestado (múltiplos atestados) e férias apenas nos dias afetados', () => {
     const team = [
       createTestEmployee({
@@ -335,10 +401,40 @@ describe('Motor V2 de Alocação Inteligente de Folgas', () => {
         fiveByTwoRestMode: 'strict',
       })
     );
-    const firstEmpWeek1 = janStrictFalse.employees[0].shifts['2027-01'].slice(0, 7);
-    const realRestsWeek1 = firstEmpWeek1.filter((s) => s === 'F' || s === 'FF').length;
-    expect(firstEmpWeek1[0]).toBe('LF');
-    expect(realRestsWeek1).toBe(2);
+    // 01/01/2027 é sexta-feira (LF). Semanas-calendário completas (Seg..Dom): idx 3..9, 10..16, 17..23, 24..30
+    for (const emp of janStrictFalse.employees) {
+      const jan = emp.shifts['2027-01'];
+      expect(jan[0]).toBe('LF');
+      for (const start of [3, 10, 17, 24]) {
+        const realRests = jan
+          .slice(start, start + 7)
+          .filter((s) => s === 'F' || String(s).startsWith('FF')).length;
+        expect(realRests).toBeGreaterThanOrEqual(2);
+      }
+    }
+
+    // Semana do Natal (Seg 21 .. Dom 27/12/2026, idx 20..26) contém LF em 25/12:
+    // com lfCountsAsRest=false o LF NÃO conta — cada colaborador precisa de 2 folgas reais além do LF
+    const decLfFalse = generateCleanMonthScheduleWithReport(
+      team,
+      2026,
+      11,
+      [],
+      [],
+      makeV2Settings(),
+      undefined,
+      'suggested_retro',
+      resolveMonthGuidelines(11, defaultSettings, undefined, {
+        lfCountsAsRest: false,
+        fiveByTwoRestMode: 'strict',
+      })
+    );
+    for (const emp of decLfFalse.employees) {
+      const week = emp.shifts['2026-12'].slice(20, 27);
+      expect(week[4]).toBe('LF');
+      const realRests = week.filter((s) => s === 'F' || String(s).startsWith('FF')).length;
+      expect(realRests).toBeGreaterThanOrEqual(2);
+    }
 
     // validateGuidelineConflicts detecta conflito quando piso > teto ou minSundayWorkers > pool
     const conflicts = validateGuidelineConflicts(

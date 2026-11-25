@@ -370,6 +370,29 @@ export function applyMonthUpdateWithReport(
     const estoqueFixedSunday = effectiveGuidelines
         ? (effectiveGuidelines.estoqueFixedOffEnabled && effectiveGuidelines.estoqueFixedOffWeekday === 0)
         : true;
+    // No motor V2, domingos seguem exclusivamente as regras específicas de domingo (minSundayWorkers e máx 2 seguidos),
+    // evitando que presets sazonais de maxFolgas=0 bloqueiem a rotação dominical e descarreguem folgas na véspera (ex: dia 19/12).
+    const sundayProtectedDays = useV2 && protectedDays
+        ? (() => {
+            const details = normalizeProtectedDaysDetails(protectedDays);
+            const filtered: Record<number, ProtectedDayDetail> = {};
+            for (const key of Object.keys(details)) {
+                const dayNum = Number(key);
+                const dow = new Date(year, month, dayNum).getDay();
+                if (dow !== 0) {
+                    filtered[dayNum] = details[dayNum];
+                } else if (details[dayNum].mandatoryEmployeeIds && details[dayNum].mandatoryEmployeeIds!.length > 0) {
+                    filtered[dayNum] = {
+                        dayNum,
+                        maxFolgas: activeRegular.length,
+                        mandatoryEmployeeIds: details[dayNum].mandatoryEmployeeIds,
+                    };
+                }
+            }
+            return filtered;
+        })()
+        : protectedDays;
+
     const { assignments: sundayAssignments } = buildSundayAssignments(
         activeRegular,
         year,
@@ -377,7 +400,7 @@ export function applyMonthUpdateWithReport(
         sundaysInMonth,
         prevConsecutive,
         effectiveSettings,
-        protectedDays,
+        sundayProtectedDays,
         targetEmpId,
         estoqueFixedSunday
     );
@@ -1254,9 +1277,23 @@ export function applyFolgasOnly(
     customHolidays: Holiday[] = [],
     deletedNationalHolidays: string[] = [],
     settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS,
-    protectedDays?: Record<number, number | ProtectedDayDetail> | number[]
+    protectedDays?: Record<number, number | ProtectedDayDetail> | number[],
+    pendingHolidayCredits?: Record<string, PendingHolidayCreditInput[]>,
+    guidelines?: Partial<MonthGuidelines>
 ): Record<string, ShiftType[]> {
-    const monthData = applyMonthUpdate(employees, year, month, customHolidays, deletedNationalHolidays, settings, protectedDays, 'suggested_retro', targetEmpId);
+    const monthData = applyMonthUpdate(
+        employees,
+        year,
+        month,
+        customHolidays,
+        deletedNationalHolidays,
+        settings,
+        protectedDays,
+        'suggested_retro',
+        targetEmpId,
+        pendingHolidayCredits,
+        guidelines
+    );
     const result: Record<string, ShiftType[]> = {};
 
     if (targetEmpId) {
