@@ -23,6 +23,8 @@ import { getLegalOverrideForDay } from '../clt/legal-overrides';
 import { isEmployeePreferredDayOff } from '../clt/clt-rules';
 import { getShiftClassification } from '../shifts/shift-predicates';
 import { isEmployeeCaixaEligible } from '../tactical/tactical-positions';
+import { isSeasonalEmployee, sortByExperienceDesc } from '../clt/experience';
+import { getPrevMonthConsecutive } from '../clt/sunday-rotation';
 
 export interface SmartAllocatorInput {
   employees: Employee[];
@@ -201,6 +203,17 @@ export function allocateSmartRestsV2(input: SmartAllocatorInput): AllocationRepo
   const displacedPreferences: DisplacedPreferenceItem[] = [];
   const capacityWarnings: string[] = [];
 
+  // Prioridade de experiência: CLT (admissão mais antiga primeiro) escolhe folgas fora do pico antes dos Sazonais
+  const prioritizeSeasonal = guidelines.prioritizeSeasonalRestOnPeaks !== false;
+  const orderedRegular = prioritizeSeasonal ? sortByExperienceDesc(activeRegular) : activeRegular;
+  const hasSeasonalInTeam = activeRegular.some(e => isSeasonalEmployee(e));
+  // Domingos de pico (ex: 20/12): seguem regras de domingo, mas Sazonais folgam primeiro no rodízio
+  const peakSundaySet = new Set<number>(
+    guidelines.peakDays
+      .filter(d => d >= 1 && d <= daysInMonth && new Date(year, month, d).getDay() === 0)
+      .map(d => d - 1)
+  );
+
   // 1. Pré-computa Pool Ativo diário (exclui FE, AT, DO, N/A, LF)
   const availabilityByDay: DailyAvailability[] = [];
   let fiveByTwoDayCount = 0;
@@ -357,8 +370,15 @@ export function allocateSmartRestsV2(input: SmartAllocatorInput): AllocationRepo
     }
 
     // 3. Penalidade de dia de pico (menor que FLOOR_BREACH_PENALTY: nunca derruba dia 19 abaixo de 70%!)
+    // Com prioridade de experiência ativa, Sazonais absorvem folgas inevitáveis do pico antes da equipe CLT.
     if (peakSet.has(dayIdx)) {
-      score -= SMART_ALLOCATOR_WEIGHTS.PEAK_REST_PENALTY;
+      if (prioritizeSeasonal && hasSeasonalInTeam) {
+        score -= isSeasonalEmployee(emp)
+          ? SMART_ALLOCATOR_WEIGHTS.PEAK_REST_PENALTY * 0.2
+          : SMART_ALLOCATOR_WEIGHTS.PEAK_REST_PENALTY * 1.6;
+      } else {
+        score -= SMART_ALLOCATOR_WEIGHTS.PEAK_REST_PENALTY;
+      }
     } else if (detail && typeof detail.maxFolgas === 'number') {
       const currentFolgas = avail.availablePool.filter(e => e.id === emp.id || shiftsByEmp[e.id]?.[dayIdx] === 'F').length;
       if (currentFolgas > detail.maxFolgas) {
@@ -429,7 +449,7 @@ export function allocateSmartRestsV2(input: SmartAllocatorInput): AllocationRepo
 
   // 2A. Folga Preferencial (consciente do piso diário de 70% e diretrizes de pico)
   for (const week of calendarWeeks) {
-    for (const emp of activeRegular) {
+    for (const emp of orderedRegular) {
       const shifts = shiftsByEmp[emp.id];
       const reasons = decisionReasonsByEmp[emp.id];
       const prefDow = getPrefDow(emp);
@@ -501,7 +521,7 @@ export function allocateSmartRestsV2(input: SmartAllocatorInput): AllocationRepo
     const isLeadingPartial = week[0] === 0 && week.length < 7;
     const isTrailingPartial = week[week.length - 1] === daysInMonth - 1 && week.length < 7;
 
-    for (const emp of activeRegular) {
+    for (const emp of orderedRegular) {
       const fiveByTwoDays = week.filter(k =>
         getEffectiveJornadaOnDate(emp, `${monthKey}-${String(k + 1).padStart(2, '0')}`) === '5x2'
       ).length;
@@ -565,7 +585,7 @@ export function allocateSmartRestsV2(input: SmartAllocatorInput): AllocationRepo
   }
 
   // 2C. Guarda absoluta CLT: nunca 7º dia consecutivo trabalhado (escolhe o melhor dia por cobertura, sem empilhar no dia 19!)
-  for (const emp of activeRegular) {
+  for (const emp of orderedRegular) {
     const shifts = shiftsByEmp[emp.id];
     const reasons = decisionReasonsByEmp[emp.id];
     let run = prevStreaks.get(emp.id) || 0;
@@ -811,6 +831,117 @@ export function allocateSmartRestsV2(input: SmartAllocatorInput): AllocationRepo
     }
   }
 
+  // 3C. Prioridade de experiência em dias de pico (inclui domingos de pico):
+  // troca em pares CLT ↔ Sazonal. O CLT trabalha no pico e assume a folga que o Sazonal tinha em um dia
+  // fora do pico; o Sazonal folga no pico. O total de presentes em cada dia não muda (piso de 70% e
+  // minSundayWorkers preservados) e ambos continuam válidos em CLT (≤ 6 dias), cota 5x2 e máx. de domingos seguidos.
+  if (prioritizeSeasonal && hasSeasonalInTeam && (peakSet.size > 0 || peakSundaySet.size > 0)) {
+    const prevSundayConsec = getPrevMonthConsecutive(activeRegular, year, month);
+    const maxConsecSundays = typeof rules.maxConsecutiveSundays === 'number' ? rules.maxConsecutiveSundays : 2;
+    const isAnyPeak = (k: number) => peakSet.has(k) || peakSundaySet.has(k);
+
+    const sundayStreakOk = (empId: string, shifts: ShiftType[]): boolean => {
+      let consec = prevSundayConsec.get(empId) || 0;
+      for (const s of sundaysInMonth) {
+        if (isShiftRestForStreak(shifts[s])) {
+          consec = 0;
+        } else {
+          consec++;
+          if (consec > maxConsecSundays) return false;
+        }
+      }
+      return true;
+    };
+
+    const turnoFloorOk = (dayIdx: number): boolean => {
+      const avail = availabilityByDay[dayIdx];
+      if (new Date(year, month, dayIdx + 1).getDay() === 0) return true;
+      const cov = getDayCoverage(dayIdx);
+      if (avail.byTurno.Abertura.length >= 4 && cov.aberturaRatio < guidelines.coverageMinFloor - 1e-9) return false;
+      if (avail.byTurno.Fechamento.length >= 4 && cov.fechamentoRatio < guidelines.coverageMinFloor - 1e-9) return false;
+      return true;
+    };
+
+    const peakDaysOrdered = Array.from(new Set([...peakSet, ...peakSundaySet]))
+      .filter(k => k >= cutoffDayIdx)
+      .sort((a, b) => a - b);
+    // Sazonais menos experientes (admissão mais recente) absorvem a folga de pico primeiro
+    const seasonalLeastExperiencedFirst = orderedRegular.filter(e => isSeasonalEmployee(e)).reverse();
+    const cltMostExperiencedFirst = orderedRegular.filter(e => !isSeasonalEmployee(e));
+
+    for (const d of peakDaysOrdered) {
+      const isSundayPeak = peakSundaySet.has(d);
+      for (const clt of cltMostExperiencedFirst) {
+        const cltShifts = shiftsByEmp[clt.id];
+        if (cltShifts[d] !== 'F' || isImmutable(clt, d)) continue;
+
+        let swapped = false;
+        for (const saz of seasonalLeastExperiencedFirst) {
+          const sazShifts = shiftsByEmp[saz.id];
+          if (sazShifts[d] !== 'T' || isImmutable(saz, d)) continue;
+          if (protectedDetails[d + 1]?.mandatoryEmployeeIds?.includes(saz.id)) continue;
+
+          // Dia "e" fora do pico: Sazonal folga, CLT trabalha → trocam (mais próximo de d primeiro)
+          const candidates: number[] = [];
+          for (let e = cutoffDayIdx; e < daysInMonth; e++) {
+            if (e === d || isAnyPeak(e)) continue;
+            if (sazShifts[e] !== 'F' || isImmutable(saz, e)) continue;
+            if (cltShifts[e] !== 'T' || isImmutable(clt, e)) continue;
+            if (protectedDetails[e + 1]?.mandatoryEmployeeIds?.includes(clt.id)) continue;
+            candidates.push(e);
+          }
+          candidates.sort((a, b) => Math.abs(a - d) - Math.abs(b - d) || a - b);
+
+          for (const e of candidates) {
+            const simClt = [...cltShifts];
+            simClt[d] = 'T';
+            simClt[e] = 'F';
+            const simSaz = [...sazShifts];
+            simSaz[d] = 'F';
+            simSaz[e] = 'T';
+
+            if (
+              !validateHardConstraints(clt, simClt, year, month, prevStreaks.get(clt.id) || 0, guidelines, protectedDetails, calendarWeeks, firstDayDow) ||
+              !validateHardConstraints(saz, simSaz, year, month, prevStreaks.get(saz.id) || 0, guidelines, protectedDetails, calendarWeeks, firstDayDow) ||
+              !sundayStreakOk(clt.id, simClt) ||
+              !sundayStreakOk(saz.id, simSaz)
+            ) {
+              continue;
+            }
+
+            // Aplica e confirma pisos por turno (Abertura/Fechamento) em d e e; reverte se violar
+            shiftsByEmp[clt.id] = simClt;
+            shiftsByEmp[saz.id] = simSaz;
+            if (!turnoFloorOk(d) || !turnoFloorOk(e)) {
+              shiftsByEmp[clt.id] = cltShifts;
+              shiftsByEmp[saz.id] = sazShifts;
+              continue;
+            }
+
+            // Mantém a mesma referência de array usada pelo chamador (month-generator / refresh)
+            for (let k = 0; k < daysInMonth; k++) {
+              cltShifts[k] = simClt[k];
+              sazShifts[k] = simSaz[k];
+            }
+            shiftsByEmp[clt.id] = cltShifts;
+            shiftsByEmp[saz.id] = sazShifts;
+
+            const cltReasons = decisionReasonsByEmp[clt.id];
+            const sazReasons = decisionReasonsByEmp[saz.id];
+            const sazReasonAtE = sazReasons[e];
+            cltReasons[d] = 'REGULAR_WORK';
+            cltReasons[e] = sazReasonAtE === 'SUNDAY_ROTATION_OFF' ? 'SUNDAY_ROTATION_OFF' : 'PEAK_DAY_SHIFTED';
+            sazReasons[d] = isSundayPeak ? 'SUNDAY_ROTATION_OFF' : 'PEAK_DAY_SHIFTED';
+            sazReasons[e] = 'REGULAR_WORK';
+            swapped = true;
+            break;
+          }
+          if (swapped) break;
+        }
+      }
+    }
+  }
+
   // Registra eventuais relaxamentos residuais de cobertura em qualquer dia aberto não-domingo
   for (let d = cutoffDayIdx; d < daysInMonth; d++) {
     const dow = new Date(year, month, d + 1).getDay();
@@ -879,11 +1010,35 @@ export function allocateSmartRestsV2(input: SmartAllocatorInput): AllocationRepo
     }
   }
 
+  // Resumo das folgas em dias de pico por tipo de contrato
+  let peakRestSummary: { clt: number; sazonal: number } | undefined;
+  if (peakSet.size > 0 || peakSundaySet.size > 0) {
+    let cltRests = 0;
+    let sazRests = 0;
+    for (const k of Array.from(new Set([...peakSet, ...peakSundaySet]))) {
+      if (k < cutoffDayIdx) continue;
+      for (const emp of activeRegular) {
+        if (shiftsByEmp[emp.id]?.[k] !== 'F') continue;
+        if (isSeasonalEmployee(emp)) sazRests++;
+        else cltRests++;
+      }
+    }
+    peakRestSummary = { clt: cltRests, sazonal: sazRests };
+    if (prioritizeSeasonal && cltRests > 0) {
+      capacityWarnings.push(
+        hasSeasonalInTeam
+          ? `${cltRests} folga(s) de colaboradores CLT permaneceram em dias de pico: não havia Sazonal disponível para troca sem violar CLT (≤ 6 dias), 5x2, domingos seguidos ou piso de ${Math.round(guidelines.coverageMinFloor * 100)}%.`
+          : `${cltRests} folga(s) em dias de pico recaíram sobre a equipe CLT porque não há colaboradores Sazonais ativos neste mês.`
+      );
+    }
+  }
+
   return {
     monthKey,
     relaxations,
     displacedPreferences,
     capacityWarnings,
     theoreticalMaxPresence,
+    peakRestSummary,
   };
 }

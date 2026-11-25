@@ -49,6 +49,7 @@ export function getDefaultMonthGuidelines(
     coverageTargetCap: typeof rules.coverageTargetCap === 'number' ? rules.coverageTargetCap : 0.80,
     minSundayWorkers: settings.minSundayWorkers ?? DEFAULT_JORNADA_SETTINGS.minSundayWorkers,
     allocatePendingHolidayCredits: true,
+    prioritizeSeasonalRestOnPeaks: rules.prioritizeSeasonalRestOnPeaks !== false,
   };
 }
 

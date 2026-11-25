@@ -291,12 +291,18 @@ export const InconsistencyModal: React.FC<InconsistencyModalProps> = ({
           allocationReport.monthKey === `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}` &&
           (allocationReport.relaxations.length > 0 ||
             allocationReport.capacityWarnings.length > 0 ||
-            allocationReport.displacedPreferences.length > 0) && (
+            allocationReport.displacedPreferences.length > 0 ||
+            Boolean(allocationReport.peakRestSummary)) && (
             <div className="px-6 py-3 border-t border-slate-100 dark:border-zinc-800 bg-amber-50/70 dark:bg-amber-950/20 max-h-40 overflow-y-auto custom-scrollbar space-y-1.5">
               <p className="text-[11px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
                 <Icon name="psychology" className="text-sm" />
                 Relatório do Motor de Folgas (teto teórico {(allocationReport.theoreticalMaxPresence * 100).toFixed(1)}%)
               </p>
+              {allocationReport.peakRestSummary && (
+                <p className="text-[11px] text-slate-700 dark:text-zinc-200 font-semibold">
+                  • Folgas em dias de pico: {allocationReport.peakRestSummary.sazonal} de Sazonais · {allocationReport.peakRestSummary.clt} de CLT
+                </p>
+              )}
               {allocationReport.capacityWarnings.map((w, idx) => (
                 <p key={`cap-${idx}`} className="text-[11px] text-amber-800 dark:text-amber-300 font-medium">
                   • {w}

@@ -290,6 +290,8 @@ export interface ScheduleRulesConfig {
   maxConsecutiveSundays: number; // 2
   preferentialDayOffPolicy: 'preferential';
   useSmartRestAllocatorV2?: boolean;
+  /** Em dias de pico, folgas inevitáveis recaem primeiro sobre Sazonais (equipe CLT mais experiente permanece ativa). */
+  prioritizeSeasonalRestOnPeaks?: boolean;
 }
 
 export interface MonthGuidelines {
@@ -302,6 +304,7 @@ export interface MonthGuidelines {
   coverageTargetCap: number;
   minSundayWorkers: number;
   allocatePendingHolidayCredits: boolean;
+  prioritizeSeasonalRestOnPeaks: boolean;
 }
 
 export interface AllocationRelaxationItem {
@@ -319,12 +322,20 @@ export interface DisplacedPreferenceItem {
   reason: string;
 }
 
+export interface PeakRestSummary {
+  /** Folgas ('F') de colaboradores CLT em dias de pico (inclui domingos de pico). */
+  clt: number;
+  /** Folgas ('F') de colaboradores Sazonais em dias de pico (inclui domingos de pico). */
+  sazonal: number;
+}
+
 export interface AllocationReport {
   monthKey: string;
   relaxations: AllocationRelaxationItem[];
   displacedPreferences: DisplacedPreferenceItem[];
   capacityWarnings: string[];
   theoreticalMaxPresence: number;
+  peakRestSummary?: PeakRestSummary;
 }
 
 export interface JornadaSettings {

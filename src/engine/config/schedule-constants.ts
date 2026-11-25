@@ -48,6 +48,7 @@ export const DEFAULT_SCHEDULE_RULES: ScheduleRulesConfig = {
   maxConsecutiveSundays: 2,
   preferentialDayOffPolicy: 'preferential',
   useSmartRestAllocatorV2: false,
+  prioritizeSeasonalRestOnPeaks: true,
 };
 
 export const SMART_ALLOCATOR_WEIGHTS = {

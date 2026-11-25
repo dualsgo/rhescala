@@ -120,6 +120,7 @@ export function migrateMonthGuidelines(
       coverageTargetCap: typeof val.coverageTargetCap === 'number' ? val.coverageTargetCap : 0.80,
       minSundayWorkers: typeof val.minSundayWorkers === 'number' ? val.minSundayWorkers : DEFAULT_JORNADA_SETTINGS.minSundayWorkers,
       allocatePendingHolidayCredits: typeof val.allocatePendingHolidayCredits === 'boolean' ? val.allocatePendingHolidayCredits : true,
+      prioritizeSeasonalRestOnPeaks: typeof val.prioritizeSeasonalRestOnPeaks === 'boolean' ? val.prioritizeSeasonalRestOnPeaks : true,
     };
   }
   return result;

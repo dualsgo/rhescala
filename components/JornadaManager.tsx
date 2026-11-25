@@ -432,6 +432,24 @@ export const JornadaManager: React.FC<JornadaManagerProps> = ({
                 />
               </label>
 
+              <label className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                    Priorizar Sazonais nas folgas de dias de pico
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    Padrão: SIM. Folgas inevitáveis no pico (inclusive domingos de pico) recaem primeiro sobre Sazonais; a equipe CLT mais antiga permanece ativa.
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  disabled={isReadOnly}
+                  checked={rules.prioritizeSeasonalRestOnPeaks !== false}
+                  onChange={(e) => updateRules({ prioritizeSeasonalRestOnPeaks: e.target.checked })}
+                  className="w-4 h-4 accent-orange-500"
+                />
+              </label>
+
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-200/70 dark:border-slate-700/70">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Modo 5x2</label>

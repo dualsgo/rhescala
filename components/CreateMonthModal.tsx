@@ -199,6 +199,16 @@ export const CreateMonthModal: React.FC<CreateMonthModalProps> = ({
                     className="w-4 h-4 accent-orange-500"
                   />
                 </label>
+
+                <label className="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-zinc-800 text-xs font-bold cursor-pointer">
+                  <span>Sazonais folgam primeiro nos dias de pico</span>
+                  <input
+                    type="checkbox"
+                    checked={guidelines.prioritizeSeasonalRestOnPeaks !== false}
+                    onChange={(e) => setGuidelines(prev => ({ ...prev, prioritizeSeasonalRestOnPeaks: e.target.checked }))}
+                    className="w-4 h-4 accent-orange-500"
+                  />
+                </label>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

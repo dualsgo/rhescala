@@ -16,6 +16,7 @@ import {
 } from '../src/engine/orchestration/month-generator';
 import { reoptimizeMonthFromCutoff } from '../src/engine/orchestration/refresh-month';
 import { isWorkingShift } from '../src/engine/shifts/shift-predicates';
+import { sortByExperienceDesc } from '../src/engine/clt/experience';
 
 function makeV2Settings(overrides: Partial<JornadaSettings> = {}): JornadaSettings {
   return {
@@ -229,6 +230,70 @@ describe('Motor V2 de Alocação Inteligente de Folgas', () => {
     for (const emp of res.employees) {
       expect(maxConsecutiveWorkDays(emp.shifts['2026-12'])).toBeLessThanOrEqual(6);
     }
+  });
+
+  it('9. prioriza Sazonais nas folgas inevitáveis de pico (CLT mais experiente ativo) sem quebrar piso, CLT e domingos', () => {
+    // 10 colaboradores: 6 CLT (admissões antigas) + 4 Sazonais (admitidos em nov/2026)
+    const team = makeTeam(10).map((e, i) => ({
+      ...e,
+      contractType: (i >= 6 ? 'Sazonal' : 'CLT') as 'CLT' | 'Sazonal',
+      hiredAt: i >= 6 ? `2026-11-0${i - 5}` : `202${i}-01-10`,
+      preferredDayOff: ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira'][i % 4],
+    }));
+    const settings = makeV2Settings({ minSundayWorkers: 5 });
+    const baseGuidelines = {
+      peakDays: [20, 21, 22, 23, 24],
+      lfCountsAsRest: false,
+      fiveByTwoRestMode: 'strict' as const,
+      minSundayWorkers: 5,
+    };
+    const peakIdx = [19, 20, 21, 22, 23];
+    const countPeakRests = (emps: Employee[], seasonal: boolean) =>
+      emps
+        .filter((e) => (e.contractType === 'Sazonal') === seasonal)
+        .reduce((acc, e) => acc + peakIdx.filter((k) => e.shifts['2026-12'][k] === 'F').length, 0);
+
+    const withPriority = generateCleanMonthScheduleWithReport(
+      team, 2026, 11, [], [], settings, undefined, 'suggested_retro',
+      resolveMonthGuidelines(11, settings, undefined, { ...baseGuidelines, prioritizeSeasonalRestOnPeaks: true })
+    );
+    const withoutPriority = generateCleanMonthScheduleWithReport(
+      team, 2026, 11, [], [], settings, undefined, 'suggested_retro',
+      resolveMonthGuidelines(11, settings, undefined, { ...baseGuidelines, prioritizeSeasonalRestOnPeaks: false })
+    );
+
+    const cltWith = countPeakRests(withPriority.employees, false);
+    const cltWithout = countPeakRests(withoutPriority.employees, false);
+    const sazWith = countPeakRests(withPriority.employees, true);
+
+    // Com prioridade, CLT nunca folga mais no pico do que sem prioridade, e os Sazonais absorvem as folgas
+    expect(cltWith).toBeLessThanOrEqual(cltWithout);
+    expect(cltWith).toBeLessThanOrEqual(sazWith);
+    expect(withPriority.report!.peakRestSummary).toBeDefined();
+    expect(withPriority.report!.peakRestSummary!.clt).toBeLessThanOrEqual(withPriority.report!.peakRestSummary!.sazonal);
+
+    // Regras duras preservadas: piso >= 70% fora de domingo, domingo >= 5, nunca 7º dia
+    for (let d = 0; d < 31; d++) {
+      if (d === 24) continue; // 25/12 LF
+      const dow = new Date(2026, 11, d + 1).getDay();
+      const working = withPriority.employees.filter((e) => isWorkingShift(e.shifts['2026-12'][d])).length;
+      if (dow === 0) expect(working).toBeGreaterThanOrEqual(5);
+      else expect(working / withPriority.employees.length).toBeGreaterThanOrEqual(0.7);
+    }
+    for (const emp of withPriority.employees) {
+      expect(maxConsecutiveWorkDays(emp.shifts['2026-12'])).toBeLessThanOrEqual(6);
+    }
+  });
+
+  it('10. sortByExperienceDesc ordena CLT antes de Sazonal e, entre iguais, admissão mais antiga primeiro', () => {
+    const emps = [
+      createTestEmployee({ id: 's-new', contractType: 'Sazonal', hiredAt: '2026-11-20' }),
+      createTestEmployee({ id: 'c-new', contractType: 'CLT', hiredAt: '2025-06-01' }),
+      createTestEmployee({ id: 's-old', contractType: 'Sazonal', hiredAt: '2026-11-01' }),
+      createTestEmployee({ id: 'c-old', contractType: 'CLT', hiredAt: '2019-03-01' }),
+      createTestEmployee({ id: 'c-nodate', contractType: 'CLT' }),
+    ];
+    expect(sortByExperienceDesc(emps).map((e) => e.id)).toEqual(['c-nodate', 'c-old', 'c-new', 's-old', 's-new']);
   });
 
   it('3. getDailyAvailability exclui colaboradores com atestado (múltiplos atestados) e férias apenas nos dias afetados', () => {
