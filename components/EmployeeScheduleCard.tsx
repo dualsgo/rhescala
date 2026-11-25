@@ -6,6 +6,14 @@ import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { isWorkingShift } from '../src/engine/shifts/shift-predicates';
 import { buildHolidaySet, getShortName, isEmployeeActiveInMonth } from '../constants';
 import { addDaysToISODate, getDaysInMonthKey } from '../src/utils/date';
+import {
+  getEmployeeAtestados,
+  getAtestadoOnDate,
+  getAtestadoDurationDays,
+  buildAddAtestadoUpdate,
+  buildRemoveAtestadoUpdate,
+  buildClearAllAtestadosUpdate,
+} from '../src/utils/atestado';
 import { useDialog } from '../contexts/DialogContext';
 
 interface EmployeeScheduleCardProps {
@@ -52,15 +60,8 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   const [requestType, setRequestType] = React.useState<'folga_aviso' | 'troca_turno'>('folga_aviso');
   const [targetEmployeeId, setTargetEmployeeId] = React.useState('');
 
-  const [atestadoStartInput, setAtestadoStartInput] = React.useState(initialDate || employee.atestadoStart || '');
-  const [atestadoDurationInput, setAtestadoDurationInput] = React.useState<number>(() => {
-    if (employee.atestadoStart && employee.atestadoEnd) {
-      const s = new Date(employee.atestadoStart + 'T00:00:00').getTime();
-      const e = new Date(employee.atestadoEnd + 'T00:00:00').getTime();
-      return Math.max(1, Math.round((e - s) / 86400000) + 1);
-    }
-    return 1;
-  });
+  const [atestadoStartInput, setAtestadoStartInput] = React.useState(initialDate || '');
+  const [atestadoDurationInput, setAtestadoDurationInput] = React.useState<number>(1);
   const [atestadoSaveFeedback, setAtestadoSaveFeedback] = React.useState(false);
 
   React.useEffect(() => {
@@ -70,74 +71,24 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
   }, [initialTab, isAdmin]);
 
   React.useEffect(() => {
-    setAtestadoStartInput(initialDate || employee.atestadoStart || '');
-    if (employee.atestadoStart && employee.atestadoEnd) {
-      const s = new Date(employee.atestadoStart + 'T00:00:00').getTime();
-      const e = new Date(employee.atestadoEnd + 'T00:00:00').getTime();
-      setAtestadoDurationInput(Math.max(1, Math.round((e - s) / 86400000) + 1));
-    } else {
-      setAtestadoDurationInput(1);
-    }
-  }, [employee.id, employee.atestadoStart, employee.atestadoEnd, initialDate]);
+    setAtestadoStartInput(initialDate || '');
+    setAtestadoDurationInput(1);
+  }, [employee.id, initialDate]);
 
   const addDaysStr = (dateStr: string, days: number): string => addDaysToISODate(dateStr, days);
 
   const handleSaveAtestado = () => {
-    if (!onUpdateEmployee) return;
-    if (!atestadoStartInput || atestadoDurationInput <= 0) {
-      handleClearAtestado();
-      return;
-    }
-    const endDate = addDaysStr(atestadoStartInput, atestadoDurationInput - 1);
-    const startObj = new Date(atestadoStartInput + 'T00:00:00');
-    const endObj = new Date(endDate + 'T00:00:00');
-    
-    const newShifts = { ...(employee.shifts || {}) };
-    const current = new Date(startObj.getFullYear(), startObj.getMonth(), 1);
-    
-    while (current <= endObj) {
-      const mKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
-      const shiftsArr = [...(newShifts[mKey] || [])];
-      const daysInM = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
-      if (shiftsArr.length === 0) {
-        for (let i = 0; i < daysInM; i++) shiftsArr[i] = 'T';
-      }
-      for (let d = 1; d <= daysInM; d++) {
-        const dStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        if (dStr >= atestadoStartInput && dStr <= endDate) {
-          shiftsArr[d - 1] = 'AT';
-        } else if (shiftsArr[d - 1] === 'AT') {
-          shiftsArr[d - 1] = 'T';
-        }
-      }
-      newShifts[mKey] = shiftsArr;
-      current.setMonth(current.getMonth() + 1);
-    }
-
-    onUpdateEmployee(employee.id, {
-      atestadoStart: atestadoStartInput,
-      atestadoEnd: endDate,
-      shifts: newShifts
-    });
-
+    if (!onUpdateEmployee || !atestadoStartInput || atestadoDurationInput <= 0) return;
+    onUpdateEmployee(employee.id, buildAddAtestadoUpdate(employee, atestadoStartInput, atestadoDurationInput));
+    setAtestadoStartInput('');
+    setAtestadoDurationInput(1);
     setAtestadoSaveFeedback(true);
     setTimeout(() => setAtestadoSaveFeedback(false), 3000);
   };
 
   const handleClearAtestado = () => {
     if (!onUpdateEmployee) return;
-    const newShifts = { ...(employee.shifts || {}) };
-    let hasChanges = false;
-    for (const [mKey, shiftArr] of Object.entries(newShifts)) {
-      if (Array.isArray(shiftArr) && shiftArr.includes('AT')) {
-        newShifts[mKey] = shiftArr.map(s => s === 'AT' ? 'T' : s);
-        hasChanges = true;
-      }
-    }
-    const updates: Partial<Employee> = { atestadoStart: '', atestadoEnd: '' };
-    if (hasChanges) updates.shifts = newShifts;
-    onUpdateEmployee(employee.id, updates);
-
+    onUpdateEmployee(employee.id, buildClearAllAtestadosUpdate(employee));
     setAtestadoStartInput('');
     setAtestadoDurationInput(1);
     setAtestadoSaveFeedback(true);
@@ -321,16 +272,15 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                             }
                             return 'FE';
                           })() : (shift === 'AT') ? (() => {
-                            if (employee.atestadoStart && employee.atestadoEnd) {
-                              const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                              if (fullDate >= employee.atestadoStart && fullDate <= employee.atestadoEnd) {
-                                 const s = new Date(employee.atestadoStart + 'T00:00:00').getTime();
-                                 const e = new Date(employee.atestadoEnd + 'T00:00:00').getTime();
-                                 const c = new Date(fullDate + 'T00:00:00').getTime();
-                                 const total = Math.round((e - s) / 86400000) + 1;
-                                 const cur = Math.round((c - s) / 86400000) + 1;
-                                 return `AT ${cur}/${total}`;
-                              }
+                            const fullDate = `${currentMY.year}-${String(currentMY.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                            const atRec = getAtestadoOnDate(employee, fullDate);
+                            if (atRec) {
+                              const s = new Date(atRec.start + 'T00:00:00').getTime();
+                              const e = new Date(atRec.end + 'T00:00:00').getTime();
+                              const c = new Date(fullDate + 'T00:00:00').getTime();
+                              const total = Math.round((e - s) / 86400000) + 1;
+                              const cur = Math.round((c - s) / 86400000) + 1;
+                              return `AT ${cur}/${total}`;
                             }
                             return 'AT';
                           })() : (shift.startsWith('FF') ? 'FF' : shift)
@@ -512,9 +462,10 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                             }
                             return 'Férias';
                           })() : shift === 'AT' ? (() => {
-                            if (employee.atestadoStart && employee.atestadoEnd && fullDate >= employee.atestadoStart && fullDate <= employee.atestadoEnd) {
-                              const s = new Date(employee.atestadoStart + 'T00:00:00').getTime();
-                              const e = new Date(employee.atestadoEnd + 'T00:00:00').getTime();
+                            const atRec = getAtestadoOnDate(employee, fullDate);
+                            if (atRec) {
+                              const s = new Date(atRec.start + 'T00:00:00').getTime();
+                              const e = new Date(atRec.end + 'T00:00:00').getTime();
                               const c = new Date(fullDate + 'T00:00:00').getTime();
                               const total = Math.round((e - s) / 86400000) + 1;
                               const cur = Math.round((c - s) / 86400000) + 1;
@@ -1033,33 +984,58 @@ export const EmployeeScheduleCard: React.FC<EmployeeScheduleCardProps> = ({
                 </div>
               </div>
 
-              {employee.atestadoStart && employee.atestadoEnd && (
-                <div className="bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-4 rounded-2xl flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="w-3 h-3 rounded-full bg-rose-500 inline-block animate-pulse" />
-                    <div>
-                      <p className="text-[11px] font-black uppercase text-slate-400">Atestado Ativo Cadastrado</p>
-                      <p className="text-xs font-bold text-slate-800 dark:text-zinc-100">
-                        {new Date(employee.atestadoStart + 'T00:00:00').toLocaleDateString('pt-BR')} até {new Date(employee.atestadoEnd + 'T00:00:00').toLocaleDateString('pt-BR')}
+              {(() => {
+                const atestadosList = getEmployeeAtestados(employee);
+                if (atestadosList.length === 0) return null;
+                return (
+                  <div className="bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-4 rounded-2xl space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] font-black uppercase text-slate-400">
+                        Atestados Lançados ({atestadosList.length})
                       </p>
-                      <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                        Retorno previsto ao trabalho: {new Date(addDaysStr(employee.atestadoEnd, 1) + 'T00:00:00').toLocaleDateString('pt-BR')}
-                      </p>
+                      {onUpdateEmployee && atestadosList.length > 1 && (
+                        <button
+                          onClick={handleClearAtestado}
+                          className="text-[11px] font-black uppercase text-red-600 dark:text-red-400 hover:underline"
+                        >
+                          Limpar Todos
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {atestadosList.map(at => {
+                        const dur = getAtestadoDurationDays(at);
+                        return (
+                          <div key={at.id} className="flex items-center justify-between gap-2 bg-white dark:bg-zinc-800/70 p-3 rounded-xl border border-slate-200/70 dark:border-zinc-700/70">
+                            <div className="flex items-center gap-3">
+                              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block shrink-0" />
+                              <div>
+                                <p className="text-xs font-bold text-slate-800 dark:text-zinc-100">
+                                  {new Date(at.start + 'T00:00:00').toLocaleDateString('pt-BR')} até {new Date(at.end + 'T00:00:00').toLocaleDateString('pt-BR')} ({dur} dia{dur > 1 ? 's' : ''})
+                                </p>
+                                <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                  Retorno previsto: {new Date(addDaysStr(at.end, 1) + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                </p>
+                              </div>
+                            </div>
+                            {onUpdateEmployee && (
+                              <button
+                                onClick={() => onUpdateEmployee(employee.id, buildRemoveAtestadoUpdate(employee, at.id))}
+                                className="px-2.5 py-1 bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-950/60 dark:hover:bg-red-900 dark:text-red-300 text-[11px] font-extrabold rounded-lg transition-all"
+                              >
+                                Remover
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                  {onUpdateEmployee && (
-                    <button
-                      onClick={handleClearAtestado}
-                      className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-950/60 dark:hover:bg-red-900 dark:text-red-300 text-xs font-extrabold rounded-xl transition-all"
-                    >
-                      Remover Atestado
-                    </button>
-                  )}
-                </div>
-              )}
+                );
+              })()}
 
               <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 rounded-2xl space-y-4 shadow-sm">
-                <h4 className="text-xs font-black uppercase text-slate-700 dark:text-zinc-200 tracking-wider">Novo / Editar Atestado</h4>
+                <h4 className="text-xs font-black uppercase text-slate-700 dark:text-zinc-200 tracking-wider">Lançar Novo Atestado</h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>

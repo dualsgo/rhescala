@@ -32,6 +32,7 @@ import { getLegalOverrideForDay } from '../clt/legal-overrides';
 import { optimizeProtectedDays } from '../peaks/protected-days';
 import { isWorkingShift, getShiftClassification } from '../shifts/shift-predicates';
 import { assignDailyRolesForMonth, isEmployeeCaixaEligible } from '../tactical/tactical-positions';
+import { isEmployeeOnAtestado } from '../../utils/atestado';
 
 /**
  * Distribui `total` pessoas entre faixas segundo pesos percentuais (método dos maiores restos),
@@ -187,7 +188,7 @@ function inferPendingHolidayCreditsBeforeMonth(
             let s = rawShift;
             if ((emp.hiredAt && dStr < emp.hiredAt) || (emp.firedAt && dStr > emp.firedAt)) s = 'N/A';
             else if (emp.vacationStart && emp.vacationEnd && dStr >= emp.vacationStart && dStr <= emp.vacationEnd) s = 'FE';
-            else if (emp.atestadoStart && emp.atestadoEnd && dStr >= emp.atestadoStart && dStr <= emp.atestadoEnd) s = 'AT';
+            else if (isEmployeeOnAtestado(emp, dStr)) s = 'AT';
 
             if (nationals.has(dStr) && (s === 'T' || ['P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ', 'CX', 'REP', 'VEND', 'FISC', 'AP'].includes(s))) {
                 const hObj = customHolidays.find(h => h.date === dStr);

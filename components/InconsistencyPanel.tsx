@@ -5,6 +5,7 @@ import { Icon } from './Icon';
 import { getPrevMonthConsecutive, getPrevMonthWorkStreak, isWorkingShift } from '../hooks/useScheduleEngine';
 import { getShortName, isEmployeeActiveInMonth } from '../constants';
 import { addDaysToISODate } from '../src/utils/date';
+import { isEmployeeOnAtestado } from '../src/utils/atestado';
 
 
 interface InconsistencyPanelProps {
@@ -57,9 +58,7 @@ function getEffectiveShift(emp: Employee, year: number, month: number, dayIdx: n
         const end = emp.vacationEnd || addDaysToISODate(start, 29);
         if (dateStr >= start && dateStr <= end) return 'FE';
     }
-    if (emp.atestadoStart && emp.atestadoEnd) {
-        if (dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd) return 'AT';
-    }
+    if (isEmployeeOnAtestado(emp, dateStr)) return 'AT';
     const shifts = (emp.shifts[monthKey] ?? []) as ShiftType[];
     return shifts[dayIdx] || 'F';
 }

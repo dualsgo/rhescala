@@ -1,6 +1,7 @@
 import { Employee, JornadaSettings, ProtectedDayDetail } from '../../../types';
 import { DEFAULT_JORNADA_SETTINGS, normalizeProtectedDaysDetails, isEmployeeHiddenInMonth } from '../config/schedule-constants';
 import { isWorkingShift, isBirthday, isEmployeePreferredDayOff } from './clt-rules';
+import { isEmployeeOnAtestado } from '../../utils/atestado';
 import { getShiftClassification } from '../shifts/shift-predicates';
 
 /**
@@ -26,9 +27,7 @@ export function isSundayUnavailable(
     if (dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) return true;
   }
   // 1c. Atestado
-  if (emp.atestadoStart && emp.atestadoEnd) {
-    if (dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd) return true;
-  }
+  if (isEmployeeOnAtestado(emp, dateStr)) return true;
   // 1b. Birthday
   if (isBirthday(emp, dateStr)) return true;
   // 2. Preferred day off is Sunday or Estoque

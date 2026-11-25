@@ -1,5 +1,6 @@
 import { Employee, ShiftType } from '../../../types';
 import { isBirthday } from './clt-rules';
+import { isEmployeeOnAtestado } from '../../utils/atestado';
 
 /**
  * Retorna o status de turno legal/obrigatório de um colaborador para uma data específica,
@@ -13,7 +14,7 @@ import { isBirthday } from './clt-rules';
  */
 export function getLegalOverride(emp: Employee, dateStr: string): ShiftType | null {
     if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) return 'FE';
-    if (emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd) return 'AT';
+    if (isEmployeeOnAtestado(emp, dateStr)) return 'AT';
     if (isBirthday(emp, dateStr)) return 'DO';
     if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) return 'N/A';
     return null;

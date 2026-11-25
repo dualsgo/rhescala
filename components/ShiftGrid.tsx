@@ -10,6 +10,7 @@ import { MobileFilterDrawer } from './MobileFilterDrawer';
 
 import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { toLocalISODate } from '../src/utils/date';
+import { getAtestadoOnDate, isEmployeeOnAtestado } from '../src/utils/atestado';
 import { ROLE_VISUAL_MAP, SHIFT_CELL_STYLES, getShiftCellStyle } from '../src/utils/design-system';
 
 interface ShiftGridProps {
@@ -387,7 +388,7 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
           s = 'N/A';
         } else if (emp.firedAt && checkDate > emp.firedAt) {
           s = 'N/A';
-        } else if (emp.atestadoStart && emp.atestadoEnd && checkDate >= emp.atestadoStart && checkDate <= emp.atestadoEnd) {
+        } else if (isEmployeeOnAtestado(emp, checkDate)) {
           s = 'AT';
         } else if (emp.vacationStart && emp.vacationEnd && checkDate >= emp.vacationStart && checkDate <= emp.vacationEnd) {
           s = 'FE';
@@ -2115,9 +2116,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                               <div className="flex items-center gap-0.5 text-rose-600 dark:text-rose-400 font-black leading-none">
                                                 <Icon name="add" className="text-base" />
                                                 {(() => {
-                                                  if (emp.atestadoStart && emp.atestadoEnd && fullDate >= emp.atestadoStart && fullDate <= emp.atestadoEnd) {
-                                                    const s = new Date(emp.atestadoStart + 'T00:00:00').getTime();
-                                                    const e = new Date(emp.atestadoEnd + 'T00:00:00').getTime();
+                                                  const atRec = getAtestadoOnDate(emp, fullDate);
+                                                  if (atRec) {
+                                                    const s = new Date(atRec.start + 'T00:00:00').getTime();
+                                                    const e = new Date(atRec.end + 'T00:00:00').getTime();
                                                     const c = new Date(fullDate + 'T00:00:00').getTime();
                                                     const total = Math.round((e - s) / 86400000) + 1;
                                                     const cur = Math.round((c - s) / 86400000) + 1;
@@ -2362,9 +2364,10 @@ export const ShiftGrid: React.FC<ShiftGridProps> = ({
                                           <div className="flex flex-col items-center justify-center text-rose-500 font-black leading-none">
                                             <Icon name="add" className="text-sm" />
                                             {(() => {
-                                              if (emp.atestadoStart && emp.atestadoEnd && fullDate >= emp.atestadoStart && fullDate <= emp.atestadoEnd) {
-                                                const s = new Date(emp.atestadoStart + 'T00:00:00').getTime();
-                                                const e = new Date(emp.atestadoEnd + 'T00:00:00').getTime();
+                                              const atRec = getAtestadoOnDate(emp, fullDate);
+                                              if (atRec) {
+                                                const s = new Date(atRec.start + 'T00:00:00').getTime();
+                                                const e = new Date(atRec.end + 'T00:00:00').getTime();
                                                 const c = new Date(fullDate + 'T00:00:00').getTime();
                                                 const total = Math.round((e - s) / 86400000) + 1;
                                                 const cur = Math.round((c - s) / 86400000) + 1;

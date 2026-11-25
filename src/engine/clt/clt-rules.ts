@@ -1,5 +1,6 @@
 import { Employee, ShiftType, Holiday, JornadaSettings } from '../../../types';
 import { DEFAULT_JORNADA_SETTINGS, APPRENTICE_WORK_PERIOD, buildHolidaySet, getStoreClosedDatesForYear } from '../config/schedule-constants';
+import { isEmployeeOnAtestado } from '../../utils/atestado';
 
 export const WEEKDAY_NAMES = [
   'Domingo', 'Segunda', 'Terça', 'Quarta',
@@ -124,7 +125,7 @@ export function generateMonthForEmployee(
     if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
       shifts.push('FE'); hours.push(getTargetHours(emp, dow, isHoliday, settings)); continue;
     }
-    if (emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd) {
+    if (isEmployeeOnAtestado(emp, dateStr)) {
       shifts.push('AT'); hours.push(getTargetHours(emp, dow, isHoliday, settings)); continue;
     }
     if (isBirthday(emp, dateStr)) {

@@ -4,6 +4,13 @@ import { Employee, EmployeeCargo, EMPLOYEE_ROLES, ROLE_METADATA_MAP, normalizeEm
 import { Icon } from './Icon';
 import { SHIFT_HOURS, APPRENTICE_WORK_PERIOD } from '../constants';
 import { addDaysToISODate } from '../src/utils/date';
+import {
+  getEmployeeAtestados,
+  getAtestadoDurationDays,
+  buildAddAtestadoUpdate,
+  buildRemoveAtestadoUpdate,
+  buildClearAllAtestadosUpdate,
+} from '../src/utils/atestado';
 import { hashEmployeePassword, isHashedPassword } from '../src/utils/passwordHash';
 import { DeactivateEmployeeModal } from './DeactivateEmployeeModal';
 
@@ -141,56 +148,12 @@ function handleVacationStart(emp: Employee, startDate: string, onUpdate: (id: st
 }
 
 function handleAtestadoSave(emp: Employee, startDate: string, durationDays: number, onUpdate: (id: string, data: Partial<Employee>) => void) {
-  if (!startDate || durationDays <= 0) {
-    handleAtestadoClear(emp, onUpdate);
-    return;
-  }
-  const endDate = addDays(startDate, durationDays - 1);
-  const startObj = new Date(startDate + 'T00:00:00');
-  const endObj = new Date(endDate + 'T00:00:00');
-  
-  const newShifts = { ...emp.shifts };
-  const current = new Date(startObj.getFullYear(), startObj.getMonth(), 1);
-  while (current <= endObj) {
-    const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
-    const shifts = [...(newShifts[monthKey] || [])];
-    const daysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
-    
-    if (shifts.length === 0) {
-      for (let i = 0; i < daysInMonth; i++) shifts[i] = 'T';
-    }
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      if (dStr >= startDate && dStr <= endDate) {
-        shifts[d - 1] = 'AT';
-      } else if (shifts[d - 1] === 'AT') {
-        shifts[d - 1] = 'T';
-      }
-    }
-    newShifts[monthKey] = shifts;
-    current.setMonth(current.getMonth() + 1);
-  }
-
-  onUpdate(emp.id, {
-    atestadoStart: startDate,
-    atestadoEnd: endDate,
-    shifts: newShifts
-  });
+  if (!startDate || durationDays <= 0) return;
+  onUpdate(emp.id, buildAddAtestadoUpdate(emp, startDate, durationDays));
 }
 
 function handleAtestadoClear(emp: Employee, onUpdate: (id: string, data: Partial<Employee>) => void) {
-  const newShifts = { ...emp.shifts };
-  let hasChanges = false;
-  for (const [mKey, shiftArr] of Object.entries(newShifts)) {
-    if (Array.isArray(shiftArr) && shiftArr.includes('AT')) {
-      newShifts[mKey] = shiftArr.map(s => s === 'AT' ? 'T' : s);
-      hasChanges = true;
-    }
-  }
-  const updates: Partial<Employee> = { atestadoStart: '', atestadoEnd: '' };
-  if (hasChanges) updates.shifts = newShifts;
-  onUpdate(emp.id, updates);
+  onUpdate(emp.id, buildClearAllAtestadosUpdate(emp));
 }
 
 interface AddEmployeeModalProps {
@@ -534,26 +497,13 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const [atestadoStartEdit, setAtestadoStartEdit] = useState(employee.atestadoStart || '');
-  const [atestadoDurationEdit, setAtestadoDurationEdit] = useState<number>(() => {
-    if (employee.atestadoStart && employee.atestadoEnd) {
-      const s = new Date(employee.atestadoStart + 'T00:00:00').getTime();
-      const e = new Date(employee.atestadoEnd + 'T00:00:00').getTime();
-      return Math.max(1, Math.round((e - s) / 86400000) + 1);
-    }
-    return 1;
-  });
+  const [atestadoStartEdit, setAtestadoStartEdit] = useState('');
+  const [atestadoDurationEdit, setAtestadoDurationEdit] = useState<number>(1);
 
   useEffect(() => {
-    setAtestadoStartEdit(employee.atestadoStart || '');
-    if (employee.atestadoStart && employee.atestadoEnd) {
-      const s = new Date(employee.atestadoStart + 'T00:00:00').getTime();
-      const e = new Date(employee.atestadoEnd + 'T00:00:00').getTime();
-      setAtestadoDurationEdit(Math.max(1, Math.round((e - s) / 86400000) + 1));
-    } else {
-      setAtestadoDurationEdit(1);
-    }
-  }, [employee.id, employee.atestadoStart, employee.atestadoEnd]);
+    setAtestadoStartEdit('');
+    setAtestadoDurationEdit(1);
+  }, [employee.id]);
 
   const currentRole = normalizeEmployeeRole(employee.primaryRole || employee.cargo || employee.role);
 
@@ -1156,72 +1106,104 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                 </div>
 
                 {/* Atestado Médico */}
-                <div className="p-3.5 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <Icon name="medical_services" className="text-rose-500 text-sm" />
-                      Atestado Médico (Período)
-                    </label>
-                    {employee.atestadoStart && employee.atestadoEnd && (
-                      <button
-                        type="button"
-                        disabled={isReadOnly}
-                        onClick={() => {
-                          handleAtestadoClear(employee, onUpdateEmployee);
-                          setAtestadoStartEdit('');
-                          setAtestadoDurationEdit(1);
-                        }}
-                        className="text-[11px] font-black text-rose-500 hover:underline uppercase"
-                      >
-                        Limpar Atestado
-                      </button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-[11px] font-bold text-slate-400 uppercase block mb-1">Data Início</span>
-                      <input
-                        type="date"
-                        disabled={isReadOnly}
-                        value={atestadoStartEdit}
-                        onChange={(e) => setAtestadoStartEdit(e.target.value)}
-                        className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 dark:text-zinc-200 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-bold text-slate-400 uppercase block mb-1">Duração (Dias)</span>
-                      <input
-                        type="number"
-                        min={1}
-                        max={180}
-                        disabled={isReadOnly}
-                        value={atestadoDurationEdit}
-                        onChange={(e) => setAtestadoDurationEdit(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 dark:text-zinc-200 outline-none"
-                      />
-                    </div>
-                  </div>
-                  {atestadoStartEdit && (
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-zinc-700/60">
-                      <div className="text-[11px] font-bold text-slate-600 dark:text-zinc-300">
-                        <span>Fim: {formatDateBR(addDays(atestadoStartEdit, atestadoDurationEdit - 1))}</span>
-                        <span className="ml-2 text-emerald-600 dark:text-emerald-400">Retorno: {formatDateBR(addDays(atestadoStartEdit, atestadoDurationEdit))}</span>
+                {(() => {
+                  const atestadoList = getEmployeeAtestados(employee);
+                  return (
+                    <div className="p-3.5 bg-slate-50 dark:bg-zinc-800/80 rounded-2xl border border-slate-200 dark:border-zinc-700 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-black text-slate-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+                          <Icon name="medical_services" className="text-rose-500 text-sm" />
+                          Atestados Médicos {atestadoList.length > 0 ? `(${atestadoList.length})` : ''}
+                        </label>
+                        {atestadoList.length > 0 && !isReadOnly && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleAtestadoClear(employee, onUpdateEmployee);
+                              setAtestadoStartEdit('');
+                              setAtestadoDurationEdit(1);
+                            }}
+                            className="text-[11px] font-black text-rose-500 hover:underline uppercase"
+                          >
+                            Limpar Todos
+                          </button>
+                        )}
                       </div>
-                      {!isReadOnly && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleAtestadoSave(employee, atestadoStartEdit, atestadoDurationEdit, onUpdateEmployee);
-                          }}
-                          className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-1"
-                        >
-                          <Icon name="save" className="text-xs" />
-                          Salvar Atestado
-                        </button>
+
+                      {atestadoList.length > 0 && (
+                        <ul className="space-y-1.5">
+                          {atestadoList.map(at => {
+                            const dur = getAtestadoDurationDays(at);
+                            return (
+                              <li key={at.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-white dark:bg-zinc-900 border border-rose-200/70 dark:border-rose-900/50 text-[11px]">
+                                <div className="font-bold text-slate-700 dark:text-zinc-200">
+                                  <span>{formatDateBR(at.start)} a {formatDateBR(at.end)}</span>
+                                  <span className="ml-1.5 text-rose-600 dark:text-rose-400">({dur} dia{dur > 1 ? 's' : ''})</span>
+                                </div>
+                                {!isReadOnly && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onUpdateEmployee(employee.id, buildRemoveAtestadoUpdate(employee, at.id))}
+                                    className="text-[10px] font-black text-rose-500 hover:text-rose-700 uppercase"
+                                  >
+                                    Remover
+                                  </button>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-[11px] font-bold text-slate-400 uppercase block mb-1">Novo Início</span>
+                          <input
+                            type="date"
+                            disabled={isReadOnly}
+                            value={atestadoStartEdit}
+                            onChange={(e) => setAtestadoStartEdit(e.target.value)}
+                            className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 dark:text-zinc-200 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <span className="text-[11px] font-bold text-slate-400 uppercase block mb-1">Duração (Dias)</span>
+                          <input
+                            type="number"
+                            min={1}
+                            max={180}
+                            disabled={isReadOnly}
+                            value={atestadoDurationEdit}
+                            onChange={(e) => setAtestadoDurationEdit(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 dark:text-zinc-200 outline-none"
+                          />
+                        </div>
+                      </div>
+                      {atestadoStartEdit && (
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-zinc-700/60">
+                          <div className="text-[11px] font-bold text-slate-600 dark:text-zinc-300">
+                            <span>Fim: {formatDateBR(addDays(atestadoStartEdit, atestadoDurationEdit - 1))}</span>
+                            <span className="ml-2 text-emerald-600 dark:text-emerald-400">Retorno: {formatDateBR(addDays(atestadoStartEdit, atestadoDurationEdit))}</span>
+                          </div>
+                          {!isReadOnly && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleAtestadoSave(employee, atestadoStartEdit, atestadoDurationEdit, onUpdateEmployee);
+                                setAtestadoStartEdit('');
+                                setAtestadoDurationEdit(1);
+                              }}
+                              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-1"
+                            >
+                              <Icon name="add" className="text-xs" />
+                              Lançar Atestado
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -1501,7 +1483,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
       }
 
       if (emp.isHidden || emp.status !== 'active') hidden++;
-      if ((emp.vacationStart && emp.vacationEnd) || (emp.atestadoStart && emp.atestadoEnd)) away++;
+      if ((emp.vacationStart && emp.vacationEnd) || getEmployeeAtestados(emp).length > 0) away++;
     }
 
     return {
@@ -1533,7 +1515,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
       else if (statusFilter === 'CLT') matchesStatus = emp.contractType !== 'Sazonal' && emp.status === 'active';
       else if (statusFilter === 'SAZONAL') matchesStatus = emp.contractType === 'Sazonal' && emp.status === 'active';
       else if (statusFilter === 'APPRENTICE') matchesStatus = Boolean(emp.isYoungApprentice) && emp.status === 'active';
-      else if (statusFilter === 'AWAY') matchesStatus = Boolean((emp.vacationStart && emp.vacationEnd) || (emp.atestadoStart && emp.atestadoEnd));
+      else if (statusFilter === 'AWAY') matchesStatus = Boolean((emp.vacationStart && emp.vacationEnd) || getEmployeeAtestados(emp).length > 0);
       else if (statusFilter === 'HIDDEN') matchesStatus = Boolean(emp.isHidden || emp.status !== 'active');
 
       let matchesShift = true;
@@ -1936,13 +1918,13 @@ export const TeamView: React.FC<TeamViewProps> = ({
                         </div>
                       )}
 
-                      {/* Atestado */}
-                      {emp.atestadoStart && emp.atestadoEnd && (
-                        <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 text-[11px] bg-rose-50 dark:bg-rose-950/30 px-2 py-0.5 rounded-lg w-fit">
+                      {/* Atestado(s) */}
+                      {getEmployeeAtestados(emp).map(at => (
+                        <div key={at.id} className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 text-[11px] bg-rose-50 dark:bg-rose-950/30 px-2 py-0.5 rounded-lg w-fit">
                           <Icon name="medical_services" className="text-xs shrink-0" />
-                          <span>Atestado: {formatDateBR(emp.atestadoStart).substring(0, 5)} a {formatDateBR(emp.atestadoEnd).substring(0, 5)}</span>
+                          <span>Atestado: {formatDateBR(at.start).substring(0, 5)} a {formatDateBR(at.end).substring(0, 5)}</span>
                         </div>
-                      )}
+                      ))}
                     </div>
 
                     {/* Bottom Action Strip */}

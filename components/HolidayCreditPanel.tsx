@@ -4,6 +4,7 @@ import { Employee, MonthYear, ShiftType, Holiday } from '../types';
 import { Icon } from './Icon';
 import { buildHolidaySet, isEmployeeActiveInMonth } from '../constants';
 import { isWorkingShift } from '../src/engine/shifts/shift-predicates';
+import { isEmployeeOnAtestado } from '../src/utils/atestado';
 
 
 interface HolidayCreditPanelProps {
@@ -68,7 +69,7 @@ export const HolidayCreditPanel: React.FC<HolidayCreditPanelProps> = ({
           currentShift = 'N/A';
         } else if (emp.vacationStart && emp.vacationEnd && hDateStr >= emp.vacationStart && hDateStr <= emp.vacationEnd) {
           currentShift = 'FE';
-        } else if (emp.atestadoStart && emp.atestadoEnd && hDateStr >= emp.atestadoStart && hDateStr <= emp.atestadoEnd) {
+        } else if (isEmployeeOnAtestado(emp, hDateStr)) {
           currentShift = 'AT';
         } else if (emp.birthday) {
           const empMD = emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday;

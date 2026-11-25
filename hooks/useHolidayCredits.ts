@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Employee, Holiday } from '../types';
 import { getNationalHolidays, isEmployeeHiddenInMonth } from '../constants';
 import { isWorkingShift } from './useScheduleEngine';
+import { isEmployeeOnAtestado } from '../src/utils/atestado';
 
 export interface HolidayCredit {
   id: string;
@@ -82,7 +83,7 @@ export function useHolidayCredits(
             shift = 'N/A';
           } else if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
             shift = 'FE';
-          } else if (emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd) {
+          } else if (isEmployeeOnAtestado(emp, dateStr)) {
             shift = 'AT';
           } else if (emp.birthday) {
             const empMD = emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday;

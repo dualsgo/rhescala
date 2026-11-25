@@ -1,6 +1,7 @@
 import { Employee, MonthYear, JornadaSettings } from '../../types';
 import { isEmployeeActiveInMonth, isEmployeeActiveOnDay, DEFAULT_JORNADA_SETTINGS } from '../../constants';
 import { getShiftClassification, isWorkingShift } from '../../hooks/useScheduleEngine';
+import { isEmployeeOnAtestado } from './atestado';
 
 function escapeCSVField(value: string | number | undefined | null): string {
   if (value === undefined || value === null) return '';
@@ -114,7 +115,7 @@ export function generateScheduleCsvContent(
           rawShift = 'N/A';
         } else if (emp.firedAt && d.dateStr > emp.firedAt) {
           rawShift = 'N/A';
-        } else if (emp.atestadoStart && emp.atestadoEnd && d.dateStr >= emp.atestadoStart && d.dateStr <= emp.atestadoEnd) {
+        } else if (isEmployeeOnAtestado(emp, d.dateStr)) {
           rawShift = 'AT';
         } else if (emp.vacationStart && emp.vacationEnd && d.dateStr >= emp.vacationStart && d.dateStr <= emp.vacationEnd) {
           rawShift = 'FE';

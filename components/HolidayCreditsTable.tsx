@@ -5,6 +5,7 @@ import { HolidayCredit } from '../hooks/useHolidayCredits';
 import { isWorkingShift } from '../src/engine/shifts/shift-predicates';
 import { toPng } from 'html-to-image';
 import { Icon } from './Icon';
+import { isEmployeeOnAtestado } from '../src/utils/atestado';
 
 interface HolidayCreditsTableProps {
   employees: Employee[];
@@ -438,7 +439,7 @@ export const HolidayCreditsTable: React.FC<HolidayCreditsTableProps> = ({
                           shift = 'N/A';
                         } else if (emp.vacationStart && emp.vacationEnd && h.date >= emp.vacationStart && h.date <= emp.vacationEnd) {
                           shift = 'FE';
-                        } else if (emp.atestadoStart && emp.atestadoEnd && h.date >= emp.atestadoStart && h.date <= emp.atestadoEnd) {
+                        } else if (isEmployeeOnAtestado(emp, h.date)) {
                           shift = 'AT';
                         } else if (emp.birthday) {
                           const empMD = emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday;

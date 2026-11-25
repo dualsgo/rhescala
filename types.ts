@@ -179,8 +179,9 @@ export interface Employee {
   shiftName: string;
   vacationStart?: string; // YYYY-MM-DD
   vacationEnd?: string;   // YYYY-MM-DD
-  atestadoStart?: string; // YYYY-MM-DD
-  atestadoEnd?: string;   // YYYY-MM-DD
+  atestadoStart?: string; // YYYY-MM-DD (legado / último período)
+  atestadoEnd?: string;   // YYYY-MM-DD (legado / último período)
+  atestados?: AtestadoRecord[]; // Lista cumulativa de múltiplos atestados distintos
   hiredAt?: string;       // YYYY-MM-DD — used to skip months before hiring
   firedAt?: string;       // YYYY-MM-DD — used to stop generating after termination
   birthday?: string;       // YYYY-MM-DD or MM-DD
@@ -188,6 +189,12 @@ export interface Employee {
   hiddenMonths?: Record<string, boolean>; // Month-scoped grid visibility ("YYYY-MM" -> true)
   password?: string;       // Personal password for individual access
   requests?: EmployeeRequest[];
+}
+
+export interface AtestadoRecord {
+  id: string;
+  start: string; // YYYY-MM-DD
+  end: string;   // YYYY-MM-DD
 }
 
 export interface LunchAllocationMetadata {

@@ -7,6 +7,7 @@ import { useDialog } from '../contexts/DialogContext';
 import { isWorkingShift } from '../src/engine/shifts/shift-predicates';
 import { copyToClipboard } from '../src/utils/clipboard';
 import { HolidayCreditsTable } from './HolidayCreditsTable';
+import { isEmployeeOnAtestado } from '../src/utils/atestado';
 
 interface WorkedHolidaysListProps {
   employees: Employee[];
@@ -61,7 +62,7 @@ export const WorkedHolidaysList: React.FC<WorkedHolidaysListProps> = ({
       if ((emp.hiredAt && dateStr < emp.hiredAt) || (emp.firedAt && dateStr > emp.firedAt)) return false;
       let shift = (emp.shifts[targetMonthKey] || [])[dayIdx];
       if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) shift = 'FE';
-      else if (emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd) shift = 'AT';
+      else if (isEmployeeOnAtestado(emp, dateStr)) shift = 'AT';
       else if (emp.birthday) {
         const empMD = emp.birthday.length > 5 ? emp.birthday.substring(5) : emp.birthday;
         if (empMD === dateStr.substring(5) && shift === 'DO') shift = 'DO';

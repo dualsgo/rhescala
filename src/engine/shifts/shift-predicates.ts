@@ -1,5 +1,6 @@
 import { DEFAULT_JORNADA_SETTINGS } from '../config/schedule-constants';
 import { Employee, JornadaSettings } from '../../../types';
+import { isEmployeeOnAtestado } from '../../utils/atestado';
 
 export const WORKING_TACTICAL_CODES = [
   'P1', 'PC', 'P2', 'P3', 'P4', 'ESTQ',
@@ -26,7 +27,7 @@ export function isWorkingShift(s: string | undefined | null): boolean {
  * 4. Turno gravado na matriz mensal (com fallback para 'T' se vazio)
  */
 export function resolveEffectiveShift(
-  emp: Pick<Employee, 'shifts' | 'hiredAt' | 'firedAt' | 'atestadoStart' | 'atestadoEnd' | 'vacationStart' | 'vacationEnd'>,
+  emp: Pick<Employee, 'shifts' | 'hiredAt' | 'firedAt' | 'atestadoStart' | 'atestadoEnd' | 'atestados' | 'vacationStart' | 'vacationEnd'>,
   dateStr: string,
   monthKey: string,
   dayIdx: number
@@ -36,7 +37,7 @@ export function resolveEffectiveShift(
     rawShift = 'N/A';
   } else if (emp.firedAt && dateStr > emp.firedAt) {
     rawShift = 'N/A';
-  } else if (emp.atestadoStart && emp.atestadoEnd && dateStr >= emp.atestadoStart && dateStr <= emp.atestadoEnd) {
+  } else if (isEmployeeOnAtestado(emp, dateStr)) {
     rawShift = 'AT';
   } else if (emp.vacationStart && emp.vacationEnd && dateStr >= emp.vacationStart && dateStr <= emp.vacationEnd) {
     rawShift = 'FE';

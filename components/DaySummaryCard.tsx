@@ -5,6 +5,7 @@ import { Employee, MonthYear, Holiday, JornadaSettings } from '../types';
 import { buildHolidaySet, DEFAULT_JORNADA_SETTINGS, getShortName, isEmployeeActiveInMonth, isEmployeeActiveOnDay } from '../constants';
 import { isWorkingShift } from '../src/engine/shifts/shift-predicates';
 import { calculateLunches } from '../hooks/useScheduleEngine';
+import { isEmployeeOnAtestado } from '../src/utils/atestado';
 
 
 interface DaySummaryCardProps {
@@ -73,7 +74,7 @@ export const DaySummaryCard: React.FC<DaySummaryCardProps> = ({
         shift = 'N/A';
       } else if (e.firedAt && dateStr > e.firedAt) {
         shift = 'N/A';
-      } else if (e.atestadoStart && e.atestadoEnd && dateStr >= e.atestadoStart && dateStr <= e.atestadoEnd) {
+      } else if (isEmployeeOnAtestado(e, dateStr)) {
         shift = 'AT';
       } else if (e.vacationStart && e.vacationEnd && dateStr >= e.vacationStart && dateStr <= e.vacationEnd) {
         shift = 'FE';
