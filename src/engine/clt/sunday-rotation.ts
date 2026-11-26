@@ -3,6 +3,7 @@ import { DEFAULT_JORNADA_SETTINGS, normalizeProtectedDaysDetails, isEmployeeHidd
 import { isWorkingShift, isBirthday, isEmployeePreferredDayOff } from './clt-rules';
 import { isEmployeeOnAtestado } from '../../utils/atestado';
 import { getShiftClassification } from '../shifts/shift-predicates';
+import { isSeasonalEmployee } from './experience';
 
 /**
  * Returns true if `emp` is UNAVAILABLE to work (or rest via rotation) on the
@@ -104,7 +105,8 @@ export function buildSundayAssignments(
   settings: JornadaSettings = DEFAULT_JORNADA_SETTINGS,
   protectedDays?: Record<number, number | ProtectedDayDetail> | number[],
   targetEmpId?: string,
-  estoqueFixedSunday: boolean = true
+  estoqueFixedSunday: boolean = true,
+  peakDaysForSeasonalPriority?: number[]
 ): { assignments: Map<string, Set<number>>, nextConsecutive: Map<string, number> } {
   const assignments = new Map<string, Set<number>>();
   const consecutive = new Map<string, number>();
@@ -190,7 +192,39 @@ export function buildSundayAssignments(
       const isVendasApto = (emp: Employee) =>
         emp.primaryRole === 'Vendas' || emp.secondaryRole === 'Vendas' || emp.primaryRole === 'Apoio' || emp.secondaryRole === 'Apoio' || emp.primaryRole === 'Pacote' || emp.secondaryRole === 'Pacote' || emp.cargo === 'Vendas';
 
+      const peakDayNums = new Set<number>(peakDaysForSeasonalPriority || []);
+      const isPeakSunday = peakDayNums.has(dayNum);
+      const hasPeakEarlierInSameWeek =
+        !isPeakSunday &&
+        peakDayNums.size > 0 &&
+        [1, 2, 3, 4, 5, 6].some(off => peakDayNums.has(dayNum - off));
+
+      const compareExperienceAsc = (a: Employee, b: Employee): number => {
+        // Retorna < 0 para o MAIS experiente (CLT, hiredAt mais antigo)
+        const sa = isSeasonalEmployee(a) ? 1 : 0;
+        const sb = isSeasonalEmployee(b) ? 1 : 0;
+        if (sa !== sb) return sa - sb;
+        const ha = a.hiredAt || '';
+        const hb = b.hiredAt || '';
+        if (ha !== hb) {
+          if (!ha) return -1;
+          if (!hb) return 1;
+          return ha < hb ? -1 : 1;
+        }
+        return 0;
+      };
+
       const compareByStreakAndRot = (a: Employee, b: Employee) => {
+        // Em domingo de pico: CLT mais experiente trabalha primeiro (Sazonais folgam).
+        // Em domingo pós-pico na mesma semana (ex: 27/12 após 21..24/12): Sazonais trabalham primeiro
+        // para liberar folgas de domingo aos CLTs e tirá-los das folgas de pico.
+        if (isPeakSunday) {
+          const expCmp = compareExperienceAsc(a, b);
+          if (expCmp !== 0) return expCmp;
+        } else if (hasPeakEarlierInSameWeek) {
+          const expCmp = compareExperienceAsc(b, a);
+          if (expCmp !== 0) return expCmp;
+        }
         const streakA = consecutive.get(a.id) ?? 0;
         const streakB = consecutive.get(b.id) ?? 0;
         if (streakA !== streakB) return streakA - streakB;

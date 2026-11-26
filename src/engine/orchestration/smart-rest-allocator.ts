@@ -853,12 +853,23 @@ export function allocateSmartRestsV2(input: SmartAllocatorInput): AllocationRepo
       return true;
     };
 
-    const turnoFloorOk = (dayIdx: number): boolean => {
-      const avail = availabilityByDay[dayIdx];
+    const turnoFloorNotDegraded = (
+      dayIdx: number,
+      beforeCov: { abWorking: number; feWorking: number; aberturaRatio: number; fechamentoRatio: number }
+    ): boolean => {
       if (new Date(year, month, dayIdx + 1).getDay() === 0) return true;
-      const cov = getDayCoverage(dayIdx);
-      if (avail.byTurno.Abertura.length >= 4 && cov.aberturaRatio < guidelines.coverageMinFloor - 1e-9) return false;
-      if (avail.byTurno.Fechamento.length >= 4 && cov.fechamentoRatio < guidelines.coverageMinFloor - 1e-9) return false;
+      const avail = availabilityByDay[dayIdx];
+      const afterCov = getDayCoverage(dayIdx);
+      if (avail.byTurno.Abertura.length >= 2 && afterCov.abWorking === 0) return false;
+      if (avail.byTurno.Fechamento.length >= 2 && afterCov.feWorking === 0) return false;
+      if (avail.byTurno.Abertura.length >= 4) {
+        const minAllowedAb = Math.min(guidelines.coverageMinFloor, beforeCov.aberturaRatio);
+        if (afterCov.aberturaRatio < minAllowedAb - 1e-9) return false;
+      }
+      if (avail.byTurno.Fechamento.length >= 4) {
+        const minAllowedFe = Math.min(guidelines.coverageMinFloor, beforeCov.fechamentoRatio);
+        if (afterCov.fechamentoRatio < minAllowedFe - 1e-9) return false;
+      }
       return true;
     };
 
@@ -881,7 +892,37 @@ export function allocateSmartRestsV2(input: SmartAllocatorInput): AllocationRepo
           if (sazShifts[d] !== 'T' || isImmutable(saz, d)) continue;
           if (protectedDetails[d + 1]?.mandatoryEmployeeIds?.includes(saz.id)) continue;
 
-          // Dia "e" fora do pico: Sazonal folga, CLT trabalha → trocam (mais próximo de d primeiro)
+          // Tentativa direta 1-por-1 em d (caso CLT já tenha folgas suficientes na semana sem precisar de nova folga em 'e')
+          const beforeCovDDirect = getDayCoverage(d);
+          const simCltDirect = [...cltShifts];
+          simCltDirect[d] = 'T';
+          const simSazDirect = [...sazShifts];
+          simSazDirect[d] = 'F';
+          if (
+            validateHardConstraints(clt, simCltDirect, year, month, prevStreaks.get(clt.id) || 0, guidelines, protectedDetails, calendarWeeks, firstDayDow) &&
+            validateHardConstraints(saz, simSazDirect, year, month, prevStreaks.get(saz.id) || 0, guidelines, protectedDetails, calendarWeeks, firstDayDow) &&
+            sundayStreakOk(clt.id, simCltDirect) &&
+            sundayStreakOk(saz.id, simSazDirect)
+          ) {
+            shiftsByEmp[clt.id] = simCltDirect;
+            shiftsByEmp[saz.id] = simSazDirect;
+            if (turnoFloorNotDegraded(d, beforeCovDDirect)) {
+              for (let k = 0; k < daysInMonth; k++) {
+                cltShifts[k] = simCltDirect[k];
+                sazShifts[k] = simSazDirect[k];
+              }
+              shiftsByEmp[clt.id] = cltShifts;
+              shiftsByEmp[saz.id] = sazShifts;
+              decisionReasonsByEmp[clt.id][d] = 'REGULAR_WORK';
+              decisionReasonsByEmp[saz.id][d] = isSundayPeak ? 'SUNDAY_ROTATION_OFF' : 'PEAK_DAY_SHIFTED';
+              swapped = true;
+              break;
+            }
+            shiftsByEmp[clt.id] = cltShifts;
+            shiftsByEmp[saz.id] = sazShifts;
+          }
+
+          // Dia "e" fora do pico: Sazonal folga, CLT trabalha → trocam (mesmo turno e mais próximo de d primeiro)
           const candidates: number[] = [];
           for (let e = cutoffDayIdx; e < daysInMonth; e++) {
             if (e === d || isAnyPeak(e)) continue;
@@ -893,6 +934,8 @@ export function allocateSmartRestsV2(input: SmartAllocatorInput): AllocationRepo
           candidates.sort((a, b) => Math.abs(a - d) - Math.abs(b - d) || a - b);
 
           for (const e of candidates) {
+            const beforeCovD = getDayCoverage(d);
+            const beforeCovE = getDayCoverage(e);
             const simClt = [...cltShifts];
             simClt[d] = 'T';
             simClt[e] = 'F';
@@ -909,10 +952,10 @@ export function allocateSmartRestsV2(input: SmartAllocatorInput): AllocationRepo
               continue;
             }
 
-            // Aplica e confirma pisos por turno (Abertura/Fechamento) em d e e; reverte se violar
+            // Aplica e confirma que o equilíbrio por turno não piora abaixo do piso em d e e; reverte se violar
             shiftsByEmp[clt.id] = simClt;
             shiftsByEmp[saz.id] = simSaz;
-            if (!turnoFloorOk(d) || !turnoFloorOk(e)) {
+            if (!turnoFloorNotDegraded(d, beforeCovD) || !turnoFloorNotDegraded(e, beforeCovE)) {
               shiftsByEmp[clt.id] = cltShifts;
               shiftsByEmp[saz.id] = sazShifts;
               continue;

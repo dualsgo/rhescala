@@ -393,6 +393,11 @@ export function applyMonthUpdateWithReport(
         })()
         : protectedDays;
 
+    const seasonalPriorityPeakDays =
+        useV2 && effectiveGuidelines && effectiveGuidelines.prioritizeSeasonalRestOnPeaks !== false
+            ? effectiveGuidelines.peakDays
+            : undefined;
+
     const { assignments: sundayAssignments } = buildSundayAssignments(
         activeRegular,
         year,
@@ -402,7 +407,8 @@ export function applyMonthUpdateWithReport(
         effectiveSettings,
         sundayProtectedDays,
         targetEmpId,
-        estoqueFixedSunday
+        estoqueFixedSunday,
+        seasonalPriorityPeakDays
     );
 
     // Retro-análise dos dias trabalhados no mês anterior até o dia 31
